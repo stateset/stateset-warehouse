@@ -70,6 +70,7 @@ export default function NativePanel({
   const [pending, setPending] = useState<Pending | null>(restored.pending);
   const broken = restored.broken;
   const mounted = useRef(true);
+  const operationInFlight = useRef(false);
   const [receipt, setReceipt] = useState<NativeReceipt | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(
@@ -83,6 +84,8 @@ export default function NativePanel({
   const [next, setNext] = useState(false);
   const [selected, setSelected] = useState<SourceOrder | null>(null);
   const [orderId, setOrderId] = useState("");
+  const [fulfillmentOrderId, setFulfillmentOrderId] = useState("");
+  const [fulfillmentVersion, setFulfillmentVersion] = useState(state.version);
   const [importVersion, setImportVersion] = useState(state.version);
   const [transportVersion, setTransportVersion] = useState(state.version);
   const [preview, setPreview] = useState<unknown>(null);
@@ -92,6 +95,10 @@ export default function NativePanel({
   > | null>(null);
   const canWork = ["admin", "operator"].includes(session.identity.role);
   const config = session.native_integrations;
+  const conditionalOms = config?.oms.shipment_writeback === "conditional_v1";
+  const fulfillmentOrder = state.orders.find(
+    (order) => order.id === fulfillmentOrderId,
+  );
   const disabled =
     !canWork || session.demo || blocked || busy || !!pending || broken;
   useEffect(() => {
@@ -108,6 +115,8 @@ export default function NativePanel({
     setPending(null);
   }
   async function send(value: Pending, recovering = false) {
+    if (operationInFlight.current) return;
+    operationInFlight.current = true;
     setBusy(true);
     setError("");
     setNotice("");
@@ -121,8 +130,15 @@ export default function NativePanel({
           "Integration saved. Original request and source evidence are retained.",
         );
         setSelected(null);
+        setFulfillmentOrderId("");
         setReviewedPlan(null);
         await refresh(value.warehouse);
+      } else if (result.status === "rejected") {
+        clear();
+        setFulfillmentOrderId("");
+        setNotice(
+          "OMS durably rejected this request without applying fulfillment. Review the current source and shipped order before submitting a new request.",
+        );
       } else
         setNotice(
           "Remote acceptance is still uncertain or in progress. Check or retry this original request.",
@@ -147,11 +163,12 @@ export default function NativePanel({
             : ""),
       );
     } finally {
+      operationInFlight.current = false;
       if (mounted.current) setBusy(false);
     }
   }
   async function start(path: string, body: Record<string, unknown>) {
-    if (disabled) return;
+    if (disabled || operationInFlight.current) return;
     const value: Pending = {
       warehouse: state.warehouse.id,
       path,
@@ -169,7 +186,8 @@ export default function NativePanel({
     await send(value);
   }
   async function check() {
-    if (!pending) return;
+    if (!pending || operationInFlight.current) return;
+    operationInFlight.current = true;
     setBusy(true);
     setError("");
     try {
@@ -182,6 +200,12 @@ export default function NativePanel({
         clear();
         setNotice("Original integration request confirmed.");
         await refresh(pending.warehouse);
+      } else if (value.status === "rejected") {
+        clear();
+        setFulfillmentOrderId("");
+        setNotice(
+          "OMS durably rejected the original request without applying fulfillment. Review the current source before starting a new request.",
+        );
       } else if (value.status === "local_conflict") {
         clear();
         setError(
@@ -197,6 +221,7 @@ export default function NativePanel({
     } catch (e) {
       if (mounted.current) setError((e as Error).message);
     } finally {
+      operationInFlight.current = false;
       if (mounted.current) setBusy(false);
     }
   }
@@ -608,10 +633,75 @@ export default function NativePanel({
           )}
         </section>
       </div>
+      {conditionalOms && (
+        <section className="integration-card">
+          <h3>Record the physical handoff in OMS</h3>
+          <p>
+            The OMS receiver must support conditional fulfillment. The original
+            source revision, shipment event, and delivery receipt are retained.
+          </p>
+          <label>
+            Shipped OMS order
+            <select
+              value={fulfillmentOrderId}
+              disabled={disabled}
+              onChange={(event) => {
+                setFulfillmentOrderId(event.target.value);
+                setFulfillmentVersion(state.version);
+              }}
+            >
+              <option value="">Choose a shipped OMS order</option>
+              {state.orders
+                .filter(
+                  (order) =>
+                    order.status === "shipped" &&
+                    order.source_order_id?.startsWith("oms:"),
+                )
+                .map((order) => (
+                  <option key={order.id} value={order.id}>
+                    {order.reference}
+                  </option>
+                ))}
+            </select>
+          </label>
+          {fulfillmentOrder && (
+            <>
+              <p>
+                <strong>{fulfillmentOrder.carrier}</strong> ·{" "}
+                {fulfillmentOrder.handoff_reference}
+                <br />
+                {fulfillmentOrder.shipped_at}
+              </p>
+              <p>
+                {fulfillmentOrder.lines.length} complete order lines. Confirm
+                that these units physically left the warehouse.
+              </p>
+              <button
+                className="btn primary"
+                disabled={disabled || fulfillmentVersion !== state.version}
+                onClick={() =>
+                  void start(
+                    `/v1/warehouses/${state.warehouse.id}/orders/${fulfillmentOrder.id}/oms-fulfillment`,
+                    { expected_version: fulfillmentVersion },
+                  )
+                }
+              >
+                Record verified handoff in OMS
+              </button>
+              {fulfillmentVersion !== state.version && (
+                <p className="native-note">
+                  Warehouse changed. Select the shipped order again to review
+                  the current record.
+                </p>
+              )}
+            </>
+          )}
+        </section>
+      )}
       <p className="native-note">
-        OMS shipment writeback is held because the current OMS endpoint cannot
-        protect a concurrent order revision. Shipped order evidence remains
-        available for reconciliation.
+        {conditionalOms
+          ? "Conditional OMS fulfillment is enabled. Every delivery verifies the receiver contract and uses its original retained request; unsupported receivers remain blocked."
+          : "OMS shipment writeback is held because the legacy OMS endpoint cannot protect a concurrent order revision. Shipped order evidence remains available for reconciliation."}
       </p>
     </section>
   );

@@ -114,6 +114,135 @@ fn receipt(reference: &str) -> Command {
 
 #[tokio::test]
 #[ignore = "requires isolated Postgres; WMS_TEST_DATABASE_URL"]
+async fn malformed_json_child_projections_cannot_override_canonical_state_detail_or_history() {
+    let f = Fixture::new().await;
+    f.command(Command::CreateLocation {
+        code: "A-01".into(),
+        zone: "Storage".into(),
+        kind: "storage".into(),
+    })
+    .await;
+    f.command(Command::CountStock {
+        sku: "SKU".into(),
+        lot: "LOT".into(),
+        location: "A-01".into(),
+        counted: 5,
+        reason: "Opening physical fixture".into(),
+    })
+    .await;
+    let order_id = f.command(order("SO-CANONICAL", "oms-canonical")).await;
+    f.command(Command::Allocate {
+        order_id: order_id.clone(),
+    })
+    .await;
+    let receipt_id = f.command(receipt("ASN-CANONICAL")).await;
+    f.command(Command::Receive {
+        receipt_id: receipt_id.clone(),
+        line_id: "receipt-line-1".into(),
+        quantity: 1,
+        location: "RECV-01".into(),
+    })
+    .await;
+    let original = f.state().await;
+    let counts = f.evidence_counts().await;
+
+    // Only replace mutable JSON projections, including malformed types. Canonical
+    // lines, allocations, physical stock, receipts and their guards stay intact.
+    sqlx::query("UPDATE wms_orders SET data=data || $3::jsonb WHERE tenant=$1 AND warehouse_id='wh-main' AND id=$2")
+        .bind(&f.identity.tenant).bind(&order_id)
+        .bind(json!({"lines":"stale malformed shadow","allocations":{"quantity":999}}))
+        .execute(&f.store.pool).await.expect("corrupt only order child projection");
+    sqlx::query("UPDATE wms_receipts SET data=data || $3::jsonb WHERE tenant=$1 AND warehouse_id='wh-main' AND id=$2")
+        .bind(&f.identity.tenant).bind(&receipt_id)
+        .bind(json!({"lines":[{"quantity":"malformed shadow","received":999}]}))
+        .execute(&f.store.pool).await.expect("corrupt only receipt child projection");
+
+    let canonical = f.state().await;
+    assert_eq!(canonical, original, "state trusted a JSON child shadow");
+    let order = canonical
+        .orders
+        .iter()
+        .find(|o| o.id == order_id)
+        .expect("canonical order");
+    let receipt = canonical
+        .receipts
+        .iter()
+        .find(|r| r.id == receipt_id)
+        .expect("canonical receipt");
+    for (kind, entity_id, expected) in [
+        ("orders", order_id.as_str(), json!(order)),
+        ("receipts", receipt_id.as_str(), json!(receipt)),
+    ] {
+        let detail = f
+            .store
+            .detail(&f.identity.tenant, "wh-main", kind, entity_id)
+            .await
+            .expect("canonical detail");
+        assert_eq!(detail, expected, "detail trusted a JSON child shadow");
+        let page = f
+            .store
+            .history(&f.identity.tenant, "wh-main", kind, None, 1)
+            .await
+            .expect("canonical bounded history");
+        assert_eq!(page["items"].as_array().expect("history items").len(), 1);
+        assert_eq!(
+            page["items"][0]["data"], expected,
+            "history trusted a JSON child shadow"
+        );
+    }
+    assert_eq!(
+        f.evidence_counts().await,
+        counts,
+        "canonical reads wrote new execution evidence"
+    );
+
+    let outside = Identity {
+        tenant: format!("guards-outside-{}", id()),
+        actor: f.identity.actor.clone(),
+        role: "admin".into(),
+    };
+    f.store
+        .provision(&outside.tenant, false)
+        .await
+        .expect("other tenant");
+    for (kind, entity_id) in [
+        ("orders", order_id.as_str()),
+        ("receipts", receipt_id.as_str()),
+    ] {
+        let hidden = f
+            .store
+            .detail(&outside.tenant, "wh-main", kind, entity_id)
+            .await
+            .expect_err("foreign record must stay hidden");
+        assert_eq!(hidden.status, 404);
+        let page = f
+            .store
+            .history(&outside.tenant, "wh-main", kind, None, 1)
+            .await
+            .expect("empty scoped page");
+        assert!(page["items"].as_array().expect("items").is_empty());
+    }
+    // A valid physical command can still execute while unrelated mutable child
+    // shadows remain malformed; every validator uses the normalized authority.
+    f.command(Command::MoveStock {
+        sku: "SKU".into(),
+        lot: "LOT".into(),
+        from: "RECV-01".into(),
+        to: "A-01".into(),
+        quantity: 1,
+    })
+    .await;
+    let proof = f
+        .store
+        .reconciliation(&f.identity.tenant, "wh-main")
+        .await
+        .expect("independent proof");
+    assert_eq!(proof["ok"], true);
+    assert_eq!(f.state().await.version, original.version + 1);
+}
+
+#[tokio::test]
+#[ignore = "requires isolated Postgres; WMS_TEST_DATABASE_URL"]
 async fn completed_business_references_return_conflict_without_retaining_a_command_receipt() {
     let f = Fixture::new().await;
     let original_order = f.command(order("SO-ARCHIVED", "oms-archived")).await;

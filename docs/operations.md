@@ -1,6 +1,34 @@
 # Operating and restoring StateSet Warehouse
 
-This runbook describes procedures; the backup and restore commands below have not been executed as a deployment qualification. [Software evidence](evidence.md) records the checks actually run. Use PostgreSQL client tools matching the deployed server's major version.
+The automated rehearsal below qualifies an isolated synthetic database recovery. It does not establish a deployed facility's recovery point or physical inventory agreement. [Software evidence](evidence.md) records which checks actually ran. Use PostgreSQL client tools matching the server's major version.
+
+## Automated recovery and release qualification
+
+Run the rehearsal against a PostgreSQL server on which the supplied role can create databases. It creates two uniquely named `wms_restore_source_test_*` and `wms_restore_target_test_*` databases, then drops only those databases. It does not copy or modify an existing warehouse database. The artifact directory must be empty; retained evidence is private to the current user.
+
+```bash
+export WMS_RESTORE_ADMIN_URL="$WMS_TEST_DATABASE_URL"
+export WMS_PG_BIN=/usr/lib/postgresql/16/bin
+export WMS_RESTORE_ARTIFACT_DIR="$(mktemp -d /tmp/wms-restore-evidence.XXXXXXXX)"
+bash scripts/restore-rehearsal.sh
+```
+
+The harness seeds two tenant scopes and executes receiving, putaway, same-SKU order lines, picking, packing, carrier handoff, source-bin and staging reservations. It retains an original command receipt, a completed native import, an uncertain transport, a rejected conditional OMS receipt followed by a separately reviewed uncertain OMS intent, their attempts, and pending outbox work. It then creates a real custom-format `pg_dump` archive, records its listing/checksum, restores it into the fresh target with `pg_restore --exit-on-error --single-transaction`, and opens the target through the application migration checks.
+
+Qualification requires identical row counts and content hashes for **every WMS table**, identical warehouse versions and migration names/digests, and complete movement/receipt/allocation reconciliation for every restored warehouse. The probe retries the original receiving and native import request IDs, requires their exact original results, and proves those retries changed no evidence. It checks actor-scoped receipt access, replays the terminal rejected OMS receipt unchanged, reclaims both exact uncertain native intents into retained attempts, and commits a new physical count followed by independent reconciliation. Native retries test journal recovery only; this rehearsal sends no external HTTP and does not certify OMS or TMS acceptance.
+
+Success writes `release-qualification.json` with archive and executable/lockfile hashes, release revision, recovery duration and individual results. `recovery-point.json`, `verification.json`, `archive.list`, `warehouse.dump`, its checksum and stage logs support independent review. Failure exits nonzero and retains the stage evidence; a readable archive listing alone cannot pass qualification. `WMS_KEEP_RESTORE_DB=1` retains the synthetic databases for diagnosis. No success report should be inferred from a sandbox-blocked or skipped rehearsal.
+
+The GitHub `warehouse checks` workflow runs the PostgreSQL/browser tests and this actual archive round-trip on Ubuntu 24.04 with matching PostgreSQL 16 tools. It also builds the production image and runs it as UID 10001 with a read-only filesystem, all capabilities dropped, and new privileges disabled. The runtime check requires container health, an authenticated reconciliation, an unauthenticated 401, and the built dashboard. Its image ID, revision label, runtime log and inspection results join the recovery artifacts. The image's health check uses `/ready` on its standard internal port 8088; publish a different host port when needed. Organization billing can prevent GitHub jobs from starting, which leaves this release gate unexecuted.
+
+Run that same container qualification locally with Docker access:
+
+```bash
+export WMS_CONTAINER_ARTIFACT_DIR="$(mktemp -d /tmp/wms-image-evidence.XXXXXXXX)"
+bash scripts/container-smoke.sh
+```
+
+The script creates its own PostgreSQL 16 container and private Docker network, publishes the API only on a random loopback port, and removes only resources carrying its unique ownership label. PostgreSQL data lives on a disposable in-memory mount. It neither needs an existing database URL nor connects to a warehouse database. The check compares build-input hashes before/after compilation, runs the resulting immutable image ID, verifies that the running container has that same image ID, validates the non-root identity and kernel `NoNewPrivs`/effective capabilities, checks all applied migration digests and requires graceful SIGTERM exit. It retains `container-qualification.json`, image/tool identities, source hashes, readiness/reconciliation and stage logs. Local container qualification is independent of whether GitHub can start its CI job.
 
 ## Deploy and establish the recovery point
 
@@ -60,7 +88,11 @@ For native work, inspect `GET /v1/warehouses/{warehouse}/native-requests/{reques
 
 The retained TMS intent pins its normalized endpoint and Freight tenant. Restore that authority before retrying if configuration changed. Before a new intent and every POST, the adapter checks Freight's actual `GET /v1/access` response for the retained `tenant_id` and `operations.write`. A credential may rotate within that same tenant; repointing a pending request to another endpoint or tenant is held. The Freight tenant's own OMS connection must still be qualified against the intended upstream source tenant.
 
-`local_conflict` means the original local import command could not commit. Review the source, warehouse version and existing ownership before starting a new reviewed request. A completed receipt is immutable. OMS fulfillment writeback remains held until the upstream endpoint implements an atomic revision and terminal-state rule; changing a client header does not supply that missing guarantee.
+`local_conflict` means the original local import command could not commit. Review the source, warehouse version and existing ownership before starting a new reviewed request. A completed receipt is immutable.
+
+OMS fulfillment remains held by default. Enable `shipment_writeback: "conditional_v1"` for a tenant only after deploying and qualifying the companion receiver's tenant-bound conditional-revision, terminal-state, durable-idempotency and durable-rejection contract. The legacy unconditional fulfillment endpoint is never used. Submit a physical shipment through `POST /v1/warehouses/{warehouse}/orders/{order}/oms-fulfillment` with a new `request_id` and reviewed `expected_version`; the WMS requires matching committed shipment evidence and freezes the source revision, full handoff and recipient before any POST. A 424 during initial preparation means that preparation sent no OMS POST. Once a request is retained or attempted, recover its original body/key and journal receipt.
+
+An `uncertain` OMS outcome retains exclusive ownership of the physical event and must not be replaced by another request. A verified, durable `rejected` receipt proves the particular predicate did not apply; it and its finished attempt remain immutable. Review the current OMS order and physical handoff before explicitly initiating another request. The new intent receives another remote request UUID while retaining the same shipment event. The WMS never rebases an old intent automatically or alters its source snapshot. A completed or rejected original request always replays its original receipt.
 
 ## Resolve delivery and inventory incidents
 
@@ -71,5 +103,9 @@ When full reconciliation reports a difference, pause affected warehouse submissi
 Rotate API keys by preserving the tenant/actor identity, issuing a new secret, updating all instances and removing the old secret. Restart instances to replace startup-loaded credentials. Preserving actor identity lets the same operator recover an earlier request. Rotate upstream OMS API and Freight bearer credentials with their service owners, update `WMS_NATIVE_INTEGRATIONS_JSON` and restart affected instances. Preserve the pinned Freight tenant and endpoint for retained intents; its credential requires `operations.write`. Native configuration contains credentials, while retained request evidence must not.
 
 ## Facility acceptance
+
+For scanner qualification, configure a keyboard-wedge device that sends each printed work reference, bin, SKU and lot as its literal, case-sensitive value followed by Enter. The WMS does not claim GS1, EAN or SSCC parsing, case conversion or unit conversion. Print and scan the explicit `UNTRACKED` lot label when the work uses an untracked lot.
+
+Receiving requires selecting the exact receipt line and receiving bin; picking requires selecting the exact allocation. Confirm bin, SKU and lot in that order, then enter a whole-each integer quantity and explicitly submit the action. A matching label does not itself record a movement. When work is stale, reload the canonical work and rescan its labels before submitting. When a response is lost, recover or retry the original journaled request; another physical scan is not the recovery procedure.
 
 Before live use, record physical counts, receiving-to-handoff and short-pick cases using the actual facility, operators and devices; verify cross-service tenant mapping and replay/deduplication; and complete the restore rehearsal above. Whole each units, explicit lots and complete-order shipments are the supported execution contract. Physical agreement, production throughput and recovery-point suitability require facility-owned evidence.

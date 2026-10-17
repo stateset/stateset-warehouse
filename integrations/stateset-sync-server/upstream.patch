@@ -1,0 +1,680 @@
+diff --git a/src/lib.rs b/src/lib.rs
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -76,6 +76,7 @@
+ pub mod tier;
+ mod tracing_config;
+ mod utils;
++pub mod warehouse_fulfillment;
+ mod webhooks;
+ mod workers;
+ 
+diff --git a/src/http/router.rs b/src/http/router.rs
+--- a/src/http/router.rs
++++ b/src/http/router.rs
+@@ -632,6 +632,11 @@
+         .route(
+             "/v1/tenants/:tenant_id/orders/:order_id/capacity/tracking",
+             post(handlers::sync_order_capacity_tracking),
++        )
++        .route(
++            "/v1/tenants/:tenant_id/warehouse-fulfillments",
++            get(crate::warehouse_fulfillment::capabilities)
++                .post(crate::warehouse_fulfillment::receive),
+         )
+         .route(
+             "/v1/tenants/:tenant_id/orders/:order_id/fulfillment",
+diff --git a/src/http/rbac.rs b/src/http/rbac.rs
+--- a/src/http/rbac.rs
++++ b/src/http/rbac.rs
+@@ -236,6 +236,15 @@
+         return RequiredScopes::any(vec![Scope::All]);
+     }
+ 
++    // Complete-order WMS handoff evidence uses the existing order scopes.
++    if path.ends_with("/warehouse-fulfillments") {
++        return if matches!(method.as_str(), "GET" | "HEAD") {
++            RequiredScopes::single(Scope::OrdersRead)
++        } else {
++            RequiredScopes::single(Scope::OrdersWrite)
++        };
++    }
++
+     // Order endpoints
+     if path.contains("/orders") && !path.contains("/acp/orders") {
+         return match method.as_str() {
+diff --git a/src/warehouse_fulfillment.rs b/src/warehouse_fulfillment.rs
+new file mode 100644
+--- /dev/null
++++ b/src/warehouse_fulfillment.rs
+@@ -0,0 +1,440 @@
++//! Conditional complete-order physical handoff receiver for StateSet WMS.
++//! Mounted behind the existing tenant authentication and orders RBAC middleware.
++use crate::http::{
++    error::{ApiError, ApiResult},
++    extractor::TenantRequest,
++    response::ApiSuccess,
++    state::AppState,
++};
++use axum::{extract::State, Json};
++use chrono::DateTime;
++use serde::{Deserialize, Serialize};
++#[cfg(test)]
++use serde_json::json;
++use serde_json::Value;
++use sha2::{Digest, Sha256};
++use std::collections::BTreeSet;
++use uuid::Uuid;
++
++pub const CONTRACT: &str = "stateset.wms-fulfillment.v1";
++
++#[derive(Clone, Debug, Deserialize, Serialize)]
++#[serde(deny_unknown_fields)]
++pub struct HandoffLine {
++    pub line_id: String,
++    pub sku: String,
++    pub quantity_each: i64,
++}
++
++#[derive(Clone, Debug, Deserialize, Serialize)]
++#[serde(deny_unknown_fields)]
++pub struct WarehouseHandoff {
++    pub order_id: String,
++    pub request_id: String,
++    pub event_id: String,
++    pub expected_updated_at: String,
++    pub warehouse_id: String,
++    pub warehouse_order_id: String,
++    pub carrier: String,
++    pub handoff_reference: String,
++    pub handed_off_at: String,
++    pub lines: Vec<HandoffLine>,
++}
++
++fn text(value: &str, field: &str, max: usize) -> ApiResult<()> {
++    if value.trim().is_empty()
++        || value.trim() != value
++        || value.len() > max
++        || value.chars().any(char::is_control)
++    {
++        return Err(ApiError::validation(format!(
++            "{field} is required and must contain at most {max} bytes without control characters"
++        )));
++    }
++    Ok(())
++}
++
++impl WarehouseHandoff {
++    fn validate(&self) -> ApiResult<()> {
++        for (value, field) in [
++            (&self.order_id, "order_id"),
++            (&self.request_id, "request_id"),
++            (&self.event_id, "event_id"),
++            (&self.warehouse_order_id, "warehouse_order_id"),
++        ] {
++            let parsed = Uuid::parse_str(value)
++                .map_err(|_| ApiError::validation(format!("{field} must be a UUID")))?;
++            if parsed.to_string() != *value {
++                return Err(ApiError::validation(format!(
++                    "{field} must use canonical UUID spelling"
++                )));
++            }
++        }
++        for (value, field) in [
++            (&self.expected_updated_at, "expected_updated_at"),
++            (&self.handed_off_at, "handed_off_at"),
++        ] {
++            if value.len() > 64 || DateTime::parse_from_rfc3339(value).is_err() {
++                return Err(ApiError::validation(format!(
++                    "{field} must be an RFC3339 timestamp"
++                )));
++            }
++        }
++        text(&self.warehouse_id, "warehouse_id", 100)?;
++        if !self
++            .warehouse_id
++            .bytes()
++            .all(|c| c.is_ascii_alphanumeric() || c == b'-' || c == b'_')
++        {
++            return Err(ApiError::validation(
++                "warehouse_id must contain ASCII letters, digits, hyphens or underscores",
++            ));
++        }
++        text(&self.carrier, "carrier", 240)?;
++        text(&self.handoff_reference, "handoff_reference", 240)?;
++        if self.lines.is_empty() || self.lines.len() > 100 {
++            return Err(ApiError::validation(
++                "A handoff requires 1-100 exact order lines",
++            ));
++        }
++        let mut identities = BTreeSet::new();
++        for line in &self.lines {
++            text(&line.sku, "sku", 100)?;
++            let hash = line.line_id.strip_prefix("oms-line-");
++            if !hash.is_some_and(|h| {
++                h.len() == 64
++                    && h.bytes()
++                        .all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))
++            }) || !identities.insert(&line.line_id)
++                || !(1..=1_000_000).contains(&line.quantity_each)
++            {
++                return Err(ApiError::validation("Handoff lines require unique canonical line identities and positive whole-each quantities"));
++            }
++        }
++        Ok(())
++    }
++}
++
++// Sort explicitly, even if another upstream dependency enables preserve_order.
++// Strings/timestamps retain their original spelling; no float-valued fields exist.
++fn canonical_json(value: &Value) -> ApiResult<String> {
++    match value {
++        Value::Object(object) => {
++            let mut keys: Vec<_> = object.keys().collect();
++            keys.sort();
++            let fields = keys
++                .into_iter()
++                .map(|key| {
++                    let key_json = serde_json::to_string(key)
++                        .map_err(|_| ApiError::validation("Invalid handoff key"))?;
++                    Ok(format!("{key_json}:{}", canonical_json(&object[key])?))
++                })
++                .collect::<ApiResult<Vec<_>>>()?;
++            Ok(format!("{{{}}}", fields.join(",")))
++        }
++        Value::Array(array) => Ok(format!(
++            "[{}]",
++            array
++                .iter()
++                .map(canonical_json)
++                .collect::<ApiResult<Vec<_>>>()?
++                .join(",")
++        )),
++        _ => {
++            serde_json::to_string(value).map_err(|_| ApiError::validation("Invalid handoff scalar"))
++        }
++    }
++}
++
++fn database_error(error: sqlx::Error) -> ApiError {
++    let database = error.as_database_error();
++    match database.and_then(|e| e.code()).as_deref() {
++        Some("40001" | "23505") => {
++            ApiError::conflict(database.map_or("Warehouse handoff conflicts", |e| e.message()))
++        }
++        Some("P0002") => ApiError::not_found("Order does not exist in this tenant"),
++        Some("22023" | "22007" | "22008" | "22P02") => {
++            ApiError::validation(database.map_or("Invalid warehouse handoff", |e| e.message()))
++        }
++        _ => ApiError::service_unavailable(
++            "Warehouse handoff storage unavailable; retry the exact original request",
++            Some(5),
++        ),
++    }
++}
++
++pub async fn capabilities(
++    State(state): State<AppState>,
++    req: TenantRequest<String>,
++) -> ApiResult<ApiSuccess<Value>> {
++    let database = state.database.as_ref().ok_or_else(|| {
++        ApiError::service_unavailable("Warehouse handoff requires a database", None)
++    })?;
++    let capability = sqlx::query_scalar::<_, Value>(
++        "SELECT warehouse_fulfillment_contract() || jsonb_build_object('tenant_id',$1::text)",
++    )
++    .bind(&req.tenant_id)
++    .fetch_one(database.pool())
++    .await
++    .map_err(database_error)?;
++    if capability["contract"] != CONTRACT || capability["durable_rejections"] != true {
++        return Err(ApiError::service_unavailable(
++            "Warehouse handoff migration is not installed",
++            None,
++        ));
++    }
++    Ok(ApiSuccess::from_ctx(req.ctx, capability))
++}
++
++pub async fn receive(
++    State(state): State<AppState>,
++    req: TenantRequest<String>,
++    Json(body): Json<WarehouseHandoff>,
++) -> ApiResult<ApiSuccess<Value>> {
++    body.validate()?;
++    let value = serde_json::to_value(&body)
++        .map_err(|_| ApiError::validation("Invalid warehouse handoff envelope"))?;
++    let digest = format!("{:x}", Sha256::digest(canonical_json(&value)?.as_bytes()));
++    let database = state.database.as_ref().ok_or_else(|| {
++        ApiError::service_unavailable("Warehouse handoff requires a database", None)
++    })?;
++    // The function's row lock, canonical source-line comparison, status/revision
++    // fence, order update and immutable receipt are one database transaction.
++    let answer = sqlx::query_scalar::<_, Value>("SELECT apply_warehouse_fulfillment($1,$2,$3)")
++        .bind(&req.tenant_id)
++        .bind(value)
++        .bind(digest)
++        .fetch_one(database.pool())
++        .await
++        .map_err(database_error)?;
++    Ok(ApiSuccess::from_ctx(req.ctx, answer))
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    fn body() -> Value {
++        json!({
++            "order_id":"00000000-0000-0000-0000-000000000001",
++            "request_id":"00000000-0000-0000-0000-000000000004",
++            "event_id":"00000000-0000-0000-0000-000000000002",
++            "expected_updated_at":"2026-10-17T00:00:00Z",
++            "warehouse_id":"wh-main",
++            "warehouse_order_id":"00000000-0000-0000-0000-000000000003",
++            "carrier":"Carrier","handoff_reference":"H-1",
++            "handed_off_at":"2026-10-17T01:00:00Z",
++            "lines":[{"line_id":format!("oms-line-{:x}",Sha256::digest(b"source:line-1")),"sku":"SKU-A","quantity_each":2}]
++        })
++    }
++
++    #[test]
++    fn rejects_unknown_fields_at_both_levels() {
++        let mut value = body();
++        value["netsuiteCashSaleId"] = json!("must-not-write");
++        assert!(serde_json::from_value::<WarehouseHandoff>(value).is_err());
++        let mut value = body();
++        value["lines"][0]["quantity"] = json!(2);
++        assert!(serde_json::from_value::<WarehouseHandoff>(value).is_err());
++    }
++
++    #[test]
++    fn rejects_fractional_duplicate_and_invalid_line_identity() {
++        let mut value = body();
++        value["lines"][0]["quantity_each"] = json!(1.5);
++        assert!(serde_json::from_value::<WarehouseHandoff>(value).is_err());
++        let mut parsed: WarehouseHandoff = serde_json::from_value(body()).expect("fixture");
++        assert!(parsed.validate().is_ok());
++        parsed.lines.push(parsed.lines[0].clone());
++        assert!(parsed.validate().is_err());
++        parsed.lines.pop();
++        parsed.lines[0].line_id = "unrelated".into();
++        assert!(parsed.validate().is_err());
++    }
++
++    #[test]
++    fn canonical_json_matches_compact_sorted_value_without_normalizing_timestamps() {
++        let value = body();
++        let parsed: WarehouseHandoff = serde_json::from_value(value.clone()).expect("fixture");
++        let retained = serde_json::to_value(parsed).expect("serialize");
++        assert_eq!(retained["handed_off_at"], "2026-10-17T01:00:00Z");
++        assert_eq!(
++            canonical_json(&retained).expect("canonical"),
++            serde_json::to_string(&value).expect("value")
++        );
++    }
++
++    async fn apply(pool: &sqlx::PgPool, value: &Value) -> Result<Value, sqlx::Error> {
++        let digest = format!(
++            "{:x}",
++            Sha256::digest(canonical_json(value).expect("canonical fixture").as_bytes())
++        );
++        sqlx::query_scalar("SELECT apply_warehouse_fulfillment($1,$2,$3)")
++            .bind("tenant-a")
++            .bind(value)
++            .bind(digest)
++            .fetch_one(pool)
++            .await
++    }
++
++    #[tokio::test]
++    #[ignore = "requires isolated WMS_TEST_DATABASE_URL; companion check-upstream.py --postgres"]
++    async fn postgres_races_rejections_and_explicit_review_preserve_one_physical_fact() {
++        let url = std::env::var("WMS_TEST_DATABASE_URL").expect("isolated test database URL");
++        let admin = sqlx::PgPool::connect(&url)
++            .await
++            .expect("database connection");
++        let database: String = sqlx::query_scalar("SELECT current_database()")
++            .fetch_one(&admin)
++            .await
++            .expect("database name");
++        assert!(database.contains("test"), "database name must contain test");
++        let schema = format!("oms_receiver_{}", Uuid::new_v4().simple());
++        sqlx::query(&format!("CREATE SCHEMA {schema}"))
++            .execute(&admin)
++            .await
++            .expect("isolated receiver schema");
++        let search_path = format!("SET search_path={schema},public");
++        let pool = sqlx::postgres::PgPoolOptions::new()
++            .max_connections(4)
++            .after_connect(move |connection, _| {
++                let search_path = search_path.clone();
++                Box::pin(async move {
++                    sqlx::query(&search_path).execute(connection).await?;
++                    Ok(())
++                })
++            })
++            .connect(&url)
++            .await
++            .expect("isolated pool");
++        sqlx::raw_sql("CREATE TABLE orders(id UUID PRIMARY KEY,tenant_id TEXT NOT NULL,status TEXT NOT NULL,line_items JSONB NOT NULL,updated_at TIMESTAMPTZ NOT NULL,fulfillment_status TEXT,netsuite_id TEXT,tracking JSONB,source_order_payload JSONB)")
++            .execute(&pool).await.expect("canonical source fixture");
++        sqlx::raw_sql(include_str!(
++            "../migrations/20261017000000_warehouse_fulfillment_receipts.sql"
++        ))
++        .execute(&pool)
++        .await
++        .expect("actual companion migration");
++        for order in [1_u128, 10, 11, 12, 13] {
++            sqlx::query("INSERT INTO orders(id,tenant_id,status,line_items,updated_at) VALUES($1,'tenant-a','PENDING',$2,'2026-10-17T00:00:00Z')")
++                .bind(Uuid::from_u128(order))
++                .bind(json!([{"shopifyLineItemId":"line-1","sku":"SKU-A","quantity":2}]))
++                .execute(&pool).await.expect("source order");
++        }
++        let first = body();
++        let mut competing = first.clone();
++        competing["request_id"] = json!(Uuid::new_v4().to_string());
++        competing["event_id"] = json!(Uuid::new_v4().to_string());
++        let (a, b) = tokio::join!(apply(&pool, &first), apply(&pool, &competing));
++        let answers = [a.expect("first response"), b.expect("competing response")];
++        assert_eq!(
++            answers
++                .iter()
++                .filter(|v| v["status"] == "fulfilled")
++                .count(),
++            1
++        );
++        assert_eq!(
++            answers
++                .iter()
++                .filter(|v| v["status"] == "rejected" && v["reason"] == "order_already_fulfilled")
++                .count(),
++            1
++        );
++        for (request, answer) in [(&first, &answers[0]), (&competing, &answers[1])] {
++            let mut expected = answer.clone();
++            expected["replayed"] = json!(true);
++            assert_eq!(apply(&pool, request).await.expect("exact replay"), expected);
++        }
++        let mut stale = body();
++        stale["order_id"] = json!(Uuid::from_u128(10).to_string());
++        stale["request_id"] = json!(Uuid::new_v4().to_string());
++        stale["event_id"] = json!(Uuid::new_v4().to_string());
++        stale["expected_updated_at"] = json!("2026-10-16T00:00:00Z");
++        let rejected = apply(&pool, &stale).await.expect("durable stale rejection");
++        assert_eq!(rejected["status"], "rejected");
++        assert_eq!(rejected["reason"], "source_revision_changed");
++        let mut reviewed = stale.clone();
++        reviewed["request_id"] = json!(Uuid::new_v4().to_string());
++        reviewed["expected_updated_at"] = json!("2026-10-17T00:00:00Z");
++        assert_eq!(
++            apply(&pool, &reviewed).await.expect("reviewed replacement")["status"],
++            "fulfilled"
++        );
++        let mut original_rejection = rejected;
++        original_rejection["replayed"] = json!(true);
++        assert_eq!(
++            apply(&pool, &stale).await.expect("late original rejection"),
++            original_rejection
++        );
++
++        // Distinct rows can race with the same physical event; the accepted-only
++        // event index prevents a second application even before either sees it.
++        let mut cross_a = body();
++        cross_a["order_id"] = json!(Uuid::from_u128(11).to_string());
++        cross_a["request_id"] = json!(Uuid::new_v4().to_string());
++        cross_a["event_id"] = json!(Uuid::new_v4().to_string());
++        let mut cross_b = cross_a.clone();
++        cross_b["order_id"] = json!(Uuid::from_u128(12).to_string());
++        cross_b["request_id"] = json!(Uuid::new_v4().to_string());
++        let (a, b) = tokio::join!(apply(&pool, &cross_a), apply(&pool, &cross_b));
++        let a = match a {
++            Ok(v) => v,
++            Err(e) => {
++                assert_eq!(
++                    e.as_database_error().and_then(|e| e.code()).as_deref(),
++                    Some("23505")
++                );
++                apply(&pool, &cross_a)
++                    .await
++                    .expect("same request after unique conflict")
++            }
++        };
++        let b = match b {
++            Ok(v) => v,
++            Err(e) => {
++                assert_eq!(
++                    e.as_database_error().and_then(|e| e.code()).as_deref(),
++                    Some("23505")
++                );
++                apply(&pool, &cross_b)
++                    .await
++                    .expect("same request after unique conflict")
++            }
++        };
++        assert_eq!(
++            [a, b].iter().filter(|v| v["status"] == "fulfilled").count(),
++            1
++        );
++
++        // A canonical cancellation holding the row lock wins before a queued
++        // handoff can inspect or mutate the same order.
++        let mut cancel = pool.begin().await.expect("cancellation transaction");
++        sqlx::query("UPDATE orders SET status='CANCELLED',updated_at=updated_at+interval '1 second' WHERE id=$1")
++            .bind(Uuid::from_u128(13)).execute(&mut *cancel).await.expect("canonical cancellation");
++        let mut queued = body();
++        queued["order_id"] = json!(Uuid::from_u128(13).to_string());
++        queued["request_id"] = json!(Uuid::new_v4().to_string());
++        queued["event_id"] = json!(Uuid::new_v4().to_string());
++        let queued_pool = pool.clone();
++        let task = tokio::spawn(async move { apply(&queued_pool, &queued).await });
++        tokio::task::yield_now().await;
++        cancel.commit().await.expect("cancellation commit");
++        let ack = task
++            .await
++            .expect("queued handoff task")
++            .expect("queued handoff result");
++        assert_eq!(ack["status"], "rejected");
++        assert_eq!(ack["reason"], "source_state_not_eligible");
++        let applied:i64=sqlx::query_scalar("SELECT count(*) FROM warehouse_fulfillment_receipts WHERE response->>'status'='fulfilled'").fetch_one(&pool).await.expect("accepted receipt count");
++        assert_eq!(applied, 3);
++        let rejected:i64=sqlx::query_scalar("SELECT count(*) FROM warehouse_fulfillment_receipts WHERE response->>'status'='rejected'").fetch_one(&pool).await.expect("rejected receipt count");
++        assert_eq!(rejected, 4);
++        pool.close().await;
++        sqlx::query(&format!("DROP SCHEMA {schema} CASCADE"))
++            .execute(&admin)
++            .await
++            .expect("remove isolated proof schema");
++        admin.close().await;
++    }
++}
+diff --git a/migrations/20261017000000_warehouse_fulfillment_receipts.sql b/migrations/20261017000000_warehouse_fulfillment_receipts.sql
+new file mode 100644
+--- /dev/null
++++ b/migrations/20261017000000_warehouse_fulfillment_receipts.sql
+@@ -0,0 +1,185 @@
++-- Conditional complete-order physical handoff evidence from StateSet WMS.
++-- Additive: existing fulfillment/tracking handlers keep their own contracts.
++CREATE TABLE warehouse_fulfillment_receipts (
++    tenant_id TEXT NOT NULL,
++    request_id UUID NOT NULL,
++    event_id UUID NOT NULL,
++    order_id UUID NOT NULL REFERENCES orders(id),
++    request_digest TEXT NOT NULL CHECK(request_digest ~ '^[0-9a-f]{64}$'),
++    request JSONB NOT NULL,
++    response JSONB NOT NULL,
++    applied_updated_at TIMESTAMPTZ,
++    observed_updated_at TIMESTAMPTZ NOT NULL,
++    PRIMARY KEY(tenant_id,request_id),
++    CHECK(response->>'status' IN('fulfilled','rejected')),
++    CHECK((response->>'status'='fulfilled')=(applied_updated_at IS NOT NULL)),
++    CHECK(response->>'request_id'=request_id::text AND response->>'event_id'=event_id::text
++      AND response->>'order_id'=order_id::text AND response->>'tenant_id'=tenant_id
++      AND response->>'request_digest'=request_digest)
++);
++CREATE UNIQUE INDEX warehouse_fulfillment_one_order ON warehouse_fulfillment_receipts(tenant_id,order_id)
++ WHERE response->>'status'='fulfilled';
++CREATE UNIQUE INDEX warehouse_fulfillment_one_event ON warehouse_fulfillment_receipts(tenant_id,event_id)
++ WHERE response->>'status'='fulfilled';
++
++CREATE FUNCTION warehouse_fulfillment_contract() RETURNS JSONB LANGUAGE SQL IMMUTABLE AS $$
++ SELECT '{"contract":"stateset.wms-fulfillment.v1","conditional_revision":true,"terminal_state_fence":true,"durable_idempotency":true,"durable_rejections":true}'::jsonb;
++$$;
++
++CREATE FUNCTION warehouse_fulfillment_receipt_immutable() RETURNS trigger
++LANGUAGE plpgsql AS $$
++BEGIN
++    RAISE EXCEPTION 'Warehouse fulfillment receipts are immutable' USING ERRCODE='23514';
++END $$;
++CREATE TRIGGER warehouse_fulfillment_receipt_immutable
++BEFORE UPDATE OR DELETE ON warehouse_fulfillment_receipts
++FOR EACH ROW EXECUTE FUNCTION warehouse_fulfillment_receipt_immutable();
++
++CREATE FUNCTION apply_warehouse_fulfillment(
++    p_tenant TEXT, p_body JSONB, p_digest TEXT
++) RETURNS JSONB LANGUAGE plpgsql AS $$
++DECLARE
++    source orders%ROWTYPE;
++    prior warehouse_fulfillment_receipts%ROWTYPE;
++    order_uuid UUID;
++    request_uuid UUID;
++    event_uuid UUID;
++    applied_at TIMESTAMPTZ;
++    expected_lines JSONB;
++    submitted_lines JSONB;
++    answer JSONB;
++    rejection TEXT;
++BEGIN
++    IF jsonb_typeof(p_body) IS DISTINCT FROM 'object'
++       OR (SELECT count(*) FROM jsonb_object_keys(p_body))<>10
++       OR NOT (p_body ?& ARRAY['order_id','request_id','event_id','expected_updated_at','warehouse_id','warehouse_order_id','carrier','handoff_reference','handed_off_at','lines'])
++       OR p_digest IS NULL OR p_digest !~ '^[0-9a-f]{64}$'
++       OR p_tenant IS NULL OR btrim(p_tenant)=''
++    THEN
++        RAISE EXCEPTION 'Invalid warehouse handoff envelope' USING ERRCODE='22023';
++    END IF;
++    IF EXISTS (
++        SELECT 1 FROM jsonb_each(p_body) f
++        WHERE f.key<>'lines' AND (jsonb_typeof(f.value)<>'string' OR btrim(f.value#>>'{}')='')
++    ) OR (p_body->>'warehouse_id') !~ '^[A-Za-z0-9_-]{1,100}$'
++      OR octet_length(p_body->>'carrier')>240
++      OR octet_length(p_body->>'handoff_reference')>240
++      OR jsonb_typeof(p_body->'lines') IS DISTINCT FROM 'array'
++    THEN
++        RAISE EXCEPTION 'Invalid warehouse handoff fields' USING ERRCODE='22023';
++    END IF;
++    IF jsonb_array_length(p_body->'lines') NOT BETWEEN 1 AND 100 THEN
++        RAISE EXCEPTION 'Warehouse handoff requires 1-100 lines' USING ERRCODE='22023';
++    END IF;
++    IF EXISTS(
++        SELECT 1 FROM jsonb_array_elements(p_body->'lines') l
++        WHERE jsonb_typeof(l) IS DISTINCT FROM 'object'
++          OR CASE WHEN jsonb_typeof(l)='object' THEN (SELECT count(*) FROM jsonb_object_keys(l))<>3 ELSE true END
++          OR NOT (l ?& ARRAY['line_id','sku','quantity_each'])
++          OR (l->>'line_id') !~ '^oms-line-[0-9a-f]{64}$'
++          OR jsonb_typeof(l->'sku') IS DISTINCT FROM 'string'
++          OR btrim(l->>'sku')='' OR btrim(l->>'sku')<>l->>'sku' OR octet_length(l->>'sku')>100
++          OR jsonb_typeof(l->'quantity_each') IS DISTINCT FROM 'number'
++          OR CASE WHEN jsonb_typeof(l->'quantity_each')='number' THEN
++               (l->>'quantity_each')::numeric<>trunc((l->>'quantity_each')::numeric)
++               OR (l->>'quantity_each')::numeric NOT BETWEEN 1 AND 1000000 ELSE true END
++    ) OR (SELECT count(*)<>count(DISTINCT l->>'line_id') FROM jsonb_array_elements(p_body->'lines') l) THEN
++        RAISE EXCEPTION 'Invalid warehouse handoff line envelope' USING ERRCODE='22023';
++    END IF;
++    order_uuid := (p_body->>'order_id')::uuid;
++    request_uuid := (p_body->>'request_id')::uuid;
++    event_uuid := (p_body->>'event_id')::uuid;
++    PERFORM (p_body->>'warehouse_order_id')::uuid;
++    PERFORM (p_body->>'handed_off_at')::timestamptz;
++    PERFORM (p_body->>'expected_updated_at')::timestamptz;
++
++    -- Both cancellation and another handoff serialize on this canonical row.
++    SELECT * INTO source FROM orders
++     WHERE tenant_id=p_tenant AND id=order_uuid FOR UPDATE;
++    IF NOT FOUND THEN
++        RAISE EXCEPTION 'Order does not exist in this tenant' USING ERRCODE='P0002';
++    END IF;
++    SELECT * INTO prior FROM warehouse_fulfillment_receipts
++     WHERE tenant_id=p_tenant AND request_id=request_uuid;
++    IF FOUND THEN
++        IF prior.order_id<>order_uuid OR prior.request_digest<>p_digest OR prior.request IS DISTINCT FROM p_body THEN
++            RAISE EXCEPTION 'Warehouse request already belongs to different evidence' USING ERRCODE='40001';
++        END IF;
++        -- Replay remains safe after a later cancellation/status transition.
++        RETURN prior.response || jsonb_build_object('replayed',true);
++    END IF;
++    IF EXISTS(SELECT 1 FROM warehouse_fulfillment_receipts WHERE tenant_id=p_tenant
++              AND (order_id=order_uuid OR event_id=event_uuid) AND response->>'status'='fulfilled') THEN
++        rejection := 'order_already_fulfilled';
++    ELSIF upper(source.status) NOT IN('PENDING','PROCESSING')
++       OR upper(btrim(COALESCE(source.fulfillment_status,''))) NOT IN('','UNFULFILLED','PENDING')
++       OR upper(btrim(COALESCE(source.source_order_payload->>'fulfillment_status',''))) NOT IN('','UNFULFILLED','PENDING')
++       OR upper(btrim(COALESCE(source.source_order_payload->>'fulfillmentStatus',''))) NOT IN('','UNFULFILLED','PENDING')
++       OR NULLIF(source.source_order_payload->>'cancelled_at','') IS NOT NULL
++       OR NULLIF(source.source_order_payload->>'cancelledAt','') IS NOT NULL
++    THEN
++        rejection := 'source_state_not_eligible';
++    ELSIF source.updated_at IS DISTINCT FROM (p_body->>'expected_updated_at')::timestamptz THEN
++        rejection := 'source_revision_changed';
++    END IF;
++    IF rejection IS NULL AND jsonb_typeof(source.line_items) IS DISTINCT FROM 'array' THEN
++        rejection := 'source_lines_changed';
++    END IF;
++    IF rejection IS NULL AND jsonb_array_length(source.line_items) NOT BETWEEN 1 AND 100 THEN
++        rejection := 'source_lines_changed';
++    END IF;
++    IF rejection IS NULL AND EXISTS(
++        SELECT 1 FROM jsonb_array_elements(source.line_items) l
++        WHERE jsonb_typeof(l)<>'object' OR jsonb_typeof(l->'sku') IS DISTINCT FROM 'string'
++           OR btrim(l->>'sku')='' OR length(l->>'sku')>100
++           OR jsonb_typeof(l->'quantity') IS DISTINCT FROM 'number'
++           OR CASE WHEN jsonb_typeof(l->'quantity')='number' THEN
++                (l->>'quantity')::numeric<>trunc((l->>'quantity')::numeric)
++                OR (l->>'quantity')::numeric NOT BETWEEN 1 AND 1000000 ELSE true END
++           OR (l->'shopifyLineItemId' IS NOT NULL AND l->'shopifyLineItemId'<>'null'::jsonb
++               AND (jsonb_typeof(l->'shopifyLineItemId')<>'string' OR btrim(l->>'shopifyLineItemId')='' OR length(l->>'shopifyLineItemId')>255))
++    ) THEN
++        rejection := 'source_lines_changed';
++    END IF;
++    IF rejection IS NULL THEN
++    WITH canonical AS (
++        SELECT 'oms-line-' || encode(sha256(convert_to(
++                 CASE WHEN item->>'shopifyLineItemId' IS NOT NULL
++                      THEN 'source:' || (item->>'shopifyLineItemId')
++                      ELSE 'position:' || (ordinality-1)::text END,'UTF8')),'hex') AS line_id,
++               item->>'sku' AS sku,(item->>'quantity')::numeric::bigint AS quantity_each
++          FROM jsonb_array_elements(source.line_items) WITH ORDINALITY AS l(item,ordinality)
++    )
++    SELECT CASE WHEN count(*)=count(DISTINCT line_id)
++           THEN jsonb_agg(jsonb_build_object('line_id',line_id,'sku',sku,'quantity_each',quantity_each) ORDER BY line_id)
++           ELSE NULL END INTO expected_lines FROM canonical;
++    IF expected_lines IS NULL THEN
++        rejection := 'source_lines_changed';
++    END IF;
++    SELECT jsonb_agg(l ORDER BY l->>'line_id') INTO submitted_lines
++      FROM jsonb_array_elements(p_body->'lines') l;
++    IF submitted_lines IS DISTINCT FROM expected_lines THEN
++        rejection := 'source_lines_changed';
++    END IF;
++    END IF;
++
++    IF rejection IS NULL THEN
++    applied_at := GREATEST(clock_timestamp(),source.updated_at+interval '1 microsecond');
++    UPDATE orders SET status='FULFILLED',fulfillment_status='FULFILLED',updated_at=applied_at
++      WHERE tenant_id=p_tenant AND id=order_uuid;
++    answer := jsonb_build_object(
++        'contract','stateset.wms-fulfillment.v1','tenant_id',p_tenant,
++        'order_id',order_uuid,'request_id',request_uuid,'event_id',event_uuid,'request_digest',p_digest,
++        'applied_updated_at',applied_at,'status','fulfilled','replayed',false
++    );
++    ELSE
++        answer := jsonb_build_object(
++            'contract','stateset.wms-fulfillment.v1','tenant_id',p_tenant,
++            'order_id',order_uuid,'request_id',request_uuid,'event_id',event_uuid,'request_digest',p_digest,
++            'status','rejected','reason',rejection,'observed_updated_at',source.updated_at,'replayed',false
++        );
++    END IF;
++    INSERT INTO warehouse_fulfillment_receipts(tenant_id,request_id,event_id,order_id,request_digest,request,response,applied_updated_at,observed_updated_at)
++      VALUES(p_tenant,request_uuid,event_uuid,order_uuid,p_digest,p_body,answer,applied_at,source.updated_at);
++    RETURN answer;
++END $$;

@@ -25,6 +25,15 @@ pub struct OmsConnection {
     pub base_url: String,
     pub tenant_id: String,
     pub api_key: String,
+    #[serde(default)]
+    pub shipment_writeback: ShipmentWriteback,
+}
+#[derive(Clone, Copy, Default, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ShipmentWriteback {
+    #[default]
+    Held,
+    ConditionalV1,
 }
 #[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -98,7 +107,7 @@ fn validate_base(value: &str) -> Result<()> {
     }
     Ok(())
 }
-fn client() -> Result<reqwest::Client> {
+pub(crate) fn client() -> Result<reqwest::Client> {
     reqwest::Client::builder()
         .timeout(Duration::from_secs(8))
         .connect_timeout(Duration::from_secs(3))
@@ -114,7 +123,7 @@ fn normalized_base(value: &str) -> Result<String> {
         .trim_end_matches('/')
         .to_string())
 }
-async fn response_json(mut response: reqwest::Response, service: &str) -> Result<Value> {
+pub(crate) async fn response_json(mut response: reqwest::Response, service: &str) -> Result<Value> {
     if !response.status().is_success() {
         return Err(format!(
             "{service} returned HTTP {}",
@@ -198,7 +207,45 @@ pub struct OmsOrder {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fulfillment_status: Option<String>,
+    #[serde(
+        default,
+        alias = "source_order_payload",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub source_order_payload: Option<Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tenant_id: Option<String>,
+}
+fn require_unfulfilled(order: &OmsOrder) -> Result<()> {
+    let valid = |value: Option<&str>| {
+        value.is_none_or(|v| {
+            matches!(
+                v.trim().to_ascii_lowercase().as_str(),
+                "" | "unfulfilled" | "pending"
+            )
+        })
+    };
+    if !valid(order.fulfillment_status.as_deref()) {
+        return Err("Complete warehouse orders require an unfulfilled OMS source; partial or unknown fulfillment requires reconciliation".into());
+    }
+    if let Some(source) = &order.source_order_payload {
+        for key in ["cancelled_at", "cancelledAt"] {
+            if let Some(value) = source.get(key).filter(|v| !v.is_null()) {
+                if value.as_str() != Some("") {
+                    return Err("Upstream source records cancellation; reconcile before starting warehouse or transport work".into());
+                }
+            }
+        }
+        for key in ["fulfillment_status", "fulfillmentStatus"] {
+            if let Some(value) = source.get(key).filter(|v| !v.is_null()) {
+                if !value.is_string() || !valid(value.as_str()) {
+                    return Err("Upstream source fulfillment is partial, completed or unknown; reconcile before full-order warehouse work".into());
+                }
+            }
+        }
+    }
+    Ok(())
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -343,7 +390,10 @@ impl NativeIntegrations {
     }
     pub fn summary(&self, tenant: &str) -> Value {
         let connection = self.tenants.get(tenant);
-        json!({"oms":{"configured":connection.is_some_and(|c|c.oms.is_some()),"read_contract":"GET /v1/tenants/{tenant}/orders","shipment_writeback":"held_missing_remote_precondition"},"tms":{"configured":connection.is_some_and(|c|c.tms.is_some()),"write_contract":"POST /v1/sync/import","behavior":"source_verified_planned_load","requires_operator_transport_plan":true}})
+        let conditional = connection
+            .and_then(|c| c.oms.as_ref())
+            .is_some_and(|c| c.shipment_writeback == ShipmentWriteback::ConditionalV1);
+        json!({"oms":{"configured":connection.is_some_and(|c|c.oms.is_some()),"read_contract":"GET /v1/tenants/{tenant}/orders","shipment_writeback":if conditional{"conditional_v1"}else{"held_missing_remote_precondition"}},"tms":{"configured":connection.is_some_and(|c|c.tms.is_some()),"write_contract":"POST /v1/sync/import","behavior":"source_verified_planned_load","requires_operator_transport_plan":true}})
     }
     pub async fn list_orders(&self, tenant: &str, page: u32) -> Result<OmsOrderPage> {
         if page == 0 {
@@ -423,6 +473,7 @@ impl NativeIntegrations {
                     .into(),
             );
         }
+        require_unfulfilled(order)?;
         text(&details.customer, "Customer", 240)?;
         text(&details.destination, "Destination", 240)?;
         if !["normal", "high", "urgent"].contains(&details.priority.as_str()) {
@@ -504,6 +555,7 @@ impl NativeIntegrations {
             );
         }
         check_readiness_source(&prepared.readiness, &order)?;
+        require_unfulfilled(&order)?;
         Ok((snapshot, order))
     }
     async fn verify_tms_recipient(&self, tenant: &str, prepared: &PreparedTransport) -> Result<()> {

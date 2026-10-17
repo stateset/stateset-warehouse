@@ -365,7 +365,7 @@ pub async fn finish_transport(
         Err(error) => ("uncertain", None, error),
     };
     let mut tx = store.pool.begin().await?;
-    let n=sqlx::query("UPDATE wms_native_requests SET status=$1,response=$2,last_error=$3,lease_token=NULL,lease_until=NULL,updated_at=now() WHERE tenant=$4 AND warehouse_id=$5 AND request_id=$6 AND actor=$7 AND lease_token=$8 AND status='sending'").bind(status).bind(&response).bind(&message).bind(&i.tenant).bind(warehouse).bind(request).bind(&i.actor).bind(lease).execute(&mut *tx).await?.rows_affected();
+    let n=sqlx::query("UPDATE wms_native_requests SET status=$1,response=$2,last_error=$3,lease_token=NULL,lease_until=NULL,updated_at=now() WHERE tenant=$4 AND warehouse_id=$5 AND request_id=$6 AND actor=$7 AND lease_token=$8 AND status='sending' AND kind='tms_transport'").bind(status).bind(&response).bind(&message).bind(&i.tenant).bind(warehouse).bind(request).bind(&i.actor).bind(lease).execute(&mut *tx).await?.rows_affected();
     if n == 1 {
         sqlx::query("UPDATE wms_native_attempts SET outcome=$1,response=$2,detail=$3,finished_at=now() WHERE id=$4 AND outcome='started'").bind(if status=="completed"{"accepted"}else{"uncertain"}).bind(&response).bind(&message).bind(lease).execute(&mut *tx).await?;
     }

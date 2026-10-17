@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "scope": "local synthetic Store/PostgreSQL observations, not production SLOs or deployed HTTP throughput",
+  "rustc": "rustc 1.90.0 (1159e78c4 2025-09-14)",
+  "workload_source_sha256": "cb37cf85745683bdca2253a614bc5793fd7381f2b43e5f8640654a2196c746d4",
+  "cargo_lock_sha256": "9d33b41dfbe2d5087094707426243313c03b11a30bec3e55855991f6a16db0a4",
+  "runs": [
+    {
+      "artifact": "small.json",
+      "artifact_sha256": "00d3206e0176e2ee988babaaff9a9cb5020312492d8293d83dc034eb9afa18d0",
+      "implementation": "opening_qualification",
+      "release_binary_sha256": "598c6d026a35a54b6cd451a2f2fbad9994c9b4db9fe142d3e0dc0f593c406b39",
+      "persistence_source_sha256": null,
+      "postgres_cluster": "shared isolated qualification cluster",
+      "recorded_at": "2026-10-17T15:26:06.061200697+00:00"
+    },
+    {
+      "artifact": "standard.json",
+      "artifact_sha256": "7017769dac50eb3f8f056b70f4962bf553fa7699e4a82fdb38a0043b3e50405d",
+      "implementation": "opening_qualification",
+      "release_binary_sha256": "598c6d026a35a54b6cd451a2f2fbad9994c9b4db9fe142d3e0dc0f593c406b39",
+      "persistence_source_sha256": null,
+      "postgres_cluster": "shared isolated qualification cluster",
+      "recorded_at": "2026-10-17T15:26:41.558346099+00:00"
+    },
+    {
+      "artifact": "large-before.json",
+      "artifact_sha256": "5e92635fe11462af527720cf39c2a4ce337d6ec83e3d576b5caadb022a155b48",
+      "implementation": "before_lookup_optimization",
+      "release_binary_sha256": "598c6d026a35a54b6cd451a2f2fbad9994c9b4db9fe142d3e0dc0f593c406b39",
+      "persistence_source_sha256": null,
+      "postgres_cluster": "shared isolated qualification cluster",
+      "recorded_at": "2026-10-17T15:31:11.521943004+00:00"
+    },
+    {
+      "artifact": "large-map-only.json",
+      "artifact_sha256": "ce7b55431c07ae57991c4bc552f50fa1e877fb91afe99712ca70b1cde8f7e899",
+      "implementation": "keyed_lookup_optimization",
+      "release_binary_sha256": "4a93e096cc6eb762ba544780d12b8523da442bd1545d772eea26198ff5d9612a",
+      "persistence_source_sha256": "06fc7fb1a1e276477b90469c2dd12f4a4046fa33c1008ee9c6f290ba77da92b8",
+      "postgres_cluster": "shared isolated qualification cluster",
+      "recorded_at": "2026-10-17T15:39:00.643267385+00:00"
+    },
+    {
+      "artifact": "large-final.json",
+      "artifact_sha256": "9858260ff3661653abff78c37e098b9ed44f35d15385c107ff3415b6ce52eea1",
+      "implementation": "keyed_lookups_and_canonical_child_projection",
+      "release_binary_sha256": "65a671aaf4e8f1efa4ff3d33443b4cd70103a4d442141035ff3e2992d532e214",
+      "persistence_source_sha256": "1571dc68b4e0906adf5e73428ba6adfdc3b3a50225332154bb4880fedb545aa2",
+      "postgres_cluster": "fresh disposable cluster from scripts/local-postgres.sh, then removed",
+      "recorded_at": "2026-10-17T15:48:39.799431019+00:00"
+    }
+  ],
+  "final_command": "WMS_WORKLOAD_PRODUCTS=500 WMS_WORKLOAD_BINS=100 WMS_WORKLOAD_LOTS=2 WMS_WORKLOAD_OPEN_ORDERS=500 WMS_WORKLOAD_ACTIONS=25 WMS_WORKLOAD_REPORT=/tmp/stateset-wms-workload-large-final.json bash scripts/local-postgres.sh target/release/examples/workload",
+  "notes": [
+    "Every executable was built with cargo build/run --locked --offline --release --example workload; one unchanged workload source was used for all runs.",
+    "Binary hashes were captured before the next executable replaced them. Complete baseline source was not captured with its executable; no baseline source digest is asserted.",
+    "The intermediate and final persistence digests identify the exact source measured before the next edit; final source matches the final qualification image inputs.",
+    "Earlier runs shared an isolated qualification PostgreSQL cluster with retained synthetic test data. The final run deliberately used a fresh disposable cluster with the final migrations.",
+    "Same larger workload configuration and independent correctness totals match across all three larger runs. Cluster cache/table population and shared-host scheduling differ, so the values are observations rather than controlled causal estimates.",
+    "Only one short measurement window per profile is retained; facility qualification should repeat expected peak workloads and enforce reviewed thresholds.",
+    "Reported process high-water memory includes setup and post-run verification, excludes PostgreSQL, and does not establish constant-memory behavior."
+  ]
+}

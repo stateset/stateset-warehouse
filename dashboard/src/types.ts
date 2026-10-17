@@ -121,7 +121,7 @@ export type Session = {
   identity: { tenant: string; actor: string; role: string };
   demo: boolean;
   native_integrations?: {
-    oms: { configured: boolean };
+    oms: { configured: boolean; shipment_writeback?: string };
     tms: { configured: boolean };
   };
   integrations: {

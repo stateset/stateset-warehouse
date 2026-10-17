@@ -218,16 +218,8 @@ async fn postgres() -> (Store, Identity) {
         "database name must contain test"
     );
     let store = Store::connect(&url).await.expect("normalized test store");
-    sqlx::raw_sql(include_str!("../migrations/003_native_operations.sql"))
-        .execute(&store.pool)
-        .await
-        .expect("native schema");
-    sqlx::raw_sql(include_str!(
-        "../migrations/004_native_source_ownership.sql"
-    ))
-    .execute(&store.pool)
-    .await
-    .expect("native source ownership schema");
+    // Store::connect applies the complete tracked migration chain. Reapplying
+    // an older migration here would replace functions installed by later ones.
     let i = Identity {
         tenant: format!("native-{}", domain::id()),
         actor: "fixture:native-operator".into(),

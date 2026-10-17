@@ -338,7 +338,7 @@ pub fn router() -> Router<App> {
         )
         .route(
             "/v1/warehouses/{warehouse}/orders/{order}/oms-fulfillment",
-            get(oms_proposal),
+            get(oms_proposal).post(crate::oms_fulfillment_api::fulfill),
         )
         .route(
             "/v1/warehouses/{warehouse}/native-requests/{request}",

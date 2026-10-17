@@ -52,7 +52,7 @@ trap 'exit 143' TERM
 export WMS_TEST_DATABASE_URL="postgresql:///wms_local_test?host=$wms_test_root/socket&port=$wms_test_port&user=$(id -un)"
 
 if [[ "$#" == 0 ]]; then
-  cargo test --locked --test postgres --test persistence_acceptance --test persistence_guards --test native_api -- --ignored --test-threads=1
+  cargo test --locked --test postgres --test persistence_acceptance --test persistence_guards --test native_api --test oms_fulfillment_api --test oms_receiver -- --ignored --test-threads=1
 else
   "$@"
 fi

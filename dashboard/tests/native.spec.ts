@@ -5,7 +5,10 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 const root = resolve(process.cwd(), "..");
-async function setup(page: Page, mode: "import" | "transport") {
+async function setup(
+  page: Page,
+  mode: "import" | "transport" | "fulfillment" | "fulfillment-rejected",
+) {
   const fixture = spawnSync(
     resolve(root, "target/debug/examples/domain_driver"),
     [],
@@ -15,6 +18,8 @@ async function setup(page: Page, mode: "import" | "transport") {
   const state = JSON.parse(fixture.stdout);
   const packed = state.orders.find((order: any) => order.status === "packed");
   packed.source_order_id = "oms:acme:00000000-0000-4000-8000-000000000999";
+  const shipped = state.orders.find((order: any) => order.status === "shipped");
+  shipped.source_order_id = "oms:acme:00000000-0000-4000-8000-000000000998";
   const source = {
     id: "00000000-0000-4000-8000-000000000999",
     orderNumber: "OMS-501",
@@ -38,7 +43,12 @@ async function setup(page: Page, mode: "import" | "transport") {
         demo: false,
         integrations: [],
         native_integrations: {
-          oms: { configured: true },
+          oms: {
+            configured: true,
+            shipment_writeback: mode.startsWith("fulfillment")
+              ? "conditional_v1"
+              : "held_missing_remote_precondition",
+          },
           tms: { configured: true },
         },
       });
@@ -72,7 +82,10 @@ async function setup(page: Page, mode: "import" | "transport") {
         return route.abort("failed");
       return send(receipt);
     }
-    if (url.pathname.endsWith("/transport")) {
+    if (
+      url.pathname.endsWith("/transport") ||
+      url.pathname.endsWith("/oms-fulfillment")
+    ) {
       submissions.push(route.request().postDataJSON());
       if (rejectRetries && submissions.length > 1)
         return route.fulfill({
@@ -83,7 +96,12 @@ async function setup(page: Page, mode: "import" | "transport") {
       receipt = {
         found: true,
         request_id: submissions[0].request_id,
-        status: submissions.length === 1 ? "uncertain" : "completed",
+        status:
+          submissions.length === 1
+            ? mode === "fulfillment-rejected"
+              ? "rejected"
+              : "uncertain"
+            : "completed",
         attempts: submissions.length,
         last_error: submissions.length === 1 ? "Remote response lost" : "",
       };
@@ -125,6 +143,7 @@ async function setup(page: Page, mode: "import" | "transport") {
     submissions,
     source,
     packed,
+    shipped,
     version: state.version,
     advanceVersion: () => ++state.version,
     denyRetries: () => {
@@ -132,6 +151,47 @@ async function setup(page: Page, mode: "import" | "transport") {
     },
   };
 }
+
+test("conditional OMS fulfillment retains one reviewed handoff request through reload and retry", async ({
+  page,
+}) => {
+  const fixture = await setup(page, "fulfillment");
+  await page
+    .getByRole("combobox", { name: "Shipped OMS order", exact: true })
+    .selectOption(fixture.shipped.id);
+  await expect(
+    page.getByText(fixture.shipped.handoff_reference, { exact: false }).first(),
+  ).toBeVisible();
+  await page
+    .getByRole("button", {
+      name: "Record verified handoff in OMS",
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByText("Original integration request awaiting confirmation"),
+  ).toBeVisible();
+  expect(fixture.submissions).toHaveLength(1);
+  expect(fixture.submissions[0]).toEqual({
+    request_id: expect.any(String),
+    expected_version: fixture.version,
+  });
+  await page.reload();
+  await page
+    .getByRole("button", {
+      name: "Retry original integration request",
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByText(
+      "Integration saved. Original request and source evidence are retained.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  expect(fixture.submissions).toHaveLength(2);
+  expect(fixture.submissions[1]).toEqual(fixture.submissions[0]);
+});
 
 async function reviewTransportPlan(page: Page, orderId: string) {
   await page
@@ -176,6 +236,51 @@ async function reviewTransportPlan(page: Page, orderId: string) {
     page.getByText("Confirm planned load", { exact: true }),
   ).toBeVisible();
 }
+
+test("a durable OMS rejection permits a separately reviewed new request", async ({
+  page,
+}) => {
+  const fixture = await setup(page, "fulfillment-rejected");
+  const choose = () =>
+    page
+      .getByRole("combobox", { name: "Shipped OMS order", exact: true })
+      .selectOption(fixture.shipped.id);
+  await choose();
+  await page
+    .getByRole("button", {
+      name: "Record verified handoff in OMS",
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByText(
+      "OMS durably rejected this request without applying fulfillment. Review the current source and shipped order before submitting a new request.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Original integration request awaiting confirmation"),
+  ).toHaveCount(0);
+  expect(fixture.submissions).toHaveLength(1);
+  await page.reload();
+  await choose();
+  await page
+    .getByRole("button", {
+      name: "Record verified handoff in OMS",
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByText(
+      "Integration saved. Original request and source evidence are retained.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  expect(fixture.submissions).toHaveLength(2);
+  expect(fixture.submissions[1].request_id).not.toEqual(
+    fixture.submissions[0].request_id,
+  );
+});
 test("native import preserves reviewed source revision and recovers a lost response without resubmission", async ({
   page,
 }) => {

@@ -4,5 +4,17 @@ dashboard/dist
 dashboard/test-results
 .git
 .env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
 .local
 docs/screenshots
+dashboard/playwright-report
+**/*.log
+**/*.dump
+**/*.dump.sha256
+.aws
+.codex
+.agents

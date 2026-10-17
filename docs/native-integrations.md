@@ -43,7 +43,8 @@ Every route uses the authenticated warehouse tenant; caller-supplied tenant and 
 | `GET /v1/warehouses/{warehouse}/orders/{order}/readiness` | Export packed readiness and the explicit OMS writeback hold. |
 | `POST /v1/warehouses/{warehouse}/orders/{order}/transport` | Retain an exact native transport intent before making any TMS mutation. |
 | `GET /v1/warehouses/{warehouse}/native-requests/{request_id}` | Recover the original actor's result, retained evidence, and delivery attempt history. |
-| `GET /v1/warehouses/{warehouse}/orders/{order}/oms-fulfillment` | Return a source-checked held proposal linked to a committed physical handoff event. No OMS POST occurs. |
+| `GET /v1/warehouses/{warehouse}/orders/{order}/oms-fulfillment` | Return the legacy source-checked held proposal after physical handoff; this GET makes no OMS POST. |
+| `POST /v1/warehouses/{warehouse}/orders/{order}/oms-fulfillment` | Freeze and deliver an opt-in conditional handoff to the separately deployed companion receiver. |
 
 An import body is:
 
@@ -77,7 +78,7 @@ The adapter calls these actual Sync routes using `x-stateset-api-key`:
 | `GET /v1/tenants/{tenant}/orders/{UUID}` | `data` containing canonical `Order` | `src/http/handlers/orders.rs::get_order`, `src/domain/mod.rs::Order` |
 | Authentication | `x-stateset-api-key`, path-bound tenant | `src/http/auth.rs`, `src/http/tenant.rs` |
 
-The WMS validates UUID identity, any returned `tenantId`, revision timestamps, source status, line identity, SKU, and quantities. Only `pending` and `processing` orders become new forward warehouse work. Cancellation, return, fulfillment, shipment, delivery and unknown statuses cannot silently create another fulfillment.
+The WMS validates UUID identity, any returned `tenantId`, revision timestamps, source status, line identity, SKU, and quantities. Only `pending` and `processing` orders with clearly unfulfilled canonical and source-payload fulfillment status become new forward warehouse work. Missing/blank, `UNFULFILLED` and `PENDING` are accepted; partial, completed and unknown fulfillment statuses are rejected. Cancellation, return, fulfillment, shipment, delivery and unknown statuses cannot silently create another fulfillment.
 
 Canonical Sync `Order` does not contain a customer address. An importing operator must supply the customer, verified destination, and warehouse priority. The adapter does not manufacture them from an order number. Product setup remains a separate authorized warehouse operation; an unknown SKU fails warehouse command validation.
 
@@ -136,13 +137,32 @@ The Freight credential selects a Freight tenant. That tenant's own Sync configur
 
 The readiness evidence remains an explicit `warehouse.order_ready` export with warehouse version, source reference, stable line IDs, and quantities in each. Current Freight has no native endpoint accepting that WMS readiness object. Creating a planned load is the supported integration; it is not confirmation that Freight consumed every warehouse readiness field. Freight currently links one load per OMS order, so the adapter does not claim native support for splitting that source into several transport loads.
 
-## OMS writeback is held at an actual contract gap
+## Conditional OMS fulfillment
 
-Sync's `POST /orders/{UUID}/fulfillment` accepts `{status, fulfillmentData, netsuiteCashSaleId}` and returns `data.ok`. However, `/home/dom/stateset-sync-server/src/database/orders.rs::update_order_fulfillment` unconditionally updates **both** order status and fulfillment status. It has no expected-version predicate, `If-Match` handling, or terminal-state fence. Fetching the latest order before posting cannot prevent a cancellation or delivery from committing between those requests. The alternative `/tracking` endpoint unconditionally sets `SHIPPED`, so it cannot safely carry readiness either.
+The legacy Sync `POST /orders/{UUID}/fulfillment` unconditionally changes both commercial and fulfillment status. Fetching the latest order before that POST cannot fence a concurrent cancellation. The WMS continues to hold that endpoint and never uses it as a fallback. GET `.../oms-fulfillment` still returns the original held proposal.
 
-`prepare_oms_fulfillment` re-fetches the source, verifies stable lines and quantities and permissible source status, and produces the exact concrete fulfillment proposal only after a complete physical warehouse handoff. The proposal includes the source revision, event ID, actor-independent stable idempotency identity, carrier, dock handoff reference and handed-off timestamp. `dispatch_oms_shipment` **does not issue the unsafe POST**. It returns the explicit `OMS_WRITEBACK_HOLD` reason for durable review and reconciliation. Readiness, partial picking and partial handoffs never become a fabricated upstream `FULFILLED` state.
+This repository includes a reviewable [companion OMS receiver](../integrations/stateset-sync-server/README.md) and [complete upstream patch](../integrations/stateset-sync-server/upstream.patch), prepared against the actual Sync router, authentication, RBAC and order schema. The sibling OMS worktree remains unchanged. Deploy the companion through the OMS release process and qualify its tenant credentials before enabling WMS writeback:
 
-Automatic native OMS mutation requires an OMS change: enforce a source revision and terminal-state rule in the same database statement that records fulfillment, and retain the original event ID idempotently. This repository cannot guarantee that behavior by adding a client header that the actual OMS ignores. Until that contract exists, the retained WMS evidence and held proposal are the truthful supported result.
+```json
+{
+  "base_url": "https://oms.example.test",
+  "tenant_id": "oms-acme",
+  "api_key": "replace-with-tenant-scoped-secret",
+  "shipment_writeback": "conditional_v1"
+}
+```
+
+Omitting `shipment_writeback` keeps the hold. The new receiver is `GET/POST /v1/tenants/{tenant}/warehouse-fulfillments`. Before freezing an intent and before every POST, the client requires contract `stateset.wms-fulfillment.v1`, the exact configured tenant, and all four capabilities: `conditional_revision`, `terminal_state_fence`, `durable_idempotency`, `durable_rejections`. The capabilities come from a migration-installed SQL function; deploying a new handler over an old schema cannot advertise them. Credentials need `orders:read` and `orders:write`.
+
+An operator submits `POST /v1/warehouses/{warehouse}/orders/{order}/oms-fulfillment` with `{request_id, expected_version}` after reviewing a completely shipped native order. The server compares normalized line allocations and the committed immutable shipment event, verifies the canonical OMS source is still eligible with exact line IDs/SKUs/whole-unit quantities, then retains the original source response and exact remote request. Preparation uses GET only; a 424 means this preparation made no OMS POST. After a retained request is claimed, failures leave its result uncertain.
+
+The [wire contract](../integrations/stateset-sync-server/README.md#wire-contract) contains ten top-level fields: `request_id`, `order_id`, `event_id`, `expected_updated_at`, `warehouse_id`, `warehouse_order_id`, `carrier`, `handoff_reference`, `handed_off_at`, `lines`. The immutable physical event and remote request UUID are different identities. Retries preserve the complete payload, revision, endpoint, tenant and `Idempotency-Key` request UUID; they do not fetch a new source revision. Credentials can rotate within that retained authority. A recursively sorted compact JSON SHA256 fingerprint binds the acknowledgment to the full request.
+
+The receiver locks the tenant's order row, replays a matching immutable request receipt before evaluating current status, and atomically checks revision, clearly unfulfilled status and exact source lines before fulfillment. Accepted-only uniqueness prevents a second accepted fulfillment for the same order or physical event. A final receipt-write failure rolls back the order update. Cancellation and fulfillment races are therefore decided by the database lock, rather than by a client read followed by an unconditional write.
+
+An accepted acknowledgment becomes local `completed`. A business precondition failure returns a durable `rejected` acknowledgment tied to the exact request/digest, with reason `source_revision_changed`, `source_state_not_eligible`, `source_lines_changed` or `order_already_fulfilled`. That receipt proves this particular attempt did not apply. The operator must review the current OMS order and original physical handoff before explicitly starting a new request. Its new remote request UUID preserves the same physical event. An old rejected request remains rejected even after that reviewed replacement succeeds.
+
+An unrecognized response, timeout, raw HTTP conflict or storage error supplies no non-application proof. It remains `uncertain`, retains exclusive ownership of the shipment and must recover the same original request. The WMS never automatically rebases a stale revision. Completed/rejected receipts and finished attempts are immutable; lease-token comparison prevents an expired worker from overwriting a later result. The UI retains pending requests across reload and denied retries, and blocks other physical/native saves while that recovery journal is unresolved.
 
 ## Validation and limits
 
@@ -151,5 +171,7 @@ Automatic native OMS mutation requires an OMS change: enforce a source revision 
 `tests/native_api.rs` adds permission and body-validation checks without a database, plus Postgres tests for immutable evidence, expired leases, first-send readiness, one intent per order and crash recovery after a normal warehouse command committed. Its complete authenticated HTTP/Postgres test lists and imports an original OMS response with unknown fields, rejects a stale source revision, replays the original import, allocates and packs duplicate-SKU lines, then simulates a TMS commit followed by HTTP 500. Retrying after a later OMS cancellation and local unpick produces one planned load with the same original key and payload, records uncertain then accepted attempts, and makes no OMS mutation.
 
 A concurrent two-warehouse regression proves that only one frozen full-source import can win. It then commits that owner and verifies that bypassing the native route with a manual native-prefix command still cannot create a second warehouse order for the same source.
+
+`tests/oms_client.rs` exercises the actual conditional HTTP wire contract, authority pins, capability requirements, full-source eligibility, exact uncertain retries, validated acknowledgments and durable-rejection recovery. `tests/oms_fulfillment_api.rs` adds authenticated HTTP/SQLx/database lease and immutable handoff proofs. `tests/oms_receiver.rs` executes the actual companion migration with independent PostgreSQL sessions, using lock-wait barriers to verify duplicate/conflicting requests, cancellation races and old rejection replay after a reviewed replacement. The companion also compiles against the cached upstream Sync types and has independent SQL and provider tests.
 
 These tests do not establish deployed credentials, cross-service tenant mappings, real carrier acceptance, physical inventory counts, or live warehouse usability. Those require the configured applications and operational evidence. The sibling applications remain unchanged by this adapter implementation.

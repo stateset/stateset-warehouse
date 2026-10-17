@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import NativePanel from "./NativePanel";
+import ScannerPanel from "./ScannerPanel";
 import {
   Activity as ActivityIcon,
   ArrowDownLeft,
@@ -36,6 +37,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  ScanLine,
   Settings2,
   ShieldCheck,
   Truck,
@@ -67,7 +69,8 @@ type Tab =
   | "locations"
   | "exceptions"
   | "activity"
-  | "integrations";
+  | "integrations"
+  | "scanner";
 type Field = {
   name: string;
   label: string;
@@ -120,6 +123,7 @@ const nav: { id: Tab; title: string; icon: typeof Box }[] = [
   { id: "receiving", title: "Receiving", icon: ArrowDownToLine },
   { id: "inventory", title: "Inventory", icon: Boxes },
   { id: "fulfillment", title: "Fulfillment", icon: PackageCheck },
+  { id: "scanner", title: "Scanner", icon: ScanLine },
   { id: "locations", title: "Locations", icon: MapPin },
   { id: "exceptions", title: "Exceptions", icon: AlertTriangle },
   { id: "activity", title: "Movement ledger", icon: ActivityIcon },
@@ -291,7 +295,7 @@ function CommandForm({
   spec: FormSpec;
   state: WarehouseState;
   busy: boolean;
-  submit: (c: Command) => Promise<void>;
+  submit: (c: Command) => Promise<unknown>;
 }) {
   const [lines, setLines] = useState([
     {
@@ -487,6 +491,9 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(false);
   const [journal, setJournal] = useState<Journal | null>(null);
+  const commandInFlight = useRef(false);
+  const pendingCommand = useRef<Journal | null>(null);
+  pendingCommand.current = journal;
   const [recoveryBlocked, setRecoveryBlocked] = useState(false);
   const [nativeBlocked, setNativeBlocked] = useState(false);
   const [outbox, setOutbox] = useState<Outbox[]>([]);
@@ -693,6 +700,8 @@ export default function App() {
   };
   const logout = () => {
     ++epoch.current;
+    commandInFlight.current = false;
+    pendingCommand.current = null;
     for (const c of controllers.current) c.abort();
     sessionStorage.removeItem("wms-token");
     setToken("");
@@ -716,9 +725,10 @@ export default function App() {
     : "";
   const clearJournal = () => {
     sessionStorage.removeItem(journalKey);
+    pendingCommand.current = null;
     setJournal(null);
   };
-  const finish = async (j: Journal) => {
+  const finish = async (j: Journal, recovering = false): Promise<boolean> => {
     const current = epoch.current;
     setBusy(true);
     setError("");
@@ -727,7 +737,7 @@ export default function App() {
         `/v1/warehouses/${j.warehouse}/commands`,
         j.request,
       );
-      if (current !== epoch.current) return;
+      if (current !== epoch.current) return false;
       clearJournal();
       setModal(null);
       setToast(
@@ -742,10 +752,16 @@ export default function App() {
           "Save confirmed, but the refreshed view is unavailable. Use Refresh; do not repeat the action.",
         );
       }
+      return true;
     } catch (e) {
-      if (current !== epoch.current) return;
+      if (current !== epoch.current) return false;
       const err = e as ApiError;
-      if (err.status && err.status < 500) {
+      if (
+        !recovering &&
+        err.status >= 400 &&
+        err.status < 500 &&
+        ![408, 429].includes(err.status)
+      ) {
         clearJournal();
         if (err.status === 409) {
           try {
@@ -762,27 +778,36 @@ export default function App() {
             ? " Close and reopen the dialog to review current stock before trying again."
             : ""),
       );
+      return false;
     } finally {
       if (current === epoch.current) setBusy(false);
     }
   };
-  const submit = async (command: Command) => {
+  const submit = async (
+    command: Command,
+    expectedVersion?: number,
+  ): Promise<boolean> => {
     if (
       !state ||
       !session ||
       journal ||
       busy ||
       recoveryBlocked ||
-      nativeBlocked
+      nativeBlocked ||
+      commandInFlight.current ||
+      pendingCommand.current
     )
-      return;
+      return false;
+    commandInFlight.current = true;
+    const current = epoch.current;
     const j: Journal = {
       tenant: session.identity.tenant,
       actor: session.identity.actor,
       warehouse: state.warehouse.id,
       request: {
         request_id: crypto.randomUUID(),
-        expected_version: modalVersion.current ?? state.version,
+        expected_version:
+          expectedVersion ?? modalVersion.current ?? state.version,
         command,
       },
     };
@@ -792,13 +817,20 @@ export default function App() {
       setError(
         "The browser could not preserve this request for recovery. Enable session storage before saving.",
       );
-      return;
+      commandInFlight.current = false;
+      return false;
     }
+    pendingCommand.current = j;
     setJournal(j);
-    await finish(j);
+    try {
+      return await finish(j);
+    } finally {
+      if (current === epoch.current) commandInFlight.current = false;
+    }
   };
   const recover = async () => {
-    if (!journal) return;
+    if (!journal || commandInFlight.current) return;
+    commandInFlight.current = true;
     const current = epoch.current;
     setBusy(true);
     setError("");
@@ -814,12 +846,15 @@ export default function App() {
         setToast("Original save confirmed.");
         await refresh(w);
       } else {
-        await finish(journal);
+        await finish(journal, true);
       }
     } catch (e) {
       if (current === epoch.current) setError((e as Error).message);
     } finally {
-      if (current === epoch.current) setBusy(false);
+      if (current === epoch.current) {
+        commandInFlight.current = false;
+        setBusy(false);
+      }
     }
   };
 
@@ -1489,6 +1524,8 @@ export default function App() {
                       "Every physical movement, with a reference and a responsible actor.",
                     integrations:
                       "Keep warehouse execution connected to the rest of StateSet.",
+                    scanner:
+                      "Verify the location, SKU, and lot before confirming physical work.",
                   }[tab]
                 }
               </p>
@@ -2608,6 +2645,16 @@ export default function App() {
                     {historyControl("activity")}
                   </Section>
                 </>
+              )}
+              {tab === "scanner" && (
+                <ScannerPanel
+                  state={state}
+                  canWork={canWork}
+                  disabled={disabled || loading}
+                  active
+                  request={request}
+                  onSubmit={submit}
+                />
               )}
               <NativePanel
                 key={`${session.identity.tenant}:${session.identity.actor}`}

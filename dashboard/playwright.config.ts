@@ -13,10 +13,13 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   projects: [
-    { name: "offline-contract", testMatch: /(?:offline|native)\.spec\.ts/ },
+    {
+      name: "offline-contract",
+      testMatch: /(?:offline|native|scanner)\.spec\.ts/,
+    },
     {
       name: "live-postgres",
-      testMatch: "live.spec.ts",
+      testMatch: /(?:^|\/)(?:live|scanner-live)\.spec\.ts$/,
       use: { baseURL: process.env.WMS_BROWSER_URL || "http://127.0.0.1:8088" },
     },
   ],

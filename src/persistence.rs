@@ -3,6 +3,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use sqlx::{postgres::PgPoolOptions, PgConnection, PgPool, Row};
+use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
 #[derive(Debug)]
@@ -52,8 +53,11 @@ fn decode<T: DeserializeOwned>(v: Value) -> Result<T> {
     serde_json::from_value(v)
         .map_err(|_| Error::new(503, "Stored warehouse evidence requires repair"))
 }
-fn changed<T: Serialize>(v: &T, old: Option<&T>) -> bool {
-    old.is_none_or(|o| json!(o) != json!(v))
+fn changed<T: PartialEq>(v: &T, old: Option<&T>) -> bool {
+    old.is_none_or(|o| o != v)
+}
+fn stock_key(stock: &Stock) -> (&str, &str, &str) {
+    (&stock.sku, &stock.lot, &stock.location)
 }
 fn target(c: Option<&Command>) -> (String, String, String) {
     match c {
@@ -116,6 +120,14 @@ impl Store {
                 "004_native_source_ownership",
                 include_str!("../migrations/004_native_source_ownership.sql"),
             ),
+            (
+                "005_conditional_oms_fulfillment",
+                include_str!("../migrations/005_conditional_oms_fulfillment.sql"),
+            ),
+            (
+                "006_oms_rejections",
+                include_str!("../migrations/006_oms_rejections.sql"),
+            ),
         ] {
             let digest = format!("{:x}", Sha256::digest(sql.as_bytes()));
             let old: Option<String> =
@@ -176,6 +188,119 @@ impl Store {
         let rows=sqlx::query("SELECT metadata,version FROM wms_warehouses WHERE tenant=$1 ORDER BY warehouse_id LIMIT 100").bind(t).fetch_all(&self.pool).await?;
         rows.iter().map(|r|Ok(json!({"warehouse":r.try_get::<Value,_>("metadata")?,"version":r.try_get::<i64,_>("version")?}))).collect()
     }
+    async fn order_children(
+        c: &mut PgConnection,
+        t: &str,
+        w: &str,
+        orders: &mut [domain::Order],
+    ) -> Result<()> {
+        let ids: Vec<_> = orders.iter().map(|o| o.id.clone()).collect();
+        let lines=sqlx::query("SELECT order_id,id,sku,quantity FROM wms_order_lines WHERE tenant=$1 AND warehouse_id=$2 AND order_id=ANY($3) ORDER BY order_id,id").bind(t).bind(w).bind(&ids).fetch_all(&mut *c).await?;
+        let allocations=sqlx::query("SELECT order_id,line_id,sku,lot,location,quantity,picked,shipped,released FROM wms_allocations WHERE tenant=$1 AND warehouse_id=$2 AND order_id=ANY($3) ORDER BY order_id,line_id,location,lot").bind(t).bind(w).bind(&ids).fetch_all(&mut *c).await?;
+        let mut lines_by_order: HashMap<String, Vec<OrderLine>> = HashMap::new();
+        for r in lines {
+            lines_by_order
+                .entry(r.try_get("order_id")?)
+                .or_default()
+                .push(OrderLine {
+                    id: r.try_get("id")?,
+                    sku: r.try_get("sku")?,
+                    quantity: r.try_get("quantity")?,
+                });
+        }
+        let mut allocations_by_order: HashMap<String, Vec<Allocation>> = HashMap::new();
+        for r in allocations {
+            allocations_by_order
+                .entry(r.try_get("order_id")?)
+                .or_default()
+                .push(Allocation {
+                    line_id: r.try_get("line_id")?,
+                    sku: r.try_get("sku")?,
+                    lot: r.try_get("lot")?,
+                    location: r.try_get("location")?,
+                    quantity: r.try_get("quantity")?,
+                    picked: r.try_get("picked")?,
+                    shipped: r.try_get("shipped")?,
+                    released: r.try_get("released")?,
+                });
+        }
+        for o in orders {
+            // Preserve canonical child ordering from SQL while decoding/joining
+            // each row once, independent of the number of active orders.
+            o.lines = lines_by_order.remove(&o.id).unwrap_or_default();
+            o.allocations = allocations_by_order.remove(&o.id).unwrap_or_default();
+        }
+        Ok(())
+    }
+    async fn receipt_children(
+        c: &mut PgConnection,
+        t: &str,
+        w: &str,
+        receipts: &mut [domain::Receipt],
+    ) -> Result<()> {
+        let ids: Vec<_> = receipts.iter().map(|r| r.id.clone()).collect();
+        let lines=sqlx::query("SELECT receipt_id,id,sku,lot,quantity,received FROM wms_receipt_lines WHERE tenant=$1 AND warehouse_id=$2 AND receipt_id=ANY($3) ORDER BY receipt_id,id").bind(t).bind(w).bind(&ids).fetch_all(&mut *c).await?;
+        let mut lines_by_receipt: HashMap<String, Vec<ReceiptLine>> = HashMap::new();
+        for l in lines {
+            lines_by_receipt
+                .entry(l.try_get("receipt_id")?)
+                .or_default()
+                .push(ReceiptLine {
+                    id: l.try_get("id")?,
+                    sku: l.try_get("sku")?,
+                    lot: l.try_get("lot")?,
+                    quantity: l.try_get("quantity")?,
+                    received: l.try_get("received")?,
+                });
+        }
+        for r in receipts {
+            r.lines = lines_by_receipt.remove(&r.id).unwrap_or_default();
+        }
+        Ok(())
+    }
+    async fn canonical_records(
+        c: &mut PgConnection,
+        t: &str,
+        w: &str,
+        kind: &str,
+        records: Vec<Value>,
+    ) -> Result<Vec<Value>> {
+        if records.is_empty() {
+            return Ok(records);
+        }
+        let headers = records
+            .into_iter()
+            .map(|mut value| {
+                let object = value
+                    .as_object_mut()
+                    .ok_or_else(|| Error::new(503, "Stored warehouse header requires repair"))?;
+                object.insert("lines".into(), json!([]));
+                if kind == "orders" {
+                    object.insert("allocations".into(), json!([]));
+                }
+                Ok(value)
+            })
+            .collect::<Result<Vec<_>>>()?;
+        match kind {
+            "orders" => {
+                let mut orders = headers
+                    .into_iter()
+                    .map(decode)
+                    .collect::<Result<Vec<domain::Order>>>()?;
+                Self::order_children(c, t, w, &mut orders).await?;
+                Ok(orders.into_iter().map(|order| json!(order)).collect())
+            }
+            "receipts" => {
+                let mut receipts = headers
+                    .into_iter()
+                    .map(decode)
+                    .collect::<Result<Vec<domain::Receipt>>>()?;
+                Self::receipt_children(c, t, w, &mut receipts).await?;
+                Ok(receipts.into_iter().map(|receipt| json!(receipt)).collect())
+            }
+            _ => Err(Error::new(404, "Unknown warehouse record")),
+        }
+    }
     async fn load(
         c: &mut PgConnection,
         t: &str,
@@ -222,61 +347,17 @@ impl Store {
             s.activity=sqlx::query("SELECT data FROM wms_activity WHERE tenant=$1 AND warehouse_id=$2 ORDER BY seq DESC LIMIT 100").bind(t).bind(w).fetch_all(&mut *c).await?.into_iter().map(|r|decode(r.get("data"))).collect::<Result<_>>()?;
             s.activity.reverse();
         }
-        s.orders=sqlx::query("SELECT data FROM wms_orders WHERE tenant=$1 AND warehouse_id=$2 AND (status NOT IN('shipped','cancelled') OR id=$3 OR ($4 AND seq IN(SELECT seq FROM wms_orders WHERE tenant=$1 AND warehouse_id=$2 AND status IN('shipped','cancelled') ORDER BY seq DESC LIMIT 20))) ORDER BY seq").bind(t).bind(w).bind(oid).bind(display).fetch_all(&mut *c).await?.into_iter().map(|r|decode(r.get("data"))).collect::<Result<_>>()?;
-        let ids: Vec<_> = s.orders.iter().map(|o| o.id.clone()).collect();
-        let lines=sqlx::query("SELECT order_id,id,sku,quantity FROM wms_order_lines WHERE tenant=$1 AND warehouse_id=$2 AND order_id=ANY($3) ORDER BY order_id,id").bind(t).bind(w).bind(&ids).fetch_all(&mut *c).await?;
-        let allocations=sqlx::query("SELECT order_id,line_id,sku,lot,location,quantity,picked,shipped,released FROM wms_allocations WHERE tenant=$1 AND warehouse_id=$2 AND order_id=ANY($3) ORDER BY order_id,line_id,location,lot").bind(t).bind(w).bind(&ids).fetch_all(&mut *c).await?;
-        for o in &mut s.orders {
-            o.lines = lines
-                .iter()
-                .filter(|r| r.get::<String, _>("order_id") == o.id)
-                .map(|r| {
-                    Ok(OrderLine {
-                        id: r.try_get("id")?,
-                        sku: r.try_get("sku")?,
-                        quantity: r.try_get("quantity")?,
-                    })
-                })
-                .collect::<Result<_>>()?;
-            o.allocations = allocations
-                .iter()
-                .filter(|r| r.get::<String, _>("order_id") == o.id)
-                .map(|r| {
-                    Ok(Allocation {
-                        line_id: r.try_get("line_id")?,
-                        sku: r.try_get("sku")?,
-                        lot: r.try_get("lot")?,
-                        location: r.try_get("location")?,
-                        quantity: r.try_get("quantity")?,
-                        picked: r.try_get("picked")?,
-                        shipped: r.try_get("shipped")?,
-                        released: r.try_get("released")?,
-                    })
-                })
-                .collect::<Result<_>>()?;
-        }
+        s.orders=sqlx::query("SELECT data || '{\"lines\":[],\"allocations\":[]}'::jsonb AS data FROM wms_orders WHERE tenant=$1 AND warehouse_id=$2 AND (status NOT IN('shipped','cancelled') OR id=$3 OR ($4 AND seq IN(SELECT seq FROM wms_orders WHERE tenant=$1 AND warehouse_id=$2 AND status IN('shipped','cancelled') ORDER BY seq DESC LIMIT 20))) ORDER BY seq").bind(t).bind(w).bind(oid).bind(display).fetch_all(&mut *c).await?.into_iter().map(|r|decode(r.get("data"))).collect::<Result<_>>()?;
+        Self::order_children(c, t, w, &mut s.orders).await?;
         let movement_receipts: Vec<_> = s
             .movements
             .iter()
             .filter_map(|m| m.receipt_id.clone())
             .collect();
-        s.receipts=sqlx::query("SELECT data FROM wms_receipts WHERE tenant=$1 AND warehouse_id=$2 AND (status<>'received' OR id=$3 OR id=ANY($5) OR ($4 AND seq IN(SELECT seq FROM wms_receipts WHERE tenant=$1 AND warehouse_id=$2 AND status='received' ORDER BY seq DESC LIMIT 20))) ORDER BY seq").bind(t).bind(w).bind(rid).bind(display).bind(movement_receipts).fetch_all(&mut *c).await?.into_iter().map(|r|decode(r.get("data"))).collect::<Result<_>>()?;
+        s.receipts=sqlx::query("SELECT data || '{\"lines\":[]}'::jsonb AS data FROM wms_receipts WHERE tenant=$1 AND warehouse_id=$2 AND (status<>'received' OR id=$3 OR id=ANY($5) OR ($4 AND seq IN(SELECT seq FROM wms_receipts WHERE tenant=$1 AND warehouse_id=$2 AND status='received' ORDER BY seq DESC LIMIT 20))) ORDER BY seq").bind(t).bind(w).bind(rid).bind(display).bind(movement_receipts).fetch_all(&mut *c).await?.into_iter().map(|r|decode(r.get("data"))).collect::<Result<_>>()?;
+        Self::receipt_children(c, t, w, &mut s.receipts).await?;
         let ids: Vec<_> = s.receipts.iter().map(|r| r.id.clone()).collect();
-        let lines=sqlx::query("SELECT receipt_id,id,sku,lot,quantity,received FROM wms_receipt_lines WHERE tenant=$1 AND warehouse_id=$2 AND receipt_id=ANY($3) ORDER BY receipt_id,id").bind(t).bind(w).bind(&ids).fetch_all(&mut *c).await?;
-        for r in &mut s.receipts {
-            r.lines = lines
-                .iter()
-                .filter(|l| l.get::<String, _>("receipt_id") == r.id)
-                .map(|l| {
-                    Ok(ReceiptLine {
-                        id: l.try_get("id")?,
-                        sku: l.try_get("sku")?,
-                        lot: l.try_get("lot")?,
-                        quantity: l.try_get("quantity")?,
-                        received: l.try_get("received")?,
-                    })
-                })
-                .collect::<Result<_>>()?;
+        for r in &s.receipts {
             for l in &r.lines {
                 s.receipt_baseline
                     .entry(r.id.clone())
@@ -336,40 +417,66 @@ impl Store {
     }
     async fn save(c: &mut PgConnection, t: &str, old: Option<&State>, s: &State) -> Result<()> {
         let w = &s.warehouse.id;
+        // Build identity indexes once. Typed equality avoids serializing every
+        // unchanged operational row just to discover that nothing changed.
+        let previous_products: HashMap<_, _> = old
+            .into_iter()
+            .flat_map(|s| s.products.iter())
+            .map(|p| (p.sku.as_str(), p))
+            .collect();
+        let previous_locations: HashMap<_, _> = old
+            .into_iter()
+            .flat_map(|s| s.locations.iter())
+            .map(|l| (l.code.as_str(), l))
+            .collect();
+        let previous_stocks: HashMap<_, _> = old
+            .into_iter()
+            .flat_map(|s| s.stocks.iter())
+            .map(|b| (stock_key(b), b))
+            .collect();
+        let previous_receipts: HashMap<_, _> = old
+            .into_iter()
+            .flat_map(|s| s.receipts.iter())
+            .map(|r| (r.id.as_str(), r))
+            .collect();
+        let previous_orders: HashMap<_, _> = old
+            .into_iter()
+            .flat_map(|s| s.orders.iter())
+            .map(|o| (o.id.as_str(), o))
+            .collect();
+        let previous_exceptions: HashMap<_, _> = old
+            .into_iter()
+            .flat_map(|s| s.exceptions.iter())
+            .map(|e| (e.id.as_str(), e))
+            .collect();
+        let previous_movements: HashSet<_> = old
+            .into_iter()
+            .flat_map(|s| s.movements.iter())
+            .map(|m| m.id.as_str())
+            .collect();
+        let previous_activity: HashSet<_> = old
+            .into_iter()
+            .flat_map(|s| s.activity.iter())
+            .map(|a| a.id.as_str())
+            .collect();
         sqlx::query("INSERT INTO wms_warehouses(tenant,warehouse_id,version,metadata) VALUES($1,$2,$3,$4) ON CONFLICT(tenant,warehouse_id) DO UPDATE SET version=EXCLUDED.version,metadata=EXCLUDED.metadata").bind(t).bind(w).bind(s.version).bind(json!(s.warehouse)).execute(&mut *c).await?;
         for p in &s.products {
-            if changed(
-                p,
-                old.and_then(|o| o.products.iter().find(|x| x.sku == p.sku)),
-            ) {
+            if changed(p, previous_products.get(p.sku.as_str()).copied()) {
                 sqlx::query("INSERT INTO wms_products VALUES($1,$2,$3,$4) ON CONFLICT(tenant,warehouse_id,sku) DO UPDATE SET data=EXCLUDED.data").bind(t).bind(w).bind(&p.sku).bind(json!(p)).execute(&mut *c).await?;
             }
         }
         for l in &s.locations {
-            if changed(
-                l,
-                old.and_then(|o| o.locations.iter().find(|x| x.code == l.code)),
-            ) {
+            if changed(l, previous_locations.get(l.code.as_str()).copied()) {
                 sqlx::query("INSERT INTO wms_locations VALUES($1,$2,$3,$4,$5) ON CONFLICT(tenant,warehouse_id,code) DO UPDATE SET kind=EXCLUDED.kind,data=EXCLUDED.data").bind(t).bind(w).bind(&l.code).bind(&l.kind).bind(json!(l)).execute(&mut *c).await?;
             }
         }
         for b in &s.stocks {
-            if changed(
-                b,
-                old.and_then(|o| {
-                    o.stocks
-                        .iter()
-                        .find(|x| x.sku == b.sku && x.lot == b.lot && x.location == b.location)
-                }),
-            ) {
+            if changed(b, previous_stocks.get(&stock_key(b)).copied()) {
                 sqlx::query("INSERT INTO wms_stock VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(tenant,warehouse_id,sku,lot,location) DO UPDATE SET on_hand=EXCLUDED.on_hand,reserved=EXCLUDED.reserved").bind(t).bind(w).bind(&b.sku).bind(&b.lot).bind(&b.location).bind(b.on_hand).bind(b.reserved).execute(&mut *c).await?;
             }
         }
         for r in &s.receipts {
-            if changed(
-                r,
-                old.and_then(|o| o.receipts.iter().find(|x| x.id == r.id)),
-            ) {
+            if changed(r, previous_receipts.get(r.id.as_str()).copied()) {
                 sqlx::query("INSERT INTO wms_receipts(tenant,warehouse_id,id,reference,status,data) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(tenant,warehouse_id,id) DO UPDATE SET status=EXCLUDED.status,data=EXCLUDED.data").bind(t).bind(w).bind(&r.id).bind(&r.reference).bind(&r.status).bind(json!(r)).execute(&mut *c).await?;
                 for l in &r.lines {
                     sqlx::query("INSERT INTO wms_receipt_lines VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(tenant,warehouse_id,receipt_id,id) DO UPDATE SET received=EXCLUDED.received").bind(t).bind(w).bind(&r.id).bind(&l.id).bind(&l.sku).bind(&l.lot).bind(l.quantity).bind(l.received).execute(&mut *c).await?;
@@ -377,7 +484,7 @@ impl Store {
             }
         }
         for o in &s.orders {
-            if changed(o, old.and_then(|v| v.orders.iter().find(|x| x.id == o.id))) {
+            if changed(o, previous_orders.get(o.id.as_str()).copied()) {
                 sqlx::query("INSERT INTO wms_orders(tenant,warehouse_id,id,reference,source_order_id,status,data) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(tenant,warehouse_id,id) DO UPDATE SET status=EXCLUDED.status,data=EXCLUDED.data").bind(t).bind(w).bind(&o.id).bind(&o.reference).bind(&o.source_order_id).bind(&o.status).bind(json!(o)).execute(&mut *c).await?;
                 for l in &o.lines {
                     sqlx::query("INSERT INTO wms_order_lines VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING").bind(t).bind(w).bind(&o.id).bind(&l.id).bind(&l.sku).bind(l.quantity).execute(&mut *c).await?;
@@ -404,20 +511,17 @@ impl Store {
             }
         }
         for e in &s.exceptions {
-            if changed(
-                e,
-                old.and_then(|o| o.exceptions.iter().find(|x| x.id == e.id)),
-            ) {
+            if changed(e, previous_exceptions.get(e.id.as_str()).copied()) {
                 sqlx::query("INSERT INTO wms_exceptions(tenant,warehouse_id,id,status,order_id,data) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(tenant,warehouse_id,id) DO UPDATE SET status=EXCLUDED.status,data=EXCLUDED.data").bind(t).bind(w).bind(&e.id).bind(&e.status).bind(&e.order_id).bind(json!(e)).execute(&mut *c).await?;
             }
         }
         for m in &s.movements {
-            if old.is_none_or(|o| !o.movements.iter().any(|x| x.id == m.id)) {
+            if !previous_movements.contains(m.id.as_str()) {
                 sqlx::query("INSERT INTO wms_movements(id,tenant,warehouse_id,sku,lot,from_location,to_location,quantity,kind,reference,receipt_id,receipt_line_id,data) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)").bind(&m.id).bind(t).bind(w).bind(&m.sku).bind(&m.lot).bind(&m.from).bind(&m.to).bind(m.quantity).bind(&m.kind).bind(&m.reference).bind(&m.receipt_id).bind(&m.receipt_line_id).bind(json!(m)).execute(&mut *c).await?;
             }
         }
         for a in &s.activity {
-            if old.is_none_or(|o| !o.activity.iter().any(|x| x.id == a.id)) {
+            if !previous_activity.contains(a.id.as_str()) {
                 sqlx::query("INSERT INTO wms_activity(id,tenant,warehouse_id,kind,data) VALUES($1,$2,$3,$4,$5)").bind(&a.id).bind(t).bind(w).bind(&a.kind).bind(json!(a)).execute(&mut *c).await?;
             }
         }
@@ -504,18 +608,12 @@ impl Store {
         Self::save(&mut tx, &i.tenant, Some(&state), &next).await?;
         let eid = domain::id();
         let order = next.orders.iter().find(|o| result["entity_id"] == o.id);
+        let previous_stocks: HashMap<_, _> =
+            state.stocks.iter().map(|b| (stock_key(b), b)).collect();
         let inventory: Vec<_> = next
             .stocks
             .iter()
-            .filter(|b| {
-                changed(
-                    *b,
-                    state
-                        .stocks
-                        .iter()
-                        .find(|x| x.sku == b.sku && x.lot == b.lot && x.location == b.location),
-                )
-            })
+            .filter(|b| changed(*b, previous_stocks.get(&stock_key(b)).copied()))
             .map(|b| json!({"stock":b,"version":next.version}))
             .collect();
         let event = json!({"schema_version":2,"id":eid,"tenant":i.tenant,"warehouse_id":w,"version":next.version,"type":r.command.kind(),"actor":i.actor,"occurred_at":domain::now(),"request_id":r.request_id,"result":result,"order":order,"inventory_changes":inventory,"command":r.command});
@@ -564,14 +662,23 @@ impl Store {
             }
             _ => return Err(Error::new(404, "Unknown warehouse record")),
         };
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+            .execute(&mut *tx)
+            .await?;
         let r = sqlx::query(q)
             .bind(t)
             .bind(w)
             .bind(id)
-            .fetch_optional(&self.pool)
+            .fetch_optional(&mut *tx)
             .await?
             .ok_or_else(|| Error::new(404, "Warehouse record not found"))?;
-        Ok(r.get("data"))
+        let mut records = Self::canonical_records(&mut tx, t, w, kind, vec![r.get("data")]).await?;
+        let record = records
+            .pop()
+            .ok_or_else(|| Error::new(503, "Canonical warehouse record unavailable"))?;
+        tx.commit().await?;
+        Ok(record)
     }
     pub async fn history(
         &self,
@@ -596,23 +703,37 @@ impl Store {
             ));
         }
         let q=format!("SELECT seq,data FROM {table} WHERE tenant=$1 AND warehouse_id=$2 AND seq<$3 ORDER BY seq DESC LIMIT $4");
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+            .execute(&mut *tx)
+            .await?;
         let rows = sqlx::query(&q)
             .bind(t)
             .bind(w)
             .bind(before.unwrap_or(i64::MAX))
             .bind(limit + 1)
-            .fetch_all(&self.pool)
+            .fetch_all(&mut *tx)
             .await?;
+        let mut records: Vec<Value> = rows
+            .iter()
+            .take(limit as usize)
+            .map(|r| r.get("data"))
+            .collect();
+        if matches!(kind, "orders" | "receipts") {
+            records = Self::canonical_records(&mut tx, t, w, kind, records).await?;
+        }
         let items: Vec<_> = rows
             .iter()
             .take(limit as usize)
-            .map(|r| json!({"cursor":r.get::<i64,_>("seq"),"data":r.get::<Value,_>("data")}))
+            .zip(records)
+            .map(|(r, data)| json!({"cursor":r.get::<i64,_>("seq"),"data":data}))
             .collect();
         let cursor = if rows.len() > limit as usize {
             items.last().map(|r| r["cursor"].clone())
         } else {
             None
         };
+        tx.commit().await?;
         Ok(json!({"items":items,"next_cursor":cursor}))
     }
     pub async fn reconciliation(&self, t: &str, w: &str) -> Result<Value> {

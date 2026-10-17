@@ -1,0 +1,2 @@
+# Blank context lines inside this unified diff carry a space prefix.
+integrations/stateset-sync-server/upstream.patch whitespace=-blank-at-eol

@@ -21,6 +21,62 @@ fn oms_fixture() -> Value {
 fn configured(base: &str) -> NativeIntegrations {
     NativeIntegrations::from_json(&json!({"acme":{"oms":{"base_url":base,"tenant_id":"oms-acme","api_key":"fixture-oms-key"},"tms":{"base_url":base,"tenant_id":"freight-acme","bearer_token":"fixture-tms-operations-key"}}}).to_string()).expect("native configuration")
 }
+
+#[test]
+fn full_order_import_rejects_partial_or_unknown_fulfillment_in_canonical_and_source_snapshots() {
+    for status in [
+        "PARTIALLY_FULFILLED",
+        "FULFILLED",
+        "SHIPPED",
+        "DELIVERED",
+        "UNKNOWN",
+    ] {
+        for field in ["canonical", "source", "source-camel"] {
+            let mut source = oms_fixture();
+            if field == "canonical" {
+                source["fulfillmentStatus"] = json!(status);
+            } else if field == "source" {
+                source["sourceOrderPayload"] = json!({"fulfillment_status":status});
+            } else {
+                source["sourceOrderPayload"] = json!({"fulfillmentStatus":status});
+            }
+            let order = serde_json::from_value(source).expect("canonical source fixture");
+            assert!(
+                configured("http://localhost:1")
+                    .import_command("acme", &order, &details())
+                    .is_err(),
+                "unsafe {field} fulfillment {status}"
+            );
+        }
+    }
+    let safe = serde_json::from_value(oms_fixture()).expect("unfulfilled source");
+    assert!(configured("http://localhost:1")
+        .import_command("acme", &safe, &details())
+        .is_ok());
+}
+#[test]
+fn raw_source_cancellation_cannot_create_new_full_order_work() {
+    for field in ["cancelled_at", "cancelledAt"] {
+        for value in [json!("2026-10-17T01:00:00Z"), json!(true), json!(" ")] {
+            let mut source = oms_fixture();
+            source["sourceOrderPayload"] = json!({});
+            source["sourceOrderPayload"][field] = value;
+            let order = serde_json::from_value(source).expect("active canonical source");
+            assert!(configured("http://localhost:1")
+                .import_command("acme", &order, &details())
+                .is_err());
+        }
+        for value in [json!(null), json!("")] {
+            let mut source = oms_fixture();
+            source["sourceOrderPayload"] = json!({});
+            source["sourceOrderPayload"][field] = value;
+            let order = serde_json::from_value(source).expect("uncancelled source");
+            assert!(configured("http://localhost:1")
+                .import_command("acme", &order, &details())
+                .is_ok());
+        }
+    }
+}
 fn details() -> ImportDetails {
     ImportDetails {
         customer: "Synthetic customer".into(),

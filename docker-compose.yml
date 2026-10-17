@@ -17,6 +17,11 @@ services:
   wms:
     build: .
     profiles: ["app"]
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=16m
     environment:
       DATABASE_URL: postgres://warehouse:${POSTGRES_PASSWORD:-warehouse}@postgres:5432/warehouse
       WMS_BIND: 0.0.0.0:8088

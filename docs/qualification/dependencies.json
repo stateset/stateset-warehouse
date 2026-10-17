@@ -1,0 +1,48 @@
+{
+  "recorded_at": "2026-10-17",
+  "cargo_lock_sha256": "9d33b41dfbe2d5087094707426243313c03b11a30bec3e55855991f6a16db0a4",
+  "dashboard_lock_sha256": "e9a0d48751f4005663a2703829d28c65cb5caed956e57240943cc28f04d9b251",
+  "rustsec_database": {
+    "advisory-count": 1338,
+    "last-commit": "999ec89d5d3f10f20be14750ec8c2d8b44e0ac9b",
+    "last-updated": "2026-10-17T17:23:59+02:00"
+  },
+  "full_lockfile_audit_exit": 1,
+  "lockfile_findings": [
+    {
+      "advisory": "RUSTSEC-2023-0071",
+      "package": "rsa",
+      "version": "0.9.10",
+      "present_in_active_linux_graph": false
+    }
+  ],
+  "active_graph_command": "cargo tree --locked --offline --prefix none --format {p}",
+  "active_linux_package_count": 197,
+  "active_dependency_graph_sha256": "e4ceb850db5fb3d99e22195441d158806cb2564705b0d947b3912113b5c827fa",
+  "active_linux_graph_vulnerability_count": 0,
+  "rustsec_warnings": {},
+  "npm_audit": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "dependencies": {
+      "prod": 7,
+      "dev": 120,
+      "optional": 54,
+      "peer": 0,
+      "peerOptional": 0,
+      "total": 126
+    }
+  },
+  "limits": [
+    "Point-in-time advisory scan, not a security certification",
+    "Enabled dependency graph checked for the current Linux target only",
+    "SQLx optional MySQL branch remains in Cargo.lock; rsa is absent from the enabled Linux dependency graph",
+    "Full lockfile audit exits nonzero; no advisory ignore or exception added"
+  ]
+}

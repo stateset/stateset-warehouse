@@ -4,5 +4,7 @@ pub mod integrations;
 pub mod native;
 pub mod native_api;
 pub mod native_store;
+pub mod oms_client;
+pub mod oms_fulfillment_api;
 mod persistence;
 pub mod store;
