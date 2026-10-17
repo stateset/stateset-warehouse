@@ -42,7 +42,13 @@ struct Fixture {
     auth: WorkOs,
     response: Arc<std::sync::Mutex<(StatusCode, String)>>,
     calls: Arc<AtomicUsize>,
+    hold: Arc<std::sync::Mutex<Option<Arc<ReplyGate>>>>,
     task: tokio::task::JoinHandle<()>,
+}
+#[derive(Default)]
+struct ReplyGate {
+    entered: tokio::sync::Notify,
+    release: tokio::sync::Notify,
 }
 impl Drop for Fixture {
     fn drop(&mut self) {
@@ -81,13 +87,22 @@ impl Fixture {
             json!({"keys":[jwk(false)]}).to_string(),
         )));
         let calls = Arc::new(AtomicUsize::new(0));
+        let hold = Arc::new(std::sync::Mutex::new(None::<Arc<ReplyGate>>));
+        let gate = hold.clone();
         let (reply, count) = (response.clone(), calls.clone());
         let router = Router::new().route(
             "/keys",
             get(move || {
                 count.fetch_add(1, Ordering::SeqCst);
                 let response = reply.lock().expect("fixture lock").clone();
-                async move { response }
+                let gate = gate.lock().expect("gate lock").clone();
+                async move {
+                    if let Some(gate) = gate {
+                        gate.entered.notify_one();
+                        gate.release.notified().await;
+                    }
+                    response
+                }
             }),
         );
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
@@ -104,6 +119,7 @@ impl Fixture {
             auth,
             response,
             calls,
+            hold,
             task,
         }
     }
@@ -112,6 +128,169 @@ impl Fixture {
     }
     fn router(&self) -> Router {
         app(self.auth.clone(), lazy_store())
+    }
+    fn hold_replies(&self) -> Arc<ReplyGate> {
+        let gate = Arc::new(ReplyGate::default());
+        *self.hold.lock().expect("gate lock") = Some(gate.clone());
+        gate
+    }
+}
+
+async fn session(router: Router, token: String) -> StatusCode {
+    router
+        .oneshot(
+            Request::builder()
+                .uri("/v1/session")
+                .header("authorization", format!("Bearer {token}"))
+                .body(Body::empty())
+                .expect("request"),
+        )
+        .await
+        .expect("response")
+        .status()
+}
+
+#[tokio::test]
+async fn cached_operator_requests_do_not_wait_for_unknown_key_refresh() {
+    let fixture = Fixture::new().await;
+    let old = signed(&claims(), false);
+    assert_eq!(session(fixture.router(), old.clone()).await, StatusCode::OK);
+    fixture.auth.cache.lock().await.attempted = Some(Instant::now() - REFRESH_COOLDOWN);
+    fixture.respond(StatusCode::OK, json!({"keys":[jwk(true)]}));
+    let gate = fixture.hold_replies();
+    let mut refreshing = tokio::task::JoinSet::new();
+    for _ in 0..20 {
+        refreshing.spawn(session(fixture.router(), signed(&claims(), true)));
+    }
+    tokio::time::timeout(Duration::from_secs(1), gate.entered.notified())
+        .await
+        .expect("provider received refresh before operator requests");
+    let mut operators = tokio::task::JoinSet::new();
+    for _ in 0..20 {
+        operators.spawn(session(fixture.router(), old.clone()));
+    }
+    // The provider is deliberately still blocked. Healthy cached sessions must
+    // finish independently, not merely succeed after its three-second timeout.
+    tokio::time::timeout(Duration::from_secs(1), async {
+        while let Some(status) = operators.join_next().await {
+            assert_eq!(status.expect("operator task"), StatusCode::OK);
+        }
+    })
+    .await
+    .expect("cached operator authentication blocked behind key refresh");
+    assert_eq!(fixture.calls.load(Ordering::SeqCst), 2);
+    gate.release.notify_one();
+    while let Some(status) = refreshing.join_next().await {
+        assert_eq!(status.expect("refresh task"), StatusCode::OK);
+    }
+    assert_eq!(fixture.calls.load(Ordering::SeqCst), 2);
+    assert_eq!(
+        session(fixture.router(), old).await,
+        StatusCode::UNAUTHORIZED
+    );
+}
+
+#[tokio::test]
+async fn expired_keys_cannot_bypass_an_in_flight_rotation() {
+    let fixture = Fixture::new().await;
+    let old = signed(&claims(), false);
+    assert_eq!(session(fixture.router(), old.clone()).await, StatusCode::OK);
+    fixture.auth.cache.lock().await.attempted = Some(Instant::now() - REFRESH_COOLDOWN);
+    fixture.respond(StatusCode::OK, json!({"keys":[jwk(true)]}));
+    let gate = fixture.hold_replies();
+    let mut refreshing = tokio::task::JoinSet::new();
+    refreshing.spawn(session(fixture.router(), signed(&claims(), true)));
+    tokio::time::timeout(Duration::from_secs(1), gate.entered.notified())
+        .await
+        .expect("rotation reached provider");
+    fixture.auth.cache.lock().await.fetched = Some(Instant::now() - KEY_TTL);
+    let old_request = session(fixture.router(), old);
+    tokio::pin!(old_request);
+    assert!(
+        tokio::time::timeout(Duration::from_millis(50), &mut old_request)
+            .await
+            .is_err(),
+        "expired keys must join the pending refresh, not authorize the request"
+    );
+    gate.release.notify_one();
+    assert_eq!(old_request.await, StatusCode::UNAUTHORIZED);
+    assert_eq!(
+        refreshing
+            .join_next()
+            .await
+            .expect("refresh task")
+            .expect("join"),
+        StatusCode::OK
+    );
+    assert_eq!(fixture.calls.load(Ordering::SeqCst), 2);
+}
+
+#[tokio::test]
+async fn failed_and_cancelled_refreshes_preserve_cooldown_without_poisoning_cache() {
+    for cancel in [false, true] {
+        let fixture = Fixture::new().await;
+        let old = signed(&claims(), false);
+        let new = signed(&claims(), true);
+        assert_eq!(session(fixture.router(), old.clone()).await, StatusCode::OK);
+        fixture.auth.cache.lock().await.attempted = Some(Instant::now() - REFRESH_COOLDOWN);
+        fixture.respond(StatusCode::SERVICE_UNAVAILABLE, json!({}));
+        let gate = fixture.hold_replies();
+        let mut refreshing = tokio::task::JoinSet::new();
+        refreshing.spawn(session(fixture.router(), new.clone()));
+        tokio::time::timeout(Duration::from_secs(1), gate.entered.notified())
+            .await
+            .expect("refresh reached provider");
+        if cancel {
+            refreshing.abort_all();
+            assert!(refreshing
+                .join_next()
+                .await
+                .expect("refresh task")
+                .expect_err("cancelled")
+                .is_cancelled());
+        } else {
+            gate.release.notify_one();
+            assert_eq!(
+                refreshing
+                    .join_next()
+                    .await
+                    .expect("refresh task")
+                    .expect("join"),
+                StatusCode::SERVICE_UNAVAILABLE
+            );
+        }
+        assert_eq!(session(fixture.router(), old.clone()).await, StatusCode::OK);
+        // Failed and cancelled fetches cannot be used to evade rate limiting.
+        let mut retries = tokio::task::JoinSet::new();
+        for _ in 0..20 {
+            retries.spawn(session(fixture.router(), new.clone()));
+        }
+        while let Some(status) = retries.join_next().await {
+            assert_eq!(status.expect("retry task"), StatusCode::UNAUTHORIZED);
+        }
+        fixture.auth.cache.lock().await.fetched = Some(Instant::now() - KEY_TTL);
+        assert_eq!(
+            session(fixture.router(), old.clone()).await,
+            StatusCode::SERVICE_UNAVAILABLE
+        );
+        assert_eq!(
+            session(fixture.router(), new.clone()).await,
+            StatusCode::SERVICE_UNAVAILABLE
+        );
+        assert_eq!(fixture.calls.load(Ordering::SeqCst), 2);
+
+        // Recover after cooldown with an actual new provider response. No
+        // abandoned refresh may publish late or prevent subsequent refreshes.
+        *fixture.hold.lock().expect("gate lock") = None;
+        fixture.respond(StatusCode::OK, json!({"keys":[jwk(true)]}));
+        fixture.auth.cache.lock().await.attempted = Some(Instant::now() - REFRESH_COOLDOWN);
+        assert_eq!(session(fixture.router(), new).await, StatusCode::OK);
+        gate.release.notify_one();
+        assert_eq!(
+            session(fixture.router(), old).await,
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(fixture.calls.load(Ordering::SeqCst), 3);
     }
 }
 #[test]

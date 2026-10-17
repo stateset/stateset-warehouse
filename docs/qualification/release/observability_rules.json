@@ -2,7 +2,7 @@
   "schema_version": 1,
   "ok": true,
   "synthetic": true,
-  "recorded_at": "2026-10-17T18:07:26.212749+00:00",
+  "recorded_at": "2026-10-17T18:48:56.217817+00:00",
   "release_revision": "unrecorded-working-tree",
   "check": "Official pinned promtool syntax and behavior tests",
   "source_sha256": {

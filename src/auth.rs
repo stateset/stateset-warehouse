@@ -100,12 +100,21 @@ struct KeyCache {
     fetched: Option<Instant>,
     attempted: Option<Instant>,
 }
+impl KeyCache {
+    fn fresh(&self) -> bool {
+        self.fetched.is_some_and(|at| at.elapsed() < KEY_TTL)
+    }
+    fn fresh_key(&self, kid: &str) -> Option<DecodingKey> {
+        self.fresh().then(|| self.keys.get(kid).cloned()).flatten()
+    }
+}
 #[derive(Clone)]
 pub struct WorkOs {
     pub config: WorkOsConfig,
     jwks_url: String,
     client: reqwest::Client,
     cache: Arc<Mutex<KeyCache>>,
+    refresh: Arc<Mutex<()>>,
 }
 #[derive(Deserialize)]
 struct Claims {
@@ -151,6 +160,7 @@ impl WorkOs {
                 .redirect(reqwest::redirect::Policy::none())
                 .build()?,
             cache: Arc::new(Mutex::new(KeyCache::default())),
+            refresh: Arc::new(Mutex::new(())),
         })
     }
     async fn fetch_keys(&self) -> Result<BTreeMap<String, DecodingKey>, Error> {
@@ -208,22 +218,32 @@ impl WorkOs {
         Ok(keys)
     }
     async fn key(&self, kid: &str) -> Result<DecodingKey, Error> {
-        // One shared refresh; random kids cannot create one outbound call per request.
+        // Reading a fresh key must never wait for provider I/O triggered by an
+        // unknown kid. Only requests that need new keys join the shared refresh.
+        if let Some(key) = self.cache.lock().await.fresh_key(kid) {
+            return Ok(key);
+        }
+        let _refresh = self.refresh.lock().await;
+        // Recheck after joining: another request may have refreshed the keys,
+        // failed, or been cancelled. Its attempt still consumes the cooldown.
         let mut cache = self.cache.lock().await;
-        let fresh = cache.fetched.is_some_and(|at| at.elapsed() < KEY_TTL);
-        if fresh {
-            if let Some(key) = cache.keys.get(kid) {
-                return Ok(key.clone());
-            }
+        if let Some(key) = cache.fresh_key(kid) {
+            return Ok(key);
         }
         if cache
             .attempted
             .is_some_and(|at| at.elapsed() < REFRESH_COOLDOWN)
         {
-            return Err(if fresh { invalid() } else { unavailable() });
+            return Err(if cache.fresh() {
+                invalid()
+            } else {
+                unavailable()
+            });
         }
         cache.attempted = Some(Instant::now());
+        drop(cache);
         let keys = self.fetch_keys().await?;
+        let mut cache = self.cache.lock().await;
         cache.keys = keys;
         cache.fetched = Some(Instant::now());
         cache.keys.get(kid).cloned().ok_or_else(invalid)

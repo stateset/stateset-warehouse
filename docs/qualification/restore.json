@@ -2,10 +2,10 @@
   "ok": true,
   "synthetic": true,
   "release_revision": "unrecorded-working-tree",
-  "elapsed_archive_restore_verify_seconds": 1,
+  "elapsed_archive_restore_verify_seconds": 2,
   "cargo_lock_sha256": "3e82f7c09b17a573f5ad6d07d8ba5e0dc1ee627c21cef8dd7af18c1fe602474c",
-  "probe_binary_sha256": "cfef5ec9fd0b47f80ba031b6ab3a8d55118c16aab5c2c30ba129ec3e616db844",
-  "archive_sha256": "1bed90047e213d0757afd422efd18331dbaafc310866bf4d1009e5f279ca1070",
+  "probe_binary_sha256": "c9dfdab4aba21d34a95e70e0e3347a8f6bef8789abe987215672c9135f394716",
+  "archive_sha256": "fced20d240c95b9f2adb25063f00dd0cae24d8535c8c563561cad9321b694192",
   "verification": {
     "all_table_hashes_identical_before_retry": true,
     "all_warehouse_reconciliation": [
@@ -29,7 +29,7 @@
               "evidence": 12,
               "line_id": "receipt-line",
               "ok": true,
-              "receipt_id": "2a33eacb-ce2b-4977-aebf-7cb44ee76109",
+              "receipt_id": "d4a97f2e-5764-4ecf-b0f1-14b126649113",
               "received": 12
             }
           ],
@@ -124,7 +124,7 @@
           "evidence": 12,
           "line_id": "receipt-line",
           "ok": true,
-          "receipt_id": "2a33eacb-ce2b-4977-aebf-7cb44ee76109",
+          "receipt_id": "d4a97f2e-5764-4ecf-b0f1-14b126649113",
           "received": 12
         }
       ],
@@ -175,7 +175,7 @@
     "table_evidence": {
       "wms_activity": {
         "rows": 17,
-        "sha256": "003615d60dbd9c3db943ee6d944a8da69850c6fe669ad917f7ea1bb5d23777c6"
+        "sha256": "47d9d1b9a774325b61cc29d05e0afe4e61e0928852bf56afd4c279e961d9123b"
       },
       "wms_admin_audit": {
         "rows": 0,
@@ -183,11 +183,11 @@
       },
       "wms_allocations": {
         "rows": 4,
-        "sha256": "4c1c1802dbe2ffb699700b40be7bc64ad880a7cb9d3d297dc0e7a3157113cf9e"
+        "sha256": "7f2221ac4cd01612e0865209dcc7f5ba2d5dbe04d40b284b425d095e536db1f2"
       },
       "wms_commands": {
         "rows": 17,
-        "sha256": "39d1bbc5f4a808599e894e97dcf2f8167b2e695ac8bed6db3ff790ff05590ce0"
+        "sha256": "be36c94a657ce04b3f58e9d33971a4acff2ef30569888fd3a8dfee71bdc0be84"
       },
       "wms_delivery_attempts": {
         "rows": 0,
@@ -195,7 +195,7 @@
       },
       "wms_events": {
         "rows": 17,
-        "sha256": "7d6bf56aa6df568ded93e58f3090a40daa01164b77b68c5f1c8ad6cf1277c3af"
+        "sha256": "2db2b239e77eac40846a1898c79d172e9407594ebe749a336be7fba07839ed9e"
       },
       "wms_exceptions": {
         "rows": 0,
@@ -207,27 +207,27 @@
       },
       "wms_movements": {
         "rows": 6,
-        "sha256": "873f980f1f0e9c6e609240fef8fc11875bcb2f9567a8609e6b5f07a55521d053"
+        "sha256": "5c25489986b082e9d8e79cb720ae13dbec2bc22d1c143d56c1101c8f6ec8a623"
       },
       "wms_native_attempts": {
         "rows": 3,
-        "sha256": "5d83c02dcdf5ec664cadbba25283f3a978886a0a6cb3ee7883e6f62e0fa0f73d"
+        "sha256": "aa90f352aead77089af3cd6f6efc841d7c2a6633f277ac646ea98f1134c2387c"
       },
       "wms_native_requests": {
         "rows": 4,
-        "sha256": "93b7be4ed5b986dbad4364ec364ee497aad9b3c74423578a3c651e6971de39a0"
+        "sha256": "64d0e0077937d08edebb121baa14bab47ad7fb4c88f25c935f13881af3d2e5ad"
       },
       "wms_order_lines": {
         "rows": 4,
-        "sha256": "012a69a51653caa8d36255f6cb9e4f9afdda5462fa6e296f52fb377d24ad74e5"
+        "sha256": "16b7a6562fa1d5ab396ab1bd747e2785aa3f0be7065fe243d1af1499283966f7"
       },
       "wms_orders": {
         "rows": 3,
-        "sha256": "19a30ea327b2eb1de479f7b8fb76f321546a813fae8062455188a003561f18c2"
+        "sha256": "3b520a11ff004d07002c7540fbd5eeae102874c556e721c271b2e56dbb26f172"
       },
       "wms_outbox": {
         "rows": 20,
-        "sha256": "7028a448c166c78088e1ec5aa323e9e0738bb346bcbb117543daada01ceda83b"
+        "sha256": "1a7bea501c314853fcf4bc6cafd3e00ee8cf4eb773f54adcc094cfa788049d6a"
       },
       "wms_products": {
         "rows": 1,
@@ -235,19 +235,19 @@
       },
       "wms_receipt_evidence": {
         "rows": 1,
-        "sha256": "ce129ad857d22c7df5ab0054f2b6b003af01b3a08ce75e37db49ab9a4540d76c"
+        "sha256": "b92fa955ea02366c089461541c268927871687c1afa6ac0aa0e8fa5efc2b9e6d"
       },
       "wms_receipt_lines": {
         "rows": 1,
-        "sha256": "b194fcea1152e1b746107b8178e5e91dea82898648235aa4cbac14debd50dd4d"
+        "sha256": "a80e48c8efd8e6c0327114be4eaa27c5b5143070a547bf439f958060d4abd5d4"
       },
       "wms_receipts": {
         "rows": 1,
-        "sha256": "4b403cc04ef36f273f0a4395a36cda3d587643a360e9ab188484a88fd208d24b"
+        "sha256": "2d3fa73a7511ce984cc94e7d96cf1a707394539f3820868171c5f46becba7837"
       },
       "wms_schema_migrations": {
         "rows": 8,
-        "sha256": "0d34745720b63c4e8a560b17ac0eda5038d4771d2eca03f2f025f1d56d831005"
+        "sha256": "3421eeff1fc35cc71ad1bdd45ef26c134842b7fd3879776d2d92aedcea8aa283"
       },
       "wms_stock": {
         "rows": 3,

@@ -1,5 +1,5 @@
 {
-  "sha256": "d24340e02ee098970246b82f9dd1fcd8c1b1c0da65f3529fe7911243ec19e550",
+  "sha256": "72f8e6c94e04aea05339b83b35280e152836ab89fd93ac91bb98bfa39f26f265",
   "inputs": [
     {
       "path": ".dockerignore",
@@ -271,7 +271,7 @@
     },
     {
       "path": "src/auth.rs",
-      "sha256": "6a6de271981713a5e8f434d70e01c30d63926420a5eaebe0dcc78841316bc15f"
+      "sha256": "5e5098de620454789a222f68311b1035afdc57423be23b12deac03eb5a58df5d"
     },
     {
       "path": "src/domain.rs",
@@ -391,7 +391,7 @@
     },
     {
       "path": "tests/support/workos.rs",
-      "sha256": "efc2e4701be004e3c6646cae3c734b27b63a53dcb3976b5b48c5a35151eb3c77"
+      "sha256": "6acefbd05d50439ec9266467795d9692c0e3d798c2bcb9a5d422c608ee171091"
     }
   ]
 }

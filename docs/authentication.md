@@ -77,7 +77,12 @@ at most once per 30 seconds; concurrent fetches share one bounded request.
 Responses are limited to 64 KiB and 32 keys, redirects are refused, and duplicate
 key IDs are rejected. Key fetches time out after three seconds; authentication
 has a four-second outer deadline. A fresh cached key remains usable during a
-provider outage. Once the cache expires, verification fails closed with 503;
+provider outage, including while an unknown-key request waits for the provider.
+Provider I/O never holds the cached-key lock. Failed or cancelled refreshes still
+consume the cooldown; they do not replace the last successfully fetched key set.
+Successful rotation replaces the complete set, retiring removed keys. Requests
+whose cache has expired join the bounded refresh rather than use stale keys.
+Once the cache expires and refresh is unavailable, verification fails closed with 503;
 old keys are not used indefinitely. A rotated key may be temporarily rejected
 during the 30-second refresh cooldown. APIs return generic errors without tokens,
 provider response bodies or configuration internals.
@@ -111,6 +116,10 @@ in access-removal and incident procedures.
 Rust tests use real RSA signatures and a local JWKS server to exercise forgery,
 issuer/audience/time checks, missing/unmapped memberships, impersonation denial,
 key rotation, cache expiry/outage, coalescing, response limits and HTTP role guards.
+An HTTP regression holds the signing provider's response while 20 cached operator
+sessions complete independently and 20 requests for a new key share one refresh.
+Separate cases expire the cache during that fetch and cancel or fail a refresh,
+checking rejection, cooldown and subsequent recovery with a new signing key.
 The PostgreSQL test submits signed-token requests through the real router and
 proves persisted attribution, same-user session refresh replay, other-user receipt
 isolation and cross-organization isolation. Public test private keys under
