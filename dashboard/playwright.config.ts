@@ -15,7 +15,7 @@ export default defineConfig({
   projects: [
     {
       name: "offline-contract",
-      testMatch: /(?:offline|native|scanner|operations)\.spec\.ts/,
+      testMatch: /(?:offline|native|scanner|operations|auth)\.spec\.ts/,
     },
     {
       name: "live-postgres",

@@ -1,7 +1,7 @@
 {
-  "recorded_at": "2026-10-17",
-  "cargo_lock_sha256": "9d33b41dfbe2d5087094707426243313c03b11a30bec3e55855991f6a16db0a4",
-  "dashboard_lock_sha256": "e9a0d48751f4005663a2703829d28c65cb5caed956e57240943cc28f04d9b251",
+  "recorded_at": "2026-10-17T18:00:40.057068+00:00",
+  "cargo_lock_sha256": "3e82f7c09b17a573f5ad6d07d8ba5e0dc1ee627c21cef8dd7af18c1fe602474c",
+  "dashboard_lock_sha256": "5e66b38ba8027d4971d68a64567f63fe64e64e31ee1eca609d99241354e55c17",
   "rustsec_database": {
     "advisory-count": 1338,
     "last-commit": "999ec89d5d3f10f20be14750ec8c2d8b44e0ac9b",
@@ -17,8 +17,8 @@
     }
   ],
   "active_graph_command": "cargo tree --locked --offline --prefix none --format {p}",
-  "active_linux_package_count": 197,
-  "active_dependency_graph_sha256": "e4ceb850db5fb3d99e22195441d158806cb2564705b0d947b3912113b5c827fa",
+  "active_linux_package_count": 208,
+  "active_dependency_graph_sha256": "ca9fb2fc6be4812dbdebe6d76ffeaab00cda9102315852ac15eee3912745a960",
   "active_linux_graph_vulnerability_count": 0,
   "rustsec_warnings": {},
   "npm_audit": {
@@ -31,12 +31,12 @@
       "total": 0
     },
     "dependencies": {
-      "prod": 7,
+      "prod": 9,
       "dev": 120,
       "optional": 54,
       "peer": 0,
       "peerOptional": 0,
-      "total": 126
+      "total": 128
     }
   },
   "limits": [

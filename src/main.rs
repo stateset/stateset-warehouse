@@ -20,6 +20,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if demo && !address.ip().is_loopback() {
         return Err("Demo API must bind to a loopback address".into());
     }
+    let workos_config = stateset_warehouse::auth::WorkOsConfig::from_env()?;
+    if demo && workos_config.is_some() {
+        return Err("Demo mode cannot enable WorkOS".into());
+    }
+    let workos = workos_config
+        .clone()
+        .map(stateset_warehouse::auth::WorkOs::new)
+        .transpose()?;
     let keys: Vec<(String, Identity)> = if demo {
         vec![(
             "demo-warehouse".into(),
@@ -32,23 +40,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         let map: BTreeMap<String, Identity> = serde_json::from_str(
             &std::env::var("WMS_API_KEYS_JSON")
-                .map_err(|_| "WMS_API_KEYS_JSON is required in real mode")?,
+                .ok()
+                .filter(|raw| !raw.trim().is_empty())
+                .unwrap_or_else(|| "{}".into()),
         )?;
-        if map.is_empty()
+        if (map.is_empty() && workos.is_none())
             || map.iter().any(|(k, i)| {
                 k.len() < 32
+                    || i.actor.starts_with("workos:")
                     || i.tenant.trim().is_empty()
                     || i.actor.trim().is_empty()
                     || !["viewer", "operator", "admin", "oms"].contains(&i.role.as_str())
             })
         {
-            return Err("Configure nonempty tenant/actor, valid role and API keys of at least 32 characters".into());
+            return Err("Configure WorkOS or API keys of at least 32 characters with valid tenant/actor/role; workos: actors are reserved".into());
         }
         if map.values().any(|i| i.tenant == "demo") {
             return Err("The demo tenant is reserved for synthetic fixtures".into());
         }
         map.into_iter().collect()
     };
+    let mut tenants: std::collections::BTreeSet<String> =
+        keys.iter().map(|(_, i)| i.tenant.clone()).collect();
+    if let Some(config) = &workos_config {
+        tenants.extend(config.organizations.values().map(|m| m.tenant.clone()));
+    }
     let native = stateset_warehouse::native::NativeIntegrations::from_env()
         .map_err(|e| format!("Native integration configuration: {e}"))?;
     if demo && !native.tenants.is_empty() {
@@ -57,7 +73,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if native
         .tenants
         .keys()
-        .any(|tenant| !keys.iter().any(|(_, i)| &i.tenant == tenant))
+        .any(|tenant| !tenants.contains(tenant))
     {
         return Err("Every native integration tenant must have a configured identity".into());
     }
@@ -67,11 +83,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     )
     .await
     .map_err(|e| e.message)?;
-    for (_, identity) in &keys {
-        store
-            .provision(&identity.tenant, demo)
-            .await
-            .map_err(|e| e.message)?;
+    for tenant in &tenants {
+        store.provision(tenant, demo).await.map_err(|e| e.message)?;
     }
     let mut connections = BTreeMap::new();
     for destination in ["oms", "tms"] {
@@ -94,7 +107,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 let tenant = std::env::var("WMS_WEBHOOK_TENANT")
                     .map_err(|_| "WMS_WEBHOOK_TENANT is required to scope event delivery")?;
-                if !keys.iter().any(|(_, i)| i.tenant == tenant) {
+                if !tenants.contains(&tenant) {
                     return Err("Webhook tenant must have a configured identity".into());
                 }
                 connections.insert((tenant, destination.into()), (url.to_string(), token));
@@ -133,7 +146,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         demo,
         connections,
     };
-    axum::serve(listener, api::router(app))
+    axum::serve(listener, api::router_with_auth(app, workos))
         .with_graceful_shutdown(async move {
             #[cfg(unix)]
             {

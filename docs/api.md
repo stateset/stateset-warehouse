@@ -1,13 +1,14 @@
 # API and integration contract
 
-All `/v1` routes require `Authorization: Bearer <credential>`. The server resolves tenant, actor and role from configuration. Passing tenant/actor headers or command fields does not change identity. Every API response, including authentication errors and unknown routes, uses `Cache-Control: no-store`. Request bodies are limited to 256 KiB.
+All `/v1` routes require `Authorization: Bearer <credential>`. The server resolves tenant, actor and role from API-key configuration or verified WorkOS AuthKit membership with explicit server mappings; see [authentication](authentication.md). Passing tenant/actor headers or command fields does not change identity. Every API response, including authentication errors and unknown routes, uses `Cache-Control: no-store`. Request bodies are limited to 256 KiB.
 
-Responses carry a server-generated UUID in `X-Request-Id`; a caller cannot override it. Request tracing records this ID, method and route template without credentials or query strings. Responses also set `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer` and a same-origin Content Security Policy that disallows framing, objects and external scripts/connections. TLS remains the ingress's responsibility.
+Responses carry a server-generated UUID in `X-Request-Id`; a caller cannot override it. Request tracing records this ID, method and route template without credentials or query strings. Responses also set `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer` and a same-origin Content Security Policy that disallows framing, objects and external scripts. Connections are same-origin plus the single configured WorkOS Authentication API origin when enabled. TLS remains the ingress's responsibility.
 
 ## Routes
 
 | Method | Route | Result |
 |---|---|---|
+| GET | `/auth/config` | Public nonsecret login provider configuration; no-store, no tenant/role maps |
 | GET | `/health` | Process liveness; public |
 | GET | `/ready` | 200 if a database query succeeds within two seconds, otherwise 503; public, no-store |
 | GET | `/v1/session` | Verified identity, explicit demo mode and configured receiver status |

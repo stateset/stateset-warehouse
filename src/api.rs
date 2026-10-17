@@ -40,7 +40,7 @@ impl IntoResponse for Error {
     }
 }
 async fn authenticate(
-    State(app): State<App>,
+    State((app, workos)): State<(App, Option<crate::auth::WorkOs>)>,
     headers: HeaderMap,
     mut request: HttpRequest,
     next: Next,
@@ -56,6 +56,20 @@ async fn authenticate(
         .iter()
         .find(|(key, _)| bool::from(Sha256::digest(key.as_bytes()).ct_eq(&digest)))
         .map(|(_, i)| i.clone());
+    let identity = match (identity, workos) {
+        (Some(identity), _) => Some(identity),
+        (None, Some(auth)) if !token.is_empty() => {
+            match tokio::time::timeout(Duration::from_secs(4), auth.authenticate(token)).await {
+                Ok(Ok(identity)) => Some(identity),
+                Ok(Err(error)) => return error.into_response(),
+                Err(_) => {
+                    return Error::new(503, "Sign-in verification is temporarily unavailable")
+                        .into_response()
+                }
+            }
+        }
+        _ => None,
+    };
     let Some(identity) = identity else {
         return Error::new(401, "A valid warehouse API credential is required").into_response();
     };
@@ -67,7 +81,11 @@ async fn authenticate(
     );
     response
 }
-async fn response_policy(mut request: HttpRequest, next: Next) -> Response {
+async fn response_policy(
+    State(auth_origin): State<Option<String>>,
+    mut request: HttpRequest,
+    next: Next,
+) -> Response {
     // Correlation IDs are generated here, never trusted from client headers.
     let request_id = axum::http::HeaderValue::from_str(&uuid::Uuid::new_v4().to_string())
         .expect("UUID is a valid response header");
@@ -75,8 +93,9 @@ async fn response_policy(mut request: HttpRequest, next: Next) -> Response {
         .headers_mut()
         .insert("x-request-id", request_id.clone());
     let path = request.uri().path();
-    let no_store =
-        path == "/v1" || path.starts_with("/v1/") || ["/ready", "/health"].contains(&path);
+    let no_store = path == "/v1"
+        || path.starts_with("/v1/")
+        || ["/", "/login", "/ready", "/health", "/auth/config"].contains(&path);
     let mut response = next.run(request).await;
     let headers = response.headers_mut();
     headers.insert("x-request-id", request_id);
@@ -87,6 +106,13 @@ async fn response_policy(mut request: HttpRequest, next: Next) -> Response {
         ("content-security-policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"),
     ] {
         headers.insert(name, axum::http::HeaderValue::from_static(value));
+    }
+    if let Some(origin) = auth_origin {
+        let policy = format!("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' {origin}; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+        headers.insert(
+            "content-security-policy",
+            axum::http::HeaderValue::from_str(&policy).expect("validated HTTPS origin"),
+        );
     }
     if no_store {
         headers.insert(
@@ -221,6 +247,14 @@ async fn event(
     Ok(Json(row.try_get("payload")?))
 }
 pub fn router(app: App) -> Router {
+    router_with_auth(app, None)
+}
+pub fn router_with_auth(app: App, workos: Option<crate::auth::WorkOs>) -> Router {
+    let public_auth = workos
+        .as_ref()
+        .map(|w| w.config.public())
+        .unwrap_or(json!({"provider":"api_key"}));
+    let auth_origin = workos.as_ref().map(|w| w.config.api_origin.clone());
     let protected = Router::new()
         .route("/v1/session", get(session))
         .route("/v1/warehouses", get(warehouses))
@@ -245,9 +279,16 @@ pub fn router(app: App) -> Router {
         .route("/v1", any(unknown_api))
         .route("/v1/", any(unknown_api))
         .route("/v1/{*path}", any(unknown_api))
-        .route_layer(middleware::from_fn_with_state(app.clone(), authenticate));
+        .route_layer(middleware::from_fn_with_state(
+            (app.clone(), workos),
+            authenticate,
+        ));
     Router::new()
         .merge(protected)
+        .route(
+            "/auth/config",
+            get(move || async move { Json(public_auth) }),
+        )
         .route(
             "/health",
             get(|| async { Json(json!({"status":"ok","service":"stateset-warehouse"})) }),
@@ -273,6 +314,6 @@ pub fn router(app: App) -> Router {
                 tracing::info_span!("warehouse_http", method=%request.method(), route, request_id)
             }),
         )
-        .layer(middleware::from_fn(response_policy))
+        .layer(middleware::from_fn_with_state(auth_origin, response_policy))
         .with_state(app)
 }

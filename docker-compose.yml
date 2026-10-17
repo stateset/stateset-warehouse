@@ -26,6 +26,8 @@ services:
       DATABASE_URL: postgres://warehouse:${POSTGRES_PASSWORD:-warehouse}@postgres:5432/warehouse
       WMS_BIND: 0.0.0.0:8088
       WMS_DEMO: "false"
+      # Inherit only when present; an absent WorkOS config keeps API-key mode.
+      WMS_WORKOS_JSON:
       WMS_API_KEYS_JSON: ${WMS_API_KEYS_JSON:-}
       WMS_NATIVE_INTEGRATIONS_JSON: ${WMS_NATIVE_INTEGRATIONS_JSON:-}
     ports:

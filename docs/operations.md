@@ -32,7 +32,7 @@ The script creates its own PostgreSQL 16 container and private Docker network, p
 
 ## Deploy and establish the recovery point
 
-Record the application commit/image digest, PostgreSQL version and applied `wms_schema_migrations` names/digests with the release. Configure real tenant/actor credentials, `WMS_DEMO=false`, database access and TLS at the ingress. `/health` is process liveness; `/ready` must return 200 before traffic is admitted and returns 503 after a bounded two-second database check. Native credentials and generic event webhooks are separate configuration; verify the intended OMS and TMS tenant mapping before enabling either.
+Record the application commit/image digest, PostgreSQL version and applied `wms_schema_migrations` names/digests with the release. Configure real tenant/actor service credentials or [WorkOS membership mappings](authentication.md), `WMS_DEMO=false`, database access and TLS at the ingress. `/health` is process liveness; `/ready` must return 200 before traffic is admitted and returns 503 after a bounded two-second database check. Native credentials and generic event webhooks are separate configuration; verify the intended OMS and TMS tenant mapping before enabling either.
 
 Startup applies tracked migrations in a transaction and validates imported legacy evidence. Relational migration fences writes from old aggregate binaries. **Rolling back the executable does not roll back the database.** A rollback across that boundary requires a verified pre-cutover backup and a plan to reconcile every physical or remote action after it. Keep all old writers stopped during cutover.
 

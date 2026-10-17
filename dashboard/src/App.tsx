@@ -1,3 +1,4 @@
+import type { WarehouseAuth } from "./Auth";
 import {
   useCallback,
   useEffect,
@@ -488,9 +489,9 @@ function CommandForm({
   );
 }
 
-export default function App() {
-  const [token, setToken] = useState(
-    () => sessionStorage.getItem("wms-token") ?? "",
+export default function App({ auth }: { auth?: WarehouseAuth }) {
+  const [token, setToken] = useState(() =>
+    auth ? "workos" : (sessionStorage.getItem("wms-token") ?? ""),
   );
   const [session, setSession] = useState<Session | null>(null);
   const [state, setState] = useState<WarehouseState | null>(null);
@@ -549,12 +550,28 @@ export default function App() {
       const controller = new AbortController();
       controllers.current.add(controller);
       const timeout = setTimeout(() => controller.abort(), 20000);
+      let cancelCredential: (() => void) | undefined;
       try {
+        const credential = auth
+          ? await new Promise<string>((resolve, reject) => {
+              cancelCredential = () =>
+                reject(
+                  new Error(
+                    "Sign-in was interrupted. Check the original save after signing in again.",
+                  ),
+                );
+              controller.signal.addEventListener("abort", cancelCredential, {
+                once: true,
+              });
+              void auth.getAccessToken().then(resolve, reject);
+            })
+          : token;
+        controller.signal.throwIfAborted();
         const response = await fetch(path, {
           signal: controller.signal,
           method: body ? "POST" : "GET",
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${credential}`,
             ...(body ? { "Content-Type": "application/json" } : {}),
           },
           body: body ? JSON.stringify(body) : undefined,
@@ -577,11 +594,13 @@ export default function App() {
           );
         return data;
       } finally {
+        if (cancelCredential)
+          controller.signal.removeEventListener("abort", cancelCredential);
         clearTimeout(timeout);
         controllers.current.delete(controller);
       }
     },
-    [token],
+    [token, auth],
   );
   const refresh = useCallback(
     async (warehouse: string) => {
@@ -681,7 +700,7 @@ export default function App() {
         const list = await request("/v1/warehouses");
         if (current !== epoch.current) return;
         setSession(s);
-        sessionStorage.setItem("wms-token", token);
+        if (!auth) sessionStorage.setItem("wms-token", token);
         const saved = sessionStorage.getItem(
           `wms-pending:${s.identity.tenant}:${s.identity.actor}`,
         );
@@ -716,7 +735,7 @@ export default function App() {
       ++epoch.current;
       for (const c of controllers.current) c.abort();
     };
-  }, [token, request, refresh]);
+  }, [token, request, refresh, auth]);
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(""), 4500);
@@ -763,6 +782,7 @@ export default function App() {
     setError("");
     setBusy(false);
     setLoading(false);
+    auth?.signOut();
   };
   const journalKey = session
     ? `wms-pending:${session.identity.tenant}:${session.identity.actor}`
@@ -920,6 +940,18 @@ export default function App() {
     }
   };
 
+  if ((!session || !state) && auth)
+    return (
+      <main className="login-form">
+        <h1>Open your warehouse</h1>
+        <p role={error ? "alert" : "status"}>
+          {error || "Loading your authorized workspace…"}
+        </p>
+        <button className="btn" onClick={logout}>
+          Sign out
+        </button>
+      </main>
+    );
   if (!session || !state)
     return (
       <div className="login-screen">

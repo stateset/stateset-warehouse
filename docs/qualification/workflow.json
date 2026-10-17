@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "recorded_at": "2026-10-17T16:43:48.763550+00:00",
+  "recorded_at": "2026-10-17T18:01:06.302575+00:00",
   "ok": true,
   "source_sha256": {
     ".github/workflows/check.yml": "27d71975d0094b0bc3b0f9fc9bf5fc4ecb2a2588b4536aad3e9d87f38e38c3d8",
-    "scripts/qualify-release.sh": "c54115a6b75aba53345c0796c70750ba43f3b09e44bb9f8bf46fac264044dc42",
+    "scripts/qualify-release.sh": "885186b677f895adda8caacfd3321866e06e2c60be7fa44df515156cf25528dc",
     "scripts/resilience-rehearsal.sh": "a3989732252279094d7ccadd68be45dc169d5a9473f51ac8507f2e456bb4afeb"
   },
   "actionlint_version": "1.7.12",

@@ -277,6 +277,7 @@ code,
   display: flex;
   flex-direction: column;
   padding: 29px 16px 0;
+  overflow-y: auto;
   z-index: 30;
 }
 .brand {
@@ -446,6 +447,9 @@ code,
   font-weight: 600;
   flex-shrink: 0;
 }
+.profile > div:not(.avatar) {
+  min-width: 0;
+}
 .profile .avatar {
   background: #36513a;
   color: #d4e7c9;
@@ -461,12 +465,16 @@ code,
   text-overflow: ellipsis;
 }
 .profile small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   display: block;
   font-size: 8px;
   margin-top: 4px;
   color: #7e9584;
 }
 .profile .icon-btn {
+  flex-shrink: 0;
   margin-left: auto;
   color: #809584;
 }

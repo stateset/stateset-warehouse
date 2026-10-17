@@ -68,6 +68,7 @@ async function setup(
         contentType: "application/json",
         body: JSON.stringify(body),
       });
+    if (pathname === "/auth/config") return send({ provider: "api_key" });
     if (pathname === "/v1/session")
       return send({
         identity: { tenant: "demo", actor: "operator:scanner", role: "admin" },

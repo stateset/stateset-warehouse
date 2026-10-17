@@ -147,7 +147,7 @@ report = {"schema_version": 1, "scope": "software_release_gate", "recorded_at": 
           "release_revision": os.environ.get("WMS_RELEASE_REVISION", "unrecorded-working-tree"),
           "elapsed_seconds": int(time.time()) - int(os.environ["WMS_RELEASE_STARTED"]),
           "stages": stages, "artifacts": artifacts,
-          "not_performed": ["Deployed OMS/Freight qualification", "Physical warehouse and scanner acceptance", "Organization-hosted GitHub execution"],
+          "not_performed": ["Deployed WorkOS sign-in and membership lifecycle", "Deployed OMS/Freight qualification", "Physical warehouse and scanner acceptance", "Organization-hosted GitHub execution"],
           "limits": ["All inventory and native-service fixtures are synthetic", "Performance results apply to the recorded profiles and host",
                      "Process/database restart is not managed database failover", "Published logs are sanitized; private raw artifacts stay in the fresh evidence directory"]}
 serialized = json.dumps(report, indent=2) + "\n"
@@ -315,7 +315,7 @@ PY
 )"
   (
     cd "$wms_release_runtime"
-    unset WMS_OMS_WEBHOOK_URL WMS_OMS_WEBHOOK_TOKEN WMS_TMS_WEBHOOK_URL WMS_TMS_WEBHOOK_TOKEN WMS_WEBHOOK_TENANT
+    unset WMS_WORKOS_JSON WMS_OMS_WEBHOOK_URL WMS_OMS_WEBHOOK_TOKEN WMS_TMS_WEBHOOK_URL WMS_TMS_WEBHOOK_TOKEN WMS_WEBHOOK_TENANT
     # Each owned API intentionally receives its own isolated process environment.
     # shellcheck disable=SC2030
     export DATABASE_URL="$WMS_TEST_DATABASE_URL" WMS_DEMO=true WMS_BIND="127.0.0.1:$WMS_RELEASE_DEMO_PORT" WMS_NATIVE_INTEGRATIONS_JSON='{}'
@@ -324,7 +324,7 @@ PY
   wms_release_api_pid=$!
   (
     cd "$wms_release_runtime"
-    unset WMS_OMS_WEBHOOK_URL WMS_OMS_WEBHOOK_TOKEN WMS_TMS_WEBHOOK_URL WMS_TMS_WEBHOOK_TOKEN WMS_WEBHOOK_TENANT
+    unset WMS_WORKOS_JSON WMS_OMS_WEBHOOK_URL WMS_OMS_WEBHOOK_TOKEN WMS_TMS_WEBHOOK_URL WMS_TMS_WEBHOOK_TOKEN WMS_WEBHOOK_TENANT
     # The demo process's environment must not propagate into the real scanner API.
     # shellcheck disable=SC2031
     export DATABASE_URL="$WMS_TEST_DATABASE_URL" WMS_DEMO=false WMS_BIND="127.0.0.1:$WMS_RELEASE_SCANNER_PORT" WMS_NATIVE_INTEGRATIONS_JSON='{}' WMS_API_KEYS_JSON="$wms_release_scanner_keys"

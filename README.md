@@ -51,7 +51,7 @@ Quantities are whole **each** units. Partial receipts/picks are supported; parti
 
 ## Real workspaces
 
-Set `WMS_DEMO=false` and configure `WMS_API_KEYS_JSON` in `.env` or your secret manager:
+Set `WMS_DEMO=false`. For operator sign-in, configure [WorkOS AuthKit](docs/authentication.md). For service credentials or API-key mode, configure `WMS_API_KEYS_JSON` in `.env` or your secret manager:
 
 ```dotenv
 WMS_API_KEYS_JSON={"replace-with-a-random-secret-of-at-least-32-characters":{"tenant":"your-org","actor":"operator:alice","role":"admin"}}
@@ -59,7 +59,7 @@ WMS_API_KEYS_JSON={"replace-with-a-random-secret-of-at-least-32-characters":{"te
 
 Real tenants start with an empty `MAIN` warehouse, a receiving bin and staging bin. Configure the physical facility, create products/storage locations, and record actual receipts or opening physical counts. This version provisions one warehouse per tenant; it does not expose a multi-facility administration product. Separate warehouses are already part of every persistence and API key.
 
-Roles are `viewer`, `operator`, `admin` and `oms`. Operators execute warehouse work; admins additionally manage facilities/catalog/locations and count adjustments. OMS credentials may create source-linked orders and cancel them before physical picking. Use individual keys for attributable actions. Browser credentials are session-scoped; sign-out removes the local credential. Server revocation is by removing/rotating the configured key and restarting instances. WorkOS/AuthKit sign-in and SSO are not integrated yet.
+Roles are `viewer`, `operator`, `admin` and `oms`. Operators execute warehouse work; admins additionally manage facilities/catalog/locations and count adjustments. OMS credentials may create source-linked orders and cancel them before physical picking. Use individual keys for attributable actions. Browser credentials are session-scoped; sign-out removes the local credential. Server revocation is by removing/rotating the configured key and restarting instances. Optional [WorkOS AuthKit sign-in](docs/authentication.md) maps verified organization memberships to explicit WMS tenants and roles, with signed access tokens and browser refresh/sign-out. It requires actual WorkOS configuration and deployed qualification; it is not enabled by default. API keys remain available for service identities.
 
 Integrations are opt-in server configuration. The [native adapters](docs/native-integrations.md) use Sync's tenant-bound order API and Freight's `/v1/sync/import` planned-load API. Configure their explicit tenant map with `WMS_NATIVE_INTEGRATIONS_JSON`. These contracts have source-derived fixtures and local HTTP tests; deployed credentials, tenant mappings and live external services still require qualification. OMS writeback defaults to held. After deploying the included companion receiver, explicitly enable `shipment_writeback: "conditional_v1"` for the qualified tenant. The WMS never falls back to the unsafe legacy fulfillment endpoint.
 
