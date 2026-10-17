@@ -848,3 +848,387 @@ async fn database_constraint_rejects_raw_balance_corruption() {
         .validate()
         .expect("original still valid");
 }
+
+#[tokio::test]
+#[ignore = "requires isolated Postgres and local HTTP; scripts/check.sh --postgres"]
+async fn delivery_recipient_change_cannot_redirect_original_event_even_after_admin_retry() {
+    use axum::{
+        http::{HeaderMap, StatusCode},
+        routing::post,
+        Json, Router,
+    };
+    let (store, i, _) = setup().await;
+    execute(&store, &i, create_order("SO-PINNED-RECEIVER", 1)).await;
+    let item = store
+        .outbox(&i.tenant, "wh-main")
+        .await
+        .expect("delivery recipient fixture operation")[0]
+        .clone();
+    let oid = item["id"].as_str().expect("string evidence");
+    let seen = Arc::new(tokio::sync::Mutex::new(Vec::new()));
+    let wrong_calls = Arc::new(AtomicUsize::new(0));
+    let receiver = Router::new()
+        .route(
+            "/original",
+            post({
+                let seen = seen.clone();
+                move |headers: HeaderMap, Json(body): Json<Value>| {
+                    let seen = seen.clone();
+                    async move {
+                        let mut calls = seen.lock().await;
+                        calls.push((
+                            headers["authorization"]
+                                .to_str()
+                                .expect("receiver request header")
+                                .to_string(),
+                            headers["idempotency-key"]
+                                .to_str()
+                                .expect("receiver request header")
+                                .to_string(),
+                            body,
+                        ));
+                        if calls.len() == 1 {
+                            StatusCode::SERVICE_UNAVAILABLE
+                        } else {
+                            StatusCode::ACCEPTED
+                        }
+                    }
+                }
+            }),
+        )
+        .route(
+            "/replacement",
+            post({
+                let calls = wrong_calls.clone();
+                move || {
+                    let calls = calls.clone();
+                    async move {
+                        calls.fetch_add(1, Ordering::SeqCst);
+                        StatusCode::ACCEPTED
+                    }
+                }
+            }),
+        );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("delivery recipient fixture operation");
+    let address = listener.local_addr().expect("local receiver address");
+    let server = tokio::spawn(async move {
+        axum::serve(listener, receiver)
+            .await
+            .expect("delivery recipient fixture operation")
+    });
+    let connections = |path: &str, token: &str| {
+        Connections(Arc::new(BTreeMap::from([(
+            (i.tenant.clone(), "oms".into()),
+            (format!("http://{address}/{path}"), token.into()),
+        )])))
+    };
+    assert!(connections("original", "old-token")
+        .dispatch_one(&store)
+        .await
+        .expect("delivery recipient fixture operation"));
+    sqlx::query("UPDATE wms_outbox SET due_at=now() WHERE id=$1")
+        .bind(oid)
+        .execute(&store.pool)
+        .await
+        .expect("delivery recipient fixture operation");
+    assert!(connections("replacement", "different-token")
+        .dispatch_one(&store)
+        .await
+        .expect("delivery recipient fixture operation"));
+    assert_eq!(
+        wrong_calls.load(Ordering::SeqCst),
+        0,
+        "a retained event must never reach a replacement receiver"
+    );
+    let held = store
+        .outbox(&i.tenant, "wh-main")
+        .await
+        .expect("delivery recipient fixture operation")[0]
+        .clone();
+    assert_eq!(held["status"], "dead_letter");
+    assert_eq!(
+        held["attempts"], 1,
+        "configuration holds are not HTTP attempts"
+    );
+    assert!(held["last_error"]
+        .as_str()
+        .expect("string evidence")
+        .contains("receiver"));
+    store
+        .retry(&i, oid)
+        .await
+        .expect("delivery recipient fixture operation");
+    assert!(connections("replacement", "different-token")
+        .dispatch_one(&store)
+        .await
+        .expect("delivery recipient fixture operation"));
+    assert_eq!(
+        wrong_calls.load(Ordering::SeqCst),
+        0,
+        "audited requeue cannot repoint the receiver"
+    );
+    store
+        .retry(&i, oid)
+        .await
+        .expect("delivery recipient fixture operation");
+    assert!(connections("original", "rotated-token")
+        .dispatch_one(&store)
+        .await
+        .expect("delivery recipient fixture operation"));
+    let done = store
+        .outbox(&i.tenant, "wh-main")
+        .await
+        .expect("delivery recipient fixture operation")[0]
+        .clone();
+    assert_eq!(done["status"], "delivered");
+    let calls = seen.lock().await;
+    assert_eq!(calls.len(), 2);
+    assert_eq!(calls[0].0, "Bearer old-token");
+    assert_eq!(calls[1].0, "Bearer rotated-token");
+    assert_eq!(calls[0].1, calls[1].1);
+    assert_eq!(calls[0].2, calls[1].2);
+    assert_eq!(
+        calls[0].1,
+        item["event_id"].as_str().expect("string evidence")
+    );
+    let attempts: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM wms_delivery_attempts WHERE outbox_id=$1")
+            .bind(oid)
+            .fetch_one(&store.pool)
+            .await
+            .expect("delivery recipient fixture operation");
+    assert_eq!(attempts, 2);
+    assert!(store
+        .reconciliation(&i.tenant, "wh-main")
+        .await
+        .expect("delivery recipient fixture operation")["ok"]
+        .as_bool()
+        .expect("delivery recipient fixture operation"));
+    server.abort();
+}
+
+#[tokio::test]
+#[ignore = "requires isolated Postgres and local HTTP; scripts/check.sh --postgres"]
+async fn historical_delivery_without_receiver_proof_stays_held_across_requeue() {
+    use axum::{http::StatusCode, routing::post, Router};
+    let (store, i, _) = setup().await;
+    execute(&store, &i, create_order("SO-LEGACY-RECEIVER", 1)).await;
+    let item = store
+        .outbox(&i.tenant, "wh-main")
+        .await
+        .expect("delivery recipient fixture operation")[0]
+        .clone();
+    let oid = item["id"].as_str().expect("string evidence");
+    // This is the durable marker assigned by the upgrade to historical sends.
+    sqlx::query("UPDATE wms_outbox SET recipient_fingerprint='unverified' WHERE id=$1")
+        .bind(oid)
+        .execute(&store.pool)
+        .await
+        .expect("delivery recipient fixture operation");
+    let calls = Arc::new(AtomicUsize::new(0));
+    let receiver = Router::new().route(
+        "/events",
+        post({
+            let calls = calls.clone();
+            move || {
+                let calls = calls.clone();
+                async move {
+                    calls.fetch_add(1, Ordering::SeqCst);
+                    StatusCode::ACCEPTED
+                }
+            }
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("delivery recipient fixture operation");
+    let address = listener.local_addr().expect("local receiver address");
+    let server = tokio::spawn(async move {
+        axum::serve(listener, receiver)
+            .await
+            .expect("delivery recipient fixture operation")
+    });
+    let connections = Connections(Arc::new(BTreeMap::from([(
+        (i.tenant.clone(), "oms".into()),
+        (format!("http://{address}/events"), "token".into()),
+    )])));
+    assert!(connections
+        .dispatch_one(&store)
+        .await
+        .expect("delivery recipient fixture operation"));
+    store
+        .retry(&i, oid)
+        .await
+        .expect("delivery recipient fixture operation");
+    assert!(connections
+        .dispatch_one(&store)
+        .await
+        .expect("delivery recipient fixture operation"));
+    assert_eq!(calls.load(Ordering::SeqCst), 0);
+    let item = store
+        .outbox(&i.tenant, "wh-main")
+        .await
+        .expect("delivery recipient fixture operation")[0]
+        .clone();
+    assert_eq!(item["status"], "dead_letter");
+    assert!(item["last_error"]
+        .as_str()
+        .expect("string evidence")
+        .contains("unknown"));
+    let attempts: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM wms_delivery_attempts WHERE outbox_id=$1")
+            .bind(oid)
+            .fetch_one(&store.pool)
+            .await
+            .expect("delivery recipient fixture operation");
+    assert_eq!(
+        attempts, 0,
+        "a configuration hold creates no invented delivery attempt"
+    );
+    server.abort();
+}
+
+#[tokio::test]
+#[ignore = "requires isolated Postgres; scripts/check.sh --postgres"]
+async fn delivery_recipient_migration_preserves_history_and_fences_identity_changes() {
+    let (store, _, _) = setup().await;
+    let mut tx = store
+        .pool
+        .begin()
+        .await
+        .expect("delivery recipient fixture operation");
+    let schema = format!("recipient_upgrade_{}", id().replace('-', ""));
+    sqlx::raw_sql(&format!(
+        "CREATE SCHEMA {schema}; SET LOCAL search_path TO {schema}"
+    ))
+    .execute(&mut *tx)
+    .await
+    .expect("delivery recipient fixture operation");
+    // Upgrade the actual preceding seven-migration schema, including an event
+    // with a reset retry counter whose retained attempt still proves a send.
+    for migration in [
+        include_str!("../migrations/001_initial.sql"),
+        include_str!("../migrations/002_relational_execution.sql"),
+        include_str!("../migrations/003_native_operations.sql"),
+        include_str!("../migrations/004_native_source_ownership.sql"),
+        include_str!("../migrations/005_conditional_oms_fulfillment.sql"),
+        include_str!("../migrations/006_oms_rejections.sql"),
+        include_str!("../migrations/007_operations_indexes.sql"),
+    ] {
+        sqlx::raw_sql(migration)
+            .execute(&mut *tx)
+            .await
+            .expect("delivery recipient fixture operation");
+    }
+    sqlx::raw_sql("INSERT INTO wms_events(id,tenant,warehouse_id,version,payload) VALUES('event','tenant','warehouse',1,'{}');
+        INSERT INTO wms_outbox(id,event_id,tenant,destination,attempts,status) VALUES
+        ('never','event','tenant','oms',0,'pending'),
+        ('counter','event','tenant','oms',2,'delivering'),
+        ('history','event','tenant','oms',0,'pending'),
+        ('done','event','tenant','oms',1,'delivered');
+        INSERT INTO wms_delivery_attempts(id,outbox_id,outcome,detail) VALUES('old','history','uncertain','original detail')")
+        .execute(&mut *tx).await.expect("delivery recipient fixture operation");
+    sqlx::raw_sql(include_str!("../migrations/008_delivery_recipient.sql"))
+        .execute(&mut *tx)
+        .await
+        .expect("delivery recipient fixture operation");
+    let rows: Vec<(String, Option<String>)> =
+        sqlx::query_as("SELECT id,recipient_fingerprint FROM wms_outbox ORDER BY id")
+            .fetch_all(&mut *tx)
+            .await
+            .expect("delivery recipient fixture operation");
+    assert_eq!(
+        rows,
+        vec![
+            ("counter".into(), Some("unverified".into())),
+            ("done".into(), Some("unverified".into())),
+            ("history".into(), Some("unverified".into())),
+            ("never".into(), None)
+        ]
+    );
+    let history: (String, String) =
+        sqlx::query_as("SELECT outcome,detail FROM wms_delivery_attempts WHERE id='old'")
+            .fetch_one(&mut *tx)
+            .await
+            .expect("delivery recipient fixture operation");
+    assert_eq!(history, ("uncertain".into(), "original detail".into()));
+    let status: String = sqlx::query_scalar("SELECT status FROM wms_outbox WHERE id='done'")
+        .fetch_one(&mut *tx)
+        .await
+        .expect("delivery recipient fixture operation");
+    assert_eq!(status, "delivered");
+    sqlx::query("UPDATE wms_outbox SET recipient_fingerprint=$1 WHERE id='never'")
+        .bind("a".repeat(64))
+        .execute(&mut *tx)
+        .await
+        .expect("delivery recipient fixture operation");
+    for change in [
+        "recipient_fingerprint=NULL",
+        "recipient_fingerprint=repeat('b',64)",
+        "tenant='other'",
+        "destination='tms'",
+        "event_id='different'",
+        "status='delivering',attempts=attempts+1,lease_token='legacy-worker',lease_until=now()+interval '30 seconds'",
+    ] {
+        sqlx::query("SAVEPOINT guard_probe")
+            .execute(&mut *tx)
+            .await
+            .expect("delivery recipient fixture operation");
+        let error = sqlx::query(&format!("UPDATE wms_outbox SET {change} WHERE id='never'"))
+            .execute(&mut *tx)
+            .await
+            .expect_err("direct SQL must not change original delivery identity");
+        assert_eq!(
+            error.as_database_error().and_then(|e| e.code()).as_deref(),
+            Some("23514")
+        );
+        sqlx::query("ROLLBACK TO SAVEPOINT guard_probe")
+            .execute(&mut *tx)
+            .await
+            .expect("delivery recipient fixture operation");
+    }
+    for (assertion, allowed) in [("b".repeat(64), false), ("a".repeat(64), true)] {
+        sqlx::query("SAVEPOINT receiver_assertion")
+            .execute(&mut *tx)
+            .await
+            .expect("receiver assertion savepoint");
+        sqlx::query("SELECT set_config('wms.delivery_recipient',$1,true)")
+            .bind(assertion)
+            .execute(&mut *tx)
+            .await
+            .expect("transaction-local receiver assertion");
+        let claim = sqlx::query("UPDATE wms_outbox SET status='delivering',attempts=attempts+1,lease_token='current-worker',lease_until=now()+interval '30 seconds' WHERE id='never'")
+            .execute(&mut *tx).await;
+        if allowed {
+            assert_eq!(
+                claim.expect("matching receiver may claim").rows_affected(),
+                1
+            );
+        } else {
+            let error = claim.expect_err("different receiver cannot claim");
+            assert_eq!(
+                error.as_database_error().and_then(|e| e.code()).as_deref(),
+                Some("23514")
+            );
+        }
+        sqlx::query("ROLLBACK TO SAVEPOINT receiver_assertion")
+            .execute(&mut *tx)
+            .await
+            .expect("discard assertion and claim probe");
+    }
+    sqlx::query("UPDATE wms_outbox SET status='pending',attempts=0 WHERE id='history'")
+        .execute(&mut *tx)
+        .await
+        .expect("delivery recipient fixture operation");
+    let pin: String =
+        sqlx::query_scalar("SELECT recipient_fingerprint FROM wms_outbox WHERE id='history'")
+            .fetch_one(&mut *tx)
+            .await
+            .expect("delivery recipient fixture operation");
+    assert_eq!(pin, "unverified");
+    tx.rollback()
+        .await
+        .expect("delivery recipient fixture operation");
+}

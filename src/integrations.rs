@@ -1,6 +1,7 @@
 //! Proposed event receiver contract. No native OMS/TMS compatibility is implied.
 use crate::store::{Error, Result, Store};
 use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
 use sqlx::Row;
 use std::{collections::BTreeMap, sync::Arc, time::Duration};
 
@@ -22,7 +23,7 @@ impl Connections {
             return Ok(false);
         }
         let mut tx = store.pool.begin().await?;
-        let rows=sqlx::query("SELECT o.id,o.event_id,o.tenant,o.destination,o.attempts,e.payload FROM wms_outbox o JOIN wms_events e ON e.id=o.event_id WHERE EXISTS (SELECT 1 FROM jsonb_to_recordset($1::jsonb) AS c(tenant text,destination text) WHERE c.tenant=o.tenant AND c.destination=o.destination) AND ((o.status='pending' AND o.due_at<=now()) OR (o.status='delivering' AND o.lease_until<now())) ORDER BY o.due_at,o.id FOR UPDATE OF o SKIP LOCKED LIMIT 1")
+        let rows=sqlx::query("SELECT o.id,o.event_id,o.tenant,o.destination,o.attempts,o.recipient_fingerprint,EXISTS(SELECT 1 FROM wms_delivery_attempts a WHERE a.outbox_id=o.id) AS attempted,e.payload FROM wms_outbox o JOIN wms_events e ON e.id=o.event_id WHERE EXISTS (SELECT 1 FROM jsonb_to_recordset($1::jsonb) AS c(tenant text,destination text) WHERE c.tenant=o.tenant AND c.destination=o.destination) AND ((o.status='pending' AND o.due_at<=now()) OR (o.status='delivering' AND o.lease_until<now())) ORDER BY o.due_at,o.id FOR UPDATE OF o SKIP LOCKED LIMIT 1")
             .bind(json!(configured)).fetch_all(&mut *tx).await?;
         let row = rows.into_iter().find(|r| {
             let tenant = r.get::<String, _>("tenant");
@@ -38,7 +39,26 @@ impl Connections {
         let destination: String = row.try_get("destination")?;
         let attempts: i64 = row.try_get("attempts")?;
         let payload: Value = row.try_get("payload")?;
+        let (url, token) = self
+            .0
+            .get(&(tenant, destination))
+            .ok_or_else(|| Error::new(503, "Receiver configuration changed"))?;
+        let fingerprint = format!("{:x}", Sha256::digest(url.as_bytes()));
+        let pinned: Option<String> = row.try_get("recipient_fingerprint")?;
+        let attempted: bool = row.try_get("attempted")?;
         sqlx::query("UPDATE wms_delivery_attempts SET outcome='uncertain',detail='Delivery lease expired before its outcome was committed',finished_at=now() WHERE outbox_id=$1 AND outcome='started'").bind(&oid).execute(&mut *tx).await?;
+        let hold = match pinned.as_deref() {
+            Some("unverified") => Some("Original receiver is unknown for a historical delivery; independent receiver reconciliation is required before recovery"),
+            Some(original) if original != fingerprint => Some("Configured receiver differs from the original delivery; restore the original receiver before an audited retry"),
+            None if attempts > 0 || attempted => Some("Original receiver is unknown for a historical delivery; independent receiver reconciliation is required before recovery"),
+            _ => None,
+        };
+        if let Some(reason) = hold {
+            sqlx::query("UPDATE wms_outbox SET status='dead_letter',last_error=$1,lease_token=NULL,lease_until=NULL WHERE id=$2")
+                .bind(reason).bind(&oid).execute(&mut *tx).await?;
+            tx.commit().await?;
+            return Ok(true);
+        }
         // A sender may disappear after HTTP but before committing its outcome.
         // Count its claimed attempt against the budget before sending again;
         // expiry does not prove the receiver rejected the original event.
@@ -48,6 +68,17 @@ impl Connections {
             tx.commit().await?;
             return Ok(true);
         }
+        if pinned.is_none() {
+            sqlx::query("UPDATE wms_outbox SET recipient_fingerprint=$1 WHERE id=$2")
+                .bind(&fingerprint)
+                .bind(&oid)
+                .execute(&mut *tx)
+                .await?;
+        }
+        sqlx::query("SELECT set_config('wms.delivery_recipient',$1,true)")
+            .bind(&fingerprint)
+            .execute(&mut *tx)
+            .await?;
         let lease = crate::domain::id();
         sqlx::query("INSERT INTO wms_delivery_attempts (id,outbox_id) VALUES ($1,$2)")
             .bind(&lease)
@@ -57,10 +88,6 @@ impl Connections {
         sqlx::query("UPDATE wms_outbox SET status='delivering',attempts=attempts+1,lease_token=$1,lease_until=now()+interval '30 seconds' WHERE id=$2")
             .bind(&lease).bind(&oid).execute(&mut *tx).await?;
         tx.commit().await?;
-        let (url, token) = self
-            .0
-            .get(&(tenant, destination))
-            .ok_or_else(|| Error::new(503, "Receiver configuration changed"))?;
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(10))
             .redirect(reqwest::redirect::Policy::none())

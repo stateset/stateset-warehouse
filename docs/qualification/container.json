@@ -1,8 +1,8 @@
 {
   "ok": true,
   "synthetic": true,
-  "image_id": "sha256:dea3eec34598d824e0c4db9cf0e90114ae776cbf462a01ea9f97ae3d62944bb5",
-  "source_inputs_sha256": "1ce49f0bb2b5ddb3d6a60c120b5c8c4f26e07101eac43d8d012f1af6d3382f57",
+  "image_id": "sha256:9ede733ef170f3b2eaaee7f97504cb3d2874d4d029f1d18e868c64e6d57b9c70",
+  "source_inputs_sha256": "0ac610111ffe4f282df0a6e13bd1be8506389b7d394e0f782b45d7f514174f72",
   "release_revision": "unrecorded-working-tree",
   "os": "linux",
   "architecture": "amd64",
@@ -13,7 +13,7 @@
     "postgres@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea"
   ],
   "qualifier_script_sha256": "5953e166762a6bea9616b8180eed4e6b13ecd30ddffcf1a9710f289df74f5be7",
-  "elapsed_build_and_runtime_seconds": 164,
+  "elapsed_build_and_runtime_seconds": 145,
   "runtime": {
     "uid": 10001,
     "read_only_rootfs": true,
@@ -62,6 +62,10 @@
     {
       "name": "007_operations_indexes",
       "sha256": "b0b9b422f570ed77ca1252df42c96b29544849621ed748cadd1f068b708576b5"
+    },
+    {
+      "name": "008_delivery_recipient",
+      "sha256": "050f40c80b9e73a3edc8a19545ab08cfe41051616b84d9445dfdea9a30de9d19"
     }
   ],
   "qualification_limit": "Production image build and isolated synthetic PostgreSQL runtime; no facility or deployed integration acceptance claimed"

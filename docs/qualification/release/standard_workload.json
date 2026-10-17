@@ -1,36 +1,36 @@
 {
   "concurrent_work": {
     "action_including_refresh_and_retries": {
-      "max_ms": 556.25944,
-      "p50_ms": 79.99498700000001,
-      "p95_ms": 366.650604,
-      "p99_ms": 556.25944,
+      "max_ms": 296.77817899999997,
+      "p50_ms": 60.923544,
+      "p95_ms": 220.938284,
+      "p99_ms": 296.77817899999997,
       "samples": 40
     },
-    "actions_per_second": 28.041255616005408,
+    "actions_per_second": 43.889749309630155,
     "command_attempt": {
-      "max_ms": 48.117489,
-      "p50_ms": 15.502503,
-      "p95_ms": 32.864297,
-      "p99_ms": 45.138862,
-      "samples": 126
+      "max_ms": 22.814518999999997,
+      "p50_ms": 10.836257,
+      "p95_ms": 17.276632,
+      "p99_ms": 22.407803,
+      "samples": 138
     },
     "frozen_replay": {
-      "max_ms": 15.996269999999999,
-      "p50_ms": 1.057014,
-      "p95_ms": 8.341235000000001,
-      "p99_ms": 15.996269999999999,
+      "max_ms": 3.342344,
+      "p50_ms": 0.7474190000000001,
+      "p95_ms": 2.047933,
+      "p99_ms": 3.342344,
       "samples": 40
     },
     "physical_actions": 40,
-    "seconds": 1.426469647,
-    "stale_version_rejections": 86,
+    "seconds": 0.911374538,
+    "stale_version_rejections": 98,
     "state_refresh": {
-      "max_ms": 65.096592,
-      "p50_ms": 19.138822,
-      "p95_ms": 39.532118,
-      "p99_ms": 64.711412,
-      "samples": 126
+      "max_ms": 30.934884,
+      "p50_ms": 10.638212,
+      "p95_ms": 21.359994,
+      "p99_ms": 28.203517,
+      "samples": 138
     },
     "successful_frozen_replays": 40,
     "transient_503_attempts": 0,
@@ -62,8 +62,8 @@
     "PostgreSQL and harness may share CPU; no production throughput or HA claim"
   ],
   "memory": {
-    "process_peak_after_clients_kib": 14528,
-    "process_peak_before_clients_kib": 7492,
+    "process_peak_after_clients_kib": 13392,
+    "process_peak_before_clients_kib": 7480,
     "scope": "Rust workload process high-water mark; excludes PostgreSQL and is not a constant-memory proof"
   },
   "proof": {
@@ -96,7 +96,7 @@
     "received": 7,
     "reserved_total": 50
   },
-  "recorded_at": "2026-10-17T17:06:32.962182244+00:00",
+  "recorded_at": "2026-10-17T17:27:47.900391416+00:00",
   "schema_version": 1,
   "seed": {
     "allocated_orders": 50,
@@ -104,8 +104,8 @@
     "commands": 476,
     "open_orders": 100,
     "products": 101,
-    "seconds": 4.693303827,
+    "seconds": 3.496866345,
     "storage_bins": 21
   },
-  "tenant": "capacity-60924215-5665-460c-aba2-d2d491e42f25"
+  "tenant": "capacity-64b526df-f282-4313-ab08-5f9ea9b68896"
 }

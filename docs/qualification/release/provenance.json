@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "ok": true,
-  "stable_software_inputs_sha256": "3d36aa80dd57e7a48d9a413e9214732060295a99e83f5eac62930282aa5ac9ac",
-  "image_id": "sha256:dea3eec34598d824e0c4db9cf0e90114ae776cbf462a01ea9f97ae3d62944bb5",
-  "image_source_inputs_sha256": "1ce49f0bb2b5ddb3d6a60c120b5c8c4f26e07101eac43d8d012f1af6d3382f57",
+  "stable_software_inputs_sha256": "a7c3b160948b9188e17b288473b68f00928b86fa48f5e24e683309780628b20d",
+  "image_id": "sha256:9ede733ef170f3b2eaaee7f97504cb3d2874d4d029f1d18e868c64e6d57b9c70",
+  "image_source_inputs_sha256": "0ac610111ffe4f282df0a6e13bd1be8506389b7d394e0f782b45d7f514174f72",
   "restore_container_resilience_migrations_identical": true,
   "migrations": {
     "004_native_source_ownership": "366979c9630c4c62cb7d71beb5c89cd917764558b4e05267c4eb4aac486a6cb9",
@@ -11,6 +11,7 @@
     "007_operations_indexes": "b0b9b422f570ed77ca1252df42c96b29544849621ed748cadd1f068b708576b5",
     "001_initial": "8e5c3fa5f0065b63076c33b8bd3c337b8490d4b7a88f3e774ec17e2290e1f4d4",
     "006_oms_rejections": "567e061943a1602ff25b5d5c988be810808b8c6e1638885ee6ef9b71a9ba4ed4",
+    "008_delivery_recipient": "050f40c80b9e73a3edc8a19545ab08cfe41051616b84d9445dfdea9a30de9d19",
     "002_relational_execution": "660cd0fdbc7205644c7c3d7ac3da43cbaf1c6d9f80c4d0f2ea4d0c0986e6ff90",
     "005_conditional_oms_fulfillment": "b8892cbaa4a1b26c6e1732616ec30503d3698f44e363240386078398e29e9a41"
   },

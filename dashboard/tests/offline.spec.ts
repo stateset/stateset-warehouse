@@ -434,90 +434,83 @@ test("a lost-before-arrival save unblocks only after exact definitive stale evid
   ).toBeEnabled();
 });
 
-test("missing, malformed, mismatched or forbidden rejection evidence retains recovery", async ({
-  browser,
-}) => {
-  test.setTimeout(60000);
-  const cases: {
-    label: string;
-    outcome: (value: Record<string, unknown>) => unknown;
-    responseStatus?: number;
-  }[] = [
-    { label: "generic conflict", outcome: () => undefined },
-    { label: "non-object proof", outcome: () => "not_committed" },
-    ...["tenant", "actor", "warehouse_id", "request_id"].map((field) => ({
-      label: `another ${field}`,
-      outcome: (value: Record<string, unknown>) => ({
-        ...value,
-        [field]: "different-identity",
-      }),
-    })),
-    {
-      label: "another expected version",
-      outcome: (value) => ({
-        ...value,
-        expected_version: Number(value.expected_version) + 1,
-      }),
-    },
-    {
-      label: "version did not advance",
-      outcome: (value) => ({
-        ...value,
-        current_version: value.expected_version,
-      }),
-    },
-    {
-      label: "unsafe version",
-      outcome: (value) => ({
-        ...value,
-        current_version: Number.MAX_SAFE_INTEGER + 1,
-      }),
-    },
-    {
-      label: "unrecognized proof schema",
-      outcome: (value) => ({ ...value, status: "unknown" }),
-    },
-    {
-      label: "forbidden response cannot prove rejection",
-      outcome: (value) => value,
-      responseStatus: 403,
-    },
-  ];
-  for (const scenario of cases) {
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    try {
-      await setup(page, false, 0, true, {
-        dropBeforeArrival: true,
-        ...scenario,
-      });
-      await loseReceiptBeforeArrival(page);
-      const saved = await page.evaluate(() =>
+const rejectionCases: {
+  label: string;
+  outcome: (value: Record<string, unknown>) => unknown;
+  responseStatus?: number;
+}[] = [
+  { label: "generic conflict", outcome: () => undefined },
+  { label: "non-object proof", outcome: () => "not_committed" },
+  ...["tenant", "actor", "warehouse_id", "request_id"].map((field) => ({
+    label: `another ${field}`,
+    outcome: (value: Record<string, unknown>) => ({
+      ...value,
+      [field]: "different-identity",
+    }),
+  })),
+  {
+    label: "another expected version",
+    outcome: (value) => ({
+      ...value,
+      expected_version: Number(value.expected_version) + 1,
+    }),
+  },
+  {
+    label: "version did not advance",
+    outcome: (value) => ({
+      ...value,
+      current_version: value.expected_version,
+    }),
+  },
+  {
+    label: "unsafe version",
+    outcome: (value) => ({
+      ...value,
+      current_version: Number.MAX_SAFE_INTEGER + 1,
+    }),
+  },
+  {
+    label: "unrecognized proof schema",
+    outcome: (value) => ({ ...value, status: "unknown" }),
+  },
+  {
+    label: "forbidden response cannot prove rejection",
+    outcome: (value) => value,
+    responseStatus: 403,
+  },
+];
+for (const scenario of rejectionCases) {
+  test(`recovery retains original request: ${scenario.label}`, async ({
+    page,
+  }) => {
+    await setup(page, false, 0, true, {
+      dropBeforeArrival: true,
+      ...scenario,
+    });
+    await loseReceiptBeforeArrival(page);
+    const saved = await page.evaluate(() =>
+      sessionStorage.getItem("wms-pending:demo:operator:demo"),
+    );
+    await page.reload();
+    await page
+      .getByRole("button", { name: "Check original save", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Check original save", exact: true }),
+      scenario.label,
+    ).toBeEnabled();
+    await expect(
+      page.getByRole("button", { name: "New receipt", exact: true }),
+      scenario.label,
+    ).toBeDisabled();
+    expect(
+      await page.evaluate(() =>
         sessionStorage.getItem("wms-pending:demo:operator:demo"),
-      );
-      await page.reload();
-      await page
-        .getByRole("button", { name: "Check original save", exact: true })
-        .click();
-      await expect(
-        page.getByRole("button", { name: "Check original save", exact: true }),
-        scenario.label,
-      ).toBeEnabled();
-      await expect(
-        page.getByRole("button", { name: "New receipt", exact: true }),
-        scenario.label,
-      ).toBeDisabled();
-      expect(
-        await page.evaluate(() =>
-          sessionStorage.getItem("wms-pending:demo:operator:demo"),
-        ),
-        scenario.label,
-      ).toBe(saved);
-    } finally {
-      await context.close();
-    }
-  }
-});
+      ),
+      scenario.label,
+    ).toBe(saved);
+  });
+}
 
 test("an in-flight warehouse refresh replaces stale canonical receipt detail before action", async ({
   page,

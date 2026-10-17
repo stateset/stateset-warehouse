@@ -148,6 +148,10 @@ WMS_TMS_WEBHOOK_TOKEN=another-independent-receiver-secret
 
 URLs require HTTPS, forbid embedded credentials, and do not follow redirects. URL and token must be configured together; tokens require at least 16 characters. The tenant must exist in the credential mapping. This initial configuration supports one delivery tenant per process. Other tenants' events remain pending, never routed using that tenant's receiver credentials.
 
+Before its first send, each event/destination freezes a SHA256 fingerprint of the exact configured URL in the same transaction as its delivery lease. Retries, expired leases and administrator requeues must use that original URL. A changed URL moves the item to a dead letter without sending or incrementing the attempt counter. Restoring the original URL and explicitly requeuing permits recovery; its credential may rotate. The database rejects changes to the retained event, tenant, destination or receiver fingerprint. Each attempt increment requires a matching transaction-local receiver assertion; older workers that do not supply it are rejected before their claim commits or HTTP send begins. A URL fingerprint proves endpoint continuity; this generic consumer contract has no remote tenant-identity endpoint, so credential-to-tenant mapping still requires deployment verification.
+
+Migration 008 marks previously attempted deliveries without a retained receiver identity as `unverified`, including rows whose counter was reset but whose attempt history remains. Completed deliveries remain completed. Pending or expired historical deliveries are held for independent receiver reconciliation; ordinary requeue cannot infer or replace their original endpoint. Never-attempted events can bind their first configured receiver. No URL or credential is stored in the fingerprint field.
+
 The producer sends `POST <configured URL>`, JSON body, bearer token, and `Idempotency-Key: <event ID>`. The envelope includes:
 
 ```json

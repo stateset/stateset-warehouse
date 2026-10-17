@@ -1,107 +1,107 @@
 {
   "schema_version": 1,
   "scope": "software_release_gate",
-  "recorded_at": "2026-10-17T17:12:42.301640+00:00",
+  "recorded_at": "2026-10-17T17:33:02.810265+00:00",
   "result": "passed",
   "production_qualified": false,
   "synthetic": true,
   "release_revision": "unrecorded-working-tree",
-  "elapsed_seconds": 598,
+  "elapsed_seconds": 497,
   "stages": [
     {
       "name": "prerequisites",
       "status": "passed",
       "exit_code": 0,
-      "elapsed_seconds": 1.659
+      "elapsed_seconds": 0.893
     },
     {
       "name": "software_checks",
       "status": "passed",
       "exit_code": 0,
-      "elapsed_seconds": 143.11
+      "elapsed_seconds": 128.834
     },
     {
       "name": "observability_rules",
       "status": "passed",
       "exit_code": 0,
-      "elapsed_seconds": 1.759
+      "elapsed_seconds": 1.489
     },
     {
       "name": "release_builds",
       "status": "passed",
       "exit_code": 0,
-      "elapsed_seconds": 75.094
+      "elapsed_seconds": 46.73
     },
     {
       "name": "standard_workload",
       "status": "passed",
       "exit_code": 0,
-      "elapsed_seconds": 6.338
+      "elapsed_seconds": 4.569
     },
     {
       "name": "archive_restore",
       "status": "passed",
       "exit_code": 0,
-      "elapsed_seconds": 3.091
+      "elapsed_seconds": 1.819
     },
     {
       "name": "live_browsers",
       "status": "passed",
       "exit_code": 0,
-      "elapsed_seconds": 30.963
+      "elapsed_seconds": 21.866
     },
     {
       "name": "production_container",
       "status": "passed",
       "exit_code": 0,
-      "elapsed_seconds": 165.763
+      "elapsed_seconds": 146.846
     },
     {
       "name": "image_resilience",
       "status": "passed",
       "exit_code": 0,
-      "elapsed_seconds": 168.238
+      "elapsed_seconds": 143.89
     },
     {
       "name": "stable_source_inputs",
       "status": "passed",
       "exit_code": 0,
-      "elapsed_seconds": 0.67
+      "elapsed_seconds": 0.203
     }
   ],
   "artifacts": [
     {
       "stage": "standard_workload",
       "path": "standard_workload.json",
-      "sha256": "1c0860e3c494cacdb35f05a97750456d108bcbf44adb31473c0a75fcf4085106"
+      "sha256": "19055b321caef7c45dd477f3efff6206e202c2878804047b332b744d0f02fc67"
     },
     {
       "stage": "archive_restore",
       "path": "archive_restore.json",
-      "sha256": "25272877c5db9dbff427bf42dbac452da545968dde87a6908b3f9f6f6784e89c"
+      "sha256": "70aae01d2a67643a56e95c7bb619bc7a1c4df2f1dd697c0f3eda4d7835c0b615"
     },
     {
       "stage": "observability_rules",
       "path": "observability_rules.json",
-      "sha256": "7f8b4b8695a46c6271ddc15ab9d9391341b6494c249dcf72b3e94c2103fc76ac"
+      "sha256": "61666fadb31948c7fc9f2256d59fa1198264731d85d9ad95289ab2f474a01eda"
     },
     {
       "stage": "production_container",
       "path": "production_container.json",
-      "sha256": "0ec869575aeca3e2889e4f2120634463dd541ab389ad88a940b918cbb5d99e0b"
+      "sha256": "1717192b0f8f854cff76d1cb5ab7e8c804c4ec18a795c8a9c5408ef83bbd837c"
     },
     {
       "stage": "image_resilience",
       "path": "image_resilience.json",
-      "sha256": "5363010cc15dff7c1fed6bf0e55d7be753c4e38080422515aebf03d1ddaf2a34"
+      "sha256": "06a11af0c079d019992aa9424cca0061117c28a77103c9856e57d1ecdfce3d1d"
     },
     {
       "path": "source-inputs-before.json",
-      "sha256": "a5a3cb591674518dc83cb880ab07446edef80275cdadb1222ca11233b5b2ab17"
+      "sha256": "1f4c007cfa72456d9e0b77e1aa161b575a07d6e52b9d763b35c0972869741392"
     },
     {
       "path": "source-inputs-after.json",
-      "sha256": "a5a3cb591674518dc83cb880ab07446edef80275cdadb1222ca11233b5b2ab17"
+      "sha256": "1f4c007cfa72456d9e0b77e1aa161b575a07d6e52b9d763b35c0972869741392"
     },
     {
       "path": "tool-versions.json",
@@ -109,23 +109,23 @@
     },
     {
       "path": "provenance.json",
-      "sha256": "13506fcdc23123d1533e88e96e4ae431ccc8bdde81d4c11cf50fad4ed52e14ee"
+      "sha256": "211594b0011849e7370fd7870b9a209e2cbdc49cffbee19566eb7427536874a9"
     },
     {
       "path": "archive_restore.log",
-      "sha256": "01230e602a878feacb5f13174844a12f7085f98b2fd43a46153f8bf66f1f445d"
+      "sha256": "c3ddf6b915374806d206f3ab8f450a5738ed41ca408b6502006ad2ed6310ba09"
     },
     {
       "path": "demo-api.log",
-      "sha256": "e6092b89277789c28d1a1004eab88cb5399be87fd9821163acc5032540f744d0"
+      "sha256": "a61d9072d5bd49ec5d3ebc06e699e313a6c4a5e9ebf576ab27051fe800ace505"
     },
     {
       "path": "image_resilience.log",
-      "sha256": "4f4ac011c90c1aaa1664bbbc68026f2938322acb3a7df9929628a2a2314c65b7"
+      "sha256": "e3e65b7845281f909e853cd6b5f8256191fb7006b8a0d64a609f7086610b57c1"
     },
     {
       "path": "live_browsers.log",
-      "sha256": "285b52e68f74d83d3c27921d1e37d6bcbc3426505c9c5273ad342e4188b6e7be"
+      "sha256": "41d4319101d50c72c4b0d9f8a990a0f1f7e7123a5c6204fe041acd43ffc0265d"
     },
     {
       "path": "observability_rules.log",
@@ -137,19 +137,19 @@
     },
     {
       "path": "production_container.log",
-      "sha256": "9a42ce9eb5e6889e4a8fd7b5a8bb685dc1e2604cede7ead044d0d3d5c952bb68"
+      "sha256": "62374bfea131d9d4a0ce01015b8b495ca7f80d29a7d94f119c55b24b7f9e6efa"
     },
     {
       "path": "release_builds.log",
-      "sha256": "90d711d3ff5508f8950b49ffd104f7a9a1a098b96e2fb777ef4fa1b91c20336a"
+      "sha256": "7775b245b5db65aca4fdab846bcc75a67e1c1b2e5b064759bc39aa101c88314e"
     },
     {
       "path": "scanner-api.log",
-      "sha256": "9fdf1a0219a83aea30ecc540e7d41c914df0b5d69434bea81404a68fb00d3a4a"
+      "sha256": "fa17ebfb65e176a600837b96d52d86d0ab0263f8f615b223b9f956a68e4c068f"
     },
     {
       "path": "software_checks.log",
-      "sha256": "d795fef7e32ad337eaf30e4a2ecaca37d094afd378074fa07792cea35c7f1687"
+      "sha256": "0c5a574ecba2753f395fb12accd29a2338565e083a7e6ec5840178749b21ee29"
     },
     {
       "path": "stable_source_inputs.log",
@@ -157,7 +157,7 @@
     },
     {
       "path": "standard_workload.log",
-      "sha256": "685cd21183de4fd4d1006ecec2b3be07ca1654652d592e7c71318d3770a6840c"
+      "sha256": "bb07832e78947a497fe7035072136151b47c5856a2c794d76a9b7d2c14b0cc46"
     }
   ],
   "not_performed": [

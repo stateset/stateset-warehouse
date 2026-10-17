@@ -1,10 +1,10 @@
 {
   "ok": true,
   "synthetic": true,
-  "qualified_at_utc": "2026-10-17T17:12:38Z",
+  "qualified_at_utc": "2026-10-17T17:33:01Z",
   "qualification": "two-replica sustained HTTP and crash recovery",
-  "image_id": "sha256:dea3eec34598d824e0c4db9cf0e90114ae776cbf462a01ea9f97ae3d62944bb5",
-  "image_source_inputs_sha256": "1ce49f0bb2b5ddb3d6a60c120b5c8c4f26e07101eac43d8d012f1af6d3382f57",
+  "image_id": "sha256:9ede733ef170f3b2eaaee7f97504cb3d2874d4d029f1d18e868c64e6d57b9c70",
+  "image_source_inputs_sha256": "0ac610111ffe4f282df0a6e13bd1be8506389b7d394e0f782b45d7f514174f72",
   "image_release_revision": "unrecorded-working-tree",
   "qualifier_sha256": {
     "scripts/resilience-rehearsal.sh": "a3989732252279094d7ccadd68be45dc169d5a9473f51ac8507f2e456bb4afeb",
@@ -22,11 +22,11 @@
     "random_loopback_api_ports": true,
     "native_and_webhook_connections": 0
   },
-  "elapsed_total_seconds": 158.84,
+  "elapsed_total_seconds": 137.698,
   "phases": {
     "seed": {
       "method": "authenticated actual HTTP commands only; opening counts are disclosed synthetic fixtures",
-      "seconds": 77.067,
+      "seconds": 60.718,
       "operational_products": 500,
       "additional_recovery_product": 1,
       "storage_bins": 100,
@@ -58,7 +58,7 @@
       "uncommitted_original_absent": true,
       "same_original_request_recovered_other_replica": true,
       "restarted_replica_exact_replay": true,
-      "local_restart_to_readiness_seconds": 0.519,
+      "local_restart_to_readiness_seconds": 0.396,
       "interrupted_response": {
         "transport_error": "RemoteDisconnected"
       }
@@ -75,12 +75,12 @@
         200,
         200
       ],
-      "local_database_restart_to_both_api_readiness_seconds": 1.123,
+      "local_database_restart_to_both_api_readiness_seconds": 1.047,
       "both_replicas_recovered_without_api_restart": true,
       "all_table_fingerprints_unchanged": {
         "wms_activity": {
           "rows": 2364,
-          "sha256": "49da3357cce5d2deea5c67c67177a95bced7d496d00ada834afd034ca83ee0ed"
+          "sha256": "47e8e3b5f7ba209a034f72fa7998dbb526006bbde3ed4b29b3559e3437d19d97"
         },
         "wms_admin_audit": {
           "rows": 0,
@@ -88,11 +88,11 @@
         },
         "wms_allocations": {
           "rows": 253,
-          "sha256": "48e2767d56d278e355c8c4362ff21644dec91306f925370fae60af7d7d86fea8"
+          "sha256": "8c9ed84a8be9b32615b8743c3c778f26b8ee6e8dccc2ca34cd3f8aa8cdd46852"
         },
         "wms_commands": {
           "rows": 2364,
-          "sha256": "29081cc93a6d4d247d5d276a8fd8bc9db83f9a92bcece15d64eb2e709521813d"
+          "sha256": "70513e5242b54286a4e7ff842007256ba68944a2a217aef37555280321478d3c"
         },
         "wms_delivery_attempts": {
           "rows": 0,
@@ -100,7 +100,7 @@
         },
         "wms_events": {
           "rows": 2364,
-          "sha256": "0dc03eb2f1e271fc57a07ca8e288378fd3dcfac71a419f5b667e4d55d07de1c3"
+          "sha256": "bb9c41e9b7275dc1d9aa0a9a895664994683273fa1d986e9fbc88627994151db"
         },
         "wms_exceptions": {
           "rows": 0,
@@ -112,7 +112,7 @@
         },
         "wms_movements": {
           "rows": 1008,
-          "sha256": "1282e54aada3ad6db17f3fb3e7b9675b7d60782f776afd1a4a6c7295ff2424c5"
+          "sha256": "35cf23c5723c221e56edb12f8292dcc7b5b027facaff47d58c9f8f4f0d91ed99"
         },
         "wms_native_attempts": {
           "rows": 0,
@@ -124,15 +124,15 @@
         },
         "wms_order_lines": {
           "rows": 503,
-          "sha256": "f020ec918fcb6b43b16b1f95366521f905bfc0158e34647d93c2cd3af57a0c5f"
+          "sha256": "6d0df2fd7bcf406f570d3b3c63bcf4a41221ba600a4863ca9e04c01a79f8318e"
         },
         "wms_orders": {
           "rows": 502,
-          "sha256": "84267ba74b3beea98b00dbb77eba85920c78c7ff3f8e22fd046ef8a412d18a30"
+          "sha256": "2e679a610b3ad109c145191c247f821380f1a7bd256a16029fc3443c666584f5"
         },
         "wms_outbox": {
           "rows": 2366,
-          "sha256": "414b3fd30a6f76c12767759cb27ec1c59e58964cb70e1dd36745d1ddd4a34b60"
+          "sha256": "521344fe1cb5a74cd1c89ff01174bae8fb9ab616d7e6a426b64067a8de806c0d"
         },
         "wms_products": {
           "rows": 501,
@@ -140,19 +140,19 @@
         },
         "wms_receipt_evidence": {
           "rows": 2,
-          "sha256": "fdc09b799360ff2fec85a1bd3b72033cca7449c1089585ab988a70d655441d3c"
+          "sha256": "f00c2c833101b10c6265c8320f65a2aedcdee93dd6d8e8e5f3b90bc17714ffc7"
         },
         "wms_receipt_lines": {
           "rows": 2,
-          "sha256": "846a6c37c0d54b4935fe22f8cbae439578e813b7ac9b8e61af77784e83b1c157"
+          "sha256": "a1b6243fe79f7b6ed665687c12a82a7433bed6a469332467098cf4b92d2e5788"
         },
         "wms_receipts": {
           "rows": 1,
-          "sha256": "4ed3b81c1936b17186a40fa263af869a1453a071203518e56f603ea575e1fdb6"
+          "sha256": "745eee4003c7c19951651e06419330bc37add27319531a0fe0619d86b96b7ccf"
         },
         "wms_schema_migrations": {
-          "rows": 7,
-          "sha256": "c61450e59695e9857288377407e7687c11231ae5db6411321b67018cd7309efa"
+          "rows": 8,
+          "sha256": "c12c92e1655478ff0723e6b2c88aa543695d8f0c7ea30c3be3324cba48f5e1b9"
         },
         "wms_stock": {
           "rows": 1004,
@@ -184,61 +184,61 @@
     },
     "sustained_http": {
       "requested_seconds": 60,
-      "elapsed_seconds": 60.808,
+      "elapsed_seconds": 60.349,
       "replicas": 2,
       "distinct_operator_identities": 4,
-      "rounds": 82,
-      "committed_moves": 328,
-      "exact_cross_replica_replays": 328,
-      "definite_stale_conflicts": 492,
+      "rounds": 120,
+      "committed_moves": 480,
+      "exact_cross_replica_replays": 480,
+      "definite_stale_conflicts": 720,
       "unexpected_errors": 0,
-      "committed_moves_per_second": 5.394,
+      "committed_moves_per_second": 7.954,
       "action_latency": {
-        "samples": 328,
-        "p50_ms": 460.711,
-        "p95_ms": 833.41,
-        "p99_ms": 948.867,
-        "max_ms": 963.739
+        "samples": 480,
+        "p50_ms": 324.937,
+        "p95_ms": 530.309,
+        "p99_ms": 586.507,
+        "max_ms": 638.922
       },
       "action_latency_scope": "shared round snapshot through committed physical write, including stale conflicts and full snapshot refreshes; subsequent exact replay excluded",
       "http_write_attempt_latency": {
-        "samples": 820,
-        "p50_ms": 68.872,
-        "p95_ms": 100.786,
-        "p99_ms": 121.507,
-        "max_ms": 140.082
+        "samples": 1200,
+        "p50_ms": 49.18,
+        "p95_ms": 66.294,
+        "p99_ms": 80.581,
+        "max_ms": 98.316
       },
       "operational_snapshot_latency": {
-        "samples": 574,
-        "p50_ms": 114.59,
-        "p95_ms": 197.636,
-        "p99_ms": 234.655,
-        "max_ms": 279.317
+        "samples": 840,
+        "p50_ms": 76.197,
+        "p95_ms": 114.888,
+        "p99_ms": 130.107,
+        "max_ms": 147.002
       },
       "operators": [
         {
           "actor": "operator:resilience-0",
-          "commits": 82,
-          "stale_conflicts": 113,
-          "exact_replays": 82
+          "commits": 120,
+          "stale_conflicts": 165,
+          "exact_replays": 120
         },
         {
           "actor": "operator:resilience-1",
-          "commits": 82,
-          "stale_conflicts": 138,
-          "exact_replays": 82
+          "commits": 120,
+          "stale_conflicts": 187,
+          "exact_replays": 120
         },
         {
           "actor": "operator:resilience-2",
-          "commits": 82,
-          "stale_conflicts": 126,
-          "exact_replays": 82
+          "commits": 120,
+          "stale_conflicts": 163,
+          "exact_replays": 120
         },
         {
           "actor": "operator:resilience-3",
-          "commits": 82,
-          "stale_conflicts": 115,
-          "exact_replays": 82
+          "commits": 120,
+          "stale_conflicts": 205,
+          "exact_replays": 120
         }
       ]
     }
@@ -252,31 +252,31 @@
     "expected_reserved": 253,
     "all_seeded_open_order_states_retained": true,
     "per_operator_bin_totals_match_committed_move_parity": true,
-    "commands": 2693,
-    "events": 2693,
-    "activity": 2693,
-    "movements": 1337,
-    "outbox": 2695,
+    "commands": 2845,
+    "events": 2845,
+    "activity": 2845,
+    "movements": 1489,
+    "outbox": 2847,
     "independent_execution_counts": {
       "expected": {
         "setup_commands": 2352,
         "recovery_commands": 13,
-        "sustained_physical_commands": 328,
-        "commands": 2693,
-        "events": 2693,
-        "activity": 2693,
-        "movements": 1337,
-        "outbox": 2695
+        "sustained_physical_commands": 480,
+        "commands": 2845,
+        "events": 2845,
+        "activity": 2845,
+        "movements": 1489,
+        "outbox": 2847
       },
       "observed": {
         "setup_commands": 2352,
         "recovery_commands": 13,
-        "sustained_physical_commands": 328,
-        "commands": 2693,
-        "events": 2693,
-        "activity": 2693,
-        "movements": 1337,
-        "outbox": 2695
+        "sustained_physical_commands": 480,
+        "commands": 2845,
+        "events": 2845,
+        "activity": 2845,
+        "movements": 1489,
+        "outbox": 2847
       },
       "all_match": true
     },
@@ -287,19 +287,19 @@
     "replica_reconciliations": [
       {
         "ok": true,
-        "version": 2693,
+        "version": 2845,
         "method": "full_append_only_ledger_and_order_line_allocations"
       },
       {
         "ok": true,
-        "version": 2693,
+        "version": 2845,
         "method": "full_append_only_ledger_and_order_line_allocations"
       }
     ],
     "final_table_fingerprints": {
       "wms_activity": {
-        "rows": 2693,
-        "sha256": "5a9866ba4d4e7a3d67bfb83c68375d23bc243b78f5b349c23fb463c891e6d978"
+        "rows": 2845,
+        "sha256": "0b956abe1787c3b9291ac8b6fdfc67754a0b42a516cbb1ea6d3624a35c14db80"
       },
       "wms_admin_audit": {
         "rows": 0,
@@ -307,19 +307,19 @@
       },
       "wms_allocations": {
         "rows": 253,
-        "sha256": "48e2767d56d278e355c8c4362ff21644dec91306f925370fae60af7d7d86fea8"
+        "sha256": "8c9ed84a8be9b32615b8743c3c778f26b8ee6e8dccc2ca34cd3f8aa8cdd46852"
       },
       "wms_commands": {
-        "rows": 2693,
-        "sha256": "4c332c412db929ff7911cf3b436ad48b2ae5c67c6a7cb34c706dacf317ce2394"
+        "rows": 2845,
+        "sha256": "8140ef5dc337ed7317692a4fbdbc7a5e3052de8c46cacd41ed725d706f9f92b7"
       },
       "wms_delivery_attempts": {
         "rows": 0,
         "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
       },
       "wms_events": {
-        "rows": 2693,
-        "sha256": "2b09f4f9d99a656d2c08448ca61f6ed919ad8b49969403a6171da1882cce8edc"
+        "rows": 2845,
+        "sha256": "47b2d923268bed1eeecd14f5ff7b17ce297ce9fe3ce6be47e631d2e1acc6edba"
       },
       "wms_exceptions": {
         "rows": 0,
@@ -330,8 +330,8 @@
         "sha256": "552a6c243e5d598af02d0dc98f3b477adf61df9cc65ef2cbe57c0604a1ce205e"
       },
       "wms_movements": {
-        "rows": 1337,
-        "sha256": "cfe851737cd02eafda3732fd7d0d9ea7bb3b1518ff1924fe68d54af87d8ecb3a"
+        "rows": 1489,
+        "sha256": "fe1b4184d860640d1b1bba9ea61d3f25a8210f9934cc5bb773c798cba96ca812"
       },
       "wms_native_attempts": {
         "rows": 0,
@@ -343,15 +343,15 @@
       },
       "wms_order_lines": {
         "rows": 503,
-        "sha256": "f020ec918fcb6b43b16b1f95366521f905bfc0158e34647d93c2cd3af57a0c5f"
+        "sha256": "6d0df2fd7bcf406f570d3b3c63bcf4a41221ba600a4863ca9e04c01a79f8318e"
       },
       "wms_orders": {
         "rows": 502,
-        "sha256": "84267ba74b3beea98b00dbb77eba85920c78c7ff3f8e22fd046ef8a412d18a30"
+        "sha256": "2e679a610b3ad109c145191c247f821380f1a7bd256a16029fc3443c666584f5"
       },
       "wms_outbox": {
-        "rows": 2695,
-        "sha256": "e74e48dea911bcf63c22b46cc2eff7bb7e092e8628f6e581007af9e8b19a8593"
+        "rows": 2847,
+        "sha256": "b843051ceeb7dd34615df5a26f41ccc61104e337fa46980f485979ecaf8e9845"
       },
       "wms_products": {
         "rows": 501,
@@ -359,19 +359,19 @@
       },
       "wms_receipt_evidence": {
         "rows": 2,
-        "sha256": "fdc09b799360ff2fec85a1bd3b72033cca7449c1089585ab988a70d655441d3c"
+        "sha256": "f00c2c833101b10c6265c8320f65a2aedcdee93dd6d8e8e5f3b90bc17714ffc7"
       },
       "wms_receipt_lines": {
         "rows": 2,
-        "sha256": "846a6c37c0d54b4935fe22f8cbae439578e813b7ac9b8e61af77784e83b1c157"
+        "sha256": "a1b6243fe79f7b6ed665687c12a82a7433bed6a469332467098cf4b92d2e5788"
       },
       "wms_receipts": {
         "rows": 1,
-        "sha256": "4ed3b81c1936b17186a40fa263af869a1453a071203518e56f603ea575e1fdb6"
+        "sha256": "745eee4003c7c19951651e06419330bc37add27319531a0fe0619d86b96b7ccf"
       },
       "wms_schema_migrations": {
-        "rows": 7,
-        "sha256": "c61450e59695e9857288377407e7687c11231ae5db6411321b67018cd7309efa"
+        "rows": 8,
+        "sha256": "c12c92e1655478ff0723e6b2c88aa543695d8f0c7ea30c3be3324cba48f5e1b9"
       },
       "wms_stock": {
         "rows": 1008,
@@ -387,7 +387,7 @@
       },
       "wms_warehouses": {
         "rows": 2,
-        "sha256": "e0fa4ed87731ef15581c5de689fccce2ae20c00008fc6dc931569a5af86149e8"
+        "sha256": "40592ac61a4f932167c5b882eae5054b041881e309cbd66811c985e639443147"
       },
       "wms_workspaces": {
         "rows": 0,
@@ -423,6 +423,10 @@
     {
       "name": "007_operations_indexes",
       "sha256": "b0b9b422f570ed77ca1252df42c96b29544849621ed748cadd1f068b708576b5"
+    },
+    {
+      "name": "008_delivery_recipient",
+      "sha256": "050f40c80b9e73a3edc8a19545ab08cfe41051616b84d9445dfdea9a30de9d19"
     }
   ],
   "qualification_limit": "Local synthetic single-host and single-PostgreSQL-primary rehearsal. API replica survival and PostgreSQL crash recovery were tested; database failover, host loss, deployed latency, native receivers and physical facility acceptance were not."

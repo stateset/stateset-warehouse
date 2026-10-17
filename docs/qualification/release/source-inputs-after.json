@@ -1,5 +1,5 @@
 {
-  "sha256": "3d36aa80dd57e7a48d9a413e9214732060295a99e83f5eac62930282aa5ac9ac",
+  "sha256": "a7c3b160948b9188e17b288473b68f00928b86fa48f5e24e683309780628b20d",
   "inputs": [
     {
       "path": ".dockerignore",
@@ -83,7 +83,7 @@
     },
     {
       "path": "dashboard/tests/offline.spec.ts",
-      "sha256": "ee877275016a6f8c505c1fe8cd1ed857e6d7f75078b95a7234cd499c967ec409"
+      "sha256": "755ec14edfd8539b99b9038b43b8bfff9bb7b4671c86bcb4daaee13ccfc21548"
     },
     {
       "path": "dashboard/tests/operations-live.spec.ts",
@@ -202,6 +202,10 @@
       "sha256": "b0b9b422f570ed77ca1252df42c96b29544849621ed748cadd1f068b708576b5"
     },
     {
+      "path": "migrations/008_delivery_recipient.sql",
+      "sha256": "050f40c80b9e73a3edc8a19545ab08cfe41051616b84d9445dfdea9a30de9d19"
+    },
+    {
       "path": "scripts/check-sql.py",
       "sha256": "1529adde82b98839928b40f1e2b8cc8f164e950dda954e3b92a87e4b7b2611cd"
     },
@@ -263,7 +267,7 @@
     },
     {
       "path": "src/integrations.rs",
-      "sha256": "762b1200f3668a589583fbe87777a23a80a792b35223ec398097f22161805ad0"
+      "sha256": "0c4b3f8dd395cfb4130de24ba2f4e9b1010532831ef7368c77808eaed4a9690f"
     },
     {
       "path": "src/lib.rs",
@@ -299,7 +303,7 @@
     },
     {
       "path": "src/persistence.rs",
-      "sha256": "0f8bb27bdd90d6ae88f3fb66085df49f8fd360dadd1a3c77d9e86acbe14827c3"
+      "sha256": "0825989a1d5eef0924310f4a699eac872e138c6599768c411797d15f77729d28"
     },
     {
       "path": "src/reconciliation.sql",
@@ -351,7 +355,7 @@
     },
     {
       "path": "tests/postgres.rs",
-      "sha256": "14f53e71fba89b5741374e30c612b8a28e4081bcf411b4ce6495cec9e38cdac6"
+      "sha256": "8706dfe8aa244b48e4804f52c6b827e6c23a55ab19f75f1cc766cc867ec6c9aa"
     }
   ]
 }

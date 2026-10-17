@@ -176,6 +176,10 @@ impl Store {
                 "007_operations_indexes",
                 include_str!("../migrations/007_operations_indexes.sql"),
             ),
+            (
+                "008_delivery_recipient",
+                include_str!("../migrations/008_delivery_recipient.sql"),
+            ),
         ] {
             let digest = format!("{:x}", Sha256::digest(sql.as_bytes()));
             let old: Option<String> =
