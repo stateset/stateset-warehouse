@@ -48,6 +48,14 @@ impl Fixture {
             credentials: Arc::new(vec![
                 ("admin-acceptance".into(), identity.clone()),
                 (
+                    "other-admin-acceptance".into(),
+                    Identity {
+                        tenant: identity.tenant.clone(),
+                        actor: "acceptance:other-admin".into(),
+                        role: "admin".into(),
+                    },
+                ),
+                (
                     "oms-acceptance".into(),
                     Identity {
                         tenant: identity.tenant.clone(),
@@ -168,6 +176,153 @@ impl Fixture {
 
 fn entity(result: &Value) -> String {
     result["entity_id"].as_str().expect("entity ID").into()
+}
+
+async fn command_evidence_counts(f: &Fixture) -> (i64, i64, i64) {
+    sqlx::query_as(
+        "SELECT (SELECT count(*) FROM wms_commands WHERE tenant=$1), (SELECT count(*) FROM wms_events WHERE tenant=$1), (SELECT count(*) FROM wms_outbox WHERE tenant=$1)",
+    )
+    .bind(&f.identity.tenant)
+    .fetch_one(&f.store.pool)
+    .await
+    .expect("command, event and delivery counts")
+}
+
+fn opening_count(counted: i64) -> Command {
+    Command::CountStock {
+        sku: "SKU-A".into(),
+        lot: "LOT-A".into(),
+        location: "A-01".into(),
+        counted,
+        reason: "Verified opening count".into(),
+    }
+}
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL; scripts/local-postgres.sh"]
+async fn stale_http_command_proves_noncommit_and_fences_a_delayed_original() {
+    let f = Fixture::new().await;
+    f.seed_catalog().await;
+    let original = Request {
+        request_id: id(),
+        expected_version: f.state().await.version,
+        command: opening_count(9),
+    };
+    // Another operator's committed work advances the shared version before
+    // either copy of this request reaches the warehouse lock.
+    f.command_as("other-admin-acceptance", opening_count(5))
+        .await;
+    let before = f.state().await;
+    let before_counts = command_evidence_counts(&f).await;
+    let (status, response) = f.submit("admin-acceptance", &original).await;
+    assert_eq!(status, StatusCode::CONFLICT, "{response}");
+    assert_eq!(
+        response["command_outcome"],
+        json!({
+            "status":"not_committed",
+            "reason":"stale_version",
+            "tenant":f.identity.tenant,
+            "actor":f.identity.actor,
+            "warehouse_id":"wh-main",
+            "request_id":original.request_id,
+            "expected_version":original.expected_version,
+            "current_version":before.version
+        })
+    );
+    assert_eq!(command_evidence_counts(&f).await, before_counts);
+    assert_eq!(
+        f.state().await,
+        before,
+        "stale rejection changed stock or history"
+    );
+    let (status, receipt) = f
+        .http(
+            "GET",
+            &format!("/v1/warehouses/wh-main/commands/{}", original.request_id),
+            "admin-acceptance",
+            None,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(receipt, json!({"found":false}));
+
+    // A delayed original arrives after the definitive rejection and another
+    // commit. It remains stale rather than executing or becoming a receipt.
+    f.command(opening_count(6)).await;
+    let advanced = f.state().await;
+    let advanced_counts = command_evidence_counts(&f).await;
+    let (status, delayed) = f.submit("admin-acceptance", &original).await;
+    assert_eq!(status, StatusCode::CONFLICT, "{delayed}");
+    assert_eq!(
+        delayed["command_outcome"]["current_version"],
+        advanced.version
+    );
+    assert_eq!(
+        delayed["command_outcome"]["request_id"],
+        original.request_id
+    );
+    assert_eq!(f.state().await, advanced);
+    assert_eq!(command_evidence_counts(&f).await, advanced_counts);
+}
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL; scripts/local-postgres.sh"]
+async fn command_noncommit_proof_never_overrides_receipts_conflicts_or_future_versions() {
+    let f = Fixture::new().await;
+    f.seed_catalog().await;
+    let original = Request {
+        request_id: id(),
+        expected_version: f.state().await.version,
+        command: opening_count(7),
+    };
+    let (status, saved) = f.submit("admin-acceptance", &original).await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    f.command(opening_count(8)).await;
+    let before = f.state().await;
+    let before_counts = command_evidence_counts(&f).await;
+    let (status, replayed) = f.submit("admin-acceptance", &original).await;
+    assert_eq!(status, StatusCode::OK, "{replayed}");
+    assert_eq!(replayed, json!({"replayed":true,"result":saved["result"]}));
+    assert!(replayed.get("command_outcome").is_none());
+
+    let mut changed = original.clone();
+    changed.command = opening_count(11);
+    let mut future = original.clone();
+    future.request_id = id();
+    future.expected_version = before.version + 1;
+    let mut invalid_id = original.clone();
+    invalid_id.request_id = "invalid".into();
+    for (token, request, expected_status) in [
+        ("admin-acceptance", &changed, StatusCode::CONFLICT),
+        ("other-admin-acceptance", &original, StatusCode::CONFLICT),
+        ("admin-acceptance", &future, StatusCode::CONFLICT),
+        (
+            "admin-acceptance",
+            &invalid_id,
+            StatusCode::UNPROCESSABLE_ENTITY,
+        ),
+        ("oms-acceptance", &original, StatusCode::FORBIDDEN),
+        ("unknown-acceptance", &original, StatusCode::UNAUTHORIZED),
+        ("outsider-acceptance", &original, StatusCode::NOT_FOUND),
+    ] {
+        let (status, response) = f.submit(token, request).await;
+        assert_eq!(status, expected_status, "{response}");
+        assert!(response["error"].is_string(), "{response}");
+        assert!(response.get("command_outcome").is_none(), "{response}");
+        assert_eq!(response.as_object().expect("error object").len(), 1);
+    }
+    let (status, response) = f
+        .http(
+            "POST",
+            "/v1/warehouses/absent-warehouse/commands",
+            "admin-acceptance",
+            Some(json!(original)),
+        )
+        .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert!(response.get("command_outcome").is_none(), "{response}");
+    assert_eq!(f.state().await, before);
+    assert_eq!(command_evidence_counts(&f).await, before_counts);
 }
 
 #[tokio::test]

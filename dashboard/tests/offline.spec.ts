@@ -24,6 +24,11 @@ async function setup(
   loseFirstResponse = false,
   historyDepth = 0,
   fullHistoryMatches = true,
+  recovery?: {
+    dropBeforeArrival: boolean;
+    outcome?: (value: Record<string, unknown>) => unknown;
+    responseStatus?: number;
+  },
 ) {
   let state = domain();
   const archivedOrders = Array.from({ length: historyDepth }, (_, index) => ({
@@ -161,8 +166,46 @@ async function setup(
     }
     if (url.pathname.endsWith("/commands")) {
       const req = route.request().postDataJSON();
-      if (req.expected_version !== state.version)
-        return send({ error: "Warehouse changed. Refresh and review." }, 409);
+      if (recovery?.dropBeforeArrival && !dropped) {
+        // Another operator commits after the original request is lost before
+        // arrival. The missing command has never been applied.
+        state = domain({
+          state,
+          command: {
+            type: "report_exception",
+            order_id: null,
+            category: "Other",
+            detail: "Concurrent operator observed a warehouse issue",
+          },
+        }).state;
+        dropped = true;
+        return route.abort("failed");
+      }
+      if (req.expected_version !== state.version) {
+        const outcome = {
+          status: "not_committed",
+          reason: "stale_version",
+          tenant: "demo",
+          actor: "operator:demo",
+          warehouse_id: state.warehouse.id,
+          request_id: req.request_id,
+          expected_version: req.expected_version,
+          current_version: state.version,
+        };
+        return send(
+          {
+            error: "Warehouse changed. Refresh and review.",
+            ...(recovery
+              ? {
+                  command_outcome: recovery.outcome
+                    ? recovery.outcome(outcome)
+                    : outcome,
+                }
+              : {}),
+          },
+          recovery?.responseStatus ?? 409,
+        );
+      }
       const r = domain({ state, command: req.command });
       if (r.error) return send({ error: r.error }, 422);
       state = r.state;
@@ -327,6 +370,217 @@ test("accepted save with a lost response recovers after reload", async ({
     page.getByRole("button", { name: "Check original save" }),
   ).toHaveCount(0);
   expect(state().version).toBe(version);
+});
+
+async function loseReceiptBeforeArrival(page: Page) {
+  await page.getByRole("button", { name: "Receiving", exact: true }).click();
+  await page
+    .getByRole("row")
+    .filter({ hasText: "RCV-207" })
+    .getByRole("button", { name: "Receive goods", exact: true })
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Receive goods", exact: true })
+    .click();
+  await page.getByLabel("Received quantity (each)").fill("1");
+  await page
+    .getByRole("button", { name: "Confirm receipt", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Check original save", exact: true }),
+  ).toBeEnabled();
+}
+
+test("a lost-before-arrival save unblocks only after exact definitive stale evidence", async ({
+  page,
+}) => {
+  const state = await setup(page, false, 0, true, {
+    dropBeforeArrival: true,
+  });
+  const received = () =>
+    state().receipts.find((receipt: any) => receipt.reference === "RCV-207")
+      .lines[0].received;
+  const before = received();
+  await loseReceiptBeforeArrival(page);
+  expect(received()).toBe(before);
+  const saved = await page.evaluate(() =>
+    JSON.parse(sessionStorage.getItem("wms-pending:demo:operator:demo")!),
+  );
+  expect(state().version).toBeGreaterThan(saved.request.expected_version);
+  await page.reload();
+  await page
+    .getByRole("button", { name: "Check original save", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Check original save", exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByRole("alert")).toContainText(
+    "Review current work and physical stock before starting a new save",
+  );
+  await expect(
+    page.getByRole("button", { name: "New receipt", exact: true }),
+  ).toBeEnabled();
+  expect(received()).toBe(before);
+  expect(domain({ state: state() }).ok).toBe(true);
+  expect(
+    await page.evaluate(() =>
+      sessionStorage.getItem("wms-pending:demo:operator:demo"),
+    ),
+  ).toBeNull();
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "New receipt", exact: true }),
+  ).toBeEnabled();
+});
+
+test("missing, malformed, mismatched or forbidden rejection evidence retains recovery", async ({
+  browser,
+}) => {
+  test.setTimeout(60000);
+  const cases: {
+    label: string;
+    outcome: (value: Record<string, unknown>) => unknown;
+    responseStatus?: number;
+  }[] = [
+    { label: "generic conflict", outcome: () => undefined },
+    { label: "non-object proof", outcome: () => "not_committed" },
+    ...["tenant", "actor", "warehouse_id", "request_id"].map((field) => ({
+      label: `another ${field}`,
+      outcome: (value: Record<string, unknown>) => ({
+        ...value,
+        [field]: "different-identity",
+      }),
+    })),
+    {
+      label: "another expected version",
+      outcome: (value) => ({
+        ...value,
+        expected_version: Number(value.expected_version) + 1,
+      }),
+    },
+    {
+      label: "version did not advance",
+      outcome: (value) => ({
+        ...value,
+        current_version: value.expected_version,
+      }),
+    },
+    {
+      label: "unsafe version",
+      outcome: (value) => ({
+        ...value,
+        current_version: Number.MAX_SAFE_INTEGER + 1,
+      }),
+    },
+    {
+      label: "unrecognized proof schema",
+      outcome: (value) => ({ ...value, status: "unknown" }),
+    },
+    {
+      label: "forbidden response cannot prove rejection",
+      outcome: (value) => value,
+      responseStatus: 403,
+    },
+  ];
+  for (const scenario of cases) {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    try {
+      await setup(page, false, 0, true, {
+        dropBeforeArrival: true,
+        ...scenario,
+      });
+      await loseReceiptBeforeArrival(page);
+      const saved = await page.evaluate(() =>
+        sessionStorage.getItem("wms-pending:demo:operator:demo"),
+      );
+      await page.reload();
+      await page
+        .getByRole("button", { name: "Check original save", exact: true })
+        .click();
+      await expect(
+        page.getByRole("button", { name: "Check original save", exact: true }),
+        scenario.label,
+      ).toBeEnabled();
+      await expect(
+        page.getByRole("button", { name: "New receipt", exact: true }),
+        scenario.label,
+      ).toBeDisabled();
+      expect(
+        await page.evaluate(() =>
+          sessionStorage.getItem("wms-pending:demo:operator:demo"),
+        ),
+        scenario.label,
+      ).toBe(saved);
+    } finally {
+      await context.close();
+    }
+  }
+});
+
+test("an in-flight warehouse refresh replaces stale canonical receipt detail before action", async ({
+  page,
+}) => {
+  const state = await setup(page);
+  await page.getByRole("button", { name: "Receiving", exact: true }).click();
+  let releaseRefresh!: () => void;
+  const refreshHeld = new Promise<void>((resolve) => {
+    releaseRefresh = resolve;
+  });
+  let refreshStarted!: () => void;
+  const started = new Promise<void>((resolve) => {
+    refreshStarted = resolve;
+  });
+  await page.route(
+    "https://warehouse.test/v1/warehouses/wh-pdx",
+    async (route) => {
+      refreshStarted();
+      await refreshHeld;
+      return route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          ...state(),
+          reconciliation: domain({ state: state() }),
+        }),
+      });
+    },
+  );
+  await page
+    .getByRole("button", { name: "Refresh warehouse", exact: true })
+    .click();
+  await started;
+  await page.getByRole("button", { name: "RCV-207", exact: true }).click();
+  const receipt = state().receipts.find(
+    (value: any) => value.reference === "RCV-207",
+  );
+  const line = receipt.lines[0];
+  await expect(page.getByRole("dialog")).toContainText(
+    `${line.received} received / ${line.quantity} expected`,
+  );
+  const changed = domain({
+    state: state(),
+    command: {
+      type: "receive",
+      receipt_id: receipt.id,
+      line_id: line.id,
+      quantity: 4,
+      location: "RECV-01",
+    },
+  });
+  expect(changed.error).toBeUndefined();
+  Object.assign(state(), changed.state);
+  releaseRefresh();
+  await expect(page.getByRole("dialog")).toContainText(
+    `${line.received + 4} received / ${line.quantity} expected`,
+  );
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Receive goods", exact: true })
+    .click();
+  await expect(page.getByLabel("Received quantity (each)")).toHaveValue(
+    String(line.quantity - line.received - 4),
+  );
 });
 
 test("blocked short picks can be physically returned, released and recounted", async ({

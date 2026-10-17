@@ -28,9 +28,13 @@ pub struct App {
 }
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
+        let mut payload = json!({"error": self.message});
+        if let Some(outcome) = self.command_outcome {
+            payload["command_outcome"] = json!(outcome);
+        }
         (
             StatusCode::from_u16(self.status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
-            Json(json!({"error":self.message})),
+            Json(payload),
         )
             .into_response()
     }

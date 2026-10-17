@@ -1,42 +1,44 @@
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.69s
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.44s
+    Checking stateset-warehouse v0.1.0 (/home/dom/stateset-warehouse)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 10.92s
+   Compiling stateset-warehouse v0.1.0 (/home/dom/stateset-warehouse)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 8.49s
      Running tests/domain.rs (target/debug/deps/domain-d3ee7a9cc5d188da)
 
 running 21 tests
-test insufficient_second_line_rolls_back_all_reservations ... ok
-test cancellation_releases_only_its_own_order ... ok
-test opening_physical_balances_reconcile_new_movement_deltas_but_not_reservations ... ok
 test allocation_status_and_unique_ownership_are_validated_independently ... ok
+test insufficient_second_line_rolls_back_all_reservations ... ok
+test counts_and_transfers_cannot_consume_reserved_stock ... ok
+test legacy_receipt_identity_is_backfilled_only_when_unambiguous ... ok
+test cancellation_releases_only_its_own_order ... ok
 test independent_reconciliation_detects_balance_and_reservation_corruption ... ok
 test exceptions_block_execution_and_resolution_does_not_invent_stock ... ok
-test receipt_evidence_rejects_wrong_reference_ownership_and_missing_identity ... ok
 test receipt_counters_and_duplicate_sku_lines_require_exact_movement_evidence ... ok
 test physical_lifecycle_preserves_stock_until_carrier_handoff ... ok
-test legacy_receipt_identity_is_backfilled_only_when_unambiguous ... ok
+test receipt_evidence_rejects_wrong_reference_ownership_and_missing_identity ... ok
+test receiving_is_partial_bounded_and_not_allocatable_until_putaway ... ok
+test opening_physical_balances_reconcile_new_movement_deltas_but_not_reservations ... ok
+test rejects_fractional_quantities_unknown_fields_and_role_escalation ... ok
+test same_sku_lines_cannot_steal_each_others_reservations ... ok
 test recovery_rejects_completed_work_and_unauthorized_roles ... ok
 test recovery_preserves_exact_line_and_order_ownership_and_invalidates_packing ... ok
-test rejects_fractional_quantities_unknown_fields_and_role_escalation ... ok
-test receiving_is_partial_bounded_and_not_allocatable_until_putaway ... ok
-test same_sku_lines_cannot_steal_each_others_reservations ... ok
-test counts_and_transfers_cannot_consume_reserved_stock ... ok
 test short_pick_can_be_returned_recounted_replenished_and_reallocated ... ok
 test synthetic_fixture_is_a_real_reconciled_workflow ... ok
 test partial_picks_never_change_physical_warehouse_total ... ok
 test arbitrary_moves_and_counts_preserve_ledger ... ok
 test arbitrary_pick_returns_preserve_stock_and_line_reservations ... ok
 
-test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.78s
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.24s
 
      Running tests/http_auth.rs (target/debug/deps/http_auth-f9d07cc07773e3ce)
 
 running 5 tests
-test health_is_public_but_warehouse_data_is_not ... ok
-test fake_tenant_headers_never_replace_identity ... ok
-test api_errors_and_successes_have_private_caching_and_unforgeable_correlation ... ok
 test viewer_command_is_rejected_before_database_access ... ok
+test health_is_public_but_warehouse_data_is_not ... ok
+test api_errors_and_successes_have_private_caching_and_unforgeable_correlation ... ok
+test fake_tenant_headers_never_replace_identity ... ok
 test database_unavailability_fails_readiness_within_a_bounded_deadline ... ok
 
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.04s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.01s
 
      Running tests/native_api.rs (target/debug/deps/native_api-daf2e86a683b5636)
 
@@ -50,50 +52,51 @@ test import_api_recovers_after_command_commit_using_frozen_source_and_actor_boun
 test native_intents_and_finished_attempts_reject_database_evidence_tampering ... ignored, requires isolated Postgres; WMS_TEST_DATABASE_URL
 test blank_native_environment_supports_unconfigured_compose_defaults ... ok
 test native_request_hash_binds_operation_order_path_and_complete_input ... ok
+test native_http_is_disabled_for_synthetic_demo_even_with_admin_role ... ok
 test malformed_native_input_is_rejected_before_any_database_or_upstream_connection ... ok
 test viewers_cannot_trigger_native_http_or_read_sensitive_native_receipts ... ok
-test native_http_is_disabled_for_synthetic_demo_even_with_admin_role ... ok
 
-test result: ok. 5 passed; 0 failed; 7 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 5 passed; 0 failed; 7 ignored; 0 measured; 0 filtered out; finished in 0.03s
 
      Running tests/native_contracts.rs (target/debug/deps/native_contracts-569931d714c77b39)
 
-running 17 tests
+running 18 tests
 test integration_configuration_binds_each_tenant_without_secrets_in_summary_or_errors ... ok
-test full_order_import_rejects_partial_or_unknown_fulfillment_in_canonical_and_source_snapshots ... ok
-test import_preserves_two_line_owners_for_the_same_sku_and_scopes_source_identity ... ok
-test raw_source_cancellation_cannot_create_new_full_order_work ... ok
-test quantity_decimal_validation_rejects_fractional_each_without_float_rounding ... ok
 test freight_plans_require_explicit_native_fields_and_reject_invented_status_commands ... ok
+test full_order_import_rejects_partial_or_unknown_fulfillment_in_canonical_and_source_snapshots ... ok
+test native_import_rejects_missing_sku_duplicate_line_ids_fractions_and_terminal_orders ... ok
+test raw_source_cancellation_cannot_create_new_full_order_work ... ok
+test import_preserves_two_line_owners_for_the_same_sku_and_scopes_source_identity ... ok
+test quantity_decimal_validation_rejects_fractional_each_without_float_rounding ... ok
 test source_line_ids_remain_stable_when_upstream_with_line_ids_changes_ordering ... ok
 test readiness_rejects_unpacked_and_foreign_oms_source_orders ... ok
-test native_import_rejects_missing_sku_duplicate_line_ids_fractions_and_terminal_orders ... ok
 test oms_handoff_remains_held_because_native_mutation_has_no_atomic_source_guard ... ok
-test native_http_rejects_redirects_bad_envelopes_and_oversized_responses ... ok
+test retained_transport_pins_recipient_authority_and_allows_only_same_tenant_secret_rotation ... ok
 test wire_oms_requests_use_tenant_paths_api_key_and_actual_response_envelopes ... ok
 test preparation_freezes_exact_native_transport_body_and_scoped_idempotency_key ... ok
 test tms_retained_source_mismatch_is_reported_as_uncertain_instead_of_accepted ... ok
-test retained_transport_pins_recipient_authority_and_allows_only_same_tenant_secret_rotation ... ok
+test native_http_rejects_redirects_bad_envelopes_and_oversized_responses ... ok
 test wire_tms_uses_source_verified_import_and_reuses_frozen_key_on_retry ... ok
 test new_transport_preflight_checks_canonical_oms_lines_and_rejects_cancelled_source ... ok
+test tms_ineligible_retained_source_after_preflight_stays_uncertain_on_exact_retry ... ok
 
-test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.43s
 
      Running tests/oms_client.rs (target/debug/deps/oms_client-5f718444ee472cf2)
 
 running 10 tests
+test conditional_fulfillment_is_explicit_opt_in_and_legacy_writeback_stays_held ... ok
+test prepare_preserves_same_sku_line_owners_and_exact_physical_handoff ... ok
+test retained_handoff_rejects_invalid_provider_fields_even_with_a_recomputed_fingerprint ... ok
+test retained_recipient_cannot_be_rebound_and_same_tenant_secret_rotation_is_allowed ... ok
 test exact_frozen_retry_does_not_refresh_source_revision_after_later_source_changes ... ok
 test durable_rejection_replays_unchanged_and_fresh_review_gets_a_separate_request_identity ... ok
-test prepare_preserves_same_sku_line_owners_and_exact_physical_handoff ... ok
-test conditional_fulfillment_is_explicit_opt_in_and_legacy_writeback_stays_held ... ok
-test retained_recipient_cannot_be_rebound_and_same_tenant_secret_rotation_is_allowed ... ok
-test retained_handoff_rejects_invalid_provider_fields_even_with_a_recomputed_fingerprint ... ok
-test fractional_or_changed_canonical_source_and_terminal_source_cannot_start_an_intent ... ok
 test missing_contract_guarantees_or_foreign_tenant_never_receive_a_post ... ok
-test unscoped_or_malformed_rejection_never_authorizes_a_replacement ... ok
+test fractional_or_changed_canonical_source_and_terminal_source_cannot_start_an_intent ... ok
 test wrong_acknowledgement_scope_fingerprint_status_or_revision_is_uncertain ... ok
+test unscoped_or_malformed_rejection_never_authorizes_a_replacement ... ok
 
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
 
      Running tests/oms_fulfillment_api.rs (target/debug/deps/oms_fulfillment_api-4705def1fe7b8656)
 
@@ -116,18 +119,19 @@ test blocked_operational_read_fails_with_bounded_unavailability_instead_of_zero_
 test empty_operational_snapshot_is_zero_complete_and_prometheus_has_fixed_cardinality ... ignored, requires isolated WMS_TEST_DATABASE_URL
 test operational_counts_ages_pagination_and_metrics_are_exact_and_tenant_scoped ... ignored, requires isolated WMS_TEST_DATABASE_URL
 test operational_snapshot_keeps_one_database_view_across_concurrent_commits ... ignored, requires isolated WMS_TEST_DATABASE_URL
-test operational_routes_require_authentication_before_database_access ... ok
 test operations_roles_reject_viewers_integrations_and_operator_metrics_without_database ... ok
+test operational_routes_require_authentication_before_database_access ... ok
 test operations_reject_invalid_or_scope_override_queries_without_database ... ok
 
-test result: ok. 3 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 0.14s
+test result: ok. 3 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 0.05s
 
 ..............
 ----------------------------------------------------------------------
-Ran 14 tests in 10.095s
+Ran 14 tests in 9.518s
 
 OK
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.43s
+   Compiling stateset-warehouse v0.1.0 (/home/dom/stateset-warehouse)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.14s
      Running tests/native_api.rs (target/debug/deps/native_api-daf2e86a683b5636)
 
 running 7 tests
@@ -139,7 +143,7 @@ test first_transport_send_rechecks_packed_state_and_exception_then_allows_unrela
 test import_api_recovers_after_command_commit_using_frozen_source_and_actor_bound_receipt ... ok
 test native_intents_and_finished_attempts_reject_database_evidence_tampering ... ok
 
-test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 2.39s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 1.65s
 
      Running tests/oms_fulfillment_api.rs (target/debug/deps/oms_fulfillment_api-4705def1fe7b8656)
 
@@ -150,7 +154,7 @@ test conditional_journal_requires_actual_committed_event_and_rechecks_normalized
 test journal_completion_revalidates_exact_acknowledgements_and_retains_uncertain_shipment_ownership ... ok
 test only_durable_oms_rejection_releases_intent_for_a_separately_reviewed_request ... ok
 
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 2.26s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 1.47s
 
      Running tests/oms_receiver.rs (target/debug/deps/oms_receiver-d801f1aca4578cea)
 
@@ -161,7 +165,7 @@ test concurrent_exact_handoffs_commit_once_and_replay_the_same_durable_receipt .
 test fulfillment_then_waiting_cancellation_preserves_later_terminal_state_on_exact_replay ... ok
 test late_original_rejection_replays_after_fresh_review_succeeds_without_changing_the_source ... ok
 
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.75s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.76s
 
      Running tests/operations.rs (target/debug/deps/operations-9e1eb50d3675585c)
 
@@ -171,17 +175,19 @@ test empty_operational_snapshot_is_zero_complete_and_prometheus_has_fixed_cardin
 test operational_counts_ages_pagination_and_metrics_are_exact_and_tenant_scoped ... ok
 test operational_snapshot_keeps_one_database_view_across_concurrent_commits ... ok
 
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 3.34s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 3.37s
 
      Running tests/persistence_acceptance.rs (target/debug/deps/persistence_acceptance-138edd4c9bcafd66)
 
-running 4 tests
+running 6 tests
+test command_noncommit_proof_never_overrides_receipts_conflicts_or_future_versions ... ok
 test completed_receipts_outside_dashboard_window_keep_exact_evidence ... ok
 test database_reconnect_preserves_receipts_and_api_authority ... ok
 test history_above_previous_aggregate_limit_keeps_commands_operable ... ok
 test http_warehouse_lifecycle_recovers_short_pick_and_reconciles ... ok
+test stale_http_command_proves_noncommit_and_fences_a_delayed_original ... ok
 
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.92s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.57s
 
      Running tests/persistence_guards.rs (target/debug/deps/persistence_guards-69f9cda465f59117)
 
@@ -192,15 +198,16 @@ test full_reconciliation_rebuilds_history_independently_of_operational_balance_c
 test malformed_json_child_projections_cannot_override_canonical_state_detail_or_history ... ok
 test relational_migration_preserves_legacy_reads_and_fences_every_old_writer_operation ... ok
 
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.48s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.51s
 
      Running tests/postgres.rs (target/debug/deps/postgres-7f5c734fe013a8b8)
 
-running 11 tests
+running 12 tests
 test concurrent_identical_requests_create_one_receipt_and_event ... ok
 test concurrent_last_unit_allocation_never_oversells ... ok
 test database_constraint_rejects_raw_balance_corruption ... ok
 test duplicate_receipt_submission_does_not_receive_twice ... ok
+test exhausted_delivery_lease_preserves_uncertainty_fences_stale_sender_and_allows_progress ... ok
 test failed_delivery_retries_same_event_id_and_recovers_expired_lease ... ok
 test failure_after_state_event_and_receipt_writes_rolls_everything_back ... ok
 test rejected_receiver_dead_letters_without_rolling_back_physical_work ... ok
@@ -209,7 +216,7 @@ test restart_and_lost_response_return_original_save ... ok
 test stale_counts_and_competing_moves_cannot_overwrite_new_stock ... ok
 test tenant_boundaries_apply_to_state_commands_receipts_and_events ... ok
 
-test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.01s
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.19s
 
 
 > @stateset/warehouse@0.1.0 build
@@ -222,39 +229,43 @@ rendering chunks...
 computing gzip size...
 dist/index.html                   0.61 kB │ gzip:  0.37 kB
 dist/assets/index-CAKkJ94N.css   44.62 kB │ gzip: 10.43 kB
-dist/assets/index-DUuslRXI.js   251.92 kB │ gzip: 75.16 kB
-✓ built in 3.74s
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.29s
+dist/assets/index-CRjW895c.js   252.87 kB │ gzip: 75.44 kB
+✓ built in 3.30s
+   Compiling stateset-warehouse v0.1.0 (/home/dom/stateset-warehouse)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.02s
 
-Running 26 tests using 1 worker
+Running 29 tests using 1 worker
 
-(node:2957635) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(node:3142433) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
   ✓   1 [offline-contract] › tests/native.spec.ts:155:1 › conditional OMS fulfillment retains one reviewed handoff request through reload and retry (1.9s)
-  ✓   2 [offline-contract] › tests/native.spec.ts:240:1 › a durable OMS rejection permits a separately reviewed new request (1.5s)
-  ✓   3 [offline-contract] › tests/native.spec.ts:284:1 › native import preserves reviewed source revision and recovers a lost response without resubmission (1.9s)
+  ✓   2 [offline-contract] › tests/native.spec.ts:240:1 › a durable OMS rejection permits a separately reviewed new request (1.6s)
+  ✓   3 [offline-contract] › tests/native.spec.ts:284:1 › native import preserves reviewed source revision and recovers a lost response without resubmission (2.2s)
   ✓   4 [offline-contract] › tests/native.spec.ts:334:1 › transport requires explicit plan review and retries the original frozen request after reload (2.6s)
-  ✓   5 [offline-contract] › tests/native.spec.ts:369:1 › reviewing transportation cannot freshen a stale OMS import form (1.7s)
-  ✓   6 [offline-contract] › tests/native.spec.ts:407:1 › denied recovery retry retains an uncertain transport journal across reload (3.0s)
-  ✓   7 [offline-contract] › tests/offline.spec.ts:202:1 › overview, filtering, stock and responsive layout (1.8s)
-  ✓   8 [offline-contract] › tests/offline.spec.ts:237:1 › partial receive and putaway execute the real domain (1.8s)
-  ✓   9 [offline-contract] › tests/offline.spec.ts:278:1 › fulfillment allocation, pick, packing and physical handoff (2.6s)
-  ✓  10 [offline-contract] › tests/offline.spec.ts:310:1 › accepted save with a lost response recovers after reload (1.6s)
-  ✓  11 [offline-contract] › tests/offline.spec.ts:332:1 › blocked short picks can be physically returned, released and recounted (4.6s)
-  ✓  12 [offline-contract] › tests/offline.spec.ts:423:1 › keyset history exposes archived records and opens authoritative details (3.1s)
-  ✓  13 [offline-contract] › tests/offline.spec.ts:486:1 › a count opened before concurrent work cannot overwrite current stock (1.5s)
-  ✓  14 [offline-contract] › tests/offline.spec.ts:526:1 › ledger uses the independent history proof even when operational balances agree (1.6s)
-  ✓  15 [offline-contract] › tests/operations.spec.ts:169:1 › operational status separates held events and immutable rejection history from active incidents on mobile (1.0s)
-  ✓  16 [offline-contract] › tests/operations.spec.ts:213:1 › uncertain requests remain actionable and a failed refresh retains explicitly stale data (1.5s)
-  ✓  17 [offline-contract] › tests/operations.spec.ts:256:1 › warehouse status pagination uses independent bounded snapshots and rejects incomplete status (1.3s)
-  ✓  18 [offline-contract] › tests/operations.spec.ts:294:1 › viewer cannot open operational data even through a saved direct URL (955ms)
-  ✓  19 [offline-contract] › tests/operations.spec.ts:308:1 › offline and elapsed reads never remain green or exportable, and reconnect refreshes (1.4s)
-  ✓  20 [offline-contract] › tests/operations.spec.ts:341:1 › old or future server timestamps cannot become a healthy snapshot (1.0s)
-  ✓  21 [offline-contract] › tests/scanner.spec.ts:196:1 › scanned receiving rejects wrong identities and saves only the selected same-SKU line (2.1s)
-  ✓  22 [offline-contract] › tests/scanner.spec.ts:260:1 › scanned partial picks preserve original allocation and exact same-SKU line identity (1.6s)
-  ✓  23 [offline-contract] › tests/scanner.spec.ts:306:1 › warehouse refresh invalidates prior scans and requires a fresh canonical work review (1.9s)
-  ✓  24 [offline-contract] › tests/scanner.spec.ts:338:1 › lost scanned save response uses the shared durable receipt recovery after reload (2.0s)
-  ✓  25 [offline-contract] › tests/scanner.spec.ts:368:1 › forbidden retry preserves the original uncertain scanner request and keeps writes blocked (2.2s)
-  ✓  26 [offline-contract] › tests/scanner.spec.ts:415:1 › an open order exception blocks scanner picks before any labels can be accepted (1.4s)
+  ✓   5 [offline-contract] › tests/native.spec.ts:369:1 › reviewing transportation cannot freshen a stale OMS import form (1.6s)
+  ✓   6 [offline-contract] › tests/native.spec.ts:407:1 › denied recovery retry retains an uncertain transport journal across reload (2.5s)
+  ✓   7 [offline-contract] › tests/offline.spec.ts:245:1 › overview, filtering, stock and responsive layout (1.9s)
+  ✓   8 [offline-contract] › tests/offline.spec.ts:280:1 › partial receive and putaway execute the real domain (2.1s)
+  ✓   9 [offline-contract] › tests/offline.spec.ts:321:1 › fulfillment allocation, pick, packing and physical handoff (2.1s)
+  ✓  10 [offline-contract] › tests/offline.spec.ts:353:1 › accepted save with a lost response recovers after reload (1.5s)
+  ✓  11 [offline-contract] › tests/offline.spec.ts:395:1 › a lost-before-arrival save unblocks only after exact definitive stale evidence (2.2s)
+  ✓  12 [offline-contract] › tests/offline.spec.ts:437:1 › missing, malformed, mismatched or forbidden rejection evidence retains recovery (21.5s)
+  ✓  13 [offline-contract] › tests/offline.spec.ts:522:1 › an in-flight warehouse refresh replaces stale canonical receipt detail before action (1.7s)
+  ✓  14 [offline-contract] › tests/offline.spec.ts:586:1 › blocked short picks can be physically returned, released and recounted (4.2s)
+  ✓  15 [offline-contract] › tests/offline.spec.ts:677:1 › keyset history exposes archived records and opens authoritative details (3.1s)
+  ✓  16 [offline-contract] › tests/offline.spec.ts:740:1 › a count opened before concurrent work cannot overwrite current stock (1.2s)
+  ✓  17 [offline-contract] › tests/offline.spec.ts:780:1 › ledger uses the independent history proof even when operational balances agree (1.4s)
+  ✓  18 [offline-contract] › tests/operations.spec.ts:169:1 › operational status separates held events and immutable rejection history from active incidents on mobile (1.0s)
+  ✓  19 [offline-contract] › tests/operations.spec.ts:213:1 › uncertain requests remain actionable and a failed refresh retains explicitly stale data (1.2s)
+  ✓  20 [offline-contract] › tests/operations.spec.ts:256:1 › warehouse status pagination uses independent bounded snapshots and rejects incomplete status (1.2s)
+  ✓  21 [offline-contract] › tests/operations.spec.ts:294:1 › viewer cannot open operational data even through a saved direct URL (770ms)
+  ✓  22 [offline-contract] › tests/operations.spec.ts:308:1 › offline and elapsed reads never remain green or exportable, and reconnect refreshes (1.3s)
+  ✓  23 [offline-contract] › tests/operations.spec.ts:341:1 › old or future server timestamps cannot become a healthy snapshot (837ms)
+  ✓  24 [offline-contract] › tests/scanner.spec.ts:196:1 › scanned receiving rejects wrong identities and saves only the selected same-SKU line (1.7s)
+  ✓  25 [offline-contract] › tests/scanner.spec.ts:260:1 › scanned partial picks preserve original allocation and exact same-SKU line identity (1.4s)
+  ✓  26 [offline-contract] › tests/scanner.spec.ts:306:1 › warehouse refresh invalidates prior scans and requires a fresh canonical work review (1.6s)
+  ✓  27 [offline-contract] › tests/scanner.spec.ts:338:1 › lost scanned save response uses the shared durable receipt recovery after reload (1.5s)
+  ✓  28 [offline-contract] › tests/scanner.spec.ts:368:1 › forbidden retry preserves the original uncertain scanner request and keeps writes blocked (1.7s)
+  ✓  29 [offline-contract] › tests/scanner.spec.ts:415:1 › an open order exception blocks scanner picks before any labels can be accepted (998ms)
 
-  26 passed (52.5s)
+  29 passed (1.2m)

@@ -145,9 +145,30 @@ class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    public commandOutcome?: unknown,
   ) {
     super(message);
   }
+}
+function provesStaleCommandDidNotCommit(error: ApiError, journal: Journal) {
+  const outcome = error.commandOutcome as Record<string, unknown> | null;
+  return (
+    error.status === 409 &&
+    !!outcome &&
+    typeof outcome === "object" &&
+    !Array.isArray(outcome) &&
+    Object.keys(outcome).length === 8 &&
+    outcome.status === "not_committed" &&
+    outcome.reason === "stale_version" &&
+    outcome.tenant === journal.tenant &&
+    outcome.actor === journal.actor &&
+    outcome.warehouse_id === journal.warehouse &&
+    outcome.request_id === journal.request.request_id &&
+    outcome.expected_version === journal.request.expected_version &&
+    Number.isSafeInteger(outcome.expected_version) &&
+    Number.isSafeInteger(outcome.current_version) &&
+    (outcome.current_version as number) > journal.request.expected_version
+  );
 }
 const opts = (items: string[]) =>
   items.map((value) => ({ value, label: value }));
@@ -503,6 +524,7 @@ export default function App() {
   const [history, setHistory] = useState<HistoryState>({});
   const [detail, setDetail] = useState<{
     key: string;
+    version: number;
     data: Order | Receipt;
   } | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -551,6 +573,7 @@ export default function App() {
           throw new ApiError(
             response.status,
             data.error ?? text ?? `HTTP ${response.status}`,
+            data.command_outcome,
           );
         return data;
       } finally {
@@ -620,6 +643,7 @@ export default function App() {
   useEffect(() => {
     if (!detailKey || !state?.warehouse.id) return;
     let cancelled = false;
+    const version = state.version;
     setDetail(null);
     setDetailLoading(true);
     setError("");
@@ -627,11 +651,14 @@ export default function App() {
       `/v1/warehouses/${encodeURIComponent(state.warehouse.id)}/${detailKey}`,
     )
       .then((data) => {
-        if (!cancelled)
+        if (!cancelled) {
+          modalVersion.current = version;
           setDetail({
             key: detailKey,
+            version,
             data: data.order ?? data.receipt ?? data,
           });
+        }
       })
       .catch((e) => {
         if (!cancelled) setError((e as Error).message);
@@ -642,7 +669,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [detailKey, state?.warehouse.id, request]);
+  }, [detailKey, state?.warehouse.id, state?.version, request]);
   useEffect(() => {
     if (!token) return;
     const current = ++epoch.current;
@@ -773,6 +800,24 @@ export default function App() {
     } catch (e) {
       if (current !== epoch.current) return false;
       const err = e as ApiError;
+      if (recovering && provesStaleCommandDidNotCommit(err, j)) {
+        clearJournal();
+        setModal(null);
+        let refreshed = true;
+        try {
+          await refresh(j.warehouse);
+        } catch {
+          refreshed = false;
+        }
+        if (current === epoch.current)
+          setError(
+            "The original save was not committed because the warehouse advanced. Review current work and physical stock before starting a new save." +
+              (refreshed
+                ? ""
+                : " The refreshed view is unavailable; use Refresh before continuing."),
+          );
+        return false;
+      }
       if (
         !recovering &&
         err.status >= 400 &&
@@ -1311,11 +1356,17 @@ export default function App() {
     </div>
   );
   const selectedOrder =
-    modal && "order" in modal && detail?.key === detailKey
+    modal &&
+    "order" in modal &&
+    detail?.key === detailKey &&
+    detail.version === s.version
       ? (detail.data as Order)
       : undefined;
   const selectedReceipt =
-    modal && "receipt" in modal && detail?.key === detailKey
+    modal &&
+    "receipt" in modal &&
+    detail?.key === detailKey &&
+    detail.version === s.version
       ? (detail.data as Receipt)
       : undefined;
   const orderBlocked =

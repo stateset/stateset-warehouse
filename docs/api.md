@@ -53,6 +53,29 @@ Request IDs contain 8–100 ASCII letters, digits, hyphens or underscores. Persi
 
 For a known version conflict, refresh and review the work, then submit a **new** request ID with the reviewed version. A receipt lookup returning `found:false` does not prove an earlier network request can never arrive: retry the original key. Do not repeat a physical action merely because its response was lost.
 
+A strictly stale original command can return HTTP 409 with this additional, definitive outcome:
+
+```json
+{
+  "error": "Warehouse changed; review current work",
+  "command_outcome": {
+    "status": "not_committed",
+    "reason": "stale_version",
+    "tenant": "your-org",
+    "actor": "operator:alice",
+    "warehouse_id": "wh-main",
+    "request_id": "c62d2a33-b2ce-46a8-9f4e-b0d471b9cc7c",
+    "expected_version": 17,
+    "current_version": 18
+  }
+}
+```
+
+The server emits this outcome only after taking the warehouse write lock, finding no saved receipt for that request, and proving the expected version is strictly older. An already committed matching request replays its original result first. Future versions, actor/payload conflicts, authorization errors and ordinary failures do not carry this proof. A delayed copy of the original stale envelope cannot commit while warehouse versions advance normally.
+
+Recovery clients may retire their pending journal only when the 409 outcome matches its tenant, actor, warehouse, request ID and expected version, with a safe integer current version strictly greater than expected. Then refresh and review current work and physical stock before creating another request; no physical action is repeated automatically. A generic 409 or `found:false` alone remains ambiguous. The dashboard closes stale detail and version-binds canonical order/receipt reads so an older detail response cannot authorize a form at a newer warehouse version.
+
+
 | Command type | Required command fields | Permission |
 |---|---|---|
 | `update_warehouse` | `code`, `name`, `city`, `timezone` (IANA) | admin |
@@ -151,4 +174,4 @@ Every committed command queues an OMS event. Packing and shipping also queue TMS
 
 Per-order business effects also require retained event identity: a previously unseen shipment may still matter even when an event's warehouse version is older than another received event. A TMS readiness event never authorizes another warehouse stock decrement.
 
-The HTTP timeout is 10 seconds, lease 30 seconds, with eight attempts and exponential backoff before dead letter. The same event ID survives retries/lease recovery/requeue. HTTP 2xx means the receiver accepted the envelope; it does not mean downstream order or transport execution completed. Delivery attempts and administrative requeues are retained independently of current queue status.
+The HTTP timeout is 10 seconds and lease 30 seconds. Automatic delivery permits at most eight claimed attempts per administrator-authorized cycle, including attempts whose sender crashed before committing an outcome. After an eighth lease expires, the worker retains uncertainty and dead-letters without another HTTP request. Exponential backoff applies between retryable attempts. Late responses are fenced by the retired lease token and cannot overwrite a dead letter or retained uncertain attempt. Audited administrator requeue starts another explicit cycle while preserving the event ID and full history. The same event ID survives retries/lease recovery/requeue. HTTP 2xx means the receiver accepted the envelope; it does not mean downstream order or transport execution completed. Delivery attempts and administrative requeues are retained independently of current queue status.

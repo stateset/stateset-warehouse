@@ -626,6 +626,14 @@ impl NativeIntegrations {
         )?;
         check_readiness_source(&prepared.readiness, &source)
             .map_err(|_| "TMS retained a different source order revision or line quantities; acceptance is uncertain and the planned load requires review")?;
+        // Freight fetches OMS again after our preflight. Check the snapshot
+        // retained with its possible load, including on exact receipt replay;
+        // reading today's OMS state would reinterpret an earlier acceptance.
+        if !["pending", "processing"].contains(&source.status.as_str())
+            || require_unfulfilled(&source).is_err()
+        {
+            return Err("TMS retained an ineligible OMS source; acceptance is uncertain and the planned load requires review".into());
+        }
         Ok(result)
     }
     pub async fn create_transport(

@@ -40,9 +40,9 @@ Open **http://127.0.0.1:8088**. Localhost is a secure browser context; use HTTPS
 - Cancellation and reservation release before picking; blocking order exceptions and retained resolution evidence.
 - Administrator physical counts with reasons, stale-version protection and rejection below reserved balances.
 - Physical movement ledger, independent balance/reservation reconstruction, searchable views and CSV exports.
-- Server-owned tenant/operator/role identity, stable request IDs, saved command receipts and browser recovery after uncertain saves.
-- Durable OMS events and TMS readiness/handoff events, leased delivery, bounded retries, retained delivery attempts, dead letters and audited requeue.
-- Source-derived Sync order import and Freight planned-load adapters, with strict tenant/source identities, exact whole-unit quantities, explicit transport facts and retained readiness evidence.
+- Server-owned tenant/operator/role identity, stable request IDs, saved command receipts and browser recovery after uncertain saves. Definitive stale-version rejection can safely retire a request that never committed; ambiguous outcomes remain held.
+- Durable OMS events and TMS readiness/handoff events, leased delivery, crash-counted retry budgets, retained delivery attempts, fenced late responses, dead letters and audited requeue.
+- Source-derived Sync order import and Freight planned-load adapters, with strict tenant/source identities, exact whole-unit quantities, explicit transport facts and retained readiness evidence. Freight acknowledgments must retain an eligible canonical source as well as exact source lines.
 - Opt-in conditional OMS fulfillment after physical handoff, with frozen source revisions, receiver capability checks, immutable accepted/rejected receipts and exact uncertain-request recovery. The [companion OMS receiver](integrations/stateset-sync-server/README.md) must be deployed and qualified first; the legacy endpoint stays held.
 - Normalized operational rows, database-enforced movement/reservation/receipt proofs, and append-only movement/activity history with cursor pagination and archived record details.
 - Tenant-wide Operations view for delivery queues, uncertain native requests and warehouse exceptions, with bounded consistent snapshots, explicit stale/offline status, current-evidence exports and administrator Prometheus metrics with tested alert policies.

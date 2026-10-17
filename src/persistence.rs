@@ -10,12 +10,56 @@ use std::time::Duration;
 pub struct Error {
     pub status: u16,
     pub message: String,
+    pub command_outcome: Option<Box<CommandOutcome>>,
+}
+/// Definitive evidence is available only after serializing against physical
+/// writes and checking the original command receipt. Other failures remain
+/// ambiguous and must retain their original request for recovery.
+#[derive(Debug, Serialize)]
+#[serde(tag = "status", rename_all = "snake_case")]
+pub enum CommandOutcome {
+    NotCommitted {
+        reason: NotCommittedReason,
+        tenant: String,
+        actor: String,
+        warehouse_id: String,
+        request_id: String,
+        expected_version: i64,
+        current_version: i64,
+    },
+}
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NotCommittedReason {
+    StaleVersion,
 }
 impl Error {
     pub fn new(status: u16, message: impl Into<String>) -> Self {
         Self {
             status,
             message: message.into(),
+            command_outcome: None,
+        }
+    }
+
+    fn stale_command(
+        identity: &Identity,
+        warehouse: &str,
+        request: &Request,
+        version: i64,
+    ) -> Self {
+        Self {
+            status: 409,
+            message: format!("Warehouse changed (version {version}). Refresh and review before submitting a new request."),
+            command_outcome: Some(Box::new(CommandOutcome::NotCommitted {
+                reason: NotCommittedReason::StaleVersion,
+                tenant: identity.tenant.clone(),
+                actor: identity.actor.clone(),
+                warehouse_id: warehouse.into(),
+                request_id: request.request_id.clone(),
+                expected_version: request.expected_version,
+                current_version: version,
+            })),
         }
     }
 }
@@ -560,6 +604,11 @@ impl Store {
         .ok_or_else(|| Error::new(404, "Warehouse not found"))?;
         if let Some(receipt)=sqlx::query("SELECT actor,digest,result FROM wms_commands WHERE tenant=$1 AND warehouse_id=$2 AND request_id=$3").bind(&i.tenant).bind(w).bind(&r.request_id).fetch_optional(&mut *tx).await?{if receipt.get::<String,_>("digest")!=digest||receipt.get::<String,_>("actor")!=i.actor{return Err(Error::new(409,"Request ID already belongs to a different payload or operator"));}return Ok(json!({"replayed":true,"result":receipt.get::<Value,_>("result")}));}
         let version: i64 = h.try_get("version")?;
+        if r.expected_version < version {
+            // The lock also fences a delayed copy of this exact request: the
+            // warehouse version only increases, so it can never commit later.
+            return Err(Error::stale_command(i, w, r, version));
+        }
         if r.expected_version != version {
             return Err(Error::new(409,format!("Warehouse changed (version {version}). Refresh and review before submitting a new request.")));
         }

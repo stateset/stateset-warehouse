@@ -40,24 +40,24 @@ The report binds these results to the running immutable application image, that 
 
 ## Executed final release profile
 
-The [checked final report](qualification/resilience.json), recorded on 2026-10-17, passed on production image `sha256:e3924a41f244b923d7048757d2a685cec81f66756bd3940a39107b7f8470c603` against isolated PostgreSQL 16.15. Its image/source fingerprint, both unchanged qualifier hashes and all seven migration digests were independently checked against the final frozen release. Interim reports were retained privately; this checked artifact comes from the corrected full release gate with every stage passing.
+The [checked final report](qualification/resilience.json), recorded on 2026-10-17, passed on production image `sha256:dea3eec34598d824e0c4db9cf0e90114ae776cbf462a01ea9f97ae3d62944bb5` against isolated PostgreSQL 16.15. Its image/source fingerprint, both unchanged qualifier hashes and all seven migration digests were independently checked against the final frozen release. The checked artifact comes from the full release gate with every stage passing.
 
 | Observation | Final recorded result |
 |---|---|
 | Active fixture | 500 operational products, 1,000 opening bin-lots, 100 storage bins, 500 open orders; 250 allocated and 250 pending |
 | Recovery fixture | One additional product; same-SKU receipt lines of 7 and 11 units, a complete 5-unit shipment, and 3 units reserved |
-| HTTP setup | 2,352 committed setup commands in 73.070 seconds; excluded from traffic timing |
-| Sustained traffic | Four distinct operators through two API replicas for 60.216 seconds |
-| Committed physical moves | 316, plus 316 exact retries through the other replica |
-| Definite stale conflicts | 474; zero unexpected errors |
-| Committed throughput | 5.248 physical moves/second, including snapshot refreshes, stale retries and exact replays in the timed interval |
-| Action latency | p50 476.380 ms; p95 812.654 ms; p99 860.845 ms; measured from initial snapshot through commitment |
-| Operational snapshot latency | 553 reads; p95 189.279 ms; every snapshot reconciled and retained the full active catalog/work set |
-| API restart to readiness | Observed locally at 0.689 seconds; the other replica remained ready throughout the API failure |
-| Database restart to both APIs ready | Observed locally at 1.223 seconds; both API processes recovered without restarting |
+| HTTP setup | 2,352 committed setup commands in 77.067 seconds; excluded from traffic timing |
+| Sustained traffic | Four distinct operators through two API replicas for 60.808 seconds |
+| Committed physical moves | 328, plus 328 exact retries through the other replica |
+| Definite stale conflicts | 492; zero unexpected errors |
+| Committed throughput | 5.394 physical moves/second, including snapshot refreshes, stale retries and exact replays in the timed interval |
+| Action latency | p50 460.711 ms; p95 833.410 ms; p99 948.867 ms; measured from initial snapshot through commitment |
+| Operational snapshot latency | 574 reads; p95 197.636 ms; every snapshot reconciled and retained the full active catalog/work set |
+| API restart to readiness | Observed locally at 0.519 seconds; the other replica remained ready throughout the API failure |
+| Database restart to both APIs ready | Observed locally at 1.123 seconds; both API processes recovered without restarting |
 
 The lost-success proxy, deterministic blocked-write API SIGKILL and deterministic PostgreSQL SIGKILL phases all passed. While PostgreSQL was stopped, both replicas returned readiness 503 and process liveness 200. All 24 WMS tables had identical pre-crash and post-recovery sorted-row fingerprints before the original interrupted request was retried. The owned persistent volume survived the crash; afterward, all rehearsal containers, networks and volumes were removed and the label-filtered Docker lists were independently verified empty.
 
-Independent SQL reconstruction ended with exactly 100,000,013 each units in physical custody and 253 reserved. The expected/observed execution models agreed on 2,681 command receipts, events and activity rows, 1,325 movements and 2,683 outbox rows. The 13 recovery commands and 316 timed physical commands account for every version after setup. All 500 seeded orders retained their original pending/allocated states, exact receipt lines retained 7 and 11 received units, both replicas passed full append-only-ledger reconciliation at version 2,681, and tenant/actor isolation passed. No external delivery was configured or attempted.
+Independent SQL reconstruction ended with exactly 100,000,013 each units in physical custody and 253 reserved. The expected/observed execution models agreed on 2,693 command receipts, events and activity rows, 1,337 movements and 2,695 outbox rows. The 13 recovery commands and 328 timed physical commands account for every version after setup. All 500 seeded orders retained their original pending/allocated states, exact receipt lines retained 7 and 11 received units, both replicas passed full append-only-ledger reconciliation at version 2,693, and tenant/actor isolation passed. No external delivery was configured or attempted.
 
 This is one synthetic local measurement window with forced same-version contention and synchronized rounds. It measures the recorded HTTP snapshot/command/replay path; it does not measure browser rendering, label handling or physical scanner timing. It is separate from the Store workload, which uses another database setup and refresh pattern, so their throughput or latency values do not establish a performance improvement. Production acceptance still requires deployed network and failover qualification, deployed native receivers, and an actual facility trial.

@@ -610,6 +610,222 @@ async fn rejected_receiver_dead_letters_without_rolling_back_physical_work() {
 }
 
 #[tokio::test]
+#[ignore = "requires isolated Postgres and local HTTP; scripts/check.sh --postgres"]
+async fn exhausted_delivery_lease_preserves_uncertainty_fences_stale_sender_and_allows_progress() {
+    use axum::{
+        http::{HeaderMap, StatusCode},
+        routing::post,
+        Router,
+    };
+    use std::time::Duration;
+    use tokio::sync::Notify;
+
+    let (store, i, _) = setup().await;
+    execute(&store, &i, create_order("SO-EXHAUSTED", 1)).await;
+    let first = store.outbox(&i.tenant, "wh-main").await.expect("queue")[0].clone();
+    let first_id = first["id"].as_str().expect("outbox ID");
+    let first_event = first["event_id"].as_str().expect("event ID");
+    let calls = Arc::new(AtomicUsize::new(0));
+    let seen = Arc::new(tokio::sync::Mutex::new(Vec::new()));
+    let eighth_started = Arc::new(Notify::new());
+    let release_eighth = Arc::new(Notify::new());
+    let receiver = Router::new().route(
+        "/events",
+        post({
+            let calls = calls.clone();
+            let seen = seen.clone();
+            let eighth_started = eighth_started.clone();
+            let release_eighth = release_eighth.clone();
+            move |headers: HeaderMap| {
+                let calls = calls.clone();
+                let seen = seen.clone();
+                let eighth_started = eighth_started.clone();
+                let release_eighth = release_eighth.clone();
+                async move {
+                    let ordinal = calls.fetch_add(1, Ordering::SeqCst);
+                    seen.lock().await.push(
+                        headers["Idempotency-Key"]
+                            .to_str()
+                            .expect("idempotency header")
+                            .to_string(),
+                    );
+                    if ordinal < 7 {
+                        return StatusCode::SERVICE_UNAVAILABLE;
+                    }
+                    if ordinal == 7 {
+                        eighth_started.notify_one();
+                        release_eighth.notified().await;
+                    }
+                    StatusCode::ACCEPTED
+                }
+            }
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("local HTTP");
+    let address = listener.local_addr().expect("address");
+    let server = tokio::spawn(async move {
+        axum::serve(listener, receiver).await.expect("receiver");
+    });
+    let connections = Connections(Arc::new(BTreeMap::from([(
+        (i.tenant.clone(), "oms".into()),
+        (format!("http://{address}/events"), "test-token".into()),
+    )])));
+
+    for _ in 0..7 {
+        sqlx::query("UPDATE wms_outbox SET due_at=now()-interval '1 minute' WHERE id=$1")
+            .bind(first_id)
+            .execute(&store.pool)
+            .await
+            .expect("advance retry clock");
+        assert!(connections
+            .dispatch_one(&store)
+            .await
+            .expect("failed attempt"));
+    }
+    sqlx::query("UPDATE wms_outbox SET due_at=now()-interval '1 minute' WHERE id=$1")
+        .bind(first_id)
+        .execute(&store.pool)
+        .await
+        .expect("advance final attempt clock");
+    let stale_sender = tokio::spawn({
+        let connections = connections.clone();
+        let store = store.clone();
+        async move { connections.dispatch_one(&store).await }
+    });
+    tokio::time::timeout(Duration::from_secs(3), eighth_started.notified())
+        .await
+        .expect("eighth request reached actual receiver");
+
+    // Another event can progress after exhaustion; retiring a lease is itself
+    // work, so the dispatch loop must not stop before inspecting the next row.
+    execute(&store, &i, create_order("SO-AFTER-EXHAUSTED", 1)).await;
+    let second = store
+        .outbox(&i.tenant, "wh-main")
+        .await
+        .expect("next event")
+        .into_iter()
+        .find(|item| item["id"] != first["id"])
+        .expect("second outbox row");
+    sqlx::query("UPDATE wms_outbox SET lease_until=now()-interval '1 second' WHERE id=$1 AND status='delivering' AND attempts=8")
+        .bind(first_id).execute(&store.pool).await.expect("expire eighth delivery lease");
+    assert!(connections
+        .dispatch_one(&store)
+        .await
+        .expect("exhausted lease is retired as progress"));
+    assert_eq!(
+        calls.load(Ordering::SeqCst),
+        8,
+        "no ninth automatic HTTP request"
+    );
+    let retired: Value = sqlx::query_scalar("SELECT to_jsonb(o) FROM wms_outbox o WHERE id=$1")
+        .bind(first_id)
+        .fetch_one(&store.pool)
+        .await
+        .expect("retired queue row");
+    assert_eq!(retired["status"], "dead_letter");
+    assert_eq!(retired["attempts"], 8);
+    assert!(retired["lease_token"].is_null() && retired["lease_until"].is_null());
+    assert!(retired["last_error"]
+        .as_str()
+        .expect("retained uncertainty")
+        .contains("uncertain"));
+    let history: Value = sqlx::query_scalar("SELECT jsonb_agg(to_jsonb(a) ORDER BY created_at,id) FROM wms_delivery_attempts a WHERE outbox_id=$1")
+        .bind(first_id).fetch_one(&store.pool).await.expect("retained delivery history");
+    let attempts = history.as_array().expect("attempt history");
+    assert_eq!(attempts.len(), 8);
+    assert_eq!(
+        attempts.iter().filter(|a| a["outcome"] == "failed").count(),
+        7
+    );
+    assert_eq!(
+        attempts
+            .iter()
+            .filter(|a| a["outcome"] == "uncertain")
+            .count(),
+        1
+    );
+    assert!(attempts.iter().all(|a| !a["finished_at"].is_null()));
+
+    // The old HTTP request now succeeds, but its retired lease has no authority
+    // to replace either the queue decision or the finished uncertain evidence.
+    release_eighth.notify_one();
+    assert!(tokio::time::timeout(Duration::from_secs(3), stale_sender)
+        .await
+        .expect("old sender finished")
+        .expect("sender task")
+        .expect("stale completion"));
+    let after: Value = sqlx::query_scalar("SELECT to_jsonb(o) FROM wms_outbox o WHERE id=$1")
+        .bind(first_id)
+        .fetch_one(&store.pool)
+        .await
+        .expect("fenced queue row");
+    let after_history: Value = sqlx::query_scalar("SELECT jsonb_agg(to_jsonb(a) ORDER BY created_at,id) FROM wms_delivery_attempts a WHERE outbox_id=$1")
+        .bind(first_id).fetch_one(&store.pool).await.expect("fenced history");
+    assert_eq!(after, retired);
+    assert_eq!(after_history, history);
+
+    assert!(connections
+        .dispatch_one(&store)
+        .await
+        .expect("next event progresses"));
+    assert_eq!(calls.load(Ordering::SeqCst), 9);
+    assert!(!connections
+        .dispatch_one(&store)
+        .await
+        .expect("queue is exhausted"));
+    assert_eq!(
+        store
+            .outbox(&i.tenant, "wh-main")
+            .await
+            .expect("queue")
+            .into_iter()
+            .find(|item| item["id"] == second["id"])
+            .expect("second event")["status"],
+        "delivered"
+    );
+
+    store
+        .retry(&i, first_id)
+        .await
+        .expect("explicit audited requeue");
+    let audit: i64 = sqlx::query_scalar("SELECT count(*) FROM wms_admin_audit WHERE tenant=$1 AND actor=$2 AND action='outbox.retry' AND reference=$3")
+        .bind(&i.tenant).bind(&i.actor).bind(first_id).fetch_one(&store.pool).await.expect("retry audit");
+    assert_eq!(audit, 1);
+    assert!(connections
+        .dispatch_one(&store)
+        .await
+        .expect("authorized retry"));
+    assert_eq!(calls.load(Ordering::SeqCst), 10);
+    let queue = store
+        .outbox(&i.tenant, "wh-main")
+        .await
+        .expect("final queue");
+    let retried = queue
+        .iter()
+        .find(|item| item["id"] == first["id"])
+        .expect("retried row");
+    assert_eq!(retried["status"], "delivered");
+    assert_eq!(retried["attempts"], 1);
+    let total: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM wms_delivery_attempts WHERE outbox_id=$1")
+            .bind(first_id)
+            .fetch_one(&store.pool)
+            .await
+            .expect("all retained attempts");
+    assert_eq!(total, 9);
+    let ids = seen.lock().await;
+    assert!(ids[..8].iter().all(|event| event == first_event));
+    assert_eq!(
+        ids[8],
+        second["event_id"].as_str().expect("second event ID")
+    );
+    assert_eq!(ids[9], first_event);
+    server.abort();
+}
+
+#[tokio::test]
 #[ignore = "requires isolated Postgres; scripts/check.sh --postgres"]
 async fn database_constraint_rejects_raw_balance_corruption() {
     let (store, i, mut s) = setup().await;

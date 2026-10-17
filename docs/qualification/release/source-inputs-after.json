@@ -1,5 +1,5 @@
 {
-  "sha256": "0a1c1aa8929fc70851200f513038c4b5a756859e5cb30c73e9815cfbcf49e55c",
+  "sha256": "3d36aa80dd57e7a48d9a413e9214732060295a99e83f5eac62930282aa5ac9ac",
   "inputs": [
     {
       "path": ".dockerignore",
@@ -39,7 +39,7 @@
     },
     {
       "path": "dashboard/src/App.tsx",
-      "sha256": "2b7c77565fcd9e009463f20f722069ebf493aaf3c82c8ac55234496a0f64dd45"
+      "sha256": "74616a1d6d9fe30ee5fb755cf0ac078020cbc17fdc06b781b665d07b12fbebf2"
     },
     {
       "path": "dashboard/src/NativePanel.tsx",
@@ -83,7 +83,7 @@
     },
     {
       "path": "dashboard/tests/offline.spec.ts",
-      "sha256": "96a51a942611385f44d6ad32712287e4162c245985d6598e0eb922d5717151ad"
+      "sha256": "ee877275016a6f8c505c1fe8cd1ed857e6d7f75078b95a7234cd499c967ec409"
     },
     {
       "path": "dashboard/tests/operations-live.spec.ts",
@@ -255,7 +255,7 @@
     },
     {
       "path": "src/api.rs",
-      "sha256": "921f218bb6f367db26c2a00e35f41651dc1e5d7b6feabaebd7a801f6878e4f60"
+      "sha256": "61e48612387c15e77b733d249d93c55e6ff9a67c3f8a407a43f4dcba5d04aa3c"
     },
     {
       "path": "src/domain.rs",
@@ -263,7 +263,7 @@
     },
     {
       "path": "src/integrations.rs",
-      "sha256": "71b703e6f55e91d8c70f2db78479659932eee5ea1607baded0023e8534938f38"
+      "sha256": "762b1200f3668a589583fbe87777a23a80a792b35223ec398097f22161805ad0"
     },
     {
       "path": "src/lib.rs",
@@ -275,7 +275,7 @@
     },
     {
       "path": "src/native.rs",
-      "sha256": "e4a911e155fee4faf897b16a34905c5b0e7064f9fe3540fe50bdb407b4278fa7"
+      "sha256": "85af1460f28691274434afe6ddb12c98ac1d253d0073642b5f74c6a2f0b6015d"
     },
     {
       "path": "src/native_api.rs",
@@ -299,7 +299,7 @@
     },
     {
       "path": "src/persistence.rs",
-      "sha256": "2e4046f85fc5e9d2a1b12026c9b39b08880b634f1b08dea0ed440026c7a042ef"
+      "sha256": "0f8bb27bdd90d6ae88f3fb66085df49f8fd360dadd1a3c77d9e86acbe14827c3"
     },
     {
       "path": "src/reconciliation.sql",
@@ -323,7 +323,7 @@
     },
     {
       "path": "tests/native_contracts.rs",
-      "sha256": "61fbc0f3b006cf635f67ca7b5384fc585251e14d42448ae5a113ae4540ae89c3"
+      "sha256": "ad7b76c38ba91c4c5baf6eef5247f2de6b5027f8887619e8ec55026341f216ef"
     },
     {
       "path": "tests/oms_client.rs",
@@ -343,7 +343,7 @@
     },
     {
       "path": "tests/persistence_acceptance.rs",
-      "sha256": "d4bb8ee685e3c25ba00b3682da616ef3ffa6b2c579aca1277467a866608d6a49"
+      "sha256": "ed7e86ef13a95084c9c821503f6d70b774326a34b8c397912e830d1ba754ea39"
     },
     {
       "path": "tests/persistence_guards.rs",
@@ -351,7 +351,7 @@
     },
     {
       "path": "tests/postgres.rs",
-      "sha256": "350e8e67c68ab9184cd559a976071f05f8c58555a979ea5d3c644d62e2e86c1c"
+      "sha256": "14f53e71fba89b5741374e30c612b8a28e4081bcf411b4ce6495cec9e38cdac6"
     }
   ]
 }

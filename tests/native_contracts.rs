@@ -634,6 +634,120 @@ async fn tms_retained_source_mismatch_is_reported_as_uncertain_instead_of_accept
     assert_eq!(capture.requests.lock().await.len(), 1);
     task.abort();
 }
+
+#[tokio::test]
+async fn tms_ineligible_retained_source_after_preflight_stays_uncertain_on_exact_retry() {
+    #[derive(Clone)]
+    struct SourceRace {
+        requests: Arc<Mutex<Vec<(String, HeaderMap, Value)>>>,
+        canonical: Value,
+        retained: Value,
+    }
+    async fn canonical_source(
+        HttpState(race): HttpState<SourceRace>,
+        headers: HeaderMap,
+    ) -> Json<Value> {
+        race.requests
+            .lock()
+            .await
+            .push(("GET order".into(), headers, Value::Null));
+        Json(json!({"data":race.canonical}))
+    }
+    async fn changed_transport(
+        HttpState(race): HttpState<SourceRace>,
+        headers: HeaderMap,
+        Json(body): Json<Value>,
+    ) -> Json<Value> {
+        let mut requests = race.requests.lock().await;
+        let replayed = requests.iter().any(|(route, _, _)| route == "POST import");
+        requests.push(("POST import".into(), headers, body.clone()));
+        Json(
+            json!({"replayed":replayed,"data":{"id":"load-created-after-source-changed","reference":body["load"]["reference"],"sync_order_id":body["order_id"],"status":"planned","source_order":race.retained}}),
+        )
+    }
+
+    for mutation in [
+        "cancelled",
+        "unknown_status",
+        "fulfilled",
+        "partial_fulfillment",
+        "unknown_fulfillment",
+        "source_cancellation",
+        "source_cancellation_camel",
+        "source_partial_fulfillment",
+        "source_unknown_fulfillment",
+    ] {
+        let canonical = packed_oms_fixture();
+        let mut retained = canonical.clone();
+        match mutation {
+            "cancelled" => retained["status"] = json!("cancelled"),
+            "unknown_status" => retained["status"] = json!("unknown"),
+            "fulfilled" => retained["status"] = json!("fulfilled"),
+            "partial_fulfillment" => retained["fulfillmentStatus"] = json!("PARTIALLY_FULFILLED"),
+            "unknown_fulfillment" => retained["fulfillmentStatus"] = json!("UNKNOWN"),
+            "source_cancellation" => {
+                retained["sourceOrderPayload"] = json!({"cancelled_at":"2026-10-17T01:00:00Z"})
+            }
+            "source_cancellation_camel" => {
+                retained["sourceOrderPayload"] = json!({"cancelledAt":"2026-10-17T01:00:00Z"})
+            }
+            "source_partial_fulfillment" => {
+                retained["sourceOrderPayload"] = json!({"fulfillment_status":"PARTIALLY_FULFILLED"})
+            }
+            "source_unknown_fulfillment" => {
+                retained["sourceOrderPayload"] = json!({"fulfillmentStatus":"UNKNOWN"})
+            }
+            _ => unreachable!("known source mutation"),
+        }
+        assert_eq!(retained["lineItems"], canonical["lineItems"]);
+        let race = SourceRace {
+            requests: Arc::new(Mutex::new(Vec::new())),
+            canonical,
+            retained,
+        };
+        let (base, task) = serve(
+            Router::new()
+                .route("/v1/tenants/oms-acme/orders/{id}", get(canonical_source))
+                .route("/v1/sync/import", post(changed_transport))
+                .route("/v1/access", get(freight_access))
+                .with_state(race.clone()),
+        )
+        .await;
+        let integration = configured(&base);
+        let (state, id) = packed();
+        let prepared = integration
+            .prepare_transport("acme", &state, &id, &transport_plan())
+            .expect("frozen transport");
+        integration
+            .verify_transport_source("acme", &prepared)
+            .await
+            .expect("canonical OMS source was eligible at preflight");
+        // Freight may create the planned load after OMS eligibility changes.
+        // Preserve that possible effect and the exact original request instead
+        // of qualifying the inconsistent snapshot or suggesting a new import.
+        for _ in 0..2 {
+            let error = integration
+                .execute_transport("acme", &prepared)
+                .await
+                .expect_err("ineligible retained source cannot confirm safe transport");
+            assert!(
+                error.contains("acceptance is uncertain"),
+                "{mutation}: {error}"
+            );
+            assert!(error.contains("review"), "{mutation}: {error}");
+        }
+        let requests = race.requests.lock().await;
+        assert_eq!(requests.len(), 3, "retry must not refetch canonical OMS");
+        assert_eq!(requests[0].0, "GET order");
+        for (route, headers, body) in &requests[1..] {
+            assert_eq!(route, "POST import");
+            assert_eq!(headers["idempotency-key"], prepared.idempotency_key);
+            assert_eq!(body, &prepared.payload);
+        }
+        task.abort();
+    }
+}
+
 #[tokio::test]
 async fn native_http_rejects_redirects_bad_envelopes_and_oversized_responses() {
     for (status, body) in [

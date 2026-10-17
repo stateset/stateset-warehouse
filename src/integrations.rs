@@ -4,6 +4,8 @@ use serde_json::{json, Value};
 use sqlx::Row;
 use std::{collections::BTreeMap, sync::Arc, time::Duration};
 
+const MAX_DELIVERY_ATTEMPTS: i64 = 8;
+
 #[derive(Clone, Default)]
 pub struct Connections(pub Arc<BTreeMap<(String, String), (String, String)>>);
 impl Connections {
@@ -36,8 +38,17 @@ impl Connections {
         let destination: String = row.try_get("destination")?;
         let attempts: i64 = row.try_get("attempts")?;
         let payload: Value = row.try_get("payload")?;
-        let lease = crate::domain::id();
         sqlx::query("UPDATE wms_delivery_attempts SET outcome='uncertain',detail='Delivery lease expired before its outcome was committed',finished_at=now() WHERE outbox_id=$1 AND outcome='started'").bind(&oid).execute(&mut *tx).await?;
+        // A sender may disappear after HTTP but before committing its outcome.
+        // Count its claimed attempt against the budget before sending again;
+        // expiry does not prove the receiver rejected the original event.
+        if attempts >= MAX_DELIVERY_ATTEMPTS {
+            sqlx::query("UPDATE wms_outbox SET status='dead_letter',last_error='Automatic delivery attempt limit reached; receiver acceptance is uncertain; review the original event before an audited retry',lease_token=NULL,lease_until=NULL WHERE id=$1")
+                .bind(&oid).execute(&mut *tx).await?;
+            tx.commit().await?;
+            return Ok(true);
+        }
+        let lease = crate::domain::id();
         sqlx::query("INSERT INTO wms_delivery_attempts (id,outbox_id) VALUES ($1,$2)")
             .bind(&lease)
             .bind(&oid)
@@ -75,17 +86,17 @@ impl Connections {
         };
         let status = if delivered {
             "delivered"
-        } else if attempts + 1 >= 8 {
+        } else if attempts + 1 >= MAX_DELIVERY_ATTEMPTS {
             "dead_letter"
         } else {
             "pending"
         };
         let delay = 2_i64.pow((attempts + 1).min(10) as u32);
         let mut tx = store.pool.begin().await?;
-        let updated=sqlx::query("UPDATE wms_outbox SET status=$1,last_error=$2,due_at=now()+($3::bigint*interval '1 second'),lease_until=NULL,delivered_at=CASE WHEN $4 THEN now() ELSE delivered_at END WHERE id=$5 AND lease_token=$6")
+        let updated=sqlx::query("UPDATE wms_outbox SET status=$1,last_error=$2,due_at=now()+($3::bigint*interval '1 second'),lease_token=NULL,lease_until=NULL,delivered_at=CASE WHEN $4 THEN now() ELSE delivered_at END WHERE id=$5 AND lease_token=$6 AND status='delivering'")
             .bind(status).bind(&message).bind(delay).bind(delivered).bind(&oid).bind(&lease).execute(&mut *tx).await?.rows_affected();
         if updated == 1 {
-            sqlx::query("UPDATE wms_delivery_attempts SET outcome=$1,detail=$2,finished_at=now() WHERE id=$3").bind(if delivered {"accepted"} else {"failed"}).bind(message).bind(lease).execute(&mut *tx).await?;
+            sqlx::query("UPDATE wms_delivery_attempts SET outcome=$1,detail=$2,finished_at=now() WHERE id=$3 AND outcome='started'").bind(if delivered {"accepted"} else {"failed"}).bind(message).bind(lease).execute(&mut *tx).await?;
         }
         tx.commit().await?;
         Ok(true)
