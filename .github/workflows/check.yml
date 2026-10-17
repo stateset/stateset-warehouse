@@ -8,7 +8,7 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
     services:
       postgres:
         image: postgres:16-alpine
@@ -22,9 +22,7 @@ jobs:
           --health-interval 5s --health-timeout 3s --health-retries 10
     env:
       WMS_TEST_DATABASE_URL: postgres://warehouse:warehouse@127.0.0.1:5432/warehouse_test
-      DATABASE_URL: postgres://warehouse:warehouse@127.0.0.1:5432/warehouse_test
-      WMS_DEMO: "true"
-      WMS_BIND: 127.0.0.1:8088
+      WMS_RESTORE_ADMIN_URL: postgres://warehouse:warehouse@127.0.0.1:5432/warehouse_test
       WMS_PG_BIN: /usr/lib/postgresql/16/bin
       WMS_RELEASE_REVISION: ${{ github.sha }}
     steps:
@@ -43,54 +41,14 @@ jobs:
           sudo apt-get install -y postgresql-client-16
       - run: npm --prefix dashboard ci --no-audit --no-fund
       - run: cd dashboard && npx playwright install --with-deps chromium
-      - run: bash scripts/check.sh --postgres
-      - name: Record the standard workload without an invented throughput target
+      - name: Run the same complete software release gate used locally
         env:
-          WMS_WORKLOAD_REPORT: ${{ runner.temp }}/wms-workload.json
-        run: cargo run --locked --release --example workload
-      - name: Rehearse custom archive recovery into a fresh database
-        env:
-          WMS_RESTORE_ARTIFACT_DIR: ${{ runner.temp }}/wms-restore-evidence
-        run: bash scripts/restore-rehearsal.sh
-      - name: Build and run live browser check
-        run: |
-          cargo build --locked
-          ./target/debug/stateset-warehouse > /tmp/wms-api.log 2>&1 &
-          api_pid=$!
-          WMS_DEMO=false WMS_BIND=127.0.0.1:8089 WMS_NATIVE_INTEGRATIONS_JSON='{}' \
-            WMS_API_KEYS_JSON='{"scanner-live-operator-credential-0001":{"tenant":"scanner-qualification","actor":"qualification:operator","role":"admin"},"scanner-live-counter-credential-0001":{"tenant":"scanner-qualification","actor":"qualification:counter","role":"admin"}}' \
-            ./target/debug/stateset-warehouse > /tmp/wms-scanner-api.log 2>&1 &
-          scanner_pid=$!
-          trap 'kill "$api_pid" "$scanner_pid" 2>/dev/null || true' EXIT
-          for n in $(seq 1 60); do
-            if curl -fsS http://127.0.0.1:8088/ready; then break; fi
-            sleep 1
-          done
-          curl -fsS http://127.0.0.1:8088/ready
-          for n in $(seq 1 60); do
-            if curl -fsS http://127.0.0.1:8089/ready; then break; fi
-            sleep 1
-          done
-          curl -fsS http://127.0.0.1:8089/ready
-          cd dashboard
-          WMS_SCANNER_BROWSER_URL=http://127.0.0.1:8089 \
-            WMS_SCANNER_OPERATOR_TOKEN=scanner-live-operator-credential-0001 \
-            WMS_SCANNER_COUNTER_TOKEN=scanner-live-counter-credential-0001 \
-            npx playwright test --project=live-postgres
-      - name: Build and qualify the production container
-        env:
-          WMS_CONTAINER_ARTIFACT_DIR: ${{ runner.temp }}/wms-image-evidence
-        run: bash scripts/container-smoke.sh
+          WMS_RELEASE_ARTIFACT_DIR: ${{ runner.temp }}/warehouse-release-qualification
+        run: bash scripts/qualify-release.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: warehouse-verification
+          name: warehouse-release-qualification
           retention-days: 14
-          path: |
-            dashboard/test-results
-            docs/screenshots
-            /tmp/wms-api.log
-            /tmp/wms-scanner-api.log
-            ${{ runner.temp }}/wms-restore-evidence
-            ${{ runner.temp }}/wms-image-evidence
-            ${{ runner.temp }}/wms-workload.json
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/warehouse-release-qualification/publish

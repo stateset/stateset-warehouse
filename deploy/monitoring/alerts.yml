@@ -1,0 +1,53 @@
+# Example operator-review policies. Change the time/count thresholds with the
+# facility owner; these are not throughput, recovery or availability SLOs.
+groups:
+  - name: stateset-warehouse-operations
+    rules:
+      - alert: WarehouseMetricsUnavailable
+        expr: up{job=~"stateset-wms-.+"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Warehouse operational metrics are unavailable
+          description: Verify API readiness, tenant credential, private ingress and monitoring connectivity. Missing series do not establish an empty queue.
+      - alert: WarehouseOutboxOverdue
+        expr: wms_outbox_due_items > 0 and on(job, instance, destination) wms_outbox_oldest_due_age_seconds > 300 and on(job, instance, destination) wms_outbox_receiver_configured == 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Warehouse event delivery remains overdue
+          description: Review the configured receiver and retained event delivery evidence. This policy does not authorize repeating warehouse movements.
+      - alert: WarehouseOutboxDeadLetter
+        expr: wms_outbox_items{status="dead_letter"} > 0 and on(job, instance, destination) wms_outbox_receiver_configured == 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Warehouse event delivery requires administrator review
+          description: Inspect the original event and receiver before requeueing the retained outbox item.
+      - alert: WarehouseNativeUncertain
+        expr: wms_native_requests{status="uncertain"} > 0 and on(job, instance, kind, status) wms_native_oldest_updated_age_seconds{status="uncertain"} > 120
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: A native warehouse request needs recovery review
+          description: The remote operation may have applied. Recover the original request identity and frozen payload; do not submit a replacement.
+      - alert: WarehouseNativeLeaseExpired
+        expr: wms_native_expired_leases > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: A native warehouse delivery lease has expired
+          description: Inspect the original native receipt before recovering its exact request. Lease expiry does not prove a remote failure.
+      - alert: WarehouseNewNativeReviewOutcome
+        expr: delta(wms_native_requests{status=~"rejected|local_conflict"}[15m]) > 0
+        for: 1m
+        labels:
+          severity: info
+        annotations:
+          summary: New native rejection or local conflict evidence was recorded
+          description: Review the new retained outcome. Historical terminal receipts are immutable and are not an unresolved-incident counter.

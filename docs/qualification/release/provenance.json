@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "ok": true,
+  "stable_software_inputs_sha256": "0a1c1aa8929fc70851200f513038c4b5a756859e5cb30c73e9815cfbcf49e55c",
+  "image_id": "sha256:e3924a41f244b923d7048757d2a685cec81f66756bd3940a39107b7f8470c603",
+  "image_source_inputs_sha256": "1da310caf6bd2a24f23e05eee16af763fb00af2d3fc74d6ec90716a98cecce06",
+  "restore_container_resilience_migrations_identical": true,
+  "migrations": {
+    "004_native_source_ownership": "366979c9630c4c62cb7d71beb5c89cd917764558b4e05267c4eb4aac486a6cb9",
+    "003_native_operations": "f9a5cfa4a1e4f7830613febe6b37f11a8485beef46d6b96791c78435fe784108",
+    "007_operations_indexes": "b0b9b422f570ed77ca1252df42c96b29544849621ed748cadd1f068b708576b5",
+    "001_initial": "8e5c3fa5f0065b63076c33b8bd3c337b8490d4b7a88f3e774ec17e2290e1f4d4",
+    "006_oms_rejections": "567e061943a1602ff25b5d5c988be810808b8c6e1638885ee6ef9b71a9ba4ed4",
+    "002_relational_execution": "660cd0fdbc7205644c7c3d7ac3da43cbaf1c6d9f80c4d0f2ea4d0c0986e6ff90",
+    "005_conditional_oms_fulfillment": "b8892cbaa4a1b26c6e1732616ec30503d3698f44e363240386078398e29e9a41"
+  },
+  "limit": "The source fingerprint binds this working tree; it does not assert a clean Git checkout or deployed acceptance"
+}

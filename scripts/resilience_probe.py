@@ -1,0 +1,1423 @@
+#!/usr/bin/env python3
+"""Exercise actual HTTP replicas and owned PostgreSQL; Python standard library only."""
+import argparse
+import collections
+import concurrent.futures
+import hashlib
+import http.client
+import http.server
+import json
+import math
+import pathlib
+import re
+import subprocess
+import threading
+import time
+import urllib.error
+import urllib.request
+import uuid
+
+
+def require(condition, message):
+    if not condition:
+        raise AssertionError(message)
+
+
+def digest(value):
+    return hashlib.sha256(
+        json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+
+
+def latency_summary(values):
+    ordered = sorted(values)
+    return (
+        {
+            "samples": len(ordered),
+            **{
+                f"p{p}_ms": round(
+                    ordered[max(0, math.ceil(len(ordered) * p / 100) - 1)], 3
+                )
+                for p in (50, 95, 99)
+            },
+            "max_ms": round(ordered[-1], 3),
+        }
+        if ordered
+        else {"samples": 0}
+    )
+
+
+class Probe:
+    tenant = "resilience-test"
+    route = "/v1/warehouses/wh-main"
+    label = "org.stateset.wms.resilience"
+
+    def __init__(self, args):
+        self.args = args
+        self.root = pathlib.Path(args.artifacts)
+        self.credentials = json.loads((self.root / "credentials.json").read_text())
+        self.admin = next(
+            k
+            for k, v in self.credentials.items()
+            if v["actor"] == "qualification:admin"
+        )
+        self.operators = sorted(
+            (v["actor"], k)
+            for k, v in self.credentials.items()
+            if v["role"] == "operator"
+        )
+        self.outsider = next(
+            k for k, v in self.credentials.items() if v["tenant"] != self.tenant
+        )
+        self.bases = []
+        self.accepted = {}
+        self.phase_evidence = {}
+        self.started = time.time()
+        self.qualifier_hashes = self.script_hashes()
+        self.seeded_orders = []
+        for container in [args.postgres, *args.api]:
+            require(
+                re.fullmatch(
+                    r"wms-resilience-(?:pg|api-[ab])-" + re.escape(args.run), container
+                ),
+                "Unexpected resource name",
+            )
+            self.owned(container)
+        self.refresh_bindings()
+
+    @staticmethod
+    def script_hashes():
+        return {
+            name: hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest()
+            for name in (
+                "scripts/resilience-rehearsal.sh",
+                "scripts/resilience_probe.py",
+            )
+        }
+
+    def bin(self, index):
+        return f"BIN-{index % self.args.bins:05}"
+
+    @staticmethod
+    def sku(index):
+        return f"LOAD-{index:05}"
+
+    @staticmethod
+    def lot(index):
+        return f"LOT-{index:03}"
+
+    def expected_setup_commands(self):
+        # Storage bins; recovery product/receipt; operational products/counts;
+        # open orders and every other order's one allocation.
+        return (
+            self.args.bins
+            + 2
+            + self.args.products * (self.args.lots + 1)
+            + self.args.open_orders
+            + (self.args.open_orders + 1) // 2
+        )
+
+    def refresh_bindings(self):
+        self.bases = []
+        for container in self.args.api:
+            binding = self.docker("port", container, "8088/tcp").strip()
+            require(
+                re.fullmatch(r"127\.0\.0\.1:[0-9]+", binding),
+                "HTTP must bind only random loopback port",
+            )
+            self.bases.append("http://" + binding)
+
+    @staticmethod
+    def docker(*args, timeout=90):
+        return subprocess.run(
+            ["docker", *args],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        ).stdout
+
+    def owned(self, container):
+        metadata = json.loads(self.docker("inspect", container))[0]
+        require(
+            metadata["Config"]["Labels"].get(self.label) == self.args.run,
+            "Resource ownership label mismatch",
+        )
+        return metadata
+
+    def sql(self, sql):
+        result = subprocess.run(
+            [
+                "docker",
+                "exec",
+                "-i",
+                self.args.postgres,
+                "psql",
+                "-X",
+                "-qAt",
+                "-v",
+                "ON_ERROR_STOP=1",
+                "-U",
+                "warehouse",
+                "-d",
+                "warehouse_resilience_test",
+            ],
+            input=sql,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        return result.stdout.strip()
+
+    def table(self, name):
+        require(re.fullmatch(r"wms_[a-z_]+", name), "Unsafe table identifier")
+        return json.loads(
+            self.sql(
+                f"SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),'[]') FROM {name} t;"
+            )
+        )
+
+    def http(self, base, method, path, token=None, body=None, timeout=12):
+        request = urllib.request.Request(
+            base + path,
+            data=None
+            if body is None
+            else json.dumps(body, separators=(",", ":")).encode(),
+            method=method,
+        )
+        if token:
+            request.add_header("Authorization", "Bearer " + token)
+        request.add_header("Content-Type", "application/json")
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                data = response.read()
+                return response.status, json.loads(data) if data else None
+        except urllib.error.HTTPError as error:
+            data = error.read()
+            try:
+                data = json.loads(data)
+            except (ValueError, UnicodeDecodeError):
+                data = data.decode(errors="replace")
+            return error.code, data
+
+    def wait(self, condition, description, seconds=60):
+        deadline = time.monotonic() + seconds
+        last = None
+        while time.monotonic() < deadline:
+            try:
+                last = condition()
+                if last:
+                    return last
+            except (
+                OSError,
+                subprocess.SubprocessError,
+                urllib.error.URLError,
+                http.client.HTTPException,
+            ):
+                pass
+            time.sleep(0.1)
+        raise AssertionError(
+            f"Timed out waiting for {description}; last result: {last}"
+        )
+
+    def ready(self):
+        for base in self.bases:
+            self.wait(
+                lambda: self.http(base, "GET", "/ready", timeout=7)[0] == 200,
+                "API database readiness",
+            )
+
+    def version(self, base=None, token=None):
+        status, data = self.http(
+            base or self.bases[0], "GET", "/v1/warehouses", token or self.admin
+        )
+        require(status == 200, f"Warehouse metadata failed: {status} {data}")
+        return next(
+            item["version"]
+            for item in data["warehouses"]
+            if item["warehouse"]["id"] == "wh-main"
+        )
+
+    def snapshot_version(self, base=None, token=None):
+        started = time.monotonic()
+        status, snapshot = self.http(
+            base or self.bases[0], "GET", self.route, token or self.admin
+        )
+        require(
+            status == 200 and snapshot["reconciliation"]["ok"] is True,
+            "Operational snapshot failed reconciliation during sustained traffic",
+        )
+        require(
+            len(snapshot["products"]) == self.args.products + 1,
+            "Operational snapshot lost catalog records",
+        )
+        require(
+            len(snapshot["orders"]) >= self.args.open_orders,
+            "Operational snapshot lost open work",
+        )
+        return snapshot["version"], (time.monotonic() - started) * 1000
+
+    def envelope(self, command, base=None, token=None):
+        return {
+            "request_id": str(uuid.uuid4()),
+            "expected_version": self.version(base, token),
+            "command": command,
+        }
+
+    def retain(self, request, result, token):
+        actor = self.credentials[token]["actor"]
+        previous = self.accepted.setdefault(
+            request["request_id"],
+            {"request": request, "result": result, "actor": actor},
+        )
+        require(
+            previous == {"request": request, "result": result, "actor": actor},
+            "A committed request changed identity/result",
+        )
+
+    def submit(self, command, token=None, base=None):
+        token = token or self.admin
+        base = base or self.bases[0]
+        request = self.envelope(command, base, token)
+        status, data = self.http(base, "POST", self.route + "/commands", token, request)
+        require(
+            status == 200 and data["replayed"] is False,
+            f"Command failed: {status} {data}",
+        )
+        self.retain(request, data["result"], token)
+        return data["result"]
+
+    def replay(self, request, token, base):
+        status, data = self.http(base, "POST", self.route + "/commands", token, request)
+        require(
+            status == 200 and data["replayed"] is True,
+            f"Exact replay failed: {status} {data}",
+        )
+        self.retain(request, data["result"], token)
+        return data["result"]
+
+    def seed(self):
+        seed_started = time.monotonic()
+        self.ready()
+        for base in self.bases:
+            require(
+                self.http(base, "GET", "/v1/warehouses")[0] == 401,
+                "Anonymous API accepted",
+            )
+            for token, identity in self.credentials.items():
+                status, session = self.http(base, "GET", "/v1/session", token)
+                require(
+                    status == 200
+                    and session["demo"] is False
+                    and session["identity"] == identity,
+                    "Real operator identity mismatch",
+                )
+        print(
+            f"Seeding {self.args.products} products, {self.args.products * self.args.lots} opening bin-lots and {self.args.open_orders} open orders through authenticated HTTP.",
+            flush=True,
+        )
+        for code in (self.bin(i) for i in range(self.args.bins)):
+            self.submit(
+                {
+                    "type": "create_location",
+                    "code": code,
+                    "zone": "Qualification",
+                    "kind": "storage",
+                }
+            )
+        self.submit(
+            {
+                "type": "create_product",
+                "sku": "PROBE",
+                "name": "Recovery evidence product",
+                "category": "Qualification",
+                "reorder_point": 0,
+            }
+        )
+        result = self.submit(
+            {
+                "type": "create_receipt",
+                "reference": "RESILIENCE-RECEIPT",
+                "supplier": "Synthetic supplier",
+                "lines": [
+                    {
+                        "id": "same-sku-first",
+                        "sku": "PROBE",
+                        "lot": "LOT-A",
+                        "quantity": 7,
+                    },
+                    {
+                        "id": "same-sku-second",
+                        "sku": "PROBE",
+                        "lot": "LOT-A",
+                        "quantity": 11,
+                    },
+                ],
+            }
+        )
+        self.receipt_id = result["entity_id"]
+        for i in range(self.args.products):
+            self.submit(
+                {
+                    "type": "create_product",
+                    "sku": self.sku(i),
+                    "name": f"Operational product {i}",
+                    "category": "Qualification",
+                    "reorder_point": 0,
+                }
+            )
+            for lot in range(self.args.lots):
+                self.submit(
+                    {
+                        "type": "count_stock",
+                        "sku": self.sku(i),
+                        "lot": self.lot(lot),
+                        "location": self.bin(i),
+                        "counted": 100000,
+                        "reason": "Synthetic opening balance observed by qualifier",
+                    }
+                )
+            if (i + 1) % 100 == 0:
+                print(
+                    f"Seeded {i + 1} stocked products in {time.monotonic() - seed_started:.1f}s.",
+                    flush=True,
+                )
+        for i in range(self.args.open_orders):
+            order = self.submit(
+                {
+                    "type": "create_order",
+                    "reference": f"RESILIENCE-OPEN-{i:05}",
+                    "source_order_id": None,
+                    "customer": "Synthetic active-work customer",
+                    "destination": "Qualification facility",
+                    "priority": "normal",
+                    "lines": [
+                        {
+                            "id": "line-1",
+                            "sku": self.sku(i % self.args.products),
+                            "quantity": 1,
+                        }
+                    ],
+                }
+            )
+            self.seeded_orders.append(order["entity_id"])
+            if i % 2 == 0:
+                self.submit({"type": "allocate", "order_id": order["entity_id"]})
+            if (i + 1) % 100 == 0:
+                print(
+                    f"Seeded {i + 1} active orders in {time.monotonic() - seed_started:.1f}s.",
+                    flush=True,
+                )
+        expected_commands = self.expected_setup_commands()
+        require(
+            len(self.accepted) == self.version() == expected_commands,
+            "Seed command receipts/version do not match independent fixture arithmetic",
+        )
+        self.phase_evidence["seed"] = {
+            "method": "authenticated actual HTTP commands only; opening counts are disclosed synthetic fixtures",
+            "seconds": round(time.monotonic() - seed_started, 3),
+            "operational_products": self.args.products,
+            "additional_recovery_product": 1,
+            "storage_bins": self.args.bins,
+            "lots_per_product": self.args.lots,
+            "opening_bin_lot_balances": self.args.products * self.args.lots,
+            "opening_each_per_balance": 100000,
+            "open_orders": self.args.open_orders,
+            "allocated_orders": (self.args.open_orders + 1) // 2,
+            "commands_before_recovery_lifecycle": len(self.accepted),
+            "expected_setup_commands": expected_commands,
+            "observed_setup_commands": len(self.accepted),
+            "independent_setup_command_count_matches": True,
+            "excluded_from_sustained_timing": True,
+        }
+
+    def lose_success(self):
+        print(
+            "Qualifying a deliberately lost HTTP success through the other API replica.",
+            flush=True,
+        )
+        token = self.operators[0][1]
+        request = self.envelope(
+            {
+                "type": "receive",
+                "receipt_id": self.receipt_id,
+                "line_id": "same-sku-first",
+                "quantity": 7,
+                "location": "RECV-01",
+            },
+            token=token,
+        )
+        probe = self
+        observed = {}
+
+        class DropSuccess(http.server.BaseHTTPRequestHandler):
+            def do_POST(self):
+                try:
+                    body = json.loads(
+                        self.rfile.read(int(self.headers["Content-Length"]))
+                    )
+                    status, data = probe.http(
+                        probe.bases[0], "POST", probe.route + "/commands", token, body
+                    )
+                    require(
+                        status == 200 and data["replayed"] is False,
+                        "Proxy upstream did not commit once",
+                    )
+                    observed.update(
+                        status=status,
+                        result=data["result"],
+                        request_digest=digest(body),
+                    )
+                except (
+                    Exception
+                ) as error:  # Preserve proxy-thread failures for the caller.
+                    observed["error"] = repr(error)
+                finally:
+                    self.close_connection = (
+                        True  # Intentionally send no downstream status/body.
+                    )
+
+            def log_message(self, *_args):
+                pass
+
+        proxy = http.server.ThreadingHTTPServer(("127.0.0.1", 0), DropSuccess)
+        thread = threading.Thread(target=proxy.serve_forever, daemon=True)
+        thread.start()
+        lost = False
+        try:
+            self.http(
+                f"http://127.0.0.1:{proxy.server_address[1]}",
+                "POST",
+                "/discard-success",
+                token,
+                request,
+            )
+        except (urllib.error.URLError, http.client.HTTPException, OSError):
+            lost = True
+        finally:
+            proxy.shutdown()
+            proxy.server_close()
+            thread.join(timeout=5)
+        require(
+            lost and observed.get("status") == 200 and "error" not in observed,
+            f"Lost-success proof failed: {observed}",
+        )
+        self.retain(request, observed["result"], token)
+        result = self.replay(request, token, self.bases[1])
+        require(
+            result == observed["result"], "Response-loss retry changed original result"
+        )
+        status, receipt = self.http(
+            self.bases[1], "GET", self.route + "/receipts/" + self.receipt_id, token
+        )
+        require(
+            status == 200
+            and {line["id"]: line["received"] for line in receipt["lines"]}
+            == {"same-sku-first": 7, "same-sku-second": 0},
+            "Response-loss replay changed another same-SKU receipt line",
+        )
+        self.phase_evidence["lost_http_success"] = {
+            "downstream_response_lost": True,
+            "upstream_commit_observed_before_drop": True,
+            "retry_other_replica": True,
+            "original_result_unchanged": True,
+            "exact_receipt_lines": {"same-sku-first": 7, "same-sku-second": 0},
+        }
+
+    def lifecycle(self):
+        token = self.operators[0][1]
+        self.submit(
+            {
+                "type": "receive",
+                "receipt_id": self.receipt_id,
+                "line_id": "same-sku-second",
+                "quantity": 11,
+                "location": "RECV-01",
+            },
+            token,
+        )
+        self.submit(
+            {
+                "type": "move_stock",
+                "sku": "PROBE",
+                "lot": "LOT-A",
+                "from": "RECV-01",
+                "to": self.bin(0),
+                "quantity": 18,
+            },
+            token,
+        )
+        result = self.submit(
+            {
+                "type": "create_order",
+                "reference": "RESILIENCE-SHIP",
+                "source_order_id": None,
+                "customer": "Synthetic customer",
+                "destination": "Synthetic receiving dock",
+                "priority": "normal",
+                "lines": [
+                    {"id": "same-sku-first", "sku": "PROBE", "quantity": 2},
+                    {"id": "same-sku-second", "sku": "PROBE", "quantity": 3},
+                ],
+            },
+            token,
+        )
+        self.shipped_order = result["entity_id"]
+        self.submit({"type": "allocate", "order_id": self.shipped_order}, token)
+        for line, quantity in (("same-sku-first", 2), ("same-sku-second", 3)):
+            self.submit(
+                {
+                    "type": "pick",
+                    "order_id": self.shipped_order,
+                    "line_id": line,
+                    "location": self.bin(0),
+                    "lot": "LOT-A",
+                    "quantity": quantity,
+                },
+                token,
+            )
+        self.submit({"type": "pack", "order_id": self.shipped_order}, token)
+        self.submit(
+            {
+                "type": "ship",
+                "order_id": self.shipped_order,
+                "carrier": "Synthetic carrier",
+                "handoff_reference": "SYNTHETIC-ONLY-001",
+            },
+            token,
+        )
+        result = self.submit(
+            {
+                "type": "create_order",
+                "reference": "RESILIENCE-RESERVED",
+                "source_order_id": None,
+                "customer": "Synthetic customer",
+                "destination": "Synthetic dock",
+                "priority": "normal",
+                "lines": [{"id": "held-line", "sku": "PROBE", "quantity": 3}],
+            },
+            token,
+        )
+        self.reserved_order = result["entity_id"]
+        self.submit({"type": "allocate", "order_id": self.reserved_order}, token)
+
+    def locker(self):
+        application = "wms-resilience-locker-" + self.args.run
+        process = subprocess.Popen(
+            [
+                "docker",
+                "exec",
+                "-i",
+                "--env",
+                "PGAPPNAME=" + application,
+                self.args.postgres,
+                "psql",
+                "-X",
+                "-qAt",
+                "-v",
+                "ON_ERROR_STOP=1",
+                "-U",
+                "warehouse",
+                "-d",
+                "warehouse_resilience_test",
+            ],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        process.stdin.write(
+            "BEGIN; SELECT version FROM wms_warehouses WHERE tenant='resilience-test' AND warehouse_id='wh-main' FOR UPDATE; SELECT pg_sleep(120); COMMIT;\n"
+        )
+        process.stdin.flush()
+        self.wait(
+            lambda: self.sql(
+                f"SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE application_name='{application}' AND wait_event='PgSleep');"
+            )
+            == "t",
+            "owned row-lock holder",
+        )
+        return application, process
+
+    def wait_blocked(self, application):
+        self.wait(
+            lambda: self.sql(
+                f"SELECT EXISTS(SELECT 1 FROM pg_stat_activity a JOIN pg_stat_activity b ON b.pid=ANY(pg_blocking_pids(a.pid)) WHERE b.application_name='{application}' AND a.query LIKE '%wms_warehouses%' AND a.pid<>b.pid);"
+            )
+            == "t",
+            "actual HTTP write blocked behind row lock",
+        )
+
+    def fingerprints(self):
+        tables = self.sql(
+            "SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename LIKE 'wms_%' ORDER BY tablename;"
+        ).splitlines()
+        return {
+            name: {"rows": len(rows), "sha256": digest(rows)}
+            for name in tables
+            for rows in [self.table(name)]
+        }
+
+    @staticmethod
+    def consume_future(future):
+        try:
+            status, _data = future.result(timeout=20)
+            require(
+                status == 503,
+                f"Interrupted request unexpectedly returned HTTP {status}",
+            )
+            return {"http_status": status}
+        except (urllib.error.URLError, OSError, http.client.HTTPException) as error:
+            return {"transport_error": type(error).__name__}
+
+    def crash_api(self):
+        print(
+            "Killing one API only after PostgreSQL proves its original HTTP write is waiting.",
+            flush=True,
+        )
+        token = self.operators[0][1]
+        request = self.envelope(
+            {
+                "type": "move_stock",
+                "sku": "PROBE",
+                "lot": "LOT-A",
+                "from": self.bin(0),
+                "to": self.bin(1),
+                "quantity": 1,
+            },
+            token=token,
+        )
+        application, locker = self.locker()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            pending = pool.submit(
+                self.http,
+                self.bases[0],
+                "POST",
+                self.route + "/commands",
+                token,
+                request,
+                20,
+            )
+            try:
+                self.wait_blocked(application)
+                self.owned(self.args.api[0])
+                self.docker("kill", "--signal=KILL", self.args.api[0])
+                interrupted = self.consume_future(pending)
+                require(
+                    self.owned(self.args.api[0])["State"]["ExitCode"] == 137,
+                    "API was not abruptly killed",
+                )
+                require(
+                    self.http(self.bases[1], "GET", "/ready")[0] == 200,
+                    "Surviving API lost readiness",
+                )
+            finally:
+                self.sql(
+                    f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE application_name='{application}';"
+                )
+                locker.communicate(timeout=10)
+        status, receipt = self.http(
+            self.bases[1],
+            "GET",
+            self.route + "/commands/" + request["request_id"],
+            token,
+        )
+        require(
+            status == 200 and receipt == {"found": False},
+            "Killed blocked request unexpectedly committed",
+        )
+        status, committed = self.http(
+            self.bases[1], "POST", self.route + "/commands", token, request
+        )
+        require(
+            status == 200 and committed["replayed"] is False,
+            "Original request did not recover on surviving API",
+        )
+        self.retain(request, committed["result"], token)
+        restart_started = time.monotonic()
+        self.docker("start", self.args.api[0])
+        # Docker may allocate a different random loopback port on container start.
+        self.refresh_bindings()
+        self.ready()
+        restart_to_readiness = time.monotonic() - restart_started
+        self.replay(request, token, self.bases[0])
+        self.phase_evidence["api_sigkill"] = {
+            "database_blocking_pid_barrier": True,
+            "exit_code": 137,
+            "surviving_replica_ready": True,
+            "uncommitted_original_absent": True,
+            "same_original_request_recovered_other_replica": True,
+            "restarted_replica_exact_replay": True,
+            "local_restart_to_readiness_seconds": round(restart_to_readiness, 3),
+            "interrupted_response": interrupted,
+        }
+
+    def crash_postgres(self):
+        print(
+            "Crashing PostgreSQL with a blocked HTTP write; both replicas must fail readiness before recovery.",
+            flush=True,
+        )
+        token = self.operators[1][1]
+        request = self.envelope(
+            {
+                "type": "move_stock",
+                "sku": "PROBE",
+                "lot": "LOT-A",
+                "from": self.bin(1),
+                "to": self.bin(0),
+                "quantity": 1,
+            },
+            token=token,
+        )
+        before = self.fingerprints()
+        application, locker = self.locker()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            pending = pool.submit(
+                self.http,
+                self.bases[1],
+                "POST",
+                self.route + "/commands",
+                token,
+                request,
+                20,
+            )
+            self.wait_blocked(application)
+            self.owned(self.args.postgres)
+            self.docker("kill", "--signal=KILL", self.args.postgres)
+            interrupted = self.consume_future(pending)
+            locker.communicate(timeout=10)
+        require(
+            self.owned(self.args.postgres)["State"]["ExitCode"] == 137,
+            "PostgreSQL was not abruptly killed",
+        )
+        readiness = []
+        liveness = []
+        for base in self.bases:
+            self.wait(
+                lambda: self.http(base, "GET", "/ready", timeout=7)[0] == 503,
+                "readiness failure while database is stopped",
+                20,
+            )
+            readiness.append(503)
+            status, _ = self.http(base, "GET", "/health")
+            require(
+                status == 200, "API process liveness should survive database outage"
+            )
+            liveness.append(status)
+        restart_started = time.monotonic()
+        self.docker("start", self.args.postgres)
+        self.ready()
+        restart_to_readiness = time.monotonic() - restart_started
+        after = self.fingerprints()
+        require(
+            before == after,
+            "Previously committed table data changed across database crash recovery",
+        )
+        status, receipt = self.http(
+            self.bases[0],
+            "GET",
+            self.route + "/commands/" + request["request_id"],
+            token,
+        )
+        require(
+            status == 200 and receipt == {"found": False},
+            "Interrupted database transaction unexpectedly committed",
+        )
+        status, committed = self.http(
+            self.bases[0], "POST", self.route + "/commands", token, request
+        )
+        require(
+            status == 200 and committed["replayed"] is False,
+            "Original interrupted request could not recover after database restart",
+        )
+        self.retain(request, committed["result"], token)
+        self.replay(request, token, self.bases[1])
+        logged = subprocess.run(
+            ["docker", "logs", self.args.postgres],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=30,
+        )
+        log = logged.stdout + logged.stderr
+        recovery_observed = (
+            "database system was interrupted" in log
+            or "database system was not properly shut down" in log
+        )
+        require(
+            recovery_observed,
+            "PostgreSQL did not report actual unclean-shutdown recovery",
+        )
+        self.phase_evidence["postgres_sigkill"] = {
+            "database_blocking_pid_barrier": True,
+            "exit_code": 137,
+            "named_volume_preserved": True,
+            "readiness_during_outage": readiness,
+            "liveness_during_outage": liveness,
+            "local_database_restart_to_both_api_readiness_seconds": round(
+                restart_to_readiness, 3
+            ),
+            "both_replicas_recovered_without_api_restart": True,
+            "all_table_fingerprints_unchanged": before,
+            "unclean_shutdown_recovery_observed": True,
+            "uncommitted_original_absent": True,
+            "same_original_request_committed_once_then_replayed": True,
+            "interrupted_response": interrupted,
+        }
+
+    def sustained(self):
+        print(
+            f"Starting {self.args.seconds}s sustained HTTP qualification with {len(self.operators)} distinct operators and two replicas.",
+            flush=True,
+        )
+        started = time.monotonic()
+        rounds = 0
+        moves = [0] * len(self.operators)
+        results = [
+            {
+                "actor": actor,
+                "commits": 0,
+                "stale_conflicts": 0,
+                "exact_replays": 0,
+                "latencies": [],
+                "attempt_latencies": [],
+                "snapshot_latencies": [],
+            }
+            for actor, _ in self.operators
+        ]
+        last_update = started
+
+        def action(index, expected, round_started):
+            _actor, token = self.operators[index]
+            base = self.bases[index % 2]
+            command = {
+                "type": "move_stock",
+                "sku": self.sku(index),
+                "lot": self.lot(0),
+                "from": self.bin(index)
+                if moves[index] % 2 == 0
+                else self.bin(index + 1),
+                "to": self.bin(index + 1) if moves[index] % 2 == 0 else self.bin(index),
+                "quantity": 1,
+            }
+            action_started = round_started
+            conflicts = 0
+            attempts = []
+            snapshots = []
+            while True:
+                request = {
+                    "request_id": str(uuid.uuid4()),
+                    "expected_version": expected,
+                    "command": command,
+                }
+                attempted = time.monotonic()
+                status, data = self.http(
+                    base, "POST", self.route + "/commands", token, request
+                )
+                attempts.append((time.monotonic() - attempted) * 1000)
+                if status == 409:
+                    require(
+                        "Warehouse changed" in data.get("error", ""),
+                        "Unexpected request-key conflict",
+                    )
+                    conflicts += 1
+                    require(
+                        conflicts < 100,
+                        "Writer starvation exceeded bounded qualification retries",
+                    )
+                    expected, refresh_latency = self.snapshot_version(
+                        self.bases[1 - index % 2], token
+                    )
+                    snapshots.append(refresh_latency)
+                    continue  # A definite stale rejection permits a reviewed new key.
+                require(
+                    status == 200 and data["replayed"] is False,
+                    f"Sustained write failed: {status} {data}",
+                )
+                latency = (time.monotonic() - action_started) * 1000
+                replay_status, replay = self.http(
+                    self.bases[1 - index % 2],
+                    "POST",
+                    self.route + "/commands",
+                    token,
+                    request,
+                )
+                require(
+                    replay_status == 200
+                    and replay["replayed"] is True
+                    and replay["result"] == data["result"],
+                    "Cross-replica replay changed result",
+                )
+                return request, data["result"], conflicts, latency, attempts, snapshots
+
+        round_snapshot_latencies = []
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=len(self.operators)
+        ) as pool:
+            while time.monotonic() - started < self.args.seconds:
+                # All first attempts intentionally share one observed version. At least
+                # clients-1 must receive a definite stale conflict on every round.
+                round_started = time.monotonic()
+                expected, refresh_latency = self.snapshot_version()
+                round_snapshot_latencies.append(refresh_latency)
+                futures = [
+                    pool.submit(action, i, expected, round_started)
+                    for i in range(len(self.operators))
+                ]
+                for i, future in enumerate(futures):
+                    (
+                        request,
+                        result,
+                        conflicts,
+                        latency,
+                        attempts,
+                        snapshots,
+                    ) = future.result()
+                    self.retain(request, result, self.operators[i][1])
+                    moves[i] += 1
+                    results[i]["commits"] += 1
+                    results[i]["exact_replays"] += 1
+                    results[i]["stale_conflicts"] += conflicts
+                    results[i]["latencies"].append(latency)
+                    results[i]["attempt_latencies"].extend(attempts)
+                    results[i]["snapshot_latencies"].extend(snapshots)
+                rounds += 1
+                if time.monotonic() - last_update >= 10:
+                    print(
+                        f"{time.monotonic() - started:.1f}s: {rounds * len(self.operators)} committed moves, {sum(r['stale_conflicts'] for r in results)} definite stale conflicts, same number of exact replays.",
+                        flush=True,
+                    )
+                    last_update = time.monotonic()
+        elapsed = time.monotonic() - started
+        require(
+            elapsed >= self.args.seconds and rounds > 0,
+            "Sustained phase did not run its full interval",
+        )
+        require(
+            sum(r["stale_conflicts"] for r in results)
+            >= rounds * (len(self.operators) - 1),
+            "Same-version race did not produce required stale protection",
+        )
+        latencies = [v for r in results for v in r["latencies"]]
+        attempts = [v for r in results for v in r["attempt_latencies"]]
+        snapshots = round_snapshot_latencies + [
+            v for r in results for v in r["snapshot_latencies"]
+        ]
+        self.moves = moves
+        self.phase_evidence["sustained_http"] = {
+            "requested_seconds": self.args.seconds,
+            "elapsed_seconds": round(elapsed, 3),
+            "replicas": 2,
+            "distinct_operator_identities": len(self.operators),
+            "rounds": rounds,
+            "committed_moves": sum(moves),
+            "exact_cross_replica_replays": sum(r["exact_replays"] for r in results),
+            "definite_stale_conflicts": sum(r["stale_conflicts"] for r in results),
+            "unexpected_errors": 0,
+            "committed_moves_per_second": round(sum(moves) / elapsed, 3),
+            "action_latency": latency_summary(latencies),
+            "action_latency_scope": "shared round snapshot through committed physical write, including stale conflicts and full snapshot refreshes; subsequent exact replay excluded",
+            "http_write_attempt_latency": latency_summary(attempts),
+            "operational_snapshot_latency": latency_summary(snapshots),
+            "operators": [
+                {
+                    k: v
+                    for k, v in r.items()
+                    if k not in ("latencies", "attempt_latencies", "snapshot_latencies")
+                }
+                for r in results
+            ],
+        }
+
+    def independent_proof(self):
+        print(
+            "Rebuilding physical custody, reservations, exact receipt lines and atomic audit evidence independently from PostgreSQL.",
+            flush=True,
+        )
+        stock_rows = self.table("wms_stock")
+        movements = self.table("wms_movements")
+        allocations = self.table("wms_allocations")
+        receipt_lines = self.table("wms_receipt_lines")
+        commands = self.table("wms_commands")
+        events = self.table("wms_events")
+        activity = self.table("wms_activity")
+        outbox = self.table("wms_outbox")
+        expected_commands = self.expected_setup_commands() + 13 + sum(self.moves)
+        expected_movements = self.args.products * self.args.lots + 9 + sum(self.moves)
+        require(
+            len(commands) == expected_commands,
+            "Total command count differs from independent seed/recovery/physical-action model",
+        )
+        require(
+            len(movements) == expected_movements,
+            "Movement count differs from independent opening/receipt/pick/handoff/recovered-action model",
+        )
+        key = lambda row, location=None: (
+            row["sku"],
+            row["lot"],
+            row["location"] if location is None else location,
+        )
+        physical = collections.Counter()
+        received = collections.Counter()
+        for row in movements:
+            require(
+                row["tenant"] == self.tenant,
+                "Cross-tenant movement leaked into evidence",
+            )
+            if row["from_location"] is not None:
+                physical[key(row, row["from_location"])] -= row["quantity"]
+            if row["to_location"] is not None:
+                physical[key(row, row["to_location"])] += row["quantity"]
+            if row["kind"] == "receipt":
+                received[(row["receipt_id"], row["receipt_line_id"])] += row["quantity"]
+        reserved = collections.Counter()
+        for row in allocations:
+            reserved[key(row)] += row["quantity"] - row["picked"] - row["released"]
+            reserved[key(row, "STAGE-01")] += row["picked"] - row["shipped"]
+        actual = {key(row): (row["on_hand"], row["reserved"]) for row in stock_rows}
+        for identity in set(actual) | set(physical) | set(reserved):
+            require(
+                actual.get(identity, (0, 0))
+                == (physical[identity], reserved[identity]),
+                f"Independent physical/reservation mismatch: {identity}",
+            )
+        for row in receipt_lines:
+            require(
+                row["received"] == received[(row["receipt_id"], row["id"])],
+                "Exact receipt line lacks matching append-only movements",
+            )
+        require(
+            {
+                row["id"]: row["received"]
+                for row in receipt_lines
+                if row["receipt_id"] == self.receipt_id
+            }
+            == {"same-sku-first": 7, "same-sku-second": 11},
+            "Repeated SKU receipt lines drifted",
+        )
+        require(
+            sum(row["on_hand"] for row in stock_rows if row["sku"] == "PROBE") == 13,
+            "Independent receive18 minus shipped5 is not13",
+        )
+        expected_reserved = 3 + (self.args.open_orders + 1) // 2
+        expected_physical = self.args.products * self.args.lots * 100000 + 13
+        require(
+            sum(row["reserved"] for row in stock_rows) == expected_reserved,
+            "Outstanding operational/recovery reservations changed",
+        )
+        require(
+            sum(row["on_hand"] for row in stock_rows) == expected_physical,
+            "Total opening plus received minus shipped custody changed",
+        )
+        for i, count in enumerate(self.moves):
+            require(
+                actual[(self.sku(i), self.lot(0), self.bin(i))][0]
+                == 100000 - count % 2,
+                "Per-operator source bin conservation failed",
+            )
+            require(
+                actual.get((self.sku(i), self.lot(0), self.bin(i + 1)), (0, 0))[0]
+                == count % 2,
+                "Per-operator destination bin conservation failed",
+            )
+        orders = self.table("wms_orders")
+        seeded_order_ids = set(self.seeded_orders)
+        seeded_orders = {
+            row["id"]: row for row in orders if row["id"] in seeded_order_ids
+        }
+        require(
+            len(seeded_orders) == self.args.open_orders,
+            "Operational work disappeared during qualification",
+        )
+        for i, order_id in enumerate(self.seeded_orders):
+            require(
+                seeded_orders[order_id]["status"]
+                == ("allocated" if i % 2 == 0 else "pending"),
+                "Operational order state changed during stock transfers",
+            )
+        require(
+            len(commands) == len(self.accepted) == len(events) == len(activity),
+            "Commands/events/activity did not commit one-to-one",
+        )
+        by_request = {row["request_id"]: row for row in commands}
+        event_by_request = {row["payload"]["request_id"]: row for row in events}
+        require(
+            set(by_request) == set(event_by_request) == set(self.accepted),
+            "Atomic receipts/event request identities differ",
+        )
+        for request_id, expected in self.accepted.items():
+            command = by_request[request_id]
+            event = event_by_request[request_id]
+            require(
+                command["actor"] == event["payload"]["actor"] == expected["actor"],
+                "Operator ownership changed",
+            )
+            require(
+                command["result"] == event["payload"]["result"] == expected["result"],
+                "Atomic command/event result changed",
+            )
+            require(
+                event["payload"]["command"] == expected["request"]["command"],
+                "Committed event command changed",
+            )
+        versions = sorted(row["version"] for row in events)
+        require(
+            versions == list(range(1, len(commands) + 1))
+            and self.version() == len(commands),
+            "Warehouse version/event sequence has a gap or duplicate",
+        )
+        destination_counts = collections.Counter(
+            (row["event_id"], row["destination"]) for row in outbox
+        )
+        for event in events:
+            require(
+                destination_counts[(event["id"], "oms")] == 1,
+                "OMS outbox not atomically retained exactly once",
+            )
+            expected_tms = int(event["payload"]["command"]["type"] in ("pack", "ship"))
+            require(
+                destination_counts[(event["id"], "tms")] == expected_tms,
+                "TMS outbox identity mismatch",
+            )
+        require(len(outbox) == len(commands) + 2, "Unexpected/missing outbox records")
+        require(
+            all(row["status"] == "pending" and row["attempts"] == 0 for row in outbox),
+            "Unconfigured external delivery unexpectedly ran",
+        )
+        require(
+            self.table("wms_delivery_attempts") == [],
+            "Unconfigured external receiver acquired delivery evidence",
+        )
+        status, outsider = self.http(self.bases[1], "GET", self.route, self.outsider)
+        require(
+            status == 200
+            and outsider["version"] == 0
+            and outsider["products"] == []
+            and outsider["stocks"] == [],
+            "Cross-tenant isolation failed",
+        )
+        for i, (actor, token) in enumerate(self.operators):
+            own = next(v for v in self.accepted.values() if v["actor"] == actor)
+            require(
+                self.http(
+                    self.bases[1 - i % 2],
+                    "POST",
+                    self.route + "/commands",
+                    self.operators[(i + 1) % len(self.operators)][1],
+                    own["request"],
+                )[0]
+                == 409,
+                "Another actor replayed retained ownership",
+            )
+        reconciliations = []
+        for base in self.bases:
+            status, proof = self.http(
+                base, "GET", self.route + "/reconciliation", self.admin
+            )
+            require(
+                status == 200
+                and proof["ok"] is True
+                and proof["version"] == len(commands),
+                "API full ledger reconciliation failed",
+            )
+            reconciliations.append(
+                {
+                    "ok": proof["ok"],
+                    "version": proof["version"],
+                    "method": proof["method"],
+                }
+            )
+        return {
+            "physical_recomputed_from_append_only_movements": True,
+            "reserved_recomputed_from_allocation_lines": True,
+            "receipt_quantities_recomputed_per_exact_line": True,
+            "expected_probe_on_hand": 13,
+            "expected_total_on_hand": expected_physical,
+            "expected_reserved": expected_reserved,
+            "all_seeded_open_order_states_retained": True,
+            "per_operator_bin_totals_match_committed_move_parity": True,
+            "commands": len(commands),
+            "events": len(events),
+            "activity": len(activity),
+            "movements": len(movements),
+            "outbox": len(outbox),
+            "independent_execution_counts": {
+                "expected": {
+                    "setup_commands": self.expected_setup_commands(),
+                    "recovery_commands": 13,
+                    "sustained_physical_commands": sum(self.moves),
+                    "commands": expected_commands,
+                    "events": expected_commands,
+                    "activity": expected_commands,
+                    "movements": expected_movements,
+                    "outbox": expected_commands + 2,
+                },
+                "observed": {
+                    "setup_commands": self.phase_evidence["seed"][
+                        "observed_setup_commands"
+                    ],
+                    "recovery_commands": len(commands)
+                    - self.phase_evidence["seed"]["observed_setup_commands"]
+                    - sum(self.moves),
+                    "sustained_physical_commands": sum(self.moves),
+                    "commands": len(commands),
+                    "events": len(events),
+                    "activity": len(activity),
+                    "movements": len(movements),
+                    "outbox": len(outbox),
+                },
+                "all_match": True,
+            },
+            "contiguous_versions_and_atomic_actor_result_evidence": True,
+            "cross_tenant_isolation": True,
+            "cross_actor_replay_rejected": True,
+            "unconfigured_external_delivery_attempts": 0,
+            "replica_reconciliations": reconciliations,
+            "final_table_fingerprints": self.fingerprints(),
+        }
+
+    def report(self, proof):
+        image = json.loads((self.root / "image-inspect.json").read_text())[0]
+        replicas = [self.owned(container) for container in self.args.api]
+        require(
+            all(row["Image"] == image["Id"] for row in replicas),
+            "Replicas differ from immutable qualified image",
+        )
+        for replica in replicas:
+            require(
+                replica["Config"]["User"] == "10001"
+                and replica["HostConfig"]["ReadonlyRootfs"] is True,
+                "Replica runtime hardening drifted",
+            )
+            require(
+                "ALL" in replica["HostConfig"]["CapDrop"]
+                and "no-new-privileges:true" in replica["HostConfig"]["SecurityOpt"],
+                "Replica capability hardening drifted",
+            )
+        pg = self.owned(self.args.postgres)
+        volumes = [
+            mount["Name"]
+            for mount in pg["Mounts"]
+            if mount["Type"] == "volume"
+            and mount["Destination"] == "/var/lib/postgresql/data"
+        ]
+        require(
+            len(volumes) == 1,
+            "PostgreSQL data does not use exactly one persistent named volume",
+        )
+        volume = json.loads(self.docker("volume", "inspect", volumes[0]))[0]
+        require(
+            volume["Labels"].get(self.label) == self.args.run,
+            "Database volume ownership label mismatch",
+        )
+        migrations = self.table("wms_schema_migrations")
+        for migration in migrations:
+            file = pathlib.Path("migrations") / (migration["name"] + ".sql")
+            require(
+                hashlib.sha256(file.read_bytes()).hexdigest() == migration["digest"],
+                "Running database migration differs from checked source",
+            )
+        require(
+            self.qualifier_hashes == self.script_hashes(),
+            "Qualifier scripts changed during execution; rerun on stable files",
+        )
+        report = {
+            "ok": True,
+            "synthetic": True,
+            "qualified_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "qualification": "two-replica sustained HTTP and crash recovery",
+            "image_id": image["Id"],
+            "image_source_inputs_sha256": image["Config"]["Labels"].get(
+                "org.stateset.wms.source-sha256"
+            ),
+            "image_release_revision": image["Config"]["Labels"].get(
+                "org.opencontainers.image.revision"
+            ),
+            "qualifier_sha256": self.qualifier_hashes,
+            "postgres_image_id": pg["Image"],
+            "postgres_version": self.sql("SHOW server_version;"),
+            "runtime": {
+                "api_replicas": 2,
+                "uid": 10001,
+                "read_only_rootfs": True,
+                "capabilities_dropped": "ALL",
+                "no_new_privileges": True,
+                "postgres_named_volume_survived_crash": True,
+                "random_loopback_api_ports": True,
+                "native_and_webhook_connections": 0,
+            },
+            "elapsed_total_seconds": round(time.time() - self.started, 3),
+            "phases": self.phase_evidence,
+            "independent_proof": proof,
+            "migrations": [
+                {"name": row["name"], "sha256": row["digest"]} for row in migrations
+            ],
+            "qualification_limit": "Local synthetic single-host and single-PostgreSQL-primary rehearsal. API replica survival and PostgreSQL crash recovery were tested; database failover, host loss, deployed latency, native receivers and physical facility acceptance were not.",
+        }
+        (self.root / "resilience.json").write_text(json.dumps(report, indent=2) + "\n")
+        print(
+            json.dumps(
+                {
+                    "ok": True,
+                    "image_id": image["Id"],
+                    "sustained_http": self.phase_evidence["sustained_http"],
+                    "report": str(self.root / "resilience.json"),
+                },
+                indent=2,
+            ),
+            flush=True,
+        )
+
+    def run(self):
+        self.seed()
+        self.lose_success()
+        self.lifecycle()
+        self.crash_api()
+        self.crash_postgres()
+        self.sustained()
+        self.report(self.independent_proof())
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--artifacts", required=True)
+    parser.add_argument("--run", required=True)
+    parser.add_argument("--postgres", required=True)
+    parser.add_argument("--api", action="append", required=True)
+    parser.add_argument("--seconds", type=int, default=60)
+    parser.add_argument("--products", type=int, default=100)
+    parser.add_argument("--open-orders", type=int, default=100)
+    parser.add_argument("--lots", type=int, default=2)
+    parser.add_argument("--bins", type=int, default=20)
+    args = parser.parse_args()
+    require(
+        re.fullmatch(r"[0-9]+-[0-9a-f]{8}", args.run), "Invalid ownership run identity"
+    )
+    require(
+        len(args.api) == 2 and len(set(args.api)) == 2,
+        "Exactly two distinct API containers required",
+    )
+    require(
+        60 <= args.seconds <= 3600,
+        "Qualification interval must be between 60 and 3600 seconds",
+    )
+    require(
+        2 <= args.products <= 2000, "Operational products must be between 2 and 2000"
+    )
+    require(0 <= args.open_orders <= 5000, "Open orders must be between 0 and 5000")
+    require(1 <= args.lots <= 10, "Lots must be between 1 and 10")
+    require(2 <= args.bins <= 1000, "Storage bins must be between 2 and 1000")
+    credentials = json.loads(
+        (pathlib.Path(args.artifacts) / "credentials.json").read_text()
+    )
+    require(
+        args.products
+        >= sum(identity["role"] == "operator" for identity in credentials.values()),
+        "Products must cover every operator identity",
+    )
+    Probe(args).run()
+
+
+if __name__ == "__main__":
+    main()

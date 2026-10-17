@@ -15,11 +15,11 @@ export default defineConfig({
   projects: [
     {
       name: "offline-contract",
-      testMatch: /(?:offline|native|scanner)\.spec\.ts/,
+      testMatch: /(?:offline|native|scanner|operations)\.spec\.ts/,
     },
     {
       name: "live-postgres",
-      testMatch: /(?:^|\/)(?:live|scanner-live)\.spec\.ts$/,
+      testMatch: /(?:^|\/)(?:live|scanner-live|operations-live)\.spec\.ts$/,
       use: { baseURL: process.env.WMS_BROWSER_URL || "http://127.0.0.1:8088" },
     },
   ],

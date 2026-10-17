@@ -6,5 +6,6 @@ pub mod native_api;
 pub mod native_store;
 pub mod oms_client;
 pub mod oms_fulfillment_api;
+pub mod operations;
 mod persistence;
 pub mod store;

@@ -1,2 +1,5 @@
 # Blank context lines inside this unified diff carry a space prefix.
 integrations/stateset-sync-server/upstream.patch whitespace=-blank-at-eol
+# Preserve hashed evidence byte-for-byte, including tool-emitted blank lines.
+docs/qualification/** -text
+docs/qualification/release/*.log whitespace=-blank-at-eol,-blank-at-eof

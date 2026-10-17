@@ -77,7 +77,7 @@ Recorded 2026-10-17 against isolated PostgreSQL 12.22 through a Unix socket, usi
 | [Standard](performance/standard.json) | 100 / 200 / 100 | 4 / 40 | 21.38 | 481 / 1,148 ms | 103 | 13.00 MiB |
 | [Larger, before lookup optimization](performance/large-before.json) | 500 / 1,000 / 500 | 4 / 100 | 3.41 | 2,735 / 3,355 ms | 262 | 39.45 MiB |
 | [Larger, keyed lookups](performance/large-map-only.json) | 500 / 1,000 / 500 | 4 / 100 | 5.52 | 1,672 / 1,799 ms | 280 | 34.65 MiB |
-| [Larger final, fresh database](performance/large-final.json) | 500 / 1,000 / 500 | 4 / 100 | 6.25 | 1,476 / 2,330 ms | 282 | 32.96 MiB |
+| [Larger previous release, fresh database](performance/large-final.json) | 500 / 1,000 / 500 | 4 / 100 | 6.25 | 1,476 / 2,330 ms | 282 | 32.96 MiB |
 
 The extra race SKU/bin and receiving/destination buckets are reported separately in each raw JSON. Every physical action was replayed once without another movement; there were zero transient 503s or unexpected errors. The larger profile ended with exactly 2,457 command receipts, events and activity rows, 1,104 physical movements, 100,000,008 units in custody, 250 reserved units and seven received units. Independent full-history reconciliation passed. Display history stayed at 100 movements/activity records and paginated history remained disjoint.
 
@@ -85,8 +85,23 @@ The larger profile exposed repeated full-vector joins and change comparisons in 
 
 A subsequent integrity fix strips mutable JSON child projections before deserialization and reconstructs state, detail and order/receipt history from the same canonical child rows. Detail/history read the header and children in one repeatable-read transaction. A new real database guard corrupts child JSON types, then proves canonical state/detail/history agree, tenant isolation holds, reads add no execution evidence and a subsequent physical command still reconciles.
 
-The final release run passed the same larger profile in a fresh disposable database with all final migrations. It recorded 100 committed moves and 100 exact replays in 16.00 seconds, with the same independent correctness totals. Command-attempt p95 was 116 ms; state-refresh p95 was 139 ms. The setup phase took 94.94 seconds and is excluded from committed-action throughput. The runner stopped and removed its own database afterward. No unexpected errors or transient 503s occurred.
+The previous release run passed the same larger profile in a fresh disposable database with its six recorded migrations, before operations indexes were added. It recorded 100 committed moves and 100 exact replays in 16.00 seconds, with the same independent correctness totals. Command-attempt p95 was 116 ms; state-refresh p95 was 139 ms. The setup phase took 94.94 seconds and is excluded from committed-action throughput. The runner stopped and removed its own database afterward. No unexpected errors or transient 503s occurred.
 
 [Provenance](performance/provenance.json) records source, release-binary and raw artifact fingerprints, exact final command and comparison limits. Earlier runs shared a qualification cluster containing synthetic test data; the final run used a fresh cluster. Cache/table population and shared-host scheduling differ. Only one short window is retained per profile, so these results do not establish a controlled causal estimate or a general latency guarantee. Repeat facility peak workloads before selecting operating limits.
 
 This is a local synthetic Store workload. It does not include browser rendering, scanner hardware, HTTP network latency, deployed OMS/TMS behavior, physical counting, PostgreSQL failover or facility acceptance. A passing profile qualifies only its recorded scale, concurrency, machine and database settings. Production sign-off requires a measured facility workload and separately qualified restore and integration checks.
+
+## Current release observations
+
+The [final unified gate](qualification/release/summary.json) also executed two distinct protocols on the current source. Both passed their correctness gates. The Store harness calls application persistence directly; the immutable-image rehearsal performs authenticated HTTP, JSON snapshot reads and cross-replica replays. Their latency and throughput figures describe different work and should not be used as a controlled comparison.
+
+| Protocol | Products / opening balances / open orders | Physical moves / exact replays | Measured window | Moves/s | Action p95 |
+|---|---|---|---|---:|---:|
+| [Current Store, PostgreSQL 12.22](qualification/release/standard_workload.json) | 100 / 200 / 100 | 40 / 40 | 1.460 s | 27.399 | 283.693 ms |
+| [Current HTTP, PostgreSQL 16.15](qualification/resilience.json) | 500 / 1,000 / 500 | 316 / 316 | 60.216 s | 5.248 | 812.654 ms |
+
+Both use four clients and one warehouse. The HTTP run uses four distinct operator identities and two independent production-image API processes. Each round starts from an actual full operational snapshot; every definite stale-version retry refreshes that snapshot. Action latency includes the round's initial read through commitment, including conflicts and full snapshot refreshes. The subsequent original-request replay is excluded from action latency but included in elapsed throughput; replays never count as physical moves. The final HTTP phase observed 474 definite stale conflicts and zero unexpected errors. Snapshot-read p95 was 189.279 ms; individual write-attempt p95 was 94.669 ms.
+
+HTTP fixture setup took 73.070 seconds and is excluded from the sustained window. Each opening balance contains 100,000 disclosed synthetic each units; this is a scaling fixture rather than a physical count. The independent final proof checks custody, reservation ownership, exact receipt lines, retained active orders, actor/request identity and explicit expected command/movement/event/outbox counts. The [rehearsal method](resilience.md) describes the separate forced API/PostgreSQL crash boundaries.
+
+These are local observations on a shared development host, with database, clients and containers sharing resources. No facility latency/throughput requirement was supplied; no capacity SLO is certified. The 60-second synthetic HTTP window does not qualify physical scanners, an ingress/load balancer, deployed OMS/TMS services, managed failover or a facility's sustained peak. Retained reports preserve exact source/image/script identities and measurement scopes.

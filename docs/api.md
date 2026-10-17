@@ -1,14 +1,18 @@
 # API and integration contract
 
-All `/v1` routes require `Authorization: Bearer <credential>`. The server resolves tenant, actor and role from configuration. Passing tenant/actor headers or command fields does not change identity. Responses containing warehouse data use `Cache-Control: no-store`. Request bodies are limited to 256 KiB.
+All `/v1` routes require `Authorization: Bearer <credential>`. The server resolves tenant, actor and role from configuration. Passing tenant/actor headers or command fields does not change identity. Every API response, including authentication errors and unknown routes, uses `Cache-Control: no-store`. Request bodies are limited to 256 KiB.
+
+Responses carry a server-generated UUID in `X-Request-Id`; a caller cannot override it. Request tracing records this ID, method and route template without credentials or query strings. Responses also set `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer` and a same-origin Content Security Policy that disallows framing, objects and external scripts/connections. TLS remains the ingress's responsibility.
 
 ## Routes
 
 | Method | Route | Result |
 |---|---|---|
 | GET | `/health` | Process liveness; public |
-| GET | `/ready` | 200 if a database query succeeds, otherwise 503; public |
+| GET | `/ready` | 200 if a database query succeeds within two seconds, otherwise 503; public, no-store |
 | GET | `/v1/session` | Verified identity, explicit demo mode and configured receiver status |
+| GET | `/v1/operations/health?limit=50&after={warehouse_id}` | Consistent tenant-wide queue/native/exception summary and warehouse page; operator/admin |
+| GET | `/v1/operations/metrics` | Fixed-cardinality Prometheus snapshot; admin only, no query parameters |
 | GET | `/v1/warehouses` | Accessible warehouse metadata and versions |
 | GET | `/v1/warehouses/{id}` | Consistent operational snapshot: active work, bounded completed work, recent history and an operational balance check |
 | GET | `/v1/warehouses/{id}/reconciliation` | Full append-only movement, allocation and exact receipt-line proof, checked version and overall validity |
@@ -22,6 +26,8 @@ All `/v1` routes require `Authorization: Bearer <credential>`. The server resolv
 | POST | `/v1/outbox/{outbox_id}/retry` | Admin-only dead-letter requeue, with retained attempts and audit entry |
 
 Unknown/cross-tenant entities return 404. Unauthorized requests return 401; forbidden roles 403; stale versions/reused keys 409; invalid transitions 422; database availability failures 503. Axum rejects malformed JSON/extraction errors with its standard non-JSON error body; clients must handle unreadable error bodies safely.
+
+Unknown `/v1`, `/v1/` and nested API paths return authenticated JSON 404 responses. They cannot fall through to the dashboard HTML. The [operations contract](observability.md) specifies queue ages, configured-receiver semantics, tenant-local metrics and snapshot deadlines. Operations reads do not alter or retry warehouse work.
 
 History pages return `{items:[{cursor,data}],next_cursor}` ordered by descending sequence. `limit` is 1–100, default 50. `before` is an exclusive positive cursor; use `next_cursor` unchanged for the next page. A null cursor means the end of that traversal. New records can appear above an existing cursor; refresh the first page to see them. History is retained independently of the bounded operational snapshot.
 

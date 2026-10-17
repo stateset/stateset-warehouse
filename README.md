@@ -2,7 +2,7 @@
 
 Warehouse execution and physical inventory authority for StateSet. **Sync is the OMS; Warehouse is the WMS; Freight is the TMS.**
 
-[Desktop preview](docs/screenshots/desktop.png) · [Mobile preview](docs/screenshots/mobile.png) · [Architecture](docs/architecture.md) · [Verification evidence](docs/evidence.md) · [API contract](docs/api.md) · [Native OMS/TMS adapters](docs/native-integrations.md) · [Operations and restore](docs/operations.md)
+[Desktop preview](docs/screenshots/desktop.png) · [Mobile preview](docs/screenshots/mobile.png) · [Architecture](docs/architecture.md) · [Verification evidence](docs/evidence.md) · [API contract](docs/api.md) · [Native OMS/TMS adapters](docs/native-integrations.md) · [Operations and restore](docs/operations.md) · [Release qualification](docs/release-qualification.md)
 
 Rust 1.90+, Axum, Tokio, SQLx/Postgres, React, TypeScript and Vite, following the existing StateSet services and dashboards.
 
@@ -45,6 +45,7 @@ Open **http://127.0.0.1:8088**. Localhost is a secure browser context; use HTTPS
 - Source-derived Sync order import and Freight planned-load adapters, with strict tenant/source identities, exact whole-unit quantities, explicit transport facts and retained readiness evidence.
 - Opt-in conditional OMS fulfillment after physical handoff, with frozen source revisions, receiver capability checks, immutable accepted/rejected receipts and exact uncertain-request recovery. The [companion OMS receiver](integrations/stateset-sync-server/README.md) must be deployed and qualified first; the legacy endpoint stays held.
 - Normalized operational rows, database-enforced movement/reservation/receipt proofs, and append-only movement/activity history with cursor pagination and archived record details.
+- Tenant-wide Operations view for delivery queues, uncertain native requests and warehouse exceptions, with bounded consistent snapshots, explicit stale/offline status, current-evidence exports and administrator Prometheus metrics with tested alert policies.
 
 Quantities are whole **each** units. Partial receipts/picks are supported; partial shipments, serial/expiry control, returns, replenishment planning and carrier purchasing are not implemented. Do not use the demo as operational inventory.
 
@@ -83,6 +84,14 @@ WMS_TEST_DATABASE_URL=postgres://warehouse:warehouse@127.0.0.1:5548/warehouse_te
 The live suite includes persistence, concurrency, HTTP warehouse lifecycle, native API recovery, conditional OMS receiver races and database guard tests. Explicit invocation fails without a database; default `cargo test` marks these tests ignored. The default check runs domain, authorization, native contract and offline browser tests. CI is configured to run both live database and live browser checks; its current GitHub run is blocked by organization billing/spending limits.
 
 For disposable socket-only PostgreSQL verification, `bash scripts/local-postgres.sh` initializes an isolated temporary cluster and runs the database suites. `bash scripts/local-postgres.sh bash scripts/check.sh --postgres` runs the complete local check against that cluster. Where sockets are unavailable, `python3 scripts/check-sql.py` applies all migrations in an isolated single-user backend, type-checks runtime SQL, executes independent reconciliation, and verifies receipt/reservation constraints, append-only history and fault-injected rollback. That check does not establish SQLx bindings or concurrent client behavior.
+
+Run the [complete software release gate](docs/release-qualification.md) with Docker, matching PostgreSQL tools and the browser installed:
+
+```bash
+bash scripts/local-postgres.sh bash scripts/qualify-release.sh
+```
+
+CI invokes this same gate. It includes actual archive restoration, live browser execution, monitoring rules, hardened production-container checks and sustained HTTP across two API replicas with forced API/PostgreSQL crashes. Reports bind the exact source, migration and immutable image identities; failed or missing stages cannot pass. Only the sanitized `publish/` artifact directory is suitable for uploading. [Native deployment preflight](docs/native-acceptance.md) and [signed facility acceptance](docs/facility-acceptance.md) require separately supplied deployment and physical observations.
 
 ## Deployment boundaries
 

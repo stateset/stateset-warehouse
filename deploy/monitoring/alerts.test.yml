@@ -1,0 +1,138 @@
+rule_files:
+  - alerts.yml
+evaluation_interval: 1m
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'up{job="stateset-wms-example",instance="api"}'
+        values: '0 0 0 0 0 0 0 0 0 0 0'
+      - series: 'wms_outbox_due_items{job="stateset-wms-example",instance="api",destination="oms"}'
+        values: '1 1 1 1 1 1 1 1 1 1 1'
+      - series: 'wms_outbox_receiver_configured{job="stateset-wms-example",instance="api",destination="oms"}'
+        values: '1 1 1 1 1 1 1 1 1 1 1'
+      - series: 'wms_outbox_oldest_due_age_seconds{job="stateset-wms-example",instance="api",destination="oms"}'
+        values: '600 660 720 780 840 900 960 1020 1080 1140 1200'
+      - series: 'wms_outbox_items{job="stateset-wms-example",instance="api",destination="tms",status="dead_letter"}'
+        values: '1 1 1 1 1 1 1 1 1 1 1'
+      - series: 'wms_native_requests{job="stateset-wms-example",instance="api",kind="tms_transport",status="uncertain"}'
+        values: '1 1 1 1 1 1 1 1 1 1 1'
+      - series: 'wms_native_oldest_updated_age_seconds{job="stateset-wms-example",instance="api",kind="tms_transport",status="uncertain"}'
+        values: '300 360 420 480 540 600 660 720 780 840 900'
+      - series: 'wms_native_expired_leases{job="stateset-wms-example",instance="api",kind="oms_fulfillment",status="sending"}'
+        values: '1 1 1 1 1 1 1 1 1 1 1'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: WarehouseMetricsUnavailable
+        exp_alerts:
+          - exp_labels:
+              job: stateset-wms-example
+              instance: api
+              severity: warning
+            exp_annotations:
+              summary: Warehouse operational metrics are unavailable
+              description: Verify API readiness, tenant credential, private ingress and monitoring connectivity. Missing series do not establish an empty queue.
+      - eval_time: 6m
+        alertname: WarehouseOutboxOverdue
+        exp_alerts:
+          - exp_labels:
+              job: stateset-wms-example
+              instance: api
+              destination: oms
+              severity: warning
+            exp_annotations:
+              summary: Warehouse event delivery remains overdue
+              description: Review the configured receiver and retained event delivery evidence. This policy does not authorize repeating warehouse movements.
+      - eval_time: 6m
+        alertname: WarehouseNativeUncertain
+        exp_alerts:
+          - exp_labels:
+              job: stateset-wms-example
+              instance: api
+              kind: tms_transport
+              status: uncertain
+              severity: warning
+            exp_annotations:
+              summary: A native warehouse request needs recovery review
+              description: The remote operation may have applied. Recover the original request identity and frozen payload; do not submit a replacement.
+      - eval_time: 6m
+        alertname: WarehouseNativeLeaseExpired
+        exp_alerts:
+          - exp_labels:
+              job: stateset-wms-example
+              instance: api
+              kind: oms_fulfillment
+              status: sending
+              severity: warning
+            exp_annotations:
+              summary: A native warehouse delivery lease has expired
+              description: Inspect the original native receipt before recovering its exact request. Lease expiry does not prove a remote failure.
+      # An intentionally unconfigured TMS receiver must not alert for retained
+      # dead letters, even though the raw durable count remains visible.
+      - eval_time: 6m
+        alertname: WarehouseOutboxDeadLetter
+        exp_alerts: []
+  - interval: 1m
+    input_series:
+      - series: 'up{job="stateset-wms-example",instance="api"}'
+        values: '1+0x20'
+      - series: 'wms_outbox_due_items{job="stateset-wms-example",instance="api",destination="oms"}'
+        values: '0+0x20'
+      - series: 'wms_outbox_oldest_due_age_seconds{job="stateset-wms-example",instance="api",destination="oms"}'
+        values: '0+0x20'
+      - series: 'wms_native_requests{job="stateset-wms-example",instance="api",kind="oms_fulfillment",status="rejected"}'
+        values: '10+0x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: WarehouseOutboxOverdue
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: WarehouseNewNativeReviewOutcome
+        exp_alerts: []
+  - interval: 1m
+    input_series:
+      - series: 'wms_outbox_receiver_configured{job="stateset-wms-example",instance="api",destination="tms"}'
+        values: '1+0x30'
+      - series: 'wms_outbox_items{job="stateset-wms-example",instance="api",destination="tms",status="dead_letter"}'
+        values: '1+0x30'
+      - series: 'wms_native_requests{job="stateset-wms-example",instance="api",kind="oms_fulfillment",status="rejected"}'
+        values: '0 0 0 1+0x30'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: WarehouseOutboxDeadLetter
+        exp_alerts:
+          - exp_labels:
+              job: stateset-wms-example
+              instance: api
+              destination: tms
+              status: dead_letter
+              severity: warning
+            exp_annotations:
+              summary: Warehouse event delivery requires administrator review
+              description: Inspect the original event and receiver before requeueing the retained outbox item.
+      - eval_time: 6m
+        alertname: WarehouseNewNativeReviewOutcome
+        exp_alerts:
+          - exp_labels:
+              job: stateset-wms-example
+              instance: api
+              kind: oms_fulfillment
+              status: rejected
+              severity: info
+            exp_annotations:
+              summary: New native rejection or local conflict evidence was recorded
+              description: Review the new retained outcome. Historical terminal receipts are immutable and are not an unresolved-incident counter.
+      - eval_time: 20m
+        alertname: WarehouseNewNativeReviewOutcome
+        exp_alerts: []
+  - interval: 1m
+    input_series:
+      - series: 'wms_outbox_receiver_configured{job="stateset-wms-example",instance="api",destination="oms"}'
+        values: '0+0x20'
+      - series: 'wms_outbox_due_items{job="stateset-wms-example",instance="api",destination="oms"}'
+        values: '100+0x20'
+      - series: 'wms_outbox_oldest_due_age_seconds{job="stateset-wms-example",instance="api",destination="oms"}'
+        values: '10000+60x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: WarehouseOutboxOverdue
+        exp_alerts: []

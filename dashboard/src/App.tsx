@@ -8,6 +8,7 @@ import {
 } from "react";
 import NativePanel from "./NativePanel";
 import ScannerPanel from "./ScannerPanel";
+import OperationsPanel from "./OperationsPanel";
 import {
   Activity as ActivityIcon,
   ArrowDownLeft,
@@ -70,7 +71,8 @@ type Tab =
   | "exceptions"
   | "activity"
   | "integrations"
-  | "scanner";
+  | "scanner"
+  | "operations";
 type Field = {
   name: string;
   label: string;
@@ -128,6 +130,7 @@ const nav: { id: Tab; title: string; icon: typeof Box }[] = [
   { id: "exceptions", title: "Exceptions", icon: AlertTriangle },
   { id: "activity", title: "Movement ledger", icon: ActivityIcon },
   { id: "integrations", title: "Integrations", icon: Link2 },
+  { id: "operations", title: "Operations", icon: ShieldCheck },
 ];
 const fmt = (n: number) => new Intl.NumberFormat("en-US").format(n);
 const when = (s: string) =>
@@ -692,6 +695,20 @@ export default function App() {
     const timer = setTimeout(() => setToast(""), 4500);
     return () => clearTimeout(timer);
   }, [toast]);
+  useEffect(() => {
+    const followHash = () => {
+      const requested = location.hash.slice(1);
+      setTab(
+        nav.some((entry) => entry.id === requested)
+          ? (requested as Tab)
+          : "overview",
+      );
+      setSearch("");
+      setFilter("all");
+    };
+    window.addEventListener("hashchange", followHash);
+    return () => window.removeEventListener("hashchange", followHash);
+  }, []);
   const navigate = (next: Tab) => {
     setTab(next);
     setSearch("");
@@ -1336,21 +1353,23 @@ export default function App() {
         </div>
         <div className="nav-label">WORKSPACE</div>
         <nav>
-          {nav.map((n) => (
-            <button
-              key={n.id}
-              aria-label={n.title}
-              title={n.title}
-              className={tab === n.id ? "active" : ""}
-              onClick={() => navigate(n.id)}
-            >
-              <n.icon size={18} />
-              <span>{n.title}</span>
-              {n.id === "exceptions" && openExceptions.length > 0 && (
-                <b>{openExceptions.length}</b>
-              )}
-            </button>
-          ))}
+          {nav
+            .filter((n) => n.id !== "operations" || canWork)
+            .map((n) => (
+              <button
+                key={n.id}
+                aria-label={n.title}
+                title={n.title}
+                className={tab === n.id ? "active" : ""}
+                onClick={() => navigate(n.id)}
+              >
+                <n.icon size={18} />
+                <span>{n.title}</span>
+                {n.id === "exceptions" && openExceptions.length > 0 && (
+                  <b>{openExceptions.length}</b>
+                )}
+              </button>
+            ))}
         </nav>
         <div className="sidebar-bottom">
           <div className="system-note">
@@ -1526,6 +1545,8 @@ export default function App() {
                       "Keep warehouse execution connected to the rest of StateSet.",
                     scanner:
                       "Verify the location, SKU, and lot before confirming physical work.",
+                    operations:
+                      "Review delivery health, uncertain requests, and warehouse exceptions.",
                   }[tab]
                 }
               </p>
@@ -1869,169 +1890,171 @@ export default function App() {
 
           {tab !== "overview" && (
             <>
-              <div className="list-toolbar">
-                <div className="search-field">
-                  <Search size={17} />
-                  <input
-                    aria-label="Search current view"
-                    placeholder={`Search ${tab === "activity" ? "movements" : tab}…`}
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                  {search && (
+              {tab !== "operations" && (
+                <div className="list-toolbar">
+                  <div className="search-field">
+                    <Search size={17} />
+                    <input
+                      aria-label="Search current view"
+                      placeholder={`Search ${tab === "activity" ? "movements" : tab}…`}
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                    {search && (
+                      <button
+                        className="icon-btn"
+                        aria-label="Clear search"
+                        onClick={() => setSearch("")}
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                  {[
+                    "receiving",
+                    "fulfillment",
+                    "exceptions",
+                    "activity",
+                  ].includes(tab) && (
+                    <div className="filter-control">
+                      <Filter size={15} />
+                      <select
+                        aria-label="Filter by status or type"
+                        value={filter}
+                        onChange={(e) => setFilter(e.target.value)}
+                      >
+                        {opts([
+                          "all",
+                          ...(tab === "fulfillment"
+                            ? [
+                                "pending",
+                                "allocated",
+                                "picking",
+                                "picked",
+                                "packed",
+                                "shipped",
+                                "cancelled",
+                              ]
+                            : tab === "receiving"
+                              ? ["expected", "partial", "received"]
+                              : tab === "exceptions"
+                                ? ["open", "resolved"]
+                                : [
+                                    "receipt",
+                                    "putaway",
+                                    "pick",
+                                    "unpick",
+                                    "shipment",
+                                    "count",
+                                  ]),
+                        ]).map((o) => (
+                          <option value={o.value} key={o.value}>
+                            {o.value === "all"
+                              ? "All " +
+                                (tab === "activity" ? "types" : "statuses")
+                              : label(o.label)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  <span className="toolbar-spacer" />
+                  {tab === "locations" && admin && (
                     <button
-                      className="icon-btn"
-                      aria-label="Clear search"
-                      onClick={() => setSearch("")}
+                      className="btn"
+                      disabled={disabled}
+                      onClick={() =>
+                        setModal({
+                          title: "Configure warehouse facility",
+                          subtitle:
+                            "Use the physical facility identity. Location and stock history keep their existing warehouse ID.",
+                          fields: [
+                            {
+                              name: "code",
+                              label: "Facility code",
+                              value: s.warehouse.code,
+                            },
+                            {
+                              name: "name",
+                              label: "Facility name",
+                              value: s.warehouse.name,
+                            },
+                            {
+                              name: "city",
+                              label: "City / region",
+                              value: s.warehouse.city,
+                            },
+                            {
+                              name: "timezone",
+                              label: "IANA timezone",
+                              value: s.warehouse.timezone,
+                            },
+                          ],
+                          submit: "Save facility",
+                          build: (d) => ({ type: "update_warehouse", ...d }),
+                        })
+                      }
                     >
-                      <X size={14} />
+                      <Settings2 size={16} />
+                      Configure facility
+                    </button>
+                  )}
+                  {tab === "inventory" && admin && (
+                    <button
+                      className="btn"
+                      disabled={disabled}
+                      onClick={() =>
+                        setModal({
+                          title: "Add product",
+                          fields: [
+                            {
+                              name: "sku",
+                              label: "SKU",
+                              placeholder: "SS-NEW-001",
+                            },
+                            { name: "name", label: "Product name" },
+                            {
+                              name: "category",
+                              label: "Category",
+                              value: "General",
+                            },
+                            {
+                              name: "reorder_point",
+                              label: "Reorder point (each)",
+                              type: "number",
+                              min: 0,
+                              value: 20,
+                            },
+                          ],
+                          submit: "Create product",
+                          build: (d) => ({
+                            type: "create_product",
+                            ...d,
+                            reorder_point: Number(d.reorder_point),
+                          }),
+                        })
+                      }
+                    >
+                      <Plus size={16} />
+                      Add product
+                    </button>
+                  )}
+                  {["inventory", "activity"].includes(tab) && (
+                    <button
+                      className="btn"
+                      onClick={() =>
+                        csv(
+                          `${tab}.csv`,
+                          tab === "inventory" ? s.stocks : s.movements,
+                        )
+                      }
+                    >
+                      <Download size={16} />
+                      Export CSV
                     </button>
                   )}
                 </div>
-                {[
-                  "receiving",
-                  "fulfillment",
-                  "exceptions",
-                  "activity",
-                ].includes(tab) && (
-                  <div className="filter-control">
-                    <Filter size={15} />
-                    <select
-                      aria-label="Filter by status or type"
-                      value={filter}
-                      onChange={(e) => setFilter(e.target.value)}
-                    >
-                      {opts([
-                        "all",
-                        ...(tab === "fulfillment"
-                          ? [
-                              "pending",
-                              "allocated",
-                              "picking",
-                              "picked",
-                              "packed",
-                              "shipped",
-                              "cancelled",
-                            ]
-                          : tab === "receiving"
-                            ? ["expected", "partial", "received"]
-                            : tab === "exceptions"
-                              ? ["open", "resolved"]
-                              : [
-                                  "receipt",
-                                  "putaway",
-                                  "pick",
-                                  "unpick",
-                                  "shipment",
-                                  "count",
-                                ]),
-                      ]).map((o) => (
-                        <option value={o.value} key={o.value}>
-                          {o.value === "all"
-                            ? "All " +
-                              (tab === "activity" ? "types" : "statuses")
-                            : label(o.label)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                <span className="toolbar-spacer" />
-                {tab === "locations" && admin && (
-                  <button
-                    className="btn"
-                    disabled={disabled}
-                    onClick={() =>
-                      setModal({
-                        title: "Configure warehouse facility",
-                        subtitle:
-                          "Use the physical facility identity. Location and stock history keep their existing warehouse ID.",
-                        fields: [
-                          {
-                            name: "code",
-                            label: "Facility code",
-                            value: s.warehouse.code,
-                          },
-                          {
-                            name: "name",
-                            label: "Facility name",
-                            value: s.warehouse.name,
-                          },
-                          {
-                            name: "city",
-                            label: "City / region",
-                            value: s.warehouse.city,
-                          },
-                          {
-                            name: "timezone",
-                            label: "IANA timezone",
-                            value: s.warehouse.timezone,
-                          },
-                        ],
-                        submit: "Save facility",
-                        build: (d) => ({ type: "update_warehouse", ...d }),
-                      })
-                    }
-                  >
-                    <Settings2 size={16} />
-                    Configure facility
-                  </button>
-                )}
-                {tab === "inventory" && admin && (
-                  <button
-                    className="btn"
-                    disabled={disabled}
-                    onClick={() =>
-                      setModal({
-                        title: "Add product",
-                        fields: [
-                          {
-                            name: "sku",
-                            label: "SKU",
-                            placeholder: "SS-NEW-001",
-                          },
-                          { name: "name", label: "Product name" },
-                          {
-                            name: "category",
-                            label: "Category",
-                            value: "General",
-                          },
-                          {
-                            name: "reorder_point",
-                            label: "Reorder point (each)",
-                            type: "number",
-                            min: 0,
-                            value: 20,
-                          },
-                        ],
-                        submit: "Create product",
-                        build: (d) => ({
-                          type: "create_product",
-                          ...d,
-                          reorder_point: Number(d.reorder_point),
-                        }),
-                      })
-                    }
-                  >
-                    <Plus size={16} />
-                    Add product
-                  </button>
-                )}
-                {["inventory", "activity"].includes(tab) && (
-                  <button
-                    className="btn"
-                    onClick={() =>
-                      csv(
-                        `${tab}.csv`,
-                        tab === "inventory" ? s.stocks : s.movements,
-                      )
-                    }
-                  >
-                    <Download size={16} />
-                    Export CSV
-                  </button>
-                )}
-              </div>
+              )}
               {tab === "inventory" && (
                 <>
                   <div className="inventory-summary">
@@ -2645,6 +2668,14 @@ export default function App() {
                     {historyControl("activity")}
                   </Section>
                 </>
+              )}
+              {tab === "operations" && (
+                <OperationsPanel
+                  key={session.identity.tenant + ":" + session.identity.actor}
+                  session={session}
+                  request={request}
+                  navigate={navigate}
+                />
               )}
               {tab === "scanner" && (
                 <ScannerPanel

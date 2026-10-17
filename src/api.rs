@@ -3,16 +3,16 @@ use crate::{
     store::{Error, Identity, Request, Store},
 };
 use axum::{
-    extract::{DefaultBodyLimit, Path, Query, Request as HttpRequest, State},
+    extract::{DefaultBodyLimit, MatchedPath, Path, Query, Request as HttpRequest, State},
     http::{HeaderMap, StatusCode},
     middleware::{self, Next},
     response::{IntoResponse, Response},
-    routing::{get, post},
+    routing::{any, get, post},
     Extension, Json, Router,
 };
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use subtle::ConstantTimeEq;
 use tower_http::{
     services::{ServeDir, ServeFile},
@@ -62,6 +62,51 @@ async fn authenticate(
         axum::http::HeaderValue::from_static("no-store"),
     );
     response
+}
+async fn response_policy(mut request: HttpRequest, next: Next) -> Response {
+    // Correlation IDs are generated here, never trusted from client headers.
+    let request_id = axum::http::HeaderValue::from_str(&uuid::Uuid::new_v4().to_string())
+        .expect("UUID is a valid response header");
+    request
+        .headers_mut()
+        .insert("x-request-id", request_id.clone());
+    let path = request.uri().path();
+    let no_store =
+        path == "/v1" || path.starts_with("/v1/") || ["/ready", "/health"].contains(&path);
+    let mut response = next.run(request).await;
+    let headers = response.headers_mut();
+    headers.insert("x-request-id", request_id);
+    for (name, value) in [
+        ("x-content-type-options", "nosniff"),
+        ("x-frame-options", "DENY"),
+        ("referrer-policy", "no-referrer"),
+        ("content-security-policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"),
+    ] {
+        headers.insert(name, axum::http::HeaderValue::from_static(value));
+    }
+    if no_store {
+        headers.insert(
+            "cache-control",
+            axum::http::HeaderValue::from_static("no-store"),
+        );
+    }
+    response
+}
+
+async fn ready(State(app): State<App>) -> StatusCode {
+    match tokio::time::timeout(
+        Duration::from_secs(2),
+        sqlx::query("SELECT 1").execute(&app.store.pool),
+    )
+    .await
+    {
+        Ok(Ok(_)) => StatusCode::OK,
+        _ => StatusCode::SERVICE_UNAVAILABLE,
+    }
+}
+
+async fn unknown_api() -> Error {
+    Error::new(404, "Warehouse API route not found")
 }
 async fn session(State(app): State<App>, Extension(i): Extension<Identity>) -> Json<Value> {
     let native = crate::native::NativeIntegrations::from_env()
@@ -192,6 +237,10 @@ pub fn router(app: App) -> Router {
         .route("/v1/outbox/{id}/retry", post(retry))
         .route("/v1/events/{id}", get(event))
         .merge(crate::native_api::router())
+        .merge(crate::operations::router())
+        .route("/v1", any(unknown_api))
+        .route("/v1/", any(unknown_api))
+        .route("/v1/{*path}", any(unknown_api))
         .route_layer(middleware::from_fn_with_state(app.clone(), authenticate));
     Router::new()
         .merge(protected)
@@ -199,26 +248,27 @@ pub fn router(app: App) -> Router {
             "/health",
             get(|| async { Json(json!({"status":"ok","service":"stateset-warehouse"})) }),
         )
-        .route(
-            "/ready",
-            get({
-                let pool = app.store.pool.clone();
-                move || {
-                    let pool = pool.clone();
-                    async move {
-                        match sqlx::query("SELECT 1").execute(&pool).await {
-                            Ok(_) => StatusCode::OK,
-                            Err(_) => StatusCode::SERVICE_UNAVAILABLE,
-                        }
-                    }
-                }
-            }),
-        )
+        .route("/ready", get(ready))
         .fallback_service(
             ServeDir::new("dashboard/dist")
                 .not_found_service(ServeFile::new("dashboard/dist/index.html")),
         )
         .layer(DefaultBodyLimit::max(256 * 1024))
-        .layer(TraceLayer::new_for_http())
+        .layer(
+            TraceLayer::new_for_http().make_span_with(|request: &HttpRequest| {
+                let route = request
+                    .extensions()
+                    .get::<MatchedPath>()
+                    .map(MatchedPath::as_str)
+                    .unwrap_or("unmatched");
+                let request_id = request
+                    .headers()
+                    .get("x-request-id")
+                    .and_then(|value| value.to_str().ok())
+                    .unwrap_or("unavailable");
+                tracing::info_span!("warehouse_http", method=%request.method(), route, request_id)
+            }),
+        )
+        .layer(middleware::from_fn(response_policy))
         .with_state(app)
 }

@@ -6,3 +6,5 @@
 /.local/
 .env
 *.log
+__pycache__/
+*.py[cod]

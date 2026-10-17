@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "qualification": "tenant-scoped operational visibility and alert policies",
+  "completed_at": "2026-10-17T16:23:53.430373+00:00",
+  "source_revision": "unrecorded-working-tree",
+  "source_sha256": {
+    "src/operations.rs": "07be1a2e297cfa32a41c16a232558ef886189403e954bb3d1cc6defd15ef980a",
+    "migrations/007_operations_indexes.sql": "b0b9b422f570ed77ca1252df42c96b29544849621ed748cadd1f068b708576b5",
+    "tests/operations.rs": "b968b2cee4f7f73191190847f446c19a184baef9375b76c6dcdb426957d0ca5b",
+    "docs/observability.md": "f3848561f184ce5f2792296c5d5cab2e042f3f609bca66097cb9ca92c5adcc54",
+    "deploy/monitoring/alerts.yml": "b54143aea85ba48972539cae63268fb592081132cae2440594b752c5bea58d82",
+    "deploy/monitoring/alerts.test.yml": "27c6301b966f8cf55446d2f72a6ff862ccb29bc342fe9a7f9ad68aef72d26f9c",
+    "deploy/monitoring/check.sh": "0eb1248a7e06210b630d5a9d1122d7fd99f4c625977465fedd6c718fb3da4041"
+  },
+  "results": {
+    "authentication_role_and_strict_query_tests": {
+      "passed": true,
+      "count": 3
+    },
+    "real_postgresql_tests": {
+      "passed": true,
+      "count": 4,
+      "disposable_cluster": true,
+      "cases": [
+        "empty queue and 112 fixed-cardinality metrics",
+        "exact counts, lease ages, pagination, tenant isolation, configuration scope, redaction, unchanged retained evidence",
+        "deterministic multi-session repeatable-read snapshot through concurrent commits",
+        "blocked aggregate bounded 503 and successful later recovery"
+      ]
+    },
+    "clippy_test_operations": {
+      "passed": true,
+      "warnings_denied": true
+    },
+    "sql_checker": {
+      "passed": true,
+      "migrations": 7,
+      "runtime_statements": 101
+    },
+    "prometheus_rule_syntax": {
+      "passed": true,
+      "rules": 6
+    },
+    "prometheus_rule_unit_cases": {
+      "passed": true,
+      "cases": [
+        "all six alert activations",
+        "retained rejection history does not page indefinitely",
+        "unconfigured receiver suppresses backlog and dead-letter alerts"
+      ]
+    }
+  },
+  "promtool": {
+    "version": "3.0.1",
+    "image": "prom/prometheus@sha256:565ee86501224ebbb98fc10b332fa54440b100469924003359edf49cbce374bd",
+    "container_network": "none",
+    "filesystem": "read-only plus disposable memory-backed /tmp"
+  },
+  "limitations": [
+    "Synthetic local software qualification; no deployed facility service-level objective is certified.",
+    "Example alert timings require an operator-owned review policy.",
+    "Metrics scrape credentials use the existing administrator role; a dedicated monitoring role is not implemented.",
+    "Terminal retained outcomes do not contain an operator acknowledgement state."
+  ]
+}
