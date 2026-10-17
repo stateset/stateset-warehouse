@@ -13,7 +13,7 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   projects: [
-    { name: "offline-contract", testMatch: "offline.spec.ts" },
+    { name: "offline-contract", testMatch: /(?:offline|native)\.spec\.ts/ },
     {
       name: "live-postgres",
       testMatch: "live.spec.ts",

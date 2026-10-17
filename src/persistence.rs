@@ -1,0 +1,663 @@
+use crate::domain::{self, Allocation, Command, OrderLine, ReceiptLine, State, Stock, Warehouse};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
+use sqlx::{postgres::PgPoolOptions, PgConnection, PgPool, Row};
+use std::time::Duration;
+
+#[derive(Debug)]
+pub struct Error {
+    pub status: u16,
+    pub message: String,
+}
+impl Error {
+    pub fn new(status: u16, message: impl Into<String>) -> Self {
+        Self {
+            status,
+            message: message.into(),
+        }
+    }
+}
+impl From<sqlx::Error> for Error {
+    fn from(e: sqlx::Error) -> Self {
+        tracing::error!(error=%e,"warehouse database operation failed");
+        if e.as_database_error().and_then(|e| e.code()).as_deref() == Some("23505") {
+            return Self::new(409,"A warehouse business reference or source identity already exists; review the original record");
+        }
+        Self::new(
+            503,
+            "Database operation unavailable; retry with the same request ID",
+        )
+    }
+}
+pub type Result<T> = std::result::Result<T, Error>;
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Request {
+    pub request_id: String,
+    pub expected_version: i64,
+    pub command: Command,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Identity {
+    pub tenant: String,
+    pub actor: String,
+    pub role: String,
+}
+#[derive(Clone)]
+pub struct Store {
+    pub pool: PgPool,
+}
+fn decode<T: DeserializeOwned>(v: Value) -> Result<T> {
+    serde_json::from_value(v)
+        .map_err(|_| Error::new(503, "Stored warehouse evidence requires repair"))
+}
+fn changed<T: Serialize>(v: &T, old: Option<&T>) -> bool {
+    old.is_none_or(|o| json!(o) != json!(v))
+}
+fn target(c: Option<&Command>) -> (String, String, String) {
+    match c {
+        Some(Command::Receive { receipt_id, .. }) => {
+            (String::new(), receipt_id.clone(), String::new())
+        }
+        Some(
+            Command::Allocate { order_id }
+            | Command::Pick { order_id, .. }
+            | Command::Pack { order_id }
+            | Command::Ship { order_id, .. }
+            | Command::CancelOrder { order_id, .. }
+            | Command::Unpick { order_id, .. }
+            | Command::ResetAllocation { order_id, .. },
+        ) => (order_id.clone(), String::new(), String::new()),
+        Some(Command::ReportException {
+            order_id: Some(id), ..
+        }) => (id.clone(), String::new(), String::new()),
+        Some(Command::ResolveException { exception_id, .. }) => {
+            (String::new(), String::new(), exception_id.clone())
+        }
+        _ => Default::default(),
+    }
+}
+
+impl Store {
+    pub async fn connect(url: &str) -> Result<Self> {
+        let pool = PgPoolOptions::new()
+            .max_connections(8)
+            .acquire_timeout(Duration::from_secs(5))
+            .after_connect(|c, _| {
+                Box::pin(async move {
+                    sqlx::query("SET statement_timeout='10s'")
+                        .execute(&mut *c)
+                        .await?;
+                    sqlx::query("SET lock_timeout='5s'")
+                        .execute(&mut *c)
+                        .await?;
+                    Ok(())
+                })
+            })
+            .connect(url)
+            .await?;
+        let mut tx = pool.begin().await?;
+        sqlx::query("SELECT pg_advisory_xact_lock(84721821)")
+            .execute(&mut *tx)
+            .await?;
+        sqlx::query("CREATE TABLE IF NOT EXISTS wms_schema_migrations(name TEXT PRIMARY KEY,digest TEXT NOT NULL,applied_at TIMESTAMPTZ NOT NULL DEFAULT now())").execute(&mut *tx).await?;
+        for (name, sql) in [
+            ("001_initial", include_str!("../migrations/001_initial.sql")),
+            (
+                "002_relational_execution",
+                include_str!("../migrations/002_relational_execution.sql"),
+            ),
+            (
+                "003_native_operations",
+                include_str!("../migrations/003_native_operations.sql"),
+            ),
+            (
+                "004_native_source_ownership",
+                include_str!("../migrations/004_native_source_ownership.sql"),
+            ),
+        ] {
+            let digest = format!("{:x}", Sha256::digest(sql.as_bytes()));
+            let old: Option<String> =
+                sqlx::query_scalar("SELECT digest FROM wms_schema_migrations WHERE name=$1")
+                    .bind(name)
+                    .fetch_optional(&mut *tx)
+                    .await?;
+            if let Some(old) = old {
+                if old != digest {
+                    return Err(Error::new(
+                        503,
+                        format!("Applied migration {name} changed; add a new migration instead"),
+                    ));
+                }
+            } else {
+                sqlx::raw_sql(sql).execute(&mut *tx).await?;
+                sqlx::query("INSERT INTO wms_schema_migrations(name,digest) VALUES($1,$2)")
+                    .bind(name)
+                    .bind(digest)
+                    .execute(&mut *tx)
+                    .await?;
+            }
+        }
+        let legacy=sqlx::query("SELECT tenant,state FROM wms_workspaces s WHERE NOT EXISTS(SELECT 1 FROM wms_warehouses w WHERE w.tenant=s.tenant AND w.warehouse_id=s.warehouse_id) FOR UPDATE").fetch_all(&mut *tx).await?;
+        for row in legacy {
+            let tenant: String = row.try_get("tenant")?;
+            let mut s: State = decode(row.try_get("state")?)?;
+            s.upgrade_legacy_receipt_evidence()
+                .map_err(|e| Error::new(503, format!("Legacy evidence migration held: {e}")))?;
+            s.validate()
+                .map_err(|e| Error::new(503, format!("Legacy reconciliation failed: {e}")))?;
+            Self::save(&mut tx, &tenant, None, &s).await?;
+        }
+        tx.commit().await?;
+        Ok(Self { pool })
+    }
+    pub async fn provision(&self, tenant: &str, demo: bool) -> Result<()> {
+        let s = if demo {
+            domain::demo_state()
+        } else {
+            State::empty(Warehouse {
+                id: "wh-main".into(),
+                code: "MAIN".into(),
+                name: "Main Warehouse".into(),
+                city: "Configure facility before live operations".into(),
+                timezone: "UTC".into(),
+            })
+        };
+        let mut tx = self.pool.begin().await?;
+        let n=sqlx::query("INSERT INTO wms_warehouses(tenant,warehouse_id,version,metadata) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING").bind(tenant).bind(&s.warehouse.id).bind(s.version).bind(json!(s.warehouse)).execute(&mut *tx).await?.rows_affected();
+        if n == 1 {
+            Self::save(&mut tx, tenant, None, &s).await?;
+        }
+        tx.commit().await?;
+        Ok(())
+    }
+    pub async fn list(&self, t: &str) -> Result<Vec<Value>> {
+        let rows=sqlx::query("SELECT metadata,version FROM wms_warehouses WHERE tenant=$1 ORDER BY warehouse_id LIMIT 100").bind(t).fetch_all(&self.pool).await?;
+        rows.iter().map(|r|Ok(json!({"warehouse":r.try_get::<Value,_>("metadata")?,"version":r.try_get::<i64,_>("version")?}))).collect()
+    }
+    async fn load(
+        c: &mut PgConnection,
+        t: &str,
+        w: &str,
+        command: Option<&Command>,
+        display: bool,
+    ) -> Result<State> {
+        let h = sqlx::query(
+            "SELECT metadata,version FROM wms_warehouses WHERE tenant=$1 AND warehouse_id=$2",
+        )
+        .bind(t)
+        .bind(w)
+        .fetch_optional(&mut *c)
+        .await?
+        .ok_or_else(|| Error::new(404, "Warehouse not found"))?;
+        let mut s = State::empty(decode(h.try_get("metadata")?)?);
+        s.version = h.try_get("version")?;
+        let (oid, rid, eid) = target(command);
+        s.products = sqlx::query(
+            "SELECT data FROM wms_products WHERE tenant=$1 AND warehouse_id=$2 ORDER BY sku",
+        )
+        .bind(t)
+        .bind(w)
+        .fetch_all(&mut *c)
+        .await?
+        .into_iter()
+        .map(|r| decode(r.get("data")))
+        .collect::<Result<_>>()?;
+        s.locations = sqlx::query(
+            "SELECT data FROM wms_locations WHERE tenant=$1 AND warehouse_id=$2 ORDER BY code",
+        )
+        .bind(t)
+        .bind(w)
+        .fetch_all(&mut *c)
+        .await?
+        .into_iter()
+        .map(|r| decode(r.get("data")))
+        .collect::<Result<_>>()?;
+        s.stocks=sqlx::query("SELECT sku,lot,location,on_hand,reserved FROM wms_stock WHERE tenant=$1 AND warehouse_id=$2 ORDER BY sku,lot,location").bind(t).bind(w).fetch_all(&mut *c).await?.iter().map(|r|Ok(Stock{sku:r.try_get("sku")?,lot:r.try_get("lot")?,location:r.try_get("location")?,on_hand:r.try_get("on_hand")?,reserved:r.try_get("reserved")?})).collect::<Result<_>>()?;
+        s.inventory_baseline=sqlx::query("SELECT sku,lot,location,quantity FROM wms_stock_ledger WHERE tenant=$1 AND warehouse_id=$2 ORDER BY sku,lot,location").bind(t).bind(w).fetch_all(&mut *c).await?.iter().map(|r|Ok(Stock{sku:r.try_get("sku")?,lot:r.try_get("lot")?,location:r.try_get("location")?,on_hand:r.try_get("quantity")?,reserved:0})).collect::<Result<_>>()?;
+        if display {
+            s.movements=sqlx::query("SELECT data FROM wms_movements WHERE tenant=$1 AND warehouse_id=$2 ORDER BY seq DESC LIMIT 100").bind(t).bind(w).fetch_all(&mut *c).await?.into_iter().map(|r|decode(r.get("data"))).collect::<Result<_>>()?;
+            s.movements.reverse();
+            s.activity=sqlx::query("SELECT data FROM wms_activity WHERE tenant=$1 AND warehouse_id=$2 ORDER BY seq DESC LIMIT 100").bind(t).bind(w).fetch_all(&mut *c).await?.into_iter().map(|r|decode(r.get("data"))).collect::<Result<_>>()?;
+            s.activity.reverse();
+        }
+        s.orders=sqlx::query("SELECT data FROM wms_orders WHERE tenant=$1 AND warehouse_id=$2 AND (status NOT IN('shipped','cancelled') OR id=$3 OR ($4 AND seq IN(SELECT seq FROM wms_orders WHERE tenant=$1 AND warehouse_id=$2 AND status IN('shipped','cancelled') ORDER BY seq DESC LIMIT 20))) ORDER BY seq").bind(t).bind(w).bind(oid).bind(display).fetch_all(&mut *c).await?.into_iter().map(|r|decode(r.get("data"))).collect::<Result<_>>()?;
+        let ids: Vec<_> = s.orders.iter().map(|o| o.id.clone()).collect();
+        let lines=sqlx::query("SELECT order_id,id,sku,quantity FROM wms_order_lines WHERE tenant=$1 AND warehouse_id=$2 AND order_id=ANY($3) ORDER BY order_id,id").bind(t).bind(w).bind(&ids).fetch_all(&mut *c).await?;
+        let allocations=sqlx::query("SELECT order_id,line_id,sku,lot,location,quantity,picked,shipped,released FROM wms_allocations WHERE tenant=$1 AND warehouse_id=$2 AND order_id=ANY($3) ORDER BY order_id,line_id,location,lot").bind(t).bind(w).bind(&ids).fetch_all(&mut *c).await?;
+        for o in &mut s.orders {
+            o.lines = lines
+                .iter()
+                .filter(|r| r.get::<String, _>("order_id") == o.id)
+                .map(|r| {
+                    Ok(OrderLine {
+                        id: r.try_get("id")?,
+                        sku: r.try_get("sku")?,
+                        quantity: r.try_get("quantity")?,
+                    })
+                })
+                .collect::<Result<_>>()?;
+            o.allocations = allocations
+                .iter()
+                .filter(|r| r.get::<String, _>("order_id") == o.id)
+                .map(|r| {
+                    Ok(Allocation {
+                        line_id: r.try_get("line_id")?,
+                        sku: r.try_get("sku")?,
+                        lot: r.try_get("lot")?,
+                        location: r.try_get("location")?,
+                        quantity: r.try_get("quantity")?,
+                        picked: r.try_get("picked")?,
+                        shipped: r.try_get("shipped")?,
+                        released: r.try_get("released")?,
+                    })
+                })
+                .collect::<Result<_>>()?;
+        }
+        let movement_receipts: Vec<_> = s
+            .movements
+            .iter()
+            .filter_map(|m| m.receipt_id.clone())
+            .collect();
+        s.receipts=sqlx::query("SELECT data FROM wms_receipts WHERE tenant=$1 AND warehouse_id=$2 AND (status<>'received' OR id=$3 OR id=ANY($5) OR ($4 AND seq IN(SELECT seq FROM wms_receipts WHERE tenant=$1 AND warehouse_id=$2 AND status='received' ORDER BY seq DESC LIMIT 20))) ORDER BY seq").bind(t).bind(w).bind(rid).bind(display).bind(movement_receipts).fetch_all(&mut *c).await?.into_iter().map(|r|decode(r.get("data"))).collect::<Result<_>>()?;
+        let ids: Vec<_> = s.receipts.iter().map(|r| r.id.clone()).collect();
+        let lines=sqlx::query("SELECT receipt_id,id,sku,lot,quantity,received FROM wms_receipt_lines WHERE tenant=$1 AND warehouse_id=$2 AND receipt_id=ANY($3) ORDER BY receipt_id,id").bind(t).bind(w).bind(&ids).fetch_all(&mut *c).await?;
+        for r in &mut s.receipts {
+            r.lines = lines
+                .iter()
+                .filter(|l| l.get::<String, _>("receipt_id") == r.id)
+                .map(|l| {
+                    Ok(ReceiptLine {
+                        id: l.try_get("id")?,
+                        sku: l.try_get("sku")?,
+                        lot: l.try_get("lot")?,
+                        quantity: l.try_get("quantity")?,
+                        received: l.try_get("received")?,
+                    })
+                })
+                .collect::<Result<_>>()?;
+            for l in &r.lines {
+                s.receipt_baseline
+                    .entry(r.id.clone())
+                    .or_default()
+                    .insert(l.id.clone(), 0);
+            }
+        }
+        let proofs=sqlx::query("SELECT receipt_id,line_id,quantity FROM wms_receipt_evidence WHERE tenant=$1 AND warehouse_id=$2 AND receipt_id=ANY($3)").bind(t).bind(w).bind(&ids).fetch_all(&mut *c).await?;
+        for p in proofs {
+            s.receipt_baseline
+                .entry(p.get("receipt_id"))
+                .or_default()
+                .insert(p.get("line_id"), p.get("quantity"));
+        }
+        s.exceptions=sqlx::query("SELECT data FROM wms_exceptions WHERE tenant=$1 AND warehouse_id=$2 AND (status='open' OR id=$3 OR ($4 AND seq IN(SELECT seq FROM wms_exceptions WHERE tenant=$1 AND warehouse_id=$2 AND status='resolved' ORDER BY seq DESC LIMIT 20))) ORDER BY seq").bind(t).bind(w).bind(eid).bind(display).fetch_all(&mut *c).await?.into_iter().map(|r|decode(r.get("data"))).collect::<Result<_>>()?;
+        for m in &s.movements {
+            for (location, delta) in [
+                (m.from.as_deref(), m.quantity),
+                (m.to.as_deref(), -m.quantity),
+            ] {
+                if let Some(location) = location {
+                    if let Some(b) = s
+                        .inventory_baseline
+                        .iter_mut()
+                        .find(|b| b.sku == m.sku && b.lot == m.lot && b.location == location)
+                    {
+                        b.on_hand += delta;
+                    } else {
+                        s.inventory_baseline.push(Stock {
+                            sku: m.sku.clone(),
+                            lot: m.lot.clone(),
+                            location: location.into(),
+                            on_hand: delta,
+                            reserved: 0,
+                        });
+                    }
+                }
+            }
+            if let (Some(rid), Some(lid)) = (&m.receipt_id, &m.receipt_line_id) {
+                *s.receipt_baseline
+                    .entry(rid.clone())
+                    .or_default()
+                    .entry(lid.clone())
+                    .or_default() -= m.quantity;
+            }
+        }
+        Ok(s)
+    }
+    pub async fn state(&self, t: &str, w: &str) -> Result<State> {
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+            .execute(&mut *tx)
+            .await?;
+        let s = Self::load(&mut tx, t, w, None, true).await?;
+        tx.commit().await?;
+        Ok(s)
+    }
+    async fn save(c: &mut PgConnection, t: &str, old: Option<&State>, s: &State) -> Result<()> {
+        let w = &s.warehouse.id;
+        sqlx::query("INSERT INTO wms_warehouses(tenant,warehouse_id,version,metadata) VALUES($1,$2,$3,$4) ON CONFLICT(tenant,warehouse_id) DO UPDATE SET version=EXCLUDED.version,metadata=EXCLUDED.metadata").bind(t).bind(w).bind(s.version).bind(json!(s.warehouse)).execute(&mut *c).await?;
+        for p in &s.products {
+            if changed(
+                p,
+                old.and_then(|o| o.products.iter().find(|x| x.sku == p.sku)),
+            ) {
+                sqlx::query("INSERT INTO wms_products VALUES($1,$2,$3,$4) ON CONFLICT(tenant,warehouse_id,sku) DO UPDATE SET data=EXCLUDED.data").bind(t).bind(w).bind(&p.sku).bind(json!(p)).execute(&mut *c).await?;
+            }
+        }
+        for l in &s.locations {
+            if changed(
+                l,
+                old.and_then(|o| o.locations.iter().find(|x| x.code == l.code)),
+            ) {
+                sqlx::query("INSERT INTO wms_locations VALUES($1,$2,$3,$4,$5) ON CONFLICT(tenant,warehouse_id,code) DO UPDATE SET kind=EXCLUDED.kind,data=EXCLUDED.data").bind(t).bind(w).bind(&l.code).bind(&l.kind).bind(json!(l)).execute(&mut *c).await?;
+            }
+        }
+        for b in &s.stocks {
+            if changed(
+                b,
+                old.and_then(|o| {
+                    o.stocks
+                        .iter()
+                        .find(|x| x.sku == b.sku && x.lot == b.lot && x.location == b.location)
+                }),
+            ) {
+                sqlx::query("INSERT INTO wms_stock VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(tenant,warehouse_id,sku,lot,location) DO UPDATE SET on_hand=EXCLUDED.on_hand,reserved=EXCLUDED.reserved").bind(t).bind(w).bind(&b.sku).bind(&b.lot).bind(&b.location).bind(b.on_hand).bind(b.reserved).execute(&mut *c).await?;
+            }
+        }
+        for r in &s.receipts {
+            if changed(
+                r,
+                old.and_then(|o| o.receipts.iter().find(|x| x.id == r.id)),
+            ) {
+                sqlx::query("INSERT INTO wms_receipts(tenant,warehouse_id,id,reference,status,data) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(tenant,warehouse_id,id) DO UPDATE SET status=EXCLUDED.status,data=EXCLUDED.data").bind(t).bind(w).bind(&r.id).bind(&r.reference).bind(&r.status).bind(json!(r)).execute(&mut *c).await?;
+                for l in &r.lines {
+                    sqlx::query("INSERT INTO wms_receipt_lines VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(tenant,warehouse_id,receipt_id,id) DO UPDATE SET received=EXCLUDED.received").bind(t).bind(w).bind(&r.id).bind(&l.id).bind(&l.sku).bind(&l.lot).bind(l.quantity).bind(l.received).execute(&mut *c).await?;
+                }
+            }
+        }
+        for o in &s.orders {
+            if changed(o, old.and_then(|v| v.orders.iter().find(|x| x.id == o.id))) {
+                sqlx::query("INSERT INTO wms_orders(tenant,warehouse_id,id,reference,source_order_id,status,data) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(tenant,warehouse_id,id) DO UPDATE SET status=EXCLUDED.status,data=EXCLUDED.data").bind(t).bind(w).bind(&o.id).bind(&o.reference).bind(&o.source_order_id).bind(&o.status).bind(json!(o)).execute(&mut *c).await?;
+                for l in &o.lines {
+                    sqlx::query("INSERT INTO wms_order_lines VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING").bind(t).bind(w).bind(&o.id).bind(&l.id).bind(&l.sku).bind(l.quantity).execute(&mut *c).await?;
+                }
+                sqlx::query("DELETE FROM wms_allocations WHERE tenant=$1 AND warehouse_id=$2 AND order_id=$3").bind(t).bind(w).bind(&o.id).execute(&mut *c).await?;
+                for a in &o.allocations {
+                    sqlx::query(
+                        "INSERT INTO wms_allocations VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
+                    )
+                    .bind(t)
+                    .bind(w)
+                    .bind(&o.id)
+                    .bind(&a.line_id)
+                    .bind(&a.sku)
+                    .bind(&a.lot)
+                    .bind(&a.location)
+                    .bind(a.quantity)
+                    .bind(a.picked)
+                    .bind(a.shipped)
+                    .bind(a.released)
+                    .execute(&mut *c)
+                    .await?;
+                }
+            }
+        }
+        for e in &s.exceptions {
+            if changed(
+                e,
+                old.and_then(|o| o.exceptions.iter().find(|x| x.id == e.id)),
+            ) {
+                sqlx::query("INSERT INTO wms_exceptions(tenant,warehouse_id,id,status,order_id,data) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(tenant,warehouse_id,id) DO UPDATE SET status=EXCLUDED.status,data=EXCLUDED.data").bind(t).bind(w).bind(&e.id).bind(&e.status).bind(&e.order_id).bind(json!(e)).execute(&mut *c).await?;
+            }
+        }
+        for m in &s.movements {
+            if old.is_none_or(|o| !o.movements.iter().any(|x| x.id == m.id)) {
+                sqlx::query("INSERT INTO wms_movements(id,tenant,warehouse_id,sku,lot,from_location,to_location,quantity,kind,reference,receipt_id,receipt_line_id,data) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)").bind(&m.id).bind(t).bind(w).bind(&m.sku).bind(&m.lot).bind(&m.from).bind(&m.to).bind(m.quantity).bind(&m.kind).bind(&m.reference).bind(&m.receipt_id).bind(&m.receipt_line_id).bind(json!(m)).execute(&mut *c).await?;
+            }
+        }
+        for a in &s.activity {
+            if old.is_none_or(|o| !o.activity.iter().any(|x| x.id == a.id)) {
+                sqlx::query("INSERT INTO wms_activity(id,tenant,warehouse_id,kind,data) VALUES($1,$2,$3,$4,$5)").bind(&a.id).bind(t).bind(w).bind(&a.kind).bind(json!(a)).execute(&mut *c).await?;
+            }
+        }
+        Ok(())
+    }
+    pub async fn execute(&self, i: &Identity, w: &str, r: &Request) -> Result<Value> {
+        if !r.command.allowed(&i.role) {
+            return Err(Error::new(403, "Your role does not permit this action"));
+        }
+        if !(8..=100).contains(&r.request_id.len())
+            || r.request_id
+                .chars()
+                .any(|c| !c.is_ascii_alphanumeric() && c != '-' && c != '_')
+        {
+            return Err(Error::new(
+                422,
+                "Request ID must contain 8–100 letters, digits, hyphens or underscores",
+            ));
+        }
+        let digest = format!(
+            "{:x}",
+            Sha256::digest(serde_json::to_vec(r).map_err(|_| Error::new(422, "Invalid command"))?)
+        );
+        let mut tx = self.pool.begin().await?;
+        let h = sqlx::query(
+            "SELECT version FROM wms_warehouses WHERE tenant=$1 AND warehouse_id=$2 FOR UPDATE",
+        )
+        .bind(&i.tenant)
+        .bind(w)
+        .fetch_optional(&mut *tx)
+        .await?
+        .ok_or_else(|| Error::new(404, "Warehouse not found"))?;
+        if let Some(receipt)=sqlx::query("SELECT actor,digest,result FROM wms_commands WHERE tenant=$1 AND warehouse_id=$2 AND request_id=$3").bind(&i.tenant).bind(w).bind(&r.request_id).fetch_optional(&mut *tx).await?{if receipt.get::<String,_>("digest")!=digest||receipt.get::<String,_>("actor")!=i.actor{return Err(Error::new(409,"Request ID already belongs to a different payload or operator"));}return Ok(json!({"replayed":true,"result":receipt.get::<Value,_>("result")}));}
+        let version: i64 = h.try_get("version")?;
+        if r.expected_version != version {
+            return Err(Error::new(409,format!("Warehouse changed (version {version}). Refresh and review before submitting a new request.")));
+        }
+        let state = Self::load(&mut tx, &i.tenant, w, Some(&r.command), false).await?;
+        match &r.command {
+            Command::CreateOrder {
+                reference,
+                source_order_id,
+                ..
+            } => {
+                let duplicate:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM wms_orders WHERE tenant=$1 AND warehouse_id=$2 AND (reference=$3 OR ($4::text IS NOT NULL AND source_order_id=$4)))").bind(&i.tenant).bind(w).bind(reference).bind(source_order_id).fetch_one(&mut *tx).await?;
+                if duplicate {
+                    return Err(Error::new(
+                        409,
+                        "Order reference or OMS source already exists, including completed work",
+                    ));
+                }
+            }
+            Command::CreateReceipt { reference, .. } => {
+                let duplicate:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM wms_receipts WHERE tenant=$1 AND warehouse_id=$2 AND reference=$3)").bind(&i.tenant).bind(w).bind(reference).fetch_one(&mut *tx).await?;
+                if duplicate {
+                    return Err(Error::new(
+                        409,
+                        "Receipt reference already exists, including completed receipts",
+                    ));
+                }
+            }
+            _ => {}
+        }
+        if i.role == "oms" {
+            if let Command::CancelOrder { order_id, .. } = &r.command {
+                if !state
+                    .orders
+                    .iter()
+                    .any(|o| o.id == *order_id && o.source_order_id.is_some())
+                {
+                    return Err(Error::new(403, "OMS can cancel only source-linked orders"));
+                }
+            }
+        }
+        state.validate().map_err(|e| {
+            Error::new(
+                503,
+                format!("Warehouse reconciliation failed; writes held: {e}"),
+            )
+        })?;
+        let (next, result) = state
+            .execute(&r.command, &i.actor)
+            .map_err(|e| Error::new(422, e))?;
+        Self::save(&mut tx, &i.tenant, Some(&state), &next).await?;
+        let eid = domain::id();
+        let order = next.orders.iter().find(|o| result["entity_id"] == o.id);
+        let inventory: Vec<_> = next
+            .stocks
+            .iter()
+            .filter(|b| {
+                changed(
+                    *b,
+                    state
+                        .stocks
+                        .iter()
+                        .find(|x| x.sku == b.sku && x.lot == b.lot && x.location == b.location),
+                )
+            })
+            .map(|b| json!({"stock":b,"version":next.version}))
+            .collect();
+        let event = json!({"schema_version":2,"id":eid,"tenant":i.tenant,"warehouse_id":w,"version":next.version,"type":r.command.kind(),"actor":i.actor,"occurred_at":domain::now(),"request_id":r.request_id,"result":result,"order":order,"inventory_changes":inventory,"command":r.command});
+        sqlx::query(
+            "INSERT INTO wms_events(id,tenant,warehouse_id,version,payload) VALUES($1,$2,$3,$4,$5)",
+        )
+        .bind(&eid)
+        .bind(&i.tenant)
+        .bind(w)
+        .bind(next.version)
+        .bind(event)
+        .execute(&mut *tx)
+        .await?;
+        sqlx::query("INSERT INTO wms_commands(tenant,warehouse_id,request_id,actor,digest,result) VALUES($1,$2,$3,$4,$5,$6)").bind(&i.tenant).bind(w).bind(&r.request_id).bind(&i.actor).bind(digest).bind(&result).execute(&mut *tx).await?;
+        let destinations = if matches!(r.command, Command::Pack { .. } | Command::Ship { .. }) {
+            vec!["oms", "tms"]
+        } else {
+            vec!["oms"]
+        };
+        for d in destinations {
+            sqlx::query(
+                "INSERT INTO wms_outbox(id,event_id,tenant,destination) VALUES($1,$2,$3,$4)",
+            )
+            .bind(domain::id())
+            .bind(&eid)
+            .bind(&i.tenant)
+            .bind(d)
+            .execute(&mut *tx)
+            .await?;
+        }
+        tx.commit().await?;
+        Ok(json!({"replayed":false,"result":result}))
+    }
+    pub async fn receipt(&self, i: &Identity, w: &str, key: &str) -> Result<Value> {
+        let r=sqlx::query("SELECT result FROM wms_commands WHERE tenant=$1 AND warehouse_id=$2 AND request_id=$3 AND actor=$4").bind(&i.tenant).bind(w).bind(key).bind(&i.actor).fetch_optional(&self.pool).await?;
+        Ok(match r {
+            Some(r) => json!({"found":true,"result":r.get::<Value,_>("result")}),
+            None => json!({"found":false}),
+        })
+    }
+    pub async fn detail(&self, t: &str, w: &str, kind: &str, id: &str) -> Result<Value> {
+        let q = match kind {
+            "orders" => "SELECT data FROM wms_orders WHERE tenant=$1 AND warehouse_id=$2 AND id=$3",
+            "receipts" => {
+                "SELECT data FROM wms_receipts WHERE tenant=$1 AND warehouse_id=$2 AND id=$3"
+            }
+            _ => return Err(Error::new(404, "Unknown warehouse record")),
+        };
+        let r = sqlx::query(q)
+            .bind(t)
+            .bind(w)
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?
+            .ok_or_else(|| Error::new(404, "Warehouse record not found"))?;
+        Ok(r.get("data"))
+    }
+    pub async fn history(
+        &self,
+        t: &str,
+        w: &str,
+        kind: &str,
+        before: Option<i64>,
+        limit: i64,
+    ) -> Result<Value> {
+        let table = match kind {
+            "orders" => "wms_orders",
+            "receipts" => "wms_receipts",
+            "movements" => "wms_movements",
+            "activity" => "wms_activity",
+            "exceptions" => "wms_exceptions",
+            _ => return Err(Error::new(404, "Unknown history type")),
+        };
+        if !(1..=100).contains(&limit) || before.is_some_and(|v| v < 1) {
+            return Err(Error::new(
+                422,
+                "History limit must be 1–100 and cursor positive",
+            ));
+        }
+        let q=format!("SELECT seq,data FROM {table} WHERE tenant=$1 AND warehouse_id=$2 AND seq<$3 ORDER BY seq DESC LIMIT $4");
+        let rows = sqlx::query(&q)
+            .bind(t)
+            .bind(w)
+            .bind(before.unwrap_or(i64::MAX))
+            .bind(limit + 1)
+            .fetch_all(&self.pool)
+            .await?;
+        let items: Vec<_> = rows
+            .iter()
+            .take(limit as usize)
+            .map(|r| json!({"cursor":r.get::<i64,_>("seq"),"data":r.get::<Value,_>("data")}))
+            .collect();
+        let cursor = if rows.len() > limit as usize {
+            items.last().map(|r| r["cursor"].clone())
+        } else {
+            None
+        };
+        Ok(json!({"items":items,"next_cursor":cursor}))
+    }
+    pub async fn reconciliation(&self, t: &str, w: &str) -> Result<Value> {
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+            .execute(&mut *tx)
+            .await?;
+        let s = Self::load(&mut tx, t, w, None, false).await?;
+        let rows = sqlx::query(include_str!("reconciliation.sql"))
+            .bind(t)
+            .bind(w)
+            .fetch_all(&mut *tx)
+            .await?;
+        let receipts=sqlx::query("SELECT r.receipt_id,r.id,r.received,COALESCE(sum(m.quantity),0)::bigint AS evidence FROM wms_receipt_lines r LEFT JOIN wms_movements m ON m.tenant=r.tenant AND m.warehouse_id=r.warehouse_id AND m.receipt_id=r.receipt_id AND m.receipt_line_id=r.id AND m.kind='receipt' WHERE r.tenant=$1 AND r.warehouse_id=$2 GROUP BY r.receipt_id,r.id,r.received ORDER BY r.receipt_id,r.id").bind(t).bind(w).fetch_all(&mut *tx).await?;
+        let proofs:Vec<_>=rows.iter().map(|r|json!({"sku":r.get::<String,_>("sku"),"lot":r.get::<String,_>("lot"),"location":r.get::<String,_>("location"),"on_hand":r.get::<i64,_>("on_hand"),"ledger":r.get::<i64,_>("ledger"),"reserved":r.get::<i64,_>("reserved"),"allocation_reserved":r.get::<i64,_>("allocation_reserved"),"difference":r.get::<i64,_>("on_hand")-r.get::<i64,_>("ledger"),"reserved_difference":r.get::<i64,_>("reserved")-r.get::<i64,_>("allocation_reserved"),"ok":r.get::<i64,_>("on_hand")==r.get::<i64,_>("ledger")&&r.get::<i64,_>("reserved")==r.get::<i64,_>("allocation_reserved")})).collect();
+        let receipt_proofs:Vec<_>=receipts.iter().map(|r|json!({"receipt_id":r.get::<String,_>("receipt_id"),"line_id":r.get::<String,_>("id"),"received":r.get::<i64,_>("received"),"evidence":r.get::<i64,_>("evidence"),"ok":r.get::<i64,_>("received")==r.get::<i64,_>("evidence")})).collect();
+        let ok = s.validate().is_ok()
+            && proofs.iter().all(|p| p["ok"] == true)
+            && receipt_proofs.iter().all(|p| p["ok"] == true);
+        tx.commit().await?;
+        Ok(
+            json!({"version":s.version,"ok":ok,"rows":proofs,"receipts":receipt_proofs,"method":"full_append_only_ledger_and_order_line_allocations"}),
+        )
+    }
+    pub async fn outbox(&self, t: &str, w: &str) -> Result<Vec<Value>> {
+        let rows=sqlx::query("SELECT o.id,o.destination,o.status,o.attempts,o.last_error,o.event_id,e.payload->>'type' AS kind,e.payload->>'occurred_at' AS occurred_at FROM wms_outbox o JOIN wms_events e ON e.id=o.event_id WHERE o.tenant=$1 AND e.warehouse_id=$2 ORDER BY e.created_at DESC,o.id LIMIT 200").bind(t).bind(w).fetch_all(&self.pool).await?;
+        rows.iter().map(|r|Ok(json!({"id":r.try_get::<String,_>("id")?,"destination":r.try_get::<String,_>("destination")?,"status":r.try_get::<String,_>("status")?,"attempts":r.try_get::<i64,_>("attempts")?,"last_error":r.try_get::<String,_>("last_error")?,"event_id":r.try_get::<String,_>("event_id")?,"type":r.try_get::<String,_>("kind")?,"occurred_at":r.try_get::<String,_>("occurred_at")?}))).collect()
+    }
+    pub async fn retry(&self, i: &Identity, id: &str) -> Result<Value> {
+        if i.role != "admin" {
+            return Err(Error::new(
+                403,
+                "Only administrators may retry dead letters",
+            ));
+        }
+        let mut tx = self.pool.begin().await?;
+        let n=sqlx::query("UPDATE wms_outbox SET status='pending',due_at=now(),attempts=0,lease_token=NULL,lease_until=NULL WHERE tenant=$1 AND id=$2 AND status='dead_letter'").bind(&i.tenant).bind(id).execute(&mut *tx).await?.rows_affected();
+        if n != 1 {
+            return Err(Error::new(
+                409,
+                "Only an existing dead letter can be retried",
+            ));
+        }
+        sqlx::query("INSERT INTO wms_admin_audit(id,tenant,actor,action,reference) VALUES($1,$2,$3,'outbox.retry',$4)").bind(domain::id()).bind(&i.tenant).bind(&i.actor).bind(id).execute(&mut *tx).await?;
+        tx.commit().await?;
+        Ok(json!({"queued":true}))
+    }
+}

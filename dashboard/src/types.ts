@@ -60,6 +60,8 @@ export type Movement = {
   to: string | null;
   quantity: number;
   reference: string;
+  receipt_id?: string | null;
+  receipt_line_id?: string | null;
   reason: string;
   actor: string;
   at: string;
@@ -100,10 +102,28 @@ export type WarehouseState = {
   movements: Movement[];
   exceptions: Exception[];
   activity: Activity[];
+  inventory_baseline?: Stock[];
+  receipt_baseline?: Record<string, Record<string, number>>;
+};
+export type HistoryData = {
+  orders: Order;
+  receipts: Receipt;
+  movements: Movement;
+  activity: Activity;
+  exceptions: Exception;
+};
+export type HistoryKind = keyof HistoryData;
+export type HistoryPage<T> = {
+  items: { cursor: number; data: T }[];
+  next_cursor: number | null;
 };
 export type Session = {
   identity: { tenant: string; actor: string; role: string };
   demo: boolean;
+  native_integrations?: {
+    oms: { configured: boolean };
+    tms: { configured: boolean };
+  };
   integrations: {
     id: string;
     name: string;

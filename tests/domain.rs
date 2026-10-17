@@ -430,6 +430,610 @@ fn independent_reconciliation_detects_balance_and_reservation_corruption() {
         .reserved = 1;
     assert!(s.validate().is_err());
 }
+
+#[test]
+fn receipt_counters_and_duplicate_sku_lines_require_exact_movement_evidence() {
+    let mut s = fixture(10);
+    // Forging both the status and counter used to pass stock reconciliation.
+    s.receipts[0].lines[0].received = 9;
+    s.receipts[0].status = "partial".into();
+    assert!(s
+        .validate()
+        .expect_err("counter forgery")
+        .contains("movement evidence"));
+
+    let mut s = fixture(1);
+    let receipt = apply(
+        &mut s,
+        Command::CreateReceipt {
+            reference: "RCV-SAME-SKU-LOT".into(),
+            supplier: "Supplier".into(),
+            lines: vec![
+                ReceiptInput {
+                    id: "first".into(),
+                    sku: "SKU-A".into(),
+                    lot: "SHARED-LOT".into(),
+                    quantity: 5,
+                },
+                ReceiptInput {
+                    id: "second".into(),
+                    sku: "SKU-A".into(),
+                    lot: "SHARED-LOT".into(),
+                    quantity: 5,
+                },
+            ],
+        },
+    );
+    apply(
+        &mut s,
+        Command::Receive {
+            receipt_id: receipt.clone(),
+            line_id: "first".into(),
+            quantity: 2,
+            location: "RECV-01".into(),
+        },
+    );
+    apply(
+        &mut s,
+        Command::Receive {
+            receipt_id: receipt.clone(),
+            line_id: "second".into(),
+            quantity: 3,
+            location: "RECV-01".into(),
+        },
+    );
+    let movements: Vec<_> = s
+        .movements
+        .iter()
+        .filter(|m| m.receipt_id.as_deref() == Some(receipt.as_str()))
+        .collect();
+    assert_eq!(movements[0].receipt_line_id.as_deref(), Some("first"));
+    assert_eq!(movements[1].receipt_line_id.as_deref(), Some("second"));
+    s.validate()
+        .expect("identical SKU/lot receipt lines are separately evidenced");
+    s.movements
+        .last_mut()
+        .expect("second line movement")
+        .receipt_line_id = Some("first".into());
+    assert!(s.validate().is_err());
+}
+
+#[test]
+fn receipt_evidence_rejects_wrong_reference_ownership_and_missing_identity() {
+    let fixture = fixture(10);
+    for alteration in 0..4 {
+        let mut s = fixture.clone();
+        let movement = s
+            .movements
+            .iter_mut()
+            .find(|m| m.kind == "receipt")
+            .expect("receipt movement");
+        match alteration {
+            0 => movement.reference = "OTHER-REFERENCE".into(),
+            1 => movement.receipt_id = Some("other-receipt".into()),
+            2 => movement.receipt_line_id = Some("other-line".into()),
+            _ => {
+                movement.receipt_id = None;
+                movement.receipt_line_id = None;
+            }
+        }
+        assert!(s.validate().is_err());
+    }
+}
+
+#[test]
+fn allocation_status_and_unique_ownership_are_validated_independently() {
+    let mut s = fixture(10);
+    let oid = order(&mut s, "SO-STATUS", &[4]);
+    apply(
+        &mut s,
+        Command::Allocate {
+            order_id: oid.clone(),
+        },
+    );
+    let mut forged = s.clone();
+    forged
+        .orders
+        .iter_mut()
+        .find(|o| o.id == oid)
+        .expect("order")
+        .status = "picking".into();
+    assert!(forged
+        .validate()
+        .expect_err("picking requires physical work")
+        .contains("partial pick"));
+    let mut forged = s.clone();
+    let order = forged
+        .orders
+        .iter_mut()
+        .find(|o| o.id == oid)
+        .expect("order");
+    order.allocations[0].quantity = 2;
+    order.allocations.push(order.allocations[0].clone());
+    assert!(forged
+        .validate()
+        .expect_err("duplicate allocations can strand picks")
+        .contains("ownership identity"));
+    apply(
+        &mut s,
+        Command::Pick {
+            order_id: oid.clone(),
+            line_id: "line-0".into(),
+            location: "A-01".into(),
+            lot: "LOT-1".into(),
+            quantity: 2,
+        },
+    );
+    let mut forged = s.clone();
+    forged
+        .orders
+        .iter_mut()
+        .find(|o| o.id == oid)
+        .expect("order")
+        .status = "allocated".into();
+    assert!(forged
+        .validate()
+        .expect_err("allocated status must expose physical pick")
+        .contains("picked stock"));
+    let movement = s.movements.last().expect("pick movement").clone();
+    s.movements.push(movement);
+    assert!(s
+        .validate()
+        .expect_err("movement evidence cannot be replayed under same ID")
+        .contains("physical movement"));
+}
+
+#[test]
+fn legacy_receipt_identity_is_backfilled_only_when_unambiguous() {
+    let mut s = fixture(10);
+    let mut value = serde_json::to_value(&s).expect("serialize original snapshot");
+    for movement in value["movements"].as_array_mut().expect("movements") {
+        movement
+            .as_object_mut()
+            .expect("object")
+            .remove("receipt_id");
+        movement
+            .as_object_mut()
+            .expect("object")
+            .remove("receipt_line_id");
+    }
+    s = serde_json::from_value(value).expect("legacy receipt fields default during parsing");
+    s.upgrade_legacy_receipt_evidence()
+        .expect("unambiguous original line");
+    s.validate()
+        .expect("backfilled original evidence remains valid");
+
+    let mut ambiguous = fixture(10);
+    let receipt = &mut ambiguous.receipts[0];
+    receipt.lines.push(ReceiptLine {
+        id: "duplicate".into(),
+        sku: "SKU-A".into(),
+        lot: "LOT-1".into(),
+        quantity: 1,
+        received: 0,
+    });
+    for movement in ambiguous
+        .movements
+        .iter_mut()
+        .filter(|m| m.kind == "receipt")
+    {
+        movement.receipt_id = None;
+        movement.receipt_line_id = None;
+    }
+    let before = ambiguous.clone();
+    assert!(ambiguous
+        .upgrade_legacy_receipt_evidence()
+        .expect_err("must not guess duplicate line ownership")
+        .contains("original line identity"));
+    assert_eq!(ambiguous, before);
+}
+
+#[test]
+fn short_pick_can_be_returned_recounted_replenished_and_reallocated() {
+    let mut s = fixture(10);
+    let oid = order(&mut s, "SO-SHORT", &[8]);
+    apply(
+        &mut s,
+        Command::Allocate {
+            order_id: oid.clone(),
+        },
+    );
+    apply(
+        &mut s,
+        Command::Pick {
+            order_id: oid.clone(),
+            line_id: "line-0".into(),
+            location: "A-01".into(),
+            lot: "LOT-1".into(),
+            quantity: 3,
+        },
+    );
+    let exception = apply(
+        &mut s,
+        Command::ReportException {
+            order_id: Some(oid.clone()),
+            category: "Short pick".into(),
+            detail: "Only three physical units found; source bin is empty".into(),
+        },
+    );
+    assert!(s
+        .execute(
+            &Command::ResetAllocation {
+                order_id: oid.clone(),
+                reason: "Recount required".into(),
+            },
+            "op"
+        )
+        .expect_err("staged ownership must be preserved")
+        .contains("staged"));
+
+    // Recovery remains available while the order is blocked. The returned three
+    // units are physically observed; no fictional completion of the pick occurs.
+    apply(
+        &mut s,
+        Command::Unpick {
+            order_id: oid.clone(),
+            line_id: "line-0".into(),
+            location: "A-01".into(),
+            lot: "LOT-1".into(),
+            quantity: 3,
+            reason: "Return verified units for recount".into(),
+        },
+    );
+    assert_eq!(stock(&s, "A-01"), (10, 8));
+    assert_eq!(stock(&s, "STAGE-01"), (0, 0));
+    apply(
+        &mut s,
+        Command::ResetAllocation {
+            order_id: oid.clone(),
+            reason: "Release reservations for physical recount".into(),
+        },
+    );
+    assert_eq!(stock(&s, "A-01"), (10, 0));
+    assert_eq!(
+        s.orders.iter().find(|o| o.id == oid).expect("order").status,
+        "pending"
+    );
+    assert!(s
+        .activity
+        .last()
+        .expect("audit")
+        .detail
+        .contains("physical recount"));
+    apply(
+        &mut s,
+        Command::CountStock {
+            sku: "SKU-A".into(),
+            lot: "LOT-1".into(),
+            location: "A-01".into(),
+            counted: 3,
+            reason: "Physical recount: three returned units only".into(),
+        },
+    );
+    apply(
+        &mut s,
+        Command::ResolveException {
+            exception_id: exception,
+            resolution: "Recount confirms three; five units replenishing".into(),
+        },
+    );
+    assert!(s
+        .execute(
+            &Command::Allocate {
+                order_id: oid.clone()
+            },
+            "op"
+        )
+        .is_err());
+    assert_eq!(stock(&s, "A-01"), (3, 0));
+    let receipt = apply(
+        &mut s,
+        Command::CreateReceipt {
+            reference: "RCV-REPLENISH".into(),
+            supplier: "Supplier".into(),
+            lines: vec![ReceiptInput {
+                id: "replenish".into(),
+                sku: "SKU-A".into(),
+                lot: "LOT-1".into(),
+                quantity: 5,
+            }],
+        },
+    );
+    apply(
+        &mut s,
+        Command::Receive {
+            receipt_id: receipt,
+            line_id: "replenish".into(),
+            quantity: 5,
+            location: "RECV-01".into(),
+        },
+    );
+    apply(
+        &mut s,
+        Command::MoveStock {
+            sku: "SKU-A".into(),
+            lot: "LOT-1".into(),
+            from: "RECV-01".into(),
+            to: "A-01".into(),
+            quantity: 5,
+        },
+    );
+    apply(
+        &mut s,
+        Command::Allocate {
+            order_id: oid.clone(),
+        },
+    );
+    apply(
+        &mut s,
+        Command::Pick {
+            order_id: oid.clone(),
+            line_id: "line-0".into(),
+            location: "A-01".into(),
+            lot: "LOT-1".into(),
+            quantity: 8,
+        },
+    );
+    apply(
+        &mut s,
+        Command::Pack {
+            order_id: oid.clone(),
+        },
+    );
+    apply(
+        &mut s,
+        Command::Ship {
+            order_id: oid,
+            carrier: "Carrier".into(),
+            handoff_reference: "SHORT-RECOVERED".into(),
+        },
+    );
+    assert_eq!(s.stocks.iter().map(|b| b.on_hand).sum::<i64>(), 0);
+    assert!(s.reconciliation().iter().all(|r| r["ok"] == true));
+    assert_eq!(
+        s.movements
+            .iter()
+            .filter(|m| m.kind == "count")
+            .map(|m| m.quantity)
+            .sum::<i64>(),
+        7
+    );
+}
+
+#[test]
+fn recovery_preserves_exact_line_and_order_ownership_and_invalidates_packing() {
+    let mut s = fixture(12);
+    let first = order(&mut s, "SO-RETURN-A", &[4, 2]);
+    let second = order(&mut s, "SO-RETURN-B", &[3]);
+    apply(
+        &mut s,
+        Command::Allocate {
+            order_id: first.clone(),
+        },
+    );
+    apply(
+        &mut s,
+        Command::Allocate {
+            order_id: second.clone(),
+        },
+    );
+    for (line, q) in [("line-0", 4), ("line-1", 2)] {
+        apply(
+            &mut s,
+            Command::Pick {
+                order_id: first.clone(),
+                line_id: line.into(),
+                location: "A-01".into(),
+                lot: "LOT-1".into(),
+                quantity: q,
+            },
+        );
+    }
+    apply(
+        &mut s,
+        Command::Pick {
+            order_id: second.clone(),
+            line_id: "line-0".into(),
+            location: "A-01".into(),
+            lot: "LOT-1".into(),
+            quantity: 3,
+        },
+    );
+    apply(
+        &mut s,
+        Command::Pack {
+            order_id: first.clone(),
+        },
+    );
+    let before = s.clone();
+    assert!(s
+        .execute(
+            &Command::Unpick {
+                order_id: first.clone(),
+                line_id: "line-1".into(),
+                location: "A-01".into(),
+                lot: "LOT-1".into(),
+                quantity: 3,
+                reason: "Must not consume the other line's staging stock".into(),
+            },
+            "op"
+        )
+        .is_err());
+    assert_eq!(s, before);
+    apply(
+        &mut s,
+        Command::Unpick {
+            order_id: first.clone(),
+            line_id: "line-1".into(),
+            location: "A-01".into(),
+            lot: "LOT-1".into(),
+            quantity: 2,
+            reason: "Verify staging label".into(),
+        },
+    );
+    let first_order = s
+        .orders
+        .iter()
+        .find(|o| o.id == first)
+        .expect("first order");
+    assert_eq!(first_order.status, "picking");
+    assert_eq!(
+        first_order
+            .allocations
+            .iter()
+            .find(|a| a.line_id == "line-0")
+            .expect("line 0")
+            .picked,
+        4
+    );
+    assert_eq!(
+        s.orders
+            .iter()
+            .find(|o| o.id == second)
+            .expect("second order")
+            .allocations[0]
+            .picked,
+        3
+    );
+    assert_eq!(stock(&s, "STAGE-01"), (7, 7));
+    assert!(s
+        .execute(
+            &Command::Ship {
+                order_id: first,
+                carrier: "Carrier".into(),
+                handoff_reference: "Invalidated pack".into(),
+            },
+            "op"
+        )
+        .is_err());
+    s.validate().expect("all stock retains exact ownership");
+}
+
+#[test]
+fn recovery_rejects_completed_work_and_unauthorized_roles() {
+    for command in [
+        Command::Unpick {
+            order_id: "id".into(),
+            line_id: "line".into(),
+            location: "A-01".into(),
+            lot: "LOT-1".into(),
+            quantity: 1,
+            reason: "Reason".into(),
+        },
+        Command::ResetAllocation {
+            order_id: "id".into(),
+            reason: "Reason".into(),
+        },
+    ] {
+        assert!(command.allowed("admin"));
+        assert!(command.allowed("operator"));
+        assert!(!command.allowed("oms"));
+        assert!(!command.allowed("viewer"));
+    }
+    let mut s = fixture(3);
+    let oid = order(&mut s, "SO-COMPLETE", &[3]);
+    apply(
+        &mut s,
+        Command::Allocate {
+            order_id: oid.clone(),
+        },
+    );
+    apply(
+        &mut s,
+        Command::Pick {
+            order_id: oid.clone(),
+            line_id: "line-0".into(),
+            location: "A-01".into(),
+            lot: "LOT-1".into(),
+            quantity: 3,
+        },
+    );
+    apply(
+        &mut s,
+        Command::Pack {
+            order_id: oid.clone(),
+        },
+    );
+    apply(
+        &mut s,
+        Command::Ship {
+            order_id: oid.clone(),
+            carrier: "Carrier".into(),
+            handoff_reference: "SHIPPED".into(),
+        },
+    );
+    let before = s.clone();
+    assert!(s
+        .execute(
+            &Command::Unpick {
+                order_id: oid.clone(),
+                line_id: "line-0".into(),
+                location: "A-01".into(),
+                lot: "LOT-1".into(),
+                quantity: 1,
+                reason: "Too late".into()
+            },
+            "op"
+        )
+        .is_err());
+    assert!(s
+        .execute(
+            &Command::ResetAllocation {
+                order_id: oid,
+                reason: "Too late".into()
+            },
+            "op"
+        )
+        .is_err());
+    assert_eq!(s, before);
+}
+
+#[test]
+fn opening_physical_balances_reconcile_new_movement_deltas_but_not_reservations() {
+    let mut s = fixture(10);
+    s.inventory_baseline = s.stocks.clone();
+    s.receipt_baseline = s
+        .receipts
+        .iter()
+        .map(|receipt| {
+            (
+                receipt.id.clone(),
+                receipt
+                    .lines
+                    .iter()
+                    .map(|line| (line.id.clone(), line.received))
+                    .collect(),
+            )
+        })
+        .collect();
+    s.movements.clear();
+    let oid = order(&mut s, "SO-BASELINE", &[3]);
+    apply(
+        &mut s,
+        Command::Allocate {
+            order_id: oid.clone(),
+        },
+    );
+    apply(
+        &mut s,
+        Command::Pick {
+            order_id: oid,
+            line_id: "line-0".into(),
+            location: "A-01".into(),
+            lot: "LOT-1".into(),
+            quantity: 2,
+        },
+    );
+    assert_eq!(stock(&s, "A-01"), (8, 1));
+    assert_eq!(stock(&s, "STAGE-01"), (2, 2));
+    s.validate().expect("baseline plus deltas reconciles");
+    s.stocks
+        .iter_mut()
+        .find(|b| b.location == "A-01")
+        .expect("bin")
+        .on_hand += 1;
+    assert!(s.validate().is_err());
+}
 #[test]
 fn rejects_fractional_quantities_unknown_fields_and_role_escalation() {
     assert!(serde_json::from_value::<Command>(serde_json::json!({"type":"pick","order_id":"1","line_id":"1","location":"A","lot":"L","quantity":1.5})).is_err());
@@ -486,5 +1090,29 @@ proptest! {
         prop_assert_eq!(s.stocks.iter().map(|b|b.reserved).sum::<i64>(),total);
         apply(&mut s,Command::Pick{order_id:oid,line_id:"line-0".into(),location:"A-01".into(),lot:"LOT-1".into(),quantity:total-first});
         prop_assert_eq!(stock(&s,"A-01"),(100-total,0));prop_assert_eq!(stock(&s,"STAGE-01"),(total,total));
+    }
+    #[test]
+    fn arbitrary_pick_returns_preserve_stock_and_line_reservations(actions in prop::collection::vec((any::<bool>(),1i64..20),1..60)) {
+        let mut s=fixture(50);
+        let oid=order(&mut s,"SO-RECOVERY-PROP",&[20,10]);
+        apply(&mut s,Command::Allocate{order_id:oid.clone()});
+        for (returning,q) in actions {
+            let command=if returning {
+                Command::Unpick{order_id:oid.clone(),line_id:"line-0".into(),location:"A-01".into(),lot:"LOT-1".into(),quantity:q,reason:"Verified physical return".into()}
+            } else {
+                Command::Pick{order_id:oid.clone(),line_id:"line-0".into(),location:"A-01".into(),lot:"LOT-1".into(),quantity:q}
+            };
+            let before=s.clone();
+            match s.execute(&command,"property:operator") {
+                Ok((next,_))=>s=next,
+                Err(_)=>prop_assert_eq!(&s,&before),
+            }
+            prop_assert!(s.validate().is_ok());
+            prop_assert_eq!(s.stocks.iter().map(|b|b.on_hand).sum::<i64>(),50);
+            prop_assert_eq!(s.stocks.iter().map(|b|b.reserved).sum::<i64>(),30);
+            let order=s.orders.iter().find(|order|order.id==oid).expect("order");
+            prop_assert_eq!(order.allocations.iter().find(|a|a.line_id=="line-1").expect("untouched line").picked,0);
+            prop_assert!(s.reconciliation().iter().all(|row|row["ok"]==true));
+        }
     }
 }

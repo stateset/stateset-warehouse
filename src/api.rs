@@ -3,7 +3,7 @@ use crate::{
     store::{Error, Identity, Request, Store},
 };
 use axum::{
-    extract::{DefaultBodyLimit, Path, Request as HttpRequest, State},
+    extract::{DefaultBodyLimit, Path, Query, Request as HttpRequest, State},
     http::{HeaderMap, StatusCode},
     middleware::{self, Next},
     response::{IntoResponse, Response},
@@ -64,7 +64,12 @@ async fn authenticate(
     response
 }
 async fn session(State(app): State<App>, Extension(i): Extension<Identity>) -> Json<Value> {
-    Json(json!({"identity":i,"demo":app.demo,"integrations":app.connections.status(&i.tenant)}))
+    let native = crate::native::NativeIntegrations::from_env()
+        .map(|c| c.summary(&i.tenant))
+        .unwrap_or_else(|_| json!({"error":"Native integration configuration requires repair"}));
+    Json(
+        json!({"identity":i,"demo":app.demo,"integrations":app.connections.status(&i.tenant),"native_integrations":native}),
+    )
 }
 async fn warehouses(
     State(app): State<App>,
@@ -88,10 +93,40 @@ async fn reconcile(
     Extension(i): Extension<Identity>,
     Path(w): Path<String>,
 ) -> Result<Json<Value>, Error> {
-    let s = app.store.state(&i.tenant, &w).await?;
-    let rows = s.reconciliation();
-    let valid = s.validate().is_ok();
-    Ok(Json(json!({"version":s.version,"ok":valid,"rows":rows})))
+    Ok(Json(app.store.reconciliation(&i.tenant, &w).await?))
+}
+#[derive(serde::Deserialize)]
+struct HistoryQuery {
+    before: Option<i64>,
+    limit: Option<i64>,
+}
+async fn history(
+    State(app): State<App>,
+    Extension(i): Extension<Identity>,
+    Path((w, kind)): Path<(String, String)>,
+    Query(q): Query<HistoryQuery>,
+) -> Result<Json<Value>, Error> {
+    Ok(Json(
+        app.store
+            .history(&i.tenant, &w, &kind, q.before, q.limit.unwrap_or(50))
+            .await?,
+    ))
+}
+async fn order_detail(
+    State(app): State<App>,
+    Extension(i): Extension<Identity>,
+    Path((w, id)): Path<(String, String)>,
+) -> Result<Json<Value>, Error> {
+    Ok(Json(app.store.detail(&i.tenant, &w, "orders", &id).await?))
+}
+async fn receipt_detail(
+    State(app): State<App>,
+    Extension(i): Extension<Identity>,
+    Path((w, id)): Path<(String, String)>,
+) -> Result<Json<Value>, Error> {
+    Ok(Json(
+        app.store.detail(&i.tenant, &w, "receipts", &id).await?,
+    ))
 }
 async fn command(
     State(app): State<App>,
@@ -142,6 +177,12 @@ pub fn router(app: App) -> Router {
         .route("/v1/warehouses", get(warehouses))
         .route("/v1/warehouses/{warehouse}", get(state))
         .route("/v1/warehouses/{warehouse}/reconciliation", get(reconcile))
+        .route("/v1/warehouses/{warehouse}/history/{kind}", get(history))
+        .route("/v1/warehouses/{warehouse}/orders/{id}", get(order_detail))
+        .route(
+            "/v1/warehouses/{warehouse}/receipts/{id}",
+            get(receipt_detail),
+        )
         .route("/v1/warehouses/{warehouse}/commands", post(command))
         .route(
             "/v1/warehouses/{warehouse}/commands/{request}",
@@ -150,6 +191,7 @@ pub fn router(app: App) -> Router {
         .route("/v1/warehouses/{warehouse}/outbox", get(outbox))
         .route("/v1/outbox/{id}/retry", post(retry))
         .route("/v1/events/{id}", get(event))
+        .merge(crate::native_api::router())
         .route_layer(middleware::from_fn_with_state(app.clone(), authenticate));
     Router::new()
         .merge(protected)

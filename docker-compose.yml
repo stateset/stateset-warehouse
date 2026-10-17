@@ -22,6 +22,7 @@ services:
       WMS_BIND: 0.0.0.0:8088
       WMS_DEMO: "false"
       WMS_API_KEYS_JSON: ${WMS_API_KEYS_JSON:-}
+      WMS_NATIVE_INTEGRATIONS_JSON: ${WMS_NATIVE_INTEGRATIONS_JSON:-}
     ports:
       - "127.0.0.1:8088:8088"
     depends_on:

@@ -6,6 +6,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
+import NativePanel from "./NativePanel";
 import {
   Activity as ActivityIcon,
   ArrowDownLeft,
@@ -44,8 +45,12 @@ import {
 } from "lucide-react";
 import type {
   Allocation,
+  Activity,
   Command,
   Journal,
+  HistoryData,
+  HistoryKind,
+  HistoryPage,
   Order,
   Outbox,
   Receipt,
@@ -88,6 +93,28 @@ type Modal =
   | { receipt: string }
   | { help: true }
   | null;
+type HistoryState = {
+  [K in HistoryKind]?: {
+    items: HistoryData[K][];
+    nextCursor: number | null;
+    loading: boolean;
+  };
+};
+type ReconciliationProof = {
+  ok: boolean;
+  rows: Record<string, unknown>[];
+  receipts?: Record<string, unknown>[];
+  version: number;
+  method?: string;
+};
+function mergeRecords<T extends { id: string }>(
+  current: T[],
+  older: T[] = [],
+): T[] {
+  const records = new Map(older.map((item) => [item.id, item]));
+  for (const item of current) records.set(item.id, item);
+  return [...records.values()];
+}
 const nav: { id: Tab; title: string; icon: typeof Box }[] = [
   { id: "overview", title: "Overview", icon: LayoutDashboard },
   { id: "receiving", title: "Receiving", icon: ArrowDownToLine },
@@ -451,6 +478,8 @@ export default function App() {
   const modalVersion = useRef<number | null>(null);
   const setModal = (next: Modal) => {
     modalVersion.current = next ? (state?.version ?? null) : null;
+    if (next && ("order" in next || "receipt" in next)) setDetail(null);
+    setError("");
     rawSetModal(next);
   };
   const [error, setError] = useState("");
@@ -459,12 +488,23 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [journal, setJournal] = useState<Journal | null>(null);
   const [recoveryBlocked, setRecoveryBlocked] = useState(false);
+  const [nativeBlocked, setNativeBlocked] = useState(false);
   const [outbox, setOutbox] = useState<Outbox[]>([]);
-  const [reconciliation, setReconciliation] = useState<{
-    ok: boolean;
-    rows: Record<string, unknown>[];
-    version: number;
+  const [history, setHistory] = useState<HistoryState>({});
+  const [detail, setDetail] = useState<{
+    key: string;
+    data: Order | Receipt;
   } | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [reconciliation, setReconciliation] =
+    useState<ReconciliationProof | null>(null);
+  const [fullReconciliation, setFullReconciliation] = useState<{
+    warehouse: string;
+    proof: ReconciliationProof;
+  } | null>(null);
+  const [fullReconciliationBusy, setFullReconciliationBusy] = useState(false);
+  const [fullReconciliationError, setFullReconciliationError] = useState("");
+  const reconciliationSequence = useRef(0);
   const epoch = useRef(0);
   const refreshSequence = useRef(0);
   const controllers = useRef(new Set<AbortController>());
@@ -526,6 +566,73 @@ export default function App() {
     },
     [request],
   );
+  const runFullReconciliation = useCallback(
+    async (warehouse: string) => {
+      const current = epoch.current;
+      const sequence = ++reconciliationSequence.current;
+      setFullReconciliationBusy(true);
+      setFullReconciliationError("");
+      try {
+        const proof: ReconciliationProof = await request(
+          `/v1/warehouses/${encodeURIComponent(warehouse)}/reconciliation`,
+        );
+        if (
+          current === epoch.current &&
+          sequence === reconciliationSequence.current
+        )
+          setFullReconciliation({ warehouse, proof });
+      } catch (e) {
+        if (
+          current === epoch.current &&
+          sequence === reconciliationSequence.current
+        )
+          setFullReconciliationError((e as Error).message);
+      } finally {
+        if (
+          current === epoch.current &&
+          sequence === reconciliationSequence.current
+        )
+          setFullReconciliationBusy(false);
+      }
+    },
+    [request],
+  );
+  useEffect(() => {
+    if (tab === "activity" && state?.warehouse.id)
+      void runFullReconciliation(state.warehouse.id);
+  }, [tab, state?.warehouse.id, state?.version, runFullReconciliation]);
+  const detailKey =
+    modal && "order" in modal
+      ? `orders/${encodeURIComponent(modal.order)}`
+      : modal && "receipt" in modal
+        ? `receipts/${encodeURIComponent(modal.receipt)}`
+        : null;
+  useEffect(() => {
+    if (!detailKey || !state?.warehouse.id) return;
+    let cancelled = false;
+    setDetail(null);
+    setDetailLoading(true);
+    setError("");
+    void request(
+      `/v1/warehouses/${encodeURIComponent(state.warehouse.id)}/${detailKey}`,
+    )
+      .then((data) => {
+        if (!cancelled)
+          setDetail({
+            key: detailKey,
+            data: data.order ?? data.receipt ?? data,
+          });
+      })
+      .catch((e) => {
+        if (!cancelled) setError((e as Error).message);
+      })
+      .finally(() => {
+        if (!cancelled) setDetailLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [detailKey, state?.warehouse.id, request]);
   useEffect(() => {
     if (!token) return;
     const current = ++epoch.current;
@@ -591,8 +698,14 @@ export default function App() {
     setToken("");
     setSession(null);
     setState(null);
+    setFullReconciliation(null);
+    setFullReconciliationBusy(false);
+    setFullReconciliationError("");
+    setHistory({});
+    setDetail(null);
     setJournal(null);
     setRecoveryBlocked(false);
+    setNativeBlocked(false);
     setModal(null);
     setError("");
     setBusy(false);
@@ -654,7 +767,15 @@ export default function App() {
     }
   };
   const submit = async (command: Command) => {
-    if (!state || !session || journal || busy || recoveryBlocked) return;
+    if (
+      !state ||
+      !session ||
+      journal ||
+      busy ||
+      recoveryBlocked ||
+      nativeBlocked
+    )
+      return;
     const j: Journal = {
       tenant: session.identity.tenant,
       actor: session.identity.actor,
@@ -791,8 +912,87 @@ export default function App() {
 
   const admin = session.identity.role === "admin";
   const canWork = ["admin", "operator"].includes(session.identity.role);
-  const disabled = busy || !!journal || recoveryBlocked;
-  const s = state;
+  const disabled = busy || !!journal || recoveryBlocked || nativeBlocked;
+  const s = {
+    ...state,
+    orders: mergeRecords(state.orders, history.orders?.items),
+    receipts: mergeRecords(state.receipts, history.receipts?.items).sort(
+      (a, b) => a.created_at.localeCompare(b.created_at),
+    ),
+    movements: mergeRecords(state.movements, history.movements?.items).sort(
+      (a, b) => a.at.localeCompare(b.at),
+    ),
+    exceptions: mergeRecords(state.exceptions, history.exceptions?.items),
+    activity: mergeRecords(state.activity, history.activity?.items).sort(
+      (a, b) => a.at.localeCompare(b.at),
+    ),
+  };
+  const fullProof =
+    fullReconciliation?.warehouse === s.warehouse.id
+      ? fullReconciliation.proof
+      : null;
+  const fullProofReady =
+    !!fullProof &&
+    fullProof.version === s.version &&
+    !fullReconciliationBusy &&
+    !fullReconciliationError;
+  const fullProofOk = fullProofReady && fullProof.ok;
+  const loadHistory = async <K extends HistoryKind>(kind: K) => {
+    const previous = history[kind];
+    if (previous?.loading || (previous && previous.nextCursor === null)) return;
+    const currentEpoch = epoch.current;
+    setHistory((value) => ({
+      ...value,
+      [kind]: {
+        items: previous?.items ?? [],
+        nextCursor: previous?.nextCursor ?? null,
+        loading: true,
+      },
+    }));
+    try {
+      const before = previous?.nextCursor;
+      const page: HistoryPage<HistoryData[K]> = await request(
+        `/v1/warehouses/${encodeURIComponent(s.warehouse.id)}/history/${kind}?limit=50${before == null ? "" : `&before=${before}`}`,
+      );
+      if (currentEpoch !== epoch.current) return;
+      setHistory((value) => ({
+        ...value,
+        [kind]: {
+          items: mergeRecords(
+            page.items.map((item) => item.data),
+            previous?.items,
+          ),
+          nextCursor: page.next_cursor,
+          loading: false,
+        },
+      }));
+    } catch (e) {
+      if (currentEpoch !== epoch.current) return;
+      setError((e as Error).message);
+      setHistory((value) => ({ ...value, [kind]: previous }));
+    }
+  };
+  const historyControl = (kind: HistoryKind) => (
+    <div className="detail-actions">
+      {history[kind]?.nextCursor === null && !history[kind]?.loading ? (
+        <span>All {kind === "activity" ? "audit records" : kind} loaded</span>
+      ) : (
+        <button
+          className="btn"
+          disabled={history[kind]?.loading}
+          onClick={() => void loadHistory(kind)}
+        >
+          {history[kind]?.loading ? (
+            <Loader2 size={16} className="spin" />
+          ) : (
+            <Clock3 size={16} />
+          )}
+          {history[kind] ? "Load older" : "Browse"}{" "}
+          {kind === "activity" ? "audit records" : kind} history
+        </button>
+      )}
+    </div>
+  );
   const totals = {
     onHand: s.stocks.reduce((n, x) => n + x.on_hand, 0),
     reserved: s.stocks.reduce((n, x) => n + x.reserved, 0),
@@ -1059,13 +1259,18 @@ export default function App() {
     </div>
   );
   const selectedOrder =
-    modal && "order" in modal
-      ? s.orders.find((o) => o.id === modal.order)
+    modal && "order" in modal && detail?.key === detailKey
+      ? (detail.data as Order)
       : undefined;
   const selectedReceipt =
-    modal && "receipt" in modal
-      ? s.receipts.find((r) => r.id === modal.receipt)
+    modal && "receipt" in modal && detail?.key === detailKey
+      ? (detail.data as Receipt)
       : undefined;
+  const orderBlocked =
+    !!selectedOrder &&
+    s.exceptions.some(
+      (issue) => issue.order_id === selectedOrder.id && issue.status === "open",
+    );
 
   return (
     <div className="app-shell">
@@ -1184,6 +1389,18 @@ export default function App() {
           </div>
         </header>
         <main>
+          {nativeBlocked && tab !== "integrations" && (
+            <div className="alert info" role="status">
+              An integration request needs confirmation. Open Integrations to
+              check or retry the original request.
+              <button
+                className="mini-btn"
+                onClick={() => setTab("integrations")}
+              >
+                Open integrations
+              </button>
+            </div>
+          )}
           {session.demo && (
             <div className="demo-banner">
               <span>
@@ -1469,9 +1686,11 @@ export default function App() {
                 <section className="warehouse-card">
                   <div className="warehouse-card-top">
                     <span className="warehouse-code">{s.warehouse.code}</span>
-                    <Badge tone="green">
+                    <Badge tone={reconciliation?.ok ? "green" : "red"}>
                       <span className="live-dot" />
-                      {reconciliation?.ok ? "Reconciled" : "Review required"}
+                      {reconciliation?.ok
+                        ? "Operational balances checked"
+                        : "Balances require review"}
                     </Badge>
                   </div>
                   <h2>{s.warehouse.name}</h2>
@@ -1665,6 +1884,7 @@ export default function App() {
                                   "receipt",
                                   "putaway",
                                   "pick",
+                                  "unpick",
                                   "shipment",
                                   "count",
                                 ]),
@@ -1929,6 +2149,7 @@ export default function App() {
                         ),
                     ),
                   )}
+                  {historyControl("orders")}
                 </Section>
               )}
               {tab === "receiving" && (
@@ -2040,6 +2261,7 @@ export default function App() {
                         />
                       )}
                     </div>
+                    {historyControl("receipts")}
                   </Section>
                 </>
               )}
@@ -2139,10 +2361,8 @@ export default function App() {
                                       setModal({ order: e.order_id! })
                                     }
                                   >
-                                    {
-                                      s.orders.find((o) => o.id === e.order_id)
-                                        ?.reference
-                                    }
+                                    {s.orders.find((o) => o.id === e.order_id)
+                                      ?.reference ?? e.order_id}
                                   </button>
                                 </>
                               )}
@@ -2192,31 +2412,65 @@ export default function App() {
                       />
                     )}
                   </div>
+                  {historyControl("exceptions")}
                 </Section>
               )}
               {tab === "activity" && (
                 <>
                   <div
-                    className={`reconciliation-banner ${reconciliation?.ok ? "" : "failed"}`}
+                    className={`reconciliation-banner ${fullProofOk ? "" : "failed"}`}
                   >
                     <ShieldCheck size={22} />
                     <div>
                       <strong>
-                        {reconciliation?.ok
-                          ? "Inventory ledger reconciles"
-                          : "Reconciliation needs review"}
+                        {fullReconciliationBusy
+                          ? "Checking full inventory history…"
+                          : fullReconciliationError
+                            ? "Full reconciliation unavailable"
+                            : fullProofReady
+                              ? fullProofOk
+                                ? "Inventory ledger reconciles"
+                                : "Full reconciliation needs review"
+                              : "Full reconciliation needs refresh"}
                       </strong>
                       <p>
-                        Physical balances match movement evidence. Reserved
-                        balances match order-line allocations. Checked at
-                        version {reconciliation?.version}.
+                        {fullProofReady
+                          ? fullProofOk
+                            ? `All physical balances and receipt line totals match the complete movement history. Reservations match order-line allocations. Independently checked at version ${fullProof?.version}.`
+                            : `Differences were found while rebuilding the complete movement history, receipt totals, and reservations at version ${fullProof?.version}. Review the exported proof before continuing.`
+                          : "This check rebuilds physical balances, received line totals, and reservations from the complete recorded history."}
                       </p>
+                      {fullReconciliationError && (
+                        <p role="alert">{fullReconciliationError}</p>
+                      )}
                     </div>
                     <button
                       className="btn"
-                      onClick={() =>
-                        csv("reconciliation.csv", reconciliation?.rows ?? [])
-                      }
+                      disabled={fullReconciliationBusy}
+                      onClick={() => void runFullReconciliation(s.warehouse.id)}
+                    >
+                      <RefreshCw
+                        size={16}
+                        className={fullReconciliationBusy ? "spin" : ""}
+                      />
+                      Run full reconciliation
+                    </button>
+                    <button
+                      className="btn"
+                      disabled={!fullProofReady}
+                      onClick={() => {
+                        if (!fullProofReady || !fullProof) return;
+                        const url = URL.createObjectURL(
+                          new Blob([JSON.stringify(fullProof, null, 2)], {
+                            type: "application/json",
+                          }),
+                        );
+                        const link = document.createElement("a");
+                        link.href = url;
+                        link.download = `warehouse-reconciliation-v${fullProof.version}.json`;
+                        link.click();
+                        URL.revokeObjectURL(url);
+                      }}
                     >
                       <Download size={16} />
                       Export proof
@@ -2285,6 +2539,11 @@ export default function App() {
                                 <td>
                                   {m.reference}
                                   <span className="subline">{m.reason}</span>
+                                  {m.receipt_line_id && (
+                                    <span className="subline">
+                                      Receipt line {m.receipt_line_id}
+                                    </span>
+                                  )}
                                 </td>
                                 <td>
                                   {m.actor}
@@ -2301,9 +2560,65 @@ export default function App() {
                         />
                       )}
                     </div>
+                    {historyControl("movements")}
+                  </Section>
+                  <Section
+                    title="Command audit"
+                    detail="Recorded warehouse actions, reasons, and responsible operators."
+                  >
+                    <div className="table-scroll">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Action</th>
+                            <th>Reference / evidence</th>
+                            <th>Actor / time</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {s.activity
+                            .slice()
+                            .reverse()
+                            .filter((item: Activity) =>
+                              matches(
+                                item.kind,
+                                item.reference,
+                                item.detail,
+                                item.actor,
+                              ),
+                            )
+                            .map((item: Activity) => (
+                              <tr key={item.id}>
+                                <td>{label(item.kind)}</td>
+                                <td>
+                                  {item.reference}
+                                  <span className="subline">{item.detail}</span>
+                                </td>
+                                <td>
+                                  {item.actor}
+                                  <span className="subline">
+                                    {when(item.at)}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {historyControl("activity")}
                   </Section>
                 </>
               )}
+              <NativePanel
+                key={`${session.identity.tenant}:${session.identity.actor}`}
+                session={session}
+                state={s}
+                active={tab === "integrations"}
+                blocked={busy || !!journal || recoveryBlocked}
+                request={request}
+                refresh={refresh}
+                onPending={setNativeBlocked}
+              />
               {tab === "integrations" && (
                 <>
                   <div className="integration-cards">
@@ -2338,9 +2653,10 @@ export default function App() {
                   <div className="alert info">
                     <Link2 size={18} />
                     <p>
-                      OMS and TMS delivery uses a proposed WMS event-receiver
-                      contract. Existing native receiver compatibility has not
-                      been verified. Unconfigured events remain pending.
+                      The queue below uses the optional WMS event-receiver
+                      contract. Configure a receiver that supports this contract
+                      to deliver these events. Native OMS imports and TMS
+                      planning use the workflows above.
                     </p>
                   </div>
                   <Section
@@ -2480,6 +2796,19 @@ export default function App() {
           )}
         </ModalFrame>
       )}
+      {detailKey && !selectedOrder && !selectedReceipt && (
+        <ModalFrame title="Warehouse record" close={closeModal}>
+          <div className="detail-body">
+            {detailLoading ? (
+              <p role="status">
+                <Loader2 size={18} className="spin" /> Loading current record…
+              </p>
+            ) : (
+              <p role="alert">{error || "This record is unavailable."}</p>
+            )}
+          </div>
+        </ModalFrame>
+      )}
       {selectedOrder && (
         <ModalFrame
           title={`${selectedOrder.reference} · ${selectedOrder.customer}`}
@@ -2539,7 +2868,7 @@ export default function App() {
                       a.quantity > a.picked && (
                         <button
                           className="btn"
-                          disabled={disabled}
+                          disabled={disabled || orderBlocked}
                           onClick={() =>
                             setModal({
                               title: "Confirm physical pick",
@@ -2566,6 +2895,48 @@ export default function App() {
                           }
                         >
                           Pick units
+                        </button>
+                      )}
+                    {canWork &&
+                      ["picking", "picked", "packed"].includes(
+                        selectedOrder.status,
+                      ) &&
+                      a.picked > a.shipped && (
+                        <button
+                          className="btn"
+                          disabled={disabled}
+                          onClick={() =>
+                            setModal({
+                              title: "Return staged stock",
+                              subtitle: `Physically return ${a.sku}, lot ${a.lot}, from STAGE-01 to ${a.location}. Only line ${a.line_id} is affected. Packing must be confirmed again after recovery.`,
+                              fields: [
+                                {
+                                  name: "quantity",
+                                  label: "Returned quantity (each)",
+                                  type: "number",
+                                  value: a.picked - a.shipped,
+                                  max: a.picked - a.shipped,
+                                },
+                                {
+                                  name: "reason",
+                                  label: "Return evidence / reason",
+                                  type: "textarea",
+                                },
+                              ],
+                              submit: "Confirm physical return",
+                              build: (data) => ({
+                                type: "unpick",
+                                order_id: selectedOrder.id,
+                                line_id: a.line_id,
+                                location: a.location,
+                                lot: a.lot,
+                                quantity: Number(data.quantity),
+                                reason: data.reason,
+                              }),
+                            })
+                          }
+                        >
+                          Return staged units
                         </button>
                       )}
                   </div>
@@ -2606,7 +2977,7 @@ export default function App() {
                   {selectedOrder.status === "pending" && (
                     <button
                       className="btn primary"
-                      disabled={disabled}
+                      disabled={disabled || orderBlocked}
                       onClick={() =>
                         action({ type: "allocate", order_id: selectedOrder.id })
                       }
@@ -2615,10 +2986,41 @@ export default function App() {
                       Allocate stock
                     </button>
                   )}
+                  {selectedOrder.status === "allocated" &&
+                    selectedOrder.allocations.every(
+                      (allocation) => allocation.picked === 0,
+                    ) && (
+                      <button
+                        className="btn"
+                        disabled={disabled}
+                        onClick={() =>
+                          setModal({
+                            title: "Release allocation for recovery",
+                            subtitle:
+                              "All staged stock has been returned. Release this order's reservations so a supervisor can recount the physical stock, then allocate the order again after the issue is resolved.",
+                            fields: [
+                              {
+                                name: "reason",
+                                label: "Allocation release reason",
+                                type: "textarea",
+                              },
+                            ],
+                            submit: "Release reservations",
+                            build: (data) => ({
+                              type: "reset_allocation",
+                              order_id: selectedOrder.id,
+                              reason: data.reason,
+                            }),
+                          })
+                        }
+                      >
+                        Release allocation
+                      </button>
+                    )}
                   {selectedOrder.status === "picked" && (
                     <button
                       className="btn primary"
-                      disabled={disabled}
+                      disabled={disabled || orderBlocked}
                       onClick={() =>
                         action({ type: "pack", order_id: selectedOrder.id })
                       }
@@ -2630,7 +3032,7 @@ export default function App() {
                   {selectedOrder.status === "packed" && (
                     <button
                       className="btn primary"
-                      disabled={disabled}
+                      disabled={disabled || orderBlocked}
                       onClick={() =>
                         setModal({
                           title: "Confirm carrier handoff",

@@ -94,6 +94,10 @@ pub struct Movement {
     pub to: Option<String>,
     pub quantity: i64,
     pub reference: String,
+    #[serde(default)]
+    pub receipt_id: Option<String>,
+    #[serde(default)]
+    pub receipt_line_id: Option<String>,
     pub reason: String,
     pub actor: String,
     pub at: String,
@@ -135,6 +139,13 @@ pub struct State {
     pub products: Vec<Product>,
     pub locations: Vec<Location>,
     pub stocks: Vec<Stock>,
+    /// Physical opening balances when persistence loads only new movement deltas.
+    /// Reserved balances are always rebuilt from current allocation ownership.
+    #[serde(default)]
+    pub inventory_baseline: Vec<Stock>,
+    /// Opening received quantities when only new receipt movements are loaded.
+    #[serde(default)]
+    pub receipt_baseline: BTreeMap<String, BTreeMap<String, i64>>,
     pub receipts: Vec<Receipt>,
     pub orders: Vec<Order>,
     pub movements: Vec<Movement>,
@@ -220,6 +231,18 @@ pub enum Command {
         lot: String,
         quantity: i64,
     },
+    Unpick {
+        order_id: String,
+        line_id: String,
+        location: String,
+        lot: String,
+        quantity: i64,
+        reason: String,
+    },
+    ResetAllocation {
+        order_id: String,
+        reason: String,
+    },
     Pack {
         order_id: String,
     },
@@ -255,6 +278,8 @@ impl Command {
             Self::CreateOrder { .. } => "fulfillment.created",
             Self::Allocate { .. } => "fulfillment.allocated",
             Self::Pick { .. } => "fulfillment.picked",
+            Self::Unpick { .. } => "fulfillment.unpicked",
+            Self::ResetAllocation { .. } => "fulfillment.allocation_reset",
             Self::Pack { .. } => "fulfillment.packed",
             Self::Ship { .. } => "fulfillment.shipped",
             Self::CancelOrder { .. } => "fulfillment.cancelled",
@@ -316,12 +341,52 @@ impl State {
                 },
             ],
             stocks: vec![],
+            inventory_baseline: vec![],
+            receipt_baseline: BTreeMap::new(),
             receipts: vec![],
             orders: vec![],
             movements: vec![],
             exceptions: vec![],
             activity: vec![],
         }
+    }
+    /// Upgrade original snapshots only when receipt ownership is unambiguous.
+    /// Duplicate SKU/lot lines require original receipt evidence, never a guess.
+    pub fn upgrade_legacy_receipt_evidence(&mut self) -> Result<()> {
+        let mut assignments = Vec::new();
+        for (index, movement) in self
+            .movements
+            .iter()
+            .enumerate()
+            .filter(|(_, m)| m.kind == "receipt")
+        {
+            if movement.receipt_id.is_some() || movement.receipt_line_id.is_some() {
+                continue;
+            }
+            let candidates: Vec<_> = self
+                .receipts
+                .iter()
+                .filter(|receipt| receipt.reference == movement.reference)
+                .flat_map(|receipt| {
+                    receipt.lines.iter().filter_map(|line| {
+                        (line.sku == movement.sku && line.lot == movement.lot)
+                            .then_some((receipt.id.clone(), line.id.clone()))
+                    })
+                })
+                .collect();
+            let [(receipt_id, line_id)] = candidates.as_slice() else {
+                return Err(format!(
+                    "Receipt movement {} requires original line identity evidence",
+                    movement.id
+                ));
+            };
+            assignments.push((index, receipt_id.clone(), line_id.clone()));
+        }
+        for (index, receipt_id, line_id) in assignments {
+            self.movements[index].receipt_id = Some(receipt_id);
+            self.movements[index].receipt_line_id = Some(line_id);
+        }
+        Ok(())
     }
     fn product(&self, sku: &str) -> Result<()> {
         if !self.products.iter().any(|p| p.sku == sku) {
@@ -394,6 +459,8 @@ impl State {
             to: to.map(str::to_owned),
             quantity: q,
             reference: reference.into(),
+            receipt_id: None,
+            receipt_line_id: None,
             reason: reason.into(),
             actor: actor.into(),
             at: now(),
@@ -410,7 +477,14 @@ impl State {
             id: id(),
             kind: command.kind().into(),
             reference: entity.clone(),
-            detail: command.kind().replace('.', " "),
+            detail: match command {
+                Command::Unpick { reason, .. }
+                | Command::ResetAllocation { reason, .. }
+                | Command::CancelOrder { reason, .. } => {
+                    format!("{}: {reason}", command.kind().replace('.', " "))
+                }
+                _ => command.kind().replace('.', " "),
+            },
             actor: actor.into(),
             at: now(),
         });
@@ -578,6 +652,10 @@ impl State {
                     "Supplier receipt",
                     actor,
                 );
+                if let Some(movement) = self.movements.last_mut() {
+                    movement.receipt_id = Some(receipt_id.clone());
+                    movement.receipt_line_id = Some(line_id.clone());
+                }
                 Ok(receipt_id.clone())
             }
             Command::MoveStock {
@@ -833,6 +911,76 @@ impl State {
                 );
                 Ok(order_id.clone())
             }
+            Command::Unpick {
+                order_id,
+                line_id,
+                location,
+                lot,
+                quantity: q,
+                reason,
+            } => {
+                quantity(*q)?;
+                text(reason, "Unpick reason")?;
+                let i = self.order_index(order_id)?;
+                if !["picking", "picked", "packed"].contains(&self.orders[i].status.as_str()) {
+                    return Err("Only physically picked, unshipped stock can be returned".into());
+                }
+                // Recovery is deliberately allowed while an exception blocks forward work.
+                // Return only this line's units to the allocation's original bin and lot.
+                let order = &mut self.orders[i];
+                let allocation = order
+                    .allocations
+                    .iter_mut()
+                    .find(|a| a.line_id == *line_id && a.location == *location && a.lot == *lot)
+                    .ok_or("No picked allocation matches this line, location and lot")?;
+                if *q > allocation.picked - allocation.shipped {
+                    return Err("Return exceeds this allocation's staged quantity".into());
+                }
+                allocation.picked -= q;
+                let sku = allocation.sku.clone();
+                let reference = order.reference.clone();
+                order.status = if order.allocations.iter().any(|a| a.picked != 0) {
+                    "picking"
+                } else {
+                    "allocated"
+                }
+                .into();
+                let staged = self.bucket(&sku, lot, "STAGE-01");
+                staged.on_hand -= q;
+                staged.reserved -= q;
+                let source = self.bucket(&sku, lot, location);
+                source.on_hand += q;
+                source.reserved += q;
+                self.movement(
+                    "unpick",
+                    &sku,
+                    lot,
+                    Some("STAGE-01"),
+                    Some(location),
+                    *q,
+                    &reference,
+                    reason,
+                    actor,
+                );
+                Ok(order_id.clone())
+            }
+            Command::ResetAllocation { order_id, reason } => {
+                text(reason, "Allocation reset reason")?;
+                let i = self.order_index(order_id)?;
+                if !["allocated", "picking"].contains(&self.orders[i].status.as_str()) {
+                    return Err("Only allocated work can be reset".into());
+                }
+                let allocations = self.orders[i].allocations.clone();
+                if allocations.iter().any(|a| a.picked != 0 || a.shipped != 0) {
+                    return Err("Return every staged unit before resetting allocations".into());
+                }
+                for a in allocations {
+                    self.bucket(&a.sku, &a.lot, &a.location).reserved -= a.quantity - a.released;
+                }
+                self.orders[i].allocations.clear();
+                self.orders[i].status = "pending".into();
+                Ok(order_id.clone())
+            }
             Command::Pack { order_id } => {
                 self.unblocked(order_id)?;
                 let i = self.order_index(order_id)?;
@@ -955,6 +1103,15 @@ impl State {
         type Key = (String, String, String);
         let mut physical: BTreeMap<Key, i64> = BTreeMap::new();
         let mut reserved: BTreeMap<Key, i64> = BTreeMap::new();
+        for balance in &self.inventory_baseline {
+            *physical
+                .entry((
+                    balance.sku.clone(),
+                    balance.lot.clone(),
+                    balance.location.clone(),
+                ))
+                .or_default() += balance.on_hand;
+        }
         for m in &self.movements {
             if let Some(from) = &m.from {
                 *physical
@@ -1022,9 +1179,77 @@ impl State {
         if self.location("STAGE-01")?.kind != "staging" {
             return Err("Outbound staging location is missing".into());
         }
+        let mut baseline_keys = BTreeSet::new();
+        for balance in &self.inventory_baseline {
+            self.product(&balance.sku)?;
+            self.location(&balance.location)?;
+            if !baseline_keys.insert((&balance.sku, &balance.lot, &balance.location))
+                || !(0..=1_000_000_000).contains(&balance.on_hand)
+            {
+                return Err("Invalid physical inventory baseline".into());
+            }
+        }
         let mut receipt_refs = BTreeSet::new();
+        let mut receipt_ids = BTreeSet::new();
+        let mut received_evidence: BTreeMap<(&str, &str), i64> = BTreeMap::new();
+        for (receipt_id, lines) in &self.receipt_baseline {
+            let receipt = self
+                .receipts
+                .iter()
+                .find(|receipt| receipt.id == *receipt_id)
+                .ok_or("Receipt baseline has no matching receipt")?;
+            for (line_id, received) in lines {
+                let line = receipt
+                    .lines
+                    .iter()
+                    .find(|line| line.id == *line_id)
+                    .ok_or("Receipt baseline has no matching line")?;
+                if *received < 0 || *received > line.quantity {
+                    return Err("Invalid received quantity baseline".into());
+                }
+                received_evidence.insert((receipt_id, line_id), *received);
+            }
+        }
+        for movement in self.movements.iter().filter(|m| m.kind == "receipt") {
+            let receipt_id = movement
+                .receipt_id
+                .as_deref()
+                .ok_or("Receipt movement requires exact receipt identity")?;
+            let line_id = movement
+                .receipt_line_id
+                .as_deref()
+                .ok_or("Receipt movement requires exact line identity")?;
+            let receipt = self
+                .receipts
+                .iter()
+                .find(|receipt| receipt.id == receipt_id)
+                .ok_or("Receipt movement has no matching receipt")?;
+            let line = receipt
+                .lines
+                .iter()
+                .find(|line| line.id == line_id)
+                .ok_or("Receipt movement has no matching receipt line")?;
+            if receipt.reference != movement.reference
+                || line.sku != movement.sku
+                || line.lot != movement.lot
+                || movement.from.is_some()
+                || !movement
+                    .to
+                    .as_deref()
+                    .is_some_and(|to| self.location(to).is_ok_and(|l| l.kind == "receiving"))
+            {
+                return Err("Receipt movement disagrees with its exact receipt line".into());
+            }
+            let total = received_evidence.entry((receipt_id, line_id)).or_default();
+            *total = total
+                .checked_add(movement.quantity)
+                .ok_or("Receipt evidence quantity overflow")?;
+        }
         for r in &self.receipts {
-            if !receipt_refs.insert(&r.reference) || r.lines.is_empty() {
+            if !receipt_refs.insert(&r.reference)
+                || !receipt_ids.insert(&r.id)
+                || r.lines.is_empty()
+            {
                 return Err("Invalid receipt identity".into());
             }
             let mut lines = BTreeSet::new();
@@ -1033,6 +1258,16 @@ impl State {
                 quantity(l.quantity)?;
                 if !lines.insert(&l.id) || l.received < 0 || l.received > l.quantity {
                     return Err("Receipt quantity invariant violated".into());
+                }
+                if received_evidence
+                    .get(&(r.id.as_str(), l.id.as_str()))
+                    .copied()
+                    .unwrap_or(0)
+                    != l.received
+                {
+                    return Err(
+                        "Receipt line quantity disagrees with received movement evidence".into(),
+                    );
                 }
             }
             let expected = if r.lines.iter().all(|l| l.received == 0) {
@@ -1046,10 +1281,18 @@ impl State {
                 return Err("Receipt state disagrees with received quantities".into());
             }
         }
+        let mut movement_ids = BTreeSet::new();
         for m in &self.movements {
             self.product(&m.sku)?;
-            if m.quantity <= 0 || m.quantity > 1_000_000_000 || m.from == m.to {
+            if !movement_ids.insert(&m.id)
+                || m.quantity <= 0
+                || m.quantity > 1_000_000_000
+                || m.from == m.to
+            {
                 return Err("Invalid physical movement".into());
+            }
+            if m.kind != "receipt" && (m.receipt_id.is_some() || m.receipt_line_id.is_some()) {
+                return Err("Only receipt movements can own a receipt line".into());
             }
             if let Some(from) = &m.from {
                 self.location(from)?;
@@ -1070,9 +1313,11 @@ impl State {
             }
         }
         let mut order_refs = BTreeSet::new();
+        let mut order_ids = BTreeSet::new();
         let mut source_refs = BTreeSet::new();
         for o in &self.orders {
             if !order_refs.insert(&o.reference)
+                || !order_ids.insert(&o.id)
                 || o.lines.is_empty()
                 || ![
                     "pending",
@@ -1103,6 +1348,15 @@ impl State {
             if o.status == "pending" && !o.allocations.is_empty() {
                 return Err("Pending orders cannot have allocations".into());
             }
+            if o.status == "allocated" && o.allocations.iter().any(|a| a.picked != 0) {
+                return Err("Allocated orders cannot already contain picked stock".into());
+            }
+            if o.status == "picking"
+                && (!o.allocations.iter().any(|a| a.picked > 0)
+                    || o.allocations.iter().all(|a| a.picked == a.quantity))
+            {
+                return Err("Picking orders require a physically partial pick".into());
+            }
             if ["picked", "packed", "shipped"].contains(&o.status.as_str())
                 && o.allocations.iter().any(|a| a.picked != a.quantity)
             {
@@ -1126,7 +1380,14 @@ impl State {
             {
                 return Err("Cancelled order must release all unpicked stock".into());
             }
+            let mut allocation_keys = BTreeSet::new();
             for a in &o.allocations {
+                if !allocation_keys.insert((&a.line_id, &a.location, &a.lot)) {
+                    return Err("Duplicate allocation ownership identity".into());
+                }
+                if o.status != "cancelled" && a.released != 0 {
+                    return Err("Active allocation cannot contain released reservations".into());
+                }
                 if self.location(&a.location)?.kind != "storage" {
                     return Err("Reservations must originate in storage".into());
                 }

@@ -19,8 +19,27 @@ function domain(value?: unknown) {
     );
   return JSON.parse(r.stdout);
 }
-async function setup(page: Page, loseFirstResponse = false) {
+async function setup(
+  page: Page,
+  loseFirstResponse = false,
+  historyDepth = 0,
+  fullHistoryMatches = true,
+) {
   let state = domain();
+  const archivedOrders = Array.from({ length: historyDepth }, (_, index) => ({
+    ...state.orders.find((order: any) => order.status === "shipped"),
+    id: `archived-order-${index}`,
+    reference: `ARCHIVE-${String(index).padStart(3, "0")}`,
+    source_order_id: `oms-archive-${index}`,
+    customer: "Historical customer",
+    created_at: new Date(Date.UTC(2020, 0, index + 1)).toISOString(),
+  }));
+  const archivedReceipts = Array.from({ length: historyDepth }, (_, index) => ({
+    ...state.receipts.find((receipt: any) => receipt.status === "received"),
+    id: `archived-receipt-${index}`,
+    reference: `ARCHIVE-RCV-${String(index).padStart(3, "0")}`,
+    created_at: new Date(Date.UTC(2020, 0, index + 1)).toISOString(),
+  }));
   const receipts = new Map<string, unknown>();
   let dropped = false;
   await page.route("https://warehouse.test/**", async (route) => {
@@ -60,9 +79,82 @@ async function setup(page: Page, loseFirstResponse = false) {
       return send({
         warehouses: [{ warehouse: state.warehouse, version: state.version }],
       });
-    if (url.pathname.endsWith("/reconciliation"))
-      return send(domain({ state }));
+    if (url.pathname.endsWith("/reconciliation")) {
+      const proof = domain({ state });
+      const receiptProofs = state.receipts.flatMap((receipt: any) =>
+        receipt.lines.map((line: any) => ({
+          receipt_id: receipt.id,
+          line_id: line.id,
+          received: line.received,
+          evidence: state.movements
+            .filter(
+              (movement: any) =>
+                movement.kind === "receipt" &&
+                movement.receipt_id === receipt.id &&
+                movement.receipt_line_id === line.id,
+            )
+            .reduce(
+              (total: number, movement: any) => total + movement.quantity,
+              0,
+            ),
+          ok: true,
+        })),
+      );
+      return send({
+        ...proof,
+        ok: fullHistoryMatches && proof.ok,
+        receipts: receiptProofs,
+        method: "full_append_only_ledger_and_order_line_allocations",
+      });
+    }
     if (url.pathname.endsWith("/outbox")) return send({ items: [] });
+    const detail = url.pathname.match(
+      /\/warehouses\/wh-pdx\/(orders|receipts)\/([^/]+)$/,
+    );
+    if (detail) {
+      const records =
+        detail[1] === "orders"
+          ? [...state.orders, ...archivedOrders]
+          : [...state.receipts, ...archivedReceipts];
+      const record = records.find(
+        (item: any) => item.id === decodeURIComponent(detail[2]),
+      );
+      return record
+        ? send(
+            record.id.startsWith("archived-order-")
+              ? { ...record, customer: "Canonical historical customer" }
+              : record,
+          )
+        : send({ error: "Record not found" }, 404);
+    }
+    const history = url.pathname.match(
+      /\/history\/(orders|receipts|movements|activity|exceptions)$/,
+    );
+    if (history) {
+      const kind = history[1];
+      const older =
+        kind === "orders"
+          ? archivedOrders
+          : kind === "receipts"
+            ? archivedReceipts
+            : [];
+      const all = [...older, ...state[kind]]
+        .map((data: unknown, index: number) => ({ cursor: index + 1, data }))
+        .reverse();
+      const before = Number(
+        url.searchParams.get("before") ?? Number.MAX_SAFE_INTEGER,
+      );
+      const remaining = all.filter((item) => item.cursor < before);
+      const items = remaining.slice(
+        0,
+        Number(url.searchParams.get("limit") ?? 50),
+      );
+      return send({
+        items,
+        next_cursor:
+          remaining.length > items.length ? items.at(-1)!.cursor : null,
+      });
+    }
     if (url.pathname.match(/\/commands\/.+$/)) {
       const result = receipts.get(url.pathname.split("/").pop()!);
       return send(result ? { found: true, result } : { found: false });
@@ -237,6 +329,160 @@ test("accepted save with a lost response recovers after reload", async ({
   expect(state().version).toBe(version);
 });
 
+test("blocked short picks can be physically returned, released and recounted", async ({
+  page,
+}) => {
+  const state = await setup(page);
+  const openOrder = async () => {
+    await page
+      .getByRole("button", { name: "Fulfillment", exact: true })
+      .click();
+    await page.getByRole("button", { name: "SO-1041", exact: true }).click();
+  };
+  await openOrder();
+  await page
+    .getByRole("button", { name: "Allocate stock", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await openOrder();
+  await page.getByRole("button", { name: "Pick units", exact: true }).click();
+  await page.getByLabel("Picked quantity (each)").fill("3");
+  await page.getByRole("button", { name: "Confirm pick", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await openOrder();
+  await page
+    .getByRole("button", { name: "Report exception", exact: true })
+    .click();
+  await page
+    .getByLabel("Observed issue")
+    .fill("Only three physical units found after partial pick");
+  await page
+    .getByRole("button", { name: "Open exception", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await openOrder();
+  await expect(page.getByRole("dialog")).toContainText(
+    "Only three physical units",
+  );
+  await expect(
+    page.getByRole("button", { name: "Pick units", exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Return staged units", exact: true }),
+  ).toBeEnabled();
+  await page
+    .getByRole("button", { name: "Return staged units", exact: true })
+    .click();
+  await page
+    .getByLabel("Return evidence / reason")
+    .fill("Three verified staged units returned to original source");
+  await page
+    .getByRole("button", { name: "Confirm physical return", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await openOrder();
+  await page
+    .getByRole("button", { name: "Release allocation", exact: true })
+    .click();
+  await page
+    .getByLabel("Allocation release reason")
+    .fill("Release for physical shortage recount");
+  await page
+    .getByRole("button", { name: "Release reservations", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("button", { name: "Inventory", exact: true }).click();
+  await page
+    .getByRole("row")
+    .filter({ hasText: "SS-TEE-001" })
+    .filter({ hasText: "A-01-01" })
+    .getByRole("button", { name: "Count", exact: true })
+    .click();
+  await page.getByLabel(/Counted each units/).fill("3");
+  await page
+    .getByLabel("Count evidence / reason")
+    .fill("Physical recount confirms only the three returned units");
+  await page
+    .getByRole("button", { name: "Apply count adjustment", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const recovered = state().orders.find(
+    (order: any) => order.reference === "SO-1041",
+  );
+  expect(recovered.status).toBe("pending");
+  expect(recovered.allocations).toEqual([]);
+  expect(
+    state().stocks.find(
+      (stock: any) =>
+        stock.sku === "SS-TEE-001" && stock.location === "A-01-01",
+    ).on_hand,
+  ).toBe(3);
+  expect(domain({ state: state() }).ok).toBe(true);
+});
+
+test("keyset history exposes archived records and opens authoritative details", async ({
+  page,
+}) => {
+  await setup(page, false, 65);
+  const detailRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/orders/archived-order-"))
+      detailRequests.push(request.url());
+  });
+  await page.getByRole("button", { name: "Fulfillment", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "ARCHIVE-000", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Browse orders history", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", {
+      name: "Load older orders history",
+      exact: true,
+    }),
+  ).toBeEnabled();
+  await page
+    .getByRole("button", { name: "Load older orders history", exact: true })
+    .click();
+  await expect(
+    page.getByText("All orders loaded", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "ARCHIVE-000", exact: true }).click();
+  await expect(page.getByRole("dialog")).toContainText(
+    "Canonical historical customer",
+  );
+  expect(detailRequests).toHaveLength(1);
+  await page.getByRole("button", { name: "Close dialog", exact: true }).click();
+  await page.getByRole("button", { name: "Receiving", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Browse receipts history", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Load older receipts history", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "ARCHIVE-RCV-000", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toContainText("ARCHIVE-RCV-000");
+  await page.getByRole("button", { name: "Close dialog", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Movement ledger", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Browse movements history", exact: true })
+    .click();
+  await expect(
+    page.getByText("All movements loaded", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Browse audit records history", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Command audit", exact: true }),
+  ).toBeVisible();
+});
+
 test("a count opened before concurrent work cannot overwrite current stock", async ({
   page,
 }) => {
@@ -275,4 +521,45 @@ test("a count opened before concurrent work cannot overwrite current stock", asy
       (b: any) => b.sku === "SS-CAP-004" && b.location === "B-01-02",
     ).on_hand,
   ).toBe(27);
+});
+
+test("ledger uses the independent history proof even when operational balances agree", async ({
+  page,
+}) => {
+  const fullChecks: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().endsWith("/reconciliation"))
+      fullChecks.push(request.url());
+  });
+  await setup(page, false, 0, false);
+  await expect(
+    page.getByText("Operational balances checked", { exact: true }),
+  ).toBeVisible();
+  expect(fullChecks).toHaveLength(0);
+  await page
+    .getByRole("button", { name: "Movement ledger", exact: true })
+    .click();
+  await expect(
+    page.getByText("Full reconciliation needs review", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Inventory ledger reconciles", { exact: true }),
+  ).toHaveCount(0);
+  expect(fullChecks).toHaveLength(1);
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export proof", exact: true }).click();
+  const result = await download;
+  const proof = JSON.parse(readFileSync((await result.path())!, "utf8"));
+  expect(proof.ok).toBe(false);
+  expect(proof.method).toBe(
+    "full_append_only_ledger_and_order_line_allocations",
+  );
+  expect(proof.receipts.length).toBeGreaterThan(0);
+  await page
+    .getByRole("button", { name: "Run full reconciliation", exact: true })
+    .click();
+  await expect(
+    page.getByText("Full reconciliation needs review", { exact: true }),
+  ).toBeVisible();
+  expect(fullChecks).toHaveLength(2);
 });

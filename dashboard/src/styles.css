@@ -2720,3 +2720,119 @@ tbody tr:hover {
     transition: none !important;
   }
 }
+
+.native-panel {
+  margin-bottom: 28px;
+}
+.native-panel[hidden] {
+  display: none;
+}
+.native-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.native-grid .integration-card {
+  min-width: 0;
+}
+.native-panel h3 {
+  margin: 0 0 10px;
+}
+.native-panel p {
+  line-height: 1.6;
+}
+.native-panel form {
+  margin-top: 20px;
+}
+.native-panel label {
+  display: grid;
+  gap: 7px;
+  margin: 12px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #526354;
+}
+.native-panel input,
+.native-panel select,
+.native-panel textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #dce3da;
+  border-radius: 7px;
+  background: #fff;
+  color: #27382d;
+  font: inherit;
+}
+.native-panel button {
+  margin: 6px 6px 6px 0;
+}
+.native-panel fieldset {
+  border: 1px solid #dce3da;
+  border-radius: 8px;
+  margin: 16px 0;
+  padding: 14px;
+}
+.native-panel legend {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 6px;
+}
+.native-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 12px;
+}
+.native-orders {
+  max-height: 240px;
+  overflow: auto;
+  margin: 12px 0;
+}
+.native-source {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  text-align: left;
+  padding: 12px;
+  border: 1px solid #dce3da;
+  border-radius: 7px;
+  background: #f8faf7;
+  gap: 12px;
+}
+.native-source span {
+  font-size: 12px;
+  color: #617166;
+}
+.native-panel pre {
+  max-height: 340px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+  padding: 14px;
+  background: #f4f7f2;
+  border-radius: 7px;
+}
+.native-note {
+  font-size: 12px;
+  color: #657268;
+  margin: 16px 0;
+}
+.native-recovery,
+.native-review {
+  background: #f5f8f1;
+  border: 1px solid #d8e2cc;
+  border-radius: 10px;
+  padding: 18px;
+  margin: 16px 0;
+}
+@media (max-width: 1000px) {
+  .native-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 600px) {
+  .native-fields {
+    grid-template-columns: 1fr;
+  }
+}

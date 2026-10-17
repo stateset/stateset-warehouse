@@ -49,6 +49,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         map.into_iter().collect()
     };
+    let native = stateset_warehouse::native::NativeIntegrations::from_env()
+        .map_err(|e| format!("Native integration configuration: {e}"))?;
+    if demo && !native.tenants.is_empty() {
+        return Err("Demo mode cannot connect to native OMS or TMS services".into());
+    }
+    if native
+        .tenants
+        .keys()
+        .any(|tenant| !keys.iter().any(|(_, i)| &i.tenant == tenant))
+    {
+        return Err("Every native integration tenant must have a configured identity".into());
+    }
     let store = Store::connect(
         &std::env::var("DATABASE_URL")
             .map_err(|_| "DATABASE_URL is required; there is no in-memory fallback")?,

@@ -1,6 +1,6 @@
 //! Mandatory in CI. Explicitly ignored locally unless invoked with --ignored;
 //! missing Postgres fails rather than silently reporting a passing DB test.
-use serde_json::{json, Value};
+use serde_json::Value;
 use sqlx::Row;
 use stateset_warehouse::{
     api::{router, App},
@@ -33,13 +33,10 @@ async fn setup() -> (Store, Identity, State) {
         actor: "test:operator".into(),
         role: "admin".into(),
     };
-    let mut s = State::empty(Warehouse {
-        id: "wh-test".into(),
-        code: "TEST".into(),
-        name: "Test Warehouse".into(),
-        city: "Test".into(),
-        timezone: "UTC".into(),
-    });
+    store
+        .provision(&identity.tenant, false)
+        .await
+        .expect("provision normalized warehouse");
     for c in [
         Command::CreateProduct {
             sku: "SKU".into(),
@@ -65,18 +62,30 @@ async fn setup() -> (Store, Identity, State) {
             reason: "Test opening physical count".into(),
         },
     ] {
-        s = s.execute(&c, "fixture").expect("fixture").0;
+        let state = store
+            .state(&identity.tenant, "wh-main")
+            .await
+            .expect("state");
+        store
+            .execute(&identity, "wh-main", &req(state.version, c))
+            .await
+            .expect("fixture command");
     }
-    sqlx::query(
-        "INSERT INTO wms_workspaces (tenant,warehouse_id,version,state) VALUES ($1,$2,$3,$4)",
-    )
-    .bind(&identity.tenant)
-    .bind(&s.warehouse.id)
-    .bind(s.version)
-    .bind(json!(s))
-    .execute(&store.pool)
-    .await
-    .expect("insert isolated fixture");
+    // Seed commands are real committed work, excluded from per-scenario counts.
+    sqlx::query("DELETE FROM wms_outbox WHERE tenant=$1")
+        .bind(&identity.tenant)
+        .execute(&store.pool)
+        .await
+        .expect("clear fixture queue");
+    sqlx::query("DELETE FROM wms_commands WHERE tenant=$1")
+        .bind(&identity.tenant)
+        .execute(&store.pool)
+        .await
+        .expect("clear fixture receipts");
+    let s = store
+        .state(&identity.tenant, "wh-main")
+        .await
+        .expect("seeded state");
     (store, identity, s)
 }
 fn req(version: i64, command: Command) -> Request {
@@ -101,15 +110,15 @@ fn create_order(reference: &str, q: i64) -> Command {
     }
 }
 async fn execute(store: &Store, i: &Identity, c: Command) -> Value {
-    let s = store.state(&i.tenant, "wh-test").await.expect("state");
+    let s = store.state(&i.tenant, "wh-main").await.expect("state");
     store
-        .execute(i, "wh-test", &req(s.version, c))
+        .execute(i, "wh-main", &req(s.version, c))
         .await
         .expect("command")["result"]
         .clone()
 }
 async fn counts(store: &Store, tenant: &str) -> (i64, i64, i64) {
-    let row=sqlx::query("SELECT (SELECT count(*) FROM wms_commands WHERE tenant=$1) AS commands,(SELECT count(*) FROM wms_events WHERE tenant=$1) AS events,(SELECT count(*) FROM wms_outbox WHERE tenant=$1) AS deliveries").bind(tenant).fetch_one(&store.pool).await.expect("counts");
+    let row=sqlx::query("SELECT (SELECT count(*) FROM wms_commands WHERE tenant=$1) AS commands,(SELECT count(*)-4 FROM wms_events WHERE tenant=$1) AS events,(SELECT count(*) FROM wms_outbox WHERE tenant=$1) AS deliveries").bind(tenant).fetch_one(&store.pool).await.expect("counts");
     (
         row.get("commands"),
         row.get("events"),
@@ -131,7 +140,7 @@ async fn concurrent_last_unit_allocation_never_oversells() {
         );
     }
     let version = store
-        .state(&i.tenant, "wh-test")
+        .state(&i.tenant, "wh-main")
         .await
         .expect("state")
         .version;
@@ -143,7 +152,7 @@ async fn concurrent_last_unit_allocation_never_oversells() {
             store
                 .execute(
                     &i,
-                    "wh-test",
+                    "wh-main",
                     &req(version, Command::Allocate { order_id: oid }),
                 )
                 .await
@@ -156,7 +165,7 @@ async fn concurrent_last_unit_allocation_never_oversells() {
         }
     }
     assert_eq!(successes, 1);
-    let s = store.state(&i.tenant, "wh-test").await.expect("state");
+    let s = store.state(&i.tenant, "wh-main").await.expect("state");
     assert_eq!(s.stocks.iter().map(|b| b.reserved).sum::<i64>(), 10);
     s.validate().expect("reconciled");
     let waiting = s
@@ -167,7 +176,7 @@ async fn concurrent_last_unit_allocation_never_oversells() {
     let e = store
         .execute(
             &i,
-            "wh-test",
+            "wh-main",
             &req(
                 s.version,
                 Command::Allocate {
@@ -190,7 +199,7 @@ async fn concurrent_identical_requests_create_one_receipt_and_event() {
         let i = i.clone();
         let r = request.clone();
         tasks.push(tokio::spawn(async move {
-            store.execute(&i, "wh-test", &r).await
+            store.execute(&i, "wh-main", &r).await
         }));
     }
     let mut original = 0;
@@ -212,7 +221,7 @@ async fn restart_and_lost_response_return_original_save() {
     let (store, i, s) = setup().await;
     let request = req(s.version, create_order("SO-RESTART", 2));
     let original = store
-        .execute(&i, "wh-test", &request)
+        .execute(&i, "wh-main", &request)
         .await
         .expect("first save");
     execute(
@@ -230,7 +239,7 @@ async fn restart_and_lost_response_return_original_save() {
         .await
         .expect("reconnect");
     let replay = restored
-        .execute(&i, "wh-test", &request)
+        .execute(&i, "wh-main", &request)
         .await
         .expect("original response recovered");
     assert_eq!(replay["result"], original["result"]);
@@ -238,7 +247,7 @@ async fn restart_and_lost_response_return_original_save() {
     assert_eq!(counts(&restored, &i.tenant).await, (2, 2, 2));
     assert_eq!(
         restored
-            .receipt(&i, "wh-test", &request.request_id)
+            .receipt(&i, "wh-main", &request.request_id)
             .await
             .expect("receipt")["found"],
         true
@@ -249,11 +258,11 @@ async fn restart_and_lost_response_return_original_save() {
 async fn request_key_payload_or_actor_conflicts_are_rejected() {
     let (store, i, s) = setup().await;
     let mut r = req(s.version, create_order("SO-KEY", 2));
-    store.execute(&i, "wh-test", &r).await.expect("first");
+    store.execute(&i, "wh-main", &r).await.expect("first");
     r.command = create_order("SO-DIFFERENT", 2);
     assert_eq!(
         store
-            .execute(&i, "wh-test", &r)
+            .execute(&i, "wh-main", &r)
             .await
             .expect_err("payload conflict")
             .status,
@@ -264,7 +273,7 @@ async fn request_key_payload_or_actor_conflicts_are_rejected() {
     another.actor = "other:operator".into();
     assert_eq!(
         store
-            .execute(&another, "wh-test", &r)
+            .execute(&another, "wh-main", &r)
             .await
             .expect_err("actor conflict")
             .status,
@@ -284,7 +293,7 @@ async fn stale_counts_and_competing_moves_cannot_overwrite_new_stock() {
             store
                 .execute(
                     &i,
-                    "wh-test",
+                    "wh-main",
                     &req(
                         version,
                         Command::MoveStock {
@@ -309,7 +318,7 @@ async fn stale_counts_and_competing_moves_cannot_overwrite_new_stock() {
     let e = store
         .execute(
             &i,
-            "wh-test",
+            "wh-main",
             &req(
                 s.version,
                 Command::CountStock {
@@ -324,7 +333,7 @@ async fn stale_counts_and_competing_moves_cannot_overwrite_new_stock() {
         .await
         .expect_err("stale count");
     assert_eq!(e.status, 409);
-    let state = store.state(&i.tenant, "wh-test").await.expect("state");
+    let state = store.state(&i.tenant, "wh-main").await.expect("state");
     assert_eq!(
         state
             .stocks
@@ -355,7 +364,7 @@ async fn duplicate_receipt_submission_does_not_receive_twice() {
         },
     )
     .await;
-    let s = store.state(&i.tenant, "wh-test").await.expect("state");
+    let s = store.state(&i.tenant, "wh-main").await.expect("state");
     let request = req(
         s.version,
         Command::Receive {
@@ -365,9 +374,9 @@ async fn duplicate_receipt_submission_does_not_receive_twice() {
             location: "RECV-01".into(),
         },
     );
-    store.execute(&i, "wh-test", &request).await.expect("first");
-    store.execute(&i, "wh-test", &request).await.expect("retry");
-    let s = store.state(&i.tenant, "wh-test").await.expect("state");
+    store.execute(&i, "wh-main", &request).await.expect("first");
+    store.execute(&i, "wh-main", &request).await.expect("retry");
+    let s = store.state(&i.tenant, "wh-main").await.expect("state");
     assert_eq!(
         s.stocks
             .iter()
@@ -403,8 +412,8 @@ async fn failure_after_state_event_and_receipt_writes_rolls_everything_back() {
             reason: "Test count".into(),
         },
     );
-    assert!(store.execute(&i, "wh-test", &request).await.is_err());
-    assert_eq!(store.state(&i.tenant, "wh-test").await.expect("state"), s);
+    assert!(store.execute(&i, "wh-main", &request).await.is_err());
+    assert_eq!(store.state(&i.tenant, "wh-main").await.expect("state"), s);
     assert_eq!(counts(&store, &i.tenant).await, (0, 0, 0));
     sqlx::raw_sql(&format!(
         "DROP TRIGGER {trigger} ON wms_outbox; DROP FUNCTION {function}();"
@@ -413,7 +422,7 @@ async fn failure_after_state_event_and_receipt_writes_rolls_everything_back() {
     .await
     .expect("remove fault");
     store
-        .execute(&i, "wh-test", &request)
+        .execute(&i, "wh-main", &request)
         .await
         .expect("same request safely applies after rollback");
     assert_eq!(counts(&store, &i.tenant).await, (1, 1, 1));
@@ -428,7 +437,7 @@ async fn tenant_boundaries_apply_to_state_commands_receipts_and_events() {
     let (store, i, s) = setup().await;
     let request = req(s.version, create_order("SO-PRIVATE", 1));
     store
-        .execute(&i, "wh-test", &request)
+        .execute(&i, "wh-main", &request)
         .await
         .expect("private order");
     let outsider = Identity {
@@ -438,7 +447,7 @@ async fn tenant_boundaries_apply_to_state_commands_receipts_and_events() {
     };
     assert_eq!(
         store
-            .state(&outsider.tenant, "wh-test")
+            .state(&outsider.tenant, "wh-main")
             .await
             .expect_err("hidden state")
             .status,
@@ -446,7 +455,7 @@ async fn tenant_boundaries_apply_to_state_commands_receipts_and_events() {
     );
     assert_eq!(
         store
-            .execute(&outsider, "wh-test", &request)
+            .execute(&outsider, "wh-main", &request)
             .await
             .expect_err("hidden warehouse")
             .status,
@@ -454,16 +463,18 @@ async fn tenant_boundaries_apply_to_state_commands_receipts_and_events() {
     );
     assert_eq!(
         store
-            .receipt(&outsider, "wh-test", &request.request_id)
+            .receipt(&outsider, "wh-main", &request.request_id)
             .await
             .expect("receipt lookup")["found"],
         false
     );
-    let event: String = sqlx::query_scalar("SELECT id FROM wms_events WHERE tenant=$1")
-        .bind(&i.tenant)
-        .fetch_one(&store.pool)
-        .await
-        .expect("event ID");
+    let event: String = sqlx::query_scalar(
+        "SELECT id FROM wms_events WHERE tenant=$1 ORDER BY version DESC LIMIT 1",
+    )
+    .bind(&i.tenant)
+    .fetch_one(&store.pool)
+    .await
+    .expect("event ID");
     let app = router(App {
         store,
         credentials: Arc::new(vec![("outsider-key".into(), outsider)]),
@@ -532,12 +543,12 @@ async fn failed_delivery_retries_same_event_id_and_recovers_expired_lease() {
         (format!("http://{address}/events"), "test-token".into()),
     )])));
     assert!(c.dispatch_one(&store).await.expect("failed turn"));
-    let o = store.outbox(&i.tenant, "wh-test").await.expect("queue");
+    let o = store.outbox(&i.tenant, "wh-main").await.expect("queue");
     assert_eq!(o[0]["status"], "pending");
     assert_eq!(o[0]["attempts"], 1);
     sqlx::query("UPDATE wms_outbox SET status='delivering',lease_token='crashed-worker',lease_until=now()-interval '1 second' WHERE tenant=$1").bind(&i.tenant).execute(&store.pool).await.expect("simulate worker crash");
     assert!(c.dispatch_one(&store).await.expect("lease recovery"));
-    let o = store.outbox(&i.tenant, "wh-test").await.expect("queue");
+    let o = store.outbox(&i.tenant, "wh-main").await.expect("queue");
     assert_eq!(o[0]["status"], "delivered");
     assert_eq!(o[0]["attempts"], 2);
     let ids = seen.lock().await;
@@ -575,12 +586,12 @@ async fn rejected_receiver_dead_letters_without_rolling_back_physical_work() {
             .expect("test clock");
         assert!(c.dispatch_one(&store).await.expect("delivery"));
     }
-    let o = store.outbox(&i.tenant, "wh-test").await.expect("queue");
+    let o = store.outbox(&i.tenant, "wh-main").await.expect("queue");
     assert_eq!(o[0]["status"], "dead_letter");
     assert_eq!(o[0]["attempts"], 8);
     assert_eq!(
         store
-            .state(&i.tenant, "wh-test")
+            .state(&i.tenant, "wh-main")
             .await
             .expect("state")
             .orders
@@ -592,7 +603,7 @@ async fn rejected_receiver_dead_letters_without_rolling_back_physical_work() {
         .await
         .expect("explicit retry");
     assert_eq!(
-        store.outbox(&i.tenant, "wh-test").await.expect("queue")[0]["status"],
+        store.outbox(&i.tenant, "wh-main").await.expect("queue")[0]["status"],
         "pending"
     );
     server.abort();
@@ -604,9 +615,8 @@ async fn database_constraint_rejects_raw_balance_corruption() {
     let (store, i, mut s) = setup().await;
     s.stocks[0].reserved = s.stocks[0].on_hand + 1;
     let error = sqlx::query(
-        "UPDATE wms_workspaces SET state=$1 WHERE tenant=$2 AND warehouse_id='wh-test'",
+        "UPDATE wms_stock SET reserved=on_hand+1 WHERE tenant=$1 AND warehouse_id='wh-main'",
     )
-    .bind(json!(s))
     .bind(&i.tenant)
     .execute(&store.pool)
     .await
@@ -616,7 +626,7 @@ async fn database_constraint_rejects_raw_balance_corruption() {
         Some("23514")
     );
     store
-        .state(&i.tenant, "wh-test")
+        .state(&i.tenant, "wh-main")
         .await
         .expect("state")
         .validate()
