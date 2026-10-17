@@ -1,0 +1,31 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: warehouse
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-warehouse}
+      POSTGRES_DB: warehouse
+    ports:
+      - "127.0.0.1:5548:5432"
+    volumes:
+      - warehouse-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U warehouse -d warehouse"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  wms:
+    build: .
+    profiles: ["app"]
+    environment:
+      DATABASE_URL: postgres://warehouse:${POSTGRES_PASSWORD:-warehouse}@postgres:5432/warehouse
+      WMS_BIND: 0.0.0.0:8088
+      WMS_DEMO: "false"
+      WMS_API_KEYS_JSON: ${WMS_API_KEYS_JSON:-}
+    ports:
+      - "127.0.0.1:8088:8088"
+    depends_on:
+      postgres:
+        condition: service_healthy
+volumes:
+  warehouse-db:

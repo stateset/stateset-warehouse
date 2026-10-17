@@ -1,0 +1,53 @@
+name: warehouse checks
+on: [push, pull_request]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: warehouse
+          POSTGRES_PASSWORD: warehouse
+          POSTGRES_DB: warehouse_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U warehouse -d warehouse_test"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      WMS_TEST_DATABASE_URL: postgres://warehouse:warehouse@127.0.0.1:5432/warehouse_test
+      DATABASE_URL: postgres://warehouse:warehouse@127.0.0.1:5432/warehouse_test
+      WMS_DEMO: "true"
+      WMS_BIND: 127.0.0.1:8088
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.90.0
+        with:
+          components: rustfmt, clippy
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - run: npm --prefix dashboard ci --no-audit --no-fund
+      - run: cd dashboard && npx playwright install --with-deps chromium
+      - run: bash scripts/check.sh --postgres
+      - name: Build and run live browser check
+        run: |
+          cargo build --locked
+          ./target/debug/stateset-warehouse > /tmp/wms-api.log 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+          for n in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8088/ready; then break; fi
+            sleep 1
+          done
+          cd dashboard
+          npx playwright test --project=live-postgres
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: warehouse-verification
+          path: |
+            dashboard/test-results
+            docs/screenshots
