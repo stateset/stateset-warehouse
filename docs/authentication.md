@@ -58,6 +58,10 @@ Compose inherits `WMS_WORKOS_JSON` when present. Set `WMS_API_KEYS_JSON` only fo
 needed service identities. Remove or rotate legacy human API keys during the cutover: WorkOS offboarding does not revoke a separately configured static credential. Verify that retired keys return 401. Restart every WMS instance after changing mappings.
 Mapped tenants are provisioned with the same empty MAIN warehouse used by API-key
 mode. Unverified organization IDs from a browser never create or select a tenant.
+The executable validates all authentication, native integration and event receiver
+configuration, then reserves its listener before connecting to PostgreSQL.
+Invalid receiver settings or an occupied listener therefore cannot migrate or
+provision the database. HTTP serving and delivery work begin after provisioning.
 
 ## Verification and recovery boundaries
 
@@ -124,6 +128,14 @@ The PostgreSQL test submits signed-token requests through the real router and
 proves persisted attribution, same-user session refresh replay, other-user receipt
 isolation and cross-organization isolation. Public test private keys under
 `tests/fixtures` are never deployed as trust roots.
+
+Separate startup tests run the actual executable in clean process environments.
+They reject malformed configuration and occupied listeners before database access,
+and verify against PostgreSQL that those failures create no tenant warehouse.
+Successful WorkOS-only startup needs no service keys; mixed mode provisions the
+union of mapped and service-key tenants. Process restarts preserve existing work
+and exact command replays, and removing service keys denies their subsequent use.
+These tests do not contact a real WorkOS project.
 
 Browser tests run the built application and actual AuthKit SDK against intercepted
 provider HTTP. They cover PKCE redirect, sign-in/out, token storage absence,

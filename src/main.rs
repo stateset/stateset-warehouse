@@ -77,15 +77,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         return Err("Every native integration tenant must have a configured identity".into());
     }
-    let store = Store::connect(
-        &std::env::var("DATABASE_URL")
-            .map_err(|_| "DATABASE_URL is required; there is no in-memory fallback")?,
-    )
-    .await
-    .map_err(|e| e.message)?;
-    for tenant in &tenants {
-        store.provision(tenant, demo).await.map_err(|e| e.message)?;
-    }
     let mut connections = BTreeMap::new();
     for destination in ["oms", "tms"] {
         let prefix = format!("WMS_{}_WEBHOOK", destination.to_uppercase());
@@ -117,6 +108,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     let connections = Connections(Arc::new(connections));
+    let database_url = std::env::var("DATABASE_URL")
+        .map_err(|_| "DATABASE_URL is required; there is no in-memory fallback")?;
+    // Reject configuration and listener conflicts before migrations,
+    // provisioning or delivery work. Binding does not serve requests yet.
+    let listener = tokio::net::TcpListener::bind(address).await?;
+    let address = listener.local_addr()?;
+    let store = Store::connect(&database_url).await.map_err(|e| e.message)?;
+    for tenant in &tenants {
+        store.provision(tenant, demo).await.map_err(|e| e.message)?;
+    }
     let worker_store = store.clone();
     let worker_connections = connections.clone();
     let (shutdown_tx, mut shutdown_rx) = tokio::sync::watch::channel(false);
@@ -138,7 +139,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     });
-    let listener = tokio::net::TcpListener::bind(address).await?;
     tracing::info!(%address,demo,"StateSet WMS listening");
     let app = App {
         store,

@@ -49,10 +49,11 @@ trap 'exit 143' TERM
 "$wms_pg_bin/pg_ctl" -D "$wms_test_root/data" -l "$wms_test_root/postgres.log" -t 15 \
   -o "-c listen_addresses='' -c unix_socket_directories='$wms_test_root/socket' -c max_connections=100 -p $wms_test_port" -w start >/dev/null
 "$wms_pg_bin/createdb" --host "$wms_test_root/socket" --port "$wms_test_port" wms_local_test
-export WMS_TEST_DATABASE_URL="postgresql:///wms_local_test?host=$wms_test_root/socket&port=$wms_test_port&user=$(id -un)"
+WMS_TEST_DATABASE_URL="postgresql:///wms_local_test?host=$wms_test_root/socket&port=$wms_test_port&user=$(id -un)"
+export WMS_TEST_DATABASE_URL
 
 if [[ "$#" == 0 ]]; then
-  cargo test --locked --test postgres --test persistence_acceptance --test persistence_guards --test native_api --test oms_fulfillment_api --test oms_receiver --test operations -- --ignored --test-threads=1
+  cargo test --locked --lib --test postgres --test persistence_acceptance --test persistence_guards --test native_api --test oms_fulfillment_api --test oms_receiver --test operations --test startup -- --ignored --test-threads=1
 else
   "$@"
 fi

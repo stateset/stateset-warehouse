@@ -1,38 +1,38 @@
-Seeding 100 products, 200 bin-lots and 100 open orders in capacity-12956edb-ed39-4e8f-bcdc-26d8d93de8d4
+Seeding 100 products, 200 bin-lots and 100 open orders in capacity-4d702080-9875-4e2a-8bb0-e7a9b3a2274a
 Running 4 concurrent clients, 10 physical moves each
 {
   "concurrent_work": {
     "action_including_refresh_and_retries": {
-      "max_ms": 354.50678800000003,
-      "p50_ms": 69.882482,
-      "p95_ms": 325.33752300000003,
-      "p99_ms": 354.50678800000003,
+      "max_ms": 606.6108529999999,
+      "p50_ms": 98.308085,
+      "p95_ms": 288.568632,
+      "p99_ms": 606.6108529999999,
       "samples": 40
     },
-    "actions_per_second": 28.682446809072847,
+    "actions_per_second": 27.934569999214755,
     "command_attempt": {
-      "max_ms": 43.066308,
-      "p50_ms": 14.822867,
-      "p95_ms": 31.766833000000002,
-      "p99_ms": 34.45968,
-      "samples": 139
+      "max_ms": 50.362286,
+      "p50_ms": 13.438189999999999,
+      "p95_ms": 37.439114000000004,
+      "p99_ms": 42.242227,
+      "samples": 142
     },
     "frozen_replay": {
-      "max_ms": 34.473248999999996,
-      "p50_ms": 1.556076,
-      "p95_ms": 12.490614,
-      "p99_ms": 34.473248999999996,
+      "max_ms": 33.851168,
+      "p50_ms": 1.652382,
+      "p95_ms": 12.553094000000002,
+      "p99_ms": 33.851168,
       "samples": 40
     },
     "physical_actions": 40,
-    "seconds": 1.394581162,
-    "stale_version_rejections": 99,
+    "seconds": 1.431917513,
+    "stale_version_rejections": 102,
     "state_refresh": {
-      "max_ms": 97.567458,
-      "p50_ms": 18.551902,
-      "p95_ms": 35.834002,
-      "p99_ms": 65.382953,
-      "samples": 139
+      "max_ms": 99.693092,
+      "p50_ms": 19.045782,
+      "p95_ms": 40.75843,
+      "p99_ms": 49.427049000000004,
+      "samples": 142
     },
     "successful_frozen_replays": 40,
     "transient_503_attempts": 0,
@@ -64,8 +64,8 @@ Running 4 concurrent clients, 10 physical moves each
     "PostgreSQL and harness may share CPU; no production throughput or HA claim"
   ],
   "memory": {
-    "process_peak_after_clients_kib": 15096,
-    "process_peak_before_clients_kib": 7488,
+    "process_peak_after_clients_kib": 12948,
+    "process_peak_before_clients_kib": 7296,
     "scope": "Rust workload process high-water mark; excludes PostgreSQL and is not a constant-memory proof"
   },
   "proof": {
@@ -98,7 +98,7 @@ Running 4 concurrent clients, 10 physical moves each
     "received": 7,
     "reserved_total": 50
   },
-  "recorded_at": "2026-10-17T18:50:34.956857152+00:00",
+  "recorded_at": "2026-10-17T19:11:48.130998217+00:00",
   "schema_version": 1,
   "seed": {
     "allocated_orders": 50,
@@ -106,8 +106,8 @@ Running 4 concurrent clients, 10 physical moves each
     "commands": 476,
     "open_orders": 100,
     "products": 101,
-    "seconds": 4.61976334,
+    "seconds": 34.204502005,
     "storage_bins": 21
   },
-  "tenant": "capacity-12956edb-ed39-4e8f-bcdc-26d8d93de8d4"
+  "tenant": "capacity-4d702080-9875-4e2a-8bb0-e7a9b3a2274a"
 }

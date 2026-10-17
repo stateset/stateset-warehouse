@@ -1,5 +1,5 @@
 {
-  "sha256": "72f8e6c94e04aea05339b83b35280e152836ab89fd93ac91bb98bfa39f26f265",
+  "sha256": "9707a35c0d9c77b864ae24567c7bd85d4706b236b909d119cfa62d8950ab4155",
   "inputs": [
     {
       "path": ".dockerignore",
@@ -219,7 +219,7 @@
     },
     {
       "path": "scripts/check.sh",
-      "sha256": "d3afaf50261957c5df963e501ba49f5b3fa600ef4ea6bba84e969a1588757adb"
+      "sha256": "4ca5e2719315df3e255b737fa0fbba6aefbd2469fffb83879a7bd6d9b5b73187"
     },
     {
       "path": "scripts/container-smoke.sh",
@@ -235,7 +235,7 @@
     },
     {
       "path": "scripts/local-postgres.sh",
-      "sha256": "44d5e9e65073f5d5eb5e11a3ad6d2b7219ef82542c1d37d64e40b5ecc54434ce"
+      "sha256": "bf3a964983824dc2f39ee2092ab812105ddca0f11daaba3f06376dbfbee87d47"
     },
     {
       "path": "scripts/qualify-native.py",
@@ -287,7 +287,7 @@
     },
     {
       "path": "src/main.rs",
-      "sha256": "028b94eaba8df625a0b7160fab7e47c0dda99630c13a036e650612ba14f1bc35"
+      "sha256": "da1c5a7e676f4d70cf99e908f96338b83b291e87582dce8b5f6d2580d8d983ca"
     },
     {
       "path": "src/native.rs",
@@ -388,6 +388,10 @@
     {
       "path": "tests/postgres.rs",
       "sha256": "8706dfe8aa244b48e4804f52c6b827e6c23a55ab19f75f1cc766cc867ec6c9aa"
+    },
+    {
+      "path": "tests/startup.rs",
+      "sha256": "5a7a4aafd5b6dc278aefa8a21b18b86c3da77145d5e08e996575e6496463f861"
     },
     {
       "path": "tests/support/workos.rs",

@@ -1,8 +1,8 @@
 {
   "ok": true,
   "synthetic": true,
-  "image_id": "sha256:bca3a233dd6acbd1bb5f4a8c237fd6a5e9e0da6addcbc7b7a112b5cd91f2c11c",
-  "source_inputs_sha256": "c15ab9b61f00073095a3180dc22d139d5b28183f11c9fcf6bef3f6ffc36e515f",
+  "image_id": "sha256:7d2cd51ceb3ac7398fef26f33aec16913f0ea71e179abaed8bf26570eba791fa",
+  "source_inputs_sha256": "cf67cbca43e197d5da1cead4ebdc5743d4f7272b2c7ac329177998bc6006c3ab",
   "release_revision": "unrecorded-working-tree",
   "os": "linux",
   "architecture": "amd64",
@@ -13,7 +13,7 @@
     "postgres@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea"
   ],
   "qualifier_script_sha256": "5953e166762a6bea9616b8180eed4e6b13ecd30ddffcf1a9710f289df74f5be7",
-  "elapsed_build_and_runtime_seconds": 240,
+  "elapsed_build_and_runtime_seconds": 232,
   "runtime": {
     "uid": 10001,
     "read_only_rootfs": true,

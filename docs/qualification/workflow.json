@@ -1,11 +1,13 @@
 {
   "schema_version": 1,
-  "recorded_at": "2026-10-17T18:01:06.302575+00:00",
+  "recorded_at": "2026-10-17T19:05:22.329083+00:00",
   "ok": true,
   "source_sha256": {
     ".github/workflows/check.yml": "27d71975d0094b0bc3b0f9fc9bf5fc4ecb2a2588b4536aad3e9d87f38e38c3d8",
     "scripts/qualify-release.sh": "885186b677f895adda8caacfd3321866e06e2c60be7fa44df515156cf25528dc",
-    "scripts/resilience-rehearsal.sh": "a3989732252279094d7ccadd68be45dc169d5a9473f51ac8507f2e456bb4afeb"
+    "scripts/resilience-rehearsal.sh": "a3989732252279094d7ccadd68be45dc169d5a9473f51ac8507f2e456bb4afeb",
+    "scripts/check.sh": "4ca5e2719315df3e255b737fa0fbba6aefbd2469fffb83879a7bd6d9b5b73187",
+    "scripts/local-postgres.sh": "bf3a964983824dc2f39ee2092ab812105ddca0f11daaba3f06376dbfbee87d47"
   },
   "actionlint_version": "1.7.12",
   "shellcheck_version": "ShellCheck - shell script analysis tool\nversion: 0.11.0\nlicense: GNU General Public License, version 3\nwebsite: https://www.shellcheck.net",
@@ -24,7 +26,9 @@
       "tool": "shellcheck",
       "arguments": [
         "scripts/qualify-release.sh",
-        "scripts/resilience-rehearsal.sh"
+        "scripts/resilience-rehearsal.sh",
+        "scripts/check.sh",
+        "scripts/local-postgres.sh"
       ],
       "exit_code": 0,
       "output": ""
