@@ -1,5 +1,9 @@
 # Sustained HTTP and crash recovery qualification
 
+## Current 0.2.0 qualification — 2026-10-19
+
+The [0.2.0 complete gate](qualification/release-20261019-icommerce-tui-v1/summary.json) and [independent audit](qualification/release-20261019-icommerce-tui-v1/independent-audit.json) pass on frozen source44, including 331 Rust, 74 Python, 13 terminal and 170 browser checks. Both full 300-second image profiles, final serial reconciliation, populated archive restore and four API/PostgreSQL crash recoveries pass. Durable original-request checkpoints precede each fault. Earlier failed attempts remain retained. Deployed identity/native/MCP-client and physical facility acceptance remain separate.
+
 `scripts/resilience-rehearsal.sh` exercises the production image through actual HTTP against two independent API processes sharing one disposable PostgreSQL primary. It uses real mode, one administrator, four distinct operator identities by default, and a second isolated tenant. The rehearsal never uses production connection strings or configured native/webhook receivers.
 
 Run it against an immutable image ID from the production container build:

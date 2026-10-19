@@ -111,7 +111,7 @@ for name, path in reports.items():
         output = root / "publish" / (name + ".json")
         output.write_bytes(raw)
         artifacts.append({"stage": name, "path": output.name, "sha256": hashlib.sha256(raw).hexdigest()})
-for name in ("source-inputs-before.json", "source-inputs-after.json", "tool-versions.json", "provenance.json"):
+for name in ("source-inputs-before.json", "source-inputs-after.json", "tool-versions.json", "provenance.json", "dependency-licenses.json"):
     path = root / name
     if path.is_file():
         raw = path.read_bytes()
@@ -185,9 +185,9 @@ wms_release_fingerprint() {
   python3 - "$1" <<'PY'
 import hashlib, json, pathlib, sys
 root = pathlib.Path.cwd()
-files = [root / path for path in ("Cargo.toml", "Cargo.lock", "Dockerfile", ".dockerignore", "docker-compose.yml", ".nvmrc")]
+files = [root / path for path in ("Cargo.toml", "Cargo.lock", "Dockerfile", ".dockerignore", "docker-compose.yml", ".nvmrc", "LICENSE", "LICENSE-MIT", "LICENSE-APACHE", "SECURITY.md", "CONTRIBUTING.md", "THIRD_PARTY_NOTICES.md")]
 excluded = {"node_modules", "dist", "test-results", "playwright-report", "__pycache__"}
-for name in ("src", "migrations", "dashboard", "examples", "tests", "scripts", "integrations", "deploy", ".github"):
+for name in ("src", "migrations", "dashboard", "vendor", "cli", "examples", "tests", "scripts", "integrations", "deploy", ".github"):
     files += [path for path in (root / name).rglob("*") if path.is_file() and not excluded.intersection(path.parts)
               and not path.name.startswith(".env") and not path.name.endswith((".log", ".pyc"))]
 inputs = [{"path": str(path.relative_to(root)), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()} for path in sorted(set(files))]
@@ -254,6 +254,7 @@ versions = {name: subprocess.run(command, check=True, capture_output=True, text=
 (pathlib.Path(os.environ["WMS_RELEASE_ARTIFACT_DIR"]) / "tool-versions.json").write_text(json.dumps(versions, indent=2) + "\n")
 PY
   wms_release_source_before="$(wms_release_fingerprint "$wms_release_root/source-inputs-before.json")"
+  python3 scripts/open_source_preflight.py --output "$wms_release_root/dependency-licenses.json"
 }
 
 wms_release_builds() {
@@ -377,6 +378,8 @@ wms_release_stable_inputs() {
   fi
   python3 - "$wms_release_root" <<'PY'
 import hashlib, json, pathlib, sys
+sys.path.insert(0, "scripts")
+from crash_journal import verify_journal
 root = pathlib.Path(sys.argv[1])
 container = json.loads((root / "container/container-qualification.json").read_text())
 resilience = json.loads((root / "resilience/resilience.json").read_text())
@@ -388,6 +391,23 @@ assert serial["ok"] is True and serial["independent_proof"]["serial_identity_pro
 assert serial["phases"]["sustained_http"]["serial_units_per_bin_lot"] >= 2
 assert serial["phases"]["sustained_http"]["serial_current_source_reads"] == serial["phases"]["sustained_http"]["committed_moves"]
 assert serial["independent_proof"]["serial_identity_proof"]["recovered_moves_outside_timed_interval"] == 2
+for folder, report in (("resilience", resilience), ("serial-resilience", serial)):
+    for phase in ("api_sigkill", "postgres_sigkill"):
+        evidence = report["phases"][phase]
+        checkpoints = verify_journal(root / folder, evidence["crash_journal"], phase)
+        original = checkpoints[0]["facts"]
+        if folder == "serial-resilience":
+            barrier = evidence["serial_after_write_barrier"]
+            assert original["original_request"] == barrier["original_request"]
+            assert original["actor"] == barrier["actor"]
+            facts = {record["stage"]: record["facts"] for record in checkpoints}
+            stages = [record["stage"] for record in checkpoints]
+            assert stages.index("barrier_planned") < stages.index("barrier_installed") < stages.index("original_send_requested")
+            assert stages.index("fault_verified") < stages.index("barrier_removed") < stages.index("original_recovery_requested")
+            assert stages.index("rollback_verified") < stages.index("original_recovery_requested")
+            assert facts["baseline_captured"]["fingerprints"] == evidence["all_table_fingerprints_unchanged"]
+            assert facts["barrier_planned"]["baseline"] == barrier["before"]
+            assert facts["writer_blocked"]["evidence"] == barrier["blocking_evidence"]
 for phase in ("api_sigkill", "postgres_sigkill"):
     evidence = serial["phases"][phase]
     assert evidence["barrier_stage"] == "after_serial_custody_history_event_receipt_before_outbox_commit"

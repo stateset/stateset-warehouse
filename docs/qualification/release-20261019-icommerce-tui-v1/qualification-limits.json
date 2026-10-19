@@ -1,0 +1,36 @@
+{
+  "production_qualified": false,
+  "physical_acceptance_performed": false,
+  "pending_serial_write_crash_qualified": true,
+  "pending_serial_write_crash_command_types": [
+    "move_stock"
+  ],
+  "pending_serial_write_crash_scope": "Exact original serial request interrupted after custody/history/event/receipt mutation, before commit. All 49 committed fingerprints remain unchanged; original requests recover once and replay.",
+  "durable_crash_journals_verified": true,
+  "tui_real_api_pg_pty_checked": true,
+  "tui_checked_flows": [
+    "Literal case-sensitive physical serial move",
+    "Lost-success exact original replay and actor fencing",
+    "New-facility creation at version zero and automatic selection",
+    "Unknown new-facility original recovery across facilities (unit fixture)"
+  ],
+  "tui_limits": [
+    "POSIX/Linux; Node22.12+; no browser sign-in or automatic token refresh",
+    "Forms use strict warehouse versions and whole each quantities; pack scans remain in dashboard/API",
+    "No automatic physical confirmation; generic failed/unknown writes remain held for original recovery"
+  ],
+  "timed_serial_labels": 8,
+  "serial_labels_static_during_timed_window": 15992,
+  "additional_recovery_label_outside_timed_window": 1,
+  "recovered_serial_commands_excluded_from_timed_move_counts": 2,
+  "limits": [
+    "Local synthetic single-host API survival and PostgreSQL restart recovery; no managed failover or host-loss proof.",
+    "The after-write crash matrix covers two move_stock transactions on one literal label. Interrupted serial count/receive/pick/package/handoff/transfer commands are not separately killed by this protocol.",
+    "Serial timed traffic moves eight fixed labels; two separately recovered out-and-back writes use one otherwise static label. Broad random-label contention and large count/commissioning workflows remain open.",
+    "Lost-success proxy fixture remains untracked; pending serial-write API and PostgreSQL crashes are independently proved by the exact after-mutation barrier.",
+    "Shared-host aggregate latency observations are not controlled capacity comparisons or facility SLOs.",
+    "Deployed identity/native/MCP-client, scanner-device and physical facility acceptance remain separate. Production and A+ are not claimed."
+  ],
+  "repository_visibility": "private; public launch not performed",
+  "packages_or_images_published": false
+}

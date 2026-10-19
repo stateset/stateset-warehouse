@@ -4,7 +4,7 @@ use sqlx::PgConnection;
 
 fn event_map(sql: &str) -> String {
     let boundary = sql
-        .find("), original AS (")
+        .find("), original AS")
         .expect("complete source boundary");
     format!("{}) SELECT COALESCE(jsonb_object_agg(id,jsonb_build_object('warehouse_id',warehouse_id,'ok',ok)),'{{}}'::jsonb) FROM event_sources;",&sql[..boundary])
 }

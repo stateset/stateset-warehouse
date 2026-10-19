@@ -1,0 +1,3 @@
+Building production image; evidence: /tmp/wms-source44-retry.omnjvtgj/container
+PASS: production image healthy under UID 10001, read-only filesystem, zero effective capabilities, no new privileges, real authentication and independent PostgreSQL reconciliation.
+Container qualification evidence: /tmp/wms-source44-retry.omnjvtgj/container

@@ -1,0 +1,1328 @@
+//! Cart and Checkout domain models
+//!
+//! Engine-native checkout aggregates with items, totals, addresses, and
+//! fulfillment. These types are protocol-neutral and are not ACP/UCP wire types.
+
+use chrono::{DateTime, Utc};
+use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
+use stateset_primitives::{CartId, CurrencyCode, CustomerId, OrderId, PaymentId, ProductId};
+use strum::{Display, EnumString};
+use uuid::Uuid;
+
+use super::Address;
+use super::x402::{X402Asset, X402IntentStatus, X402Network};
+use crate::errors::Result;
+use crate::validation::{Validate, ValidationBuilder};
+
+/// Cart/Checkout Session aggregate
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Cart {
+    pub id: CartId,
+    pub cart_number: String,
+    pub customer_id: Option<CustomerId>,
+    pub status: CartStatus,
+    pub currency: CurrencyCode,
+
+    // Items
+    pub items: Vec<CartItem>,
+
+    // Totals
+    pub subtotal: Decimal,
+    pub tax_amount: Decimal,
+    pub shipping_amount: Decimal,
+    pub discount_amount: Decimal,
+    pub grand_total: Decimal,
+
+    // Customer info (for guest checkout)
+    pub customer_email: Option<String>,
+    pub customer_phone: Option<String>,
+    pub customer_name: Option<String>,
+
+    // Addresses
+    pub shipping_address: Option<CartAddress>,
+    pub billing_address: Option<CartAddress>,
+    pub billing_same_as_shipping: bool,
+
+    // Fulfillment
+    pub fulfillment_type: Option<FulfillmentType>,
+    pub shipping_method: Option<String>,
+    pub shipping_carrier: Option<String>,
+    pub estimated_delivery: Option<DateTime<Utc>>,
+
+    // Payment
+    pub payment_method: Option<String>,
+    pub payment_token: Option<String>,
+    pub payment_status: CartPaymentStatus,
+
+    // Discount/Promo
+    pub coupon_code: Option<String>,
+    pub discount_description: Option<String>,
+
+    // Order reference (after checkout completes)
+    pub order_id: Option<OrderId>,
+    pub order_number: Option<String>,
+
+    // Metadata
+    pub notes: Option<String>,
+    pub metadata: Option<serde_json::Value>,
+
+    // Inventory reservations
+    pub inventory_reserved: bool,
+    pub reservation_expires_at: Option<DateTime<Utc>>,
+
+    // x402 Payment (for stablecoin checkout)
+    pub x402_payment: Option<CartX402Payment>,
+
+    // Timestamps
+    pub expires_at: Option<DateTime<Utc>>,
+    pub completed_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Cart line item
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CartItem {
+    pub id: Uuid,
+    pub cart_id: CartId,
+    pub product_id: Option<ProductId>,
+    pub variant_id: Option<Uuid>,
+    pub sku: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub image_url: Option<String>,
+    pub quantity: i32,
+    pub unit_price: Decimal,
+    pub original_price: Option<Decimal>,
+    pub discount_amount: Decimal,
+    pub tax_amount: Decimal,
+    pub total: Decimal,
+    pub weight: Option<Decimal>,
+    pub requires_shipping: bool,
+    pub metadata: Option<serde_json::Value>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Cart address (detailed for checkout)
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CartAddress {
+    pub first_name: String,
+    pub last_name: String,
+    pub company: Option<String>,
+    pub line1: String,
+    pub line2: Option<String>,
+    pub city: String,
+    pub state: Option<String>,
+    pub postal_code: String,
+    pub country: String,
+    pub phone: Option<String>,
+    pub email: Option<String>,
+}
+
+impl From<CartAddress> for Address {
+    fn from(addr: CartAddress) -> Self {
+        Self {
+            line1: addr.line1,
+            line2: addr.line2,
+            city: addr.city,
+            state: addr.state,
+            postal_code: addr.postal_code,
+            country: addr.country,
+        }
+    }
+}
+
+impl From<Address> for CartAddress {
+    fn from(addr: Address) -> Self {
+        Self {
+            first_name: String::new(),
+            last_name: String::new(),
+            company: None,
+            line1: addr.line1,
+            line2: addr.line2,
+            city: addr.city,
+            state: addr.state,
+            postal_code: addr.postal_code,
+            country: addr.country,
+            phone: None,
+            email: None,
+        }
+    }
+}
+
+/// x402 payment configuration for cart checkout
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CartX402Payment {
+    /// x402 payment intent ID (if created)
+    pub intent_id: Option<Uuid>,
+    /// Payer wallet address
+    pub payer_address: String,
+    /// Target blockchain network
+    pub network: X402Network,
+    /// Payment asset (stablecoin)
+    pub asset: X402Asset,
+    /// Current status of the x402 payment
+    pub status: X402IntentStatus,
+}
+
+/// Input for setting x402 payment on cart
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SetCartX402Payment {
+    /// Payer wallet address
+    pub payer_address: String,
+    /// Target blockchain network
+    pub network: X402Network,
+    /// Payment asset (stablecoin)
+    pub asset: X402Asset,
+}
+
+/// Result of x402 checkout attempt
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum X402CheckoutResult {
+    /// Payment is required - return HTTP 402 with this data
+    PaymentRequired(X402PaymentRequiredData),
+    /// Intent was created and is awaiting signature
+    IntentCreated(X402IntentCreatedData),
+    /// Intent is signed and awaiting settlement
+    AwaitingSettlement(X402AwaitingSettlementData),
+    /// Checkout completed successfully
+    Completed(CheckoutResult),
+}
+
+/// Data for HTTP 402 Payment Required response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct X402PaymentRequiredData {
+    pub cart_id: CartId,
+    pub payee_address: String,
+    pub amount: u64,
+    pub amount_display: String,
+    pub asset: X402Asset,
+    pub network: X402Network,
+    pub chain_id: u64,
+    pub valid_seconds: u64,
+}
+
+/// Data when intent is created and awaiting signature
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct X402IntentCreatedData {
+    pub cart_id: CartId,
+    pub intent_id: Uuid,
+    pub signing_hash: String,
+    pub amount: u64,
+    pub amount_display: String,
+    pub asset: X402Asset,
+    pub network: X402Network,
+    pub payee_address: String,
+    pub valid_until: u64,
+    pub nonce: u64,
+}
+
+/// Data when awaiting on-chain settlement
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct X402AwaitingSettlementData {
+    pub cart_id: CartId,
+    pub intent_id: Uuid,
+    pub status: X402IntentStatus,
+    pub sequence_number: Option<u64>,
+    pub batch_id: Option<Uuid>,
+}
+
+/// Cart status enumeration
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Display, EnumString)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case", ascii_case_insensitive)]
+#[non_exhaustive]
+pub enum CartStatus {
+    /// Cart is active and being modified
+    Active,
+    /// Ready for payment (all required info collected)
+    #[strum(serialize = "ready_for_payment", serialize = "readyforpayment")]
+    ReadyForPayment,
+    /// Payment processing
+    #[strum(serialize = "payment_pending", serialize = "paymentpending")]
+    PaymentPending,
+    /// Checkout completed, order created
+    Completed,
+    /// Cart abandoned by customer
+    Abandoned,
+    /// Cart cancelled
+    #[strum(serialize = "cancelled", serialize = "canceled")]
+    Cancelled,
+    /// Cart expired
+    Expired,
+}
+
+impl Default for CartStatus {
+    fn default() -> Self {
+        Self::Active
+    }
+}
+
+impl CartStatus {
+    /// Check if a cart status transition is allowed.
+    ///
+    /// Mirrors the guards enforced by the repositories
+    /// (`crates/stateset-db/src/sqlite/carts.rs`, postgres twin):
+    /// `Active`/`ReadyForPayment`/`PaymentPending` move freely among the
+    /// open states and into any terminal state (`Completed` via checkout,
+    /// `Cancelled`/`Abandoned`/`Expired` via their own transitions).
+    /// Terminal states are closed except for idempotent self-transitions.
+    /// No transition ever returns to `Active`.
+    #[must_use]
+    pub fn can_transition_to(self, next: Self) -> bool {
+        if self == next {
+            return true;
+        }
+
+        match self {
+            Self::Active => matches!(
+                next,
+                Self::ReadyForPayment
+                    | Self::PaymentPending
+                    | Self::Completed
+                    | Self::Cancelled
+                    | Self::Abandoned
+                    | Self::Expired
+            ),
+            Self::ReadyForPayment => matches!(
+                next,
+                Self::PaymentPending
+                    | Self::Completed
+                    | Self::Cancelled
+                    | Self::Abandoned
+                    | Self::Expired
+            ),
+            Self::PaymentPending => matches!(
+                next,
+                Self::ReadyForPayment
+                    | Self::Completed
+                    | Self::Cancelled
+                    | Self::Abandoned
+                    | Self::Expired
+            ),
+            Self::Completed | Self::Cancelled | Self::Abandoned | Self::Expired => false,
+        }
+    }
+}
+
+/// Cart payment status
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Display, EnumString)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case", ascii_case_insensitive)]
+#[non_exhaustive]
+pub enum CartPaymentStatus {
+    /// No payment attempted
+    None,
+    /// Payment method selected
+    #[strum(serialize = "method_selected", serialize = "methodselected")]
+    MethodSelected,
+    /// Payment authorized but not captured
+    Authorized,
+    /// Payment captured/completed
+    Captured,
+    /// Payment failed
+    Failed,
+    /// Payment refunded
+    Refunded,
+}
+
+impl Default for CartPaymentStatus {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
+/// Fulfillment type
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case", ascii_case_insensitive)]
+#[non_exhaustive]
+pub enum FulfillmentType {
+    /// Ship to address
+    Shipping,
+    /// Store/local pickup
+    #[strum(serialize = "pickup", serialize = "pick_up", serialize = "pick-up")]
+    Pickup,
+    /// Digital delivery
+    Digital,
+}
+
+impl Default for FulfillmentType {
+    fn default() -> Self {
+        Self::Shipping
+    }
+}
+
+/// Shipping rate/option
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ShippingRate {
+    pub id: String,
+    pub carrier: String,
+    pub service: String,
+    pub description: Option<String>,
+    pub price: Decimal,
+    pub currency: CurrencyCode,
+    pub estimated_days: Option<i32>,
+    pub estimated_delivery: Option<DateTime<Utc>>,
+}
+
+/// Input for creating a new cart
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct CreateCart {
+    pub customer_id: Option<CustomerId>,
+    pub customer_email: Option<String>,
+    pub customer_name: Option<String>,
+    pub currency: Option<CurrencyCode>,
+    pub items: Option<Vec<AddCartItem>>,
+    pub shipping_address: Option<CartAddress>,
+    pub billing_address: Option<CartAddress>,
+    pub notes: Option<String>,
+    pub metadata: Option<serde_json::Value>,
+    pub expires_in_minutes: Option<i64>,
+}
+
+/// Input for adding an item to cart
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AddCartItem {
+    pub product_id: Option<ProductId>,
+    pub variant_id: Option<Uuid>,
+    pub sku: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub image_url: Option<String>,
+    pub quantity: i32,
+    pub unit_price: Decimal,
+    pub original_price: Option<Decimal>,
+    pub weight: Option<Decimal>,
+    pub requires_shipping: Option<bool>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+impl Default for AddCartItem {
+    fn default() -> Self {
+        Self {
+            product_id: None,
+            variant_id: None,
+            sku: String::new(),
+            name: String::new(),
+            description: None,
+            image_url: None,
+            quantity: 1,
+            unit_price: Decimal::ZERO,
+            original_price: None,
+            weight: None,
+            requires_shipping: Some(true),
+            metadata: None,
+        }
+    }
+}
+
+/// Input for updating a cart item
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UpdateCartItem {
+    pub quantity: Option<i32>,
+    pub unit_price: Option<Decimal>,
+    pub discount_amount: Option<Decimal>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+/// Input for updating a cart
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UpdateCart {
+    pub customer_id: Option<CustomerId>,
+    pub customer_email: Option<String>,
+    pub customer_phone: Option<String>,
+    pub customer_name: Option<String>,
+    pub shipping_address: Option<CartAddress>,
+    pub billing_address: Option<CartAddress>,
+    pub billing_same_as_shipping: Option<bool>,
+    pub fulfillment_type: Option<FulfillmentType>,
+    pub shipping_method: Option<String>,
+    pub shipping_carrier: Option<String>,
+    pub coupon_code: Option<String>,
+    pub discount_amount: Option<Decimal>,
+    pub discount_description: Option<String>,
+    pub notes: Option<String>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+/// Input for setting shipping on cart
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SetCartShipping {
+    pub shipping_address: CartAddress,
+    pub shipping_method: Option<String>,
+    pub shipping_carrier: Option<String>,
+    pub shipping_amount: Option<Decimal>,
+}
+
+/// Input for setting payment on cart
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SetCartPayment {
+    pub payment_method: String,
+    pub payment_token: Option<String>,
+    pub billing_address: Option<CartAddress>,
+}
+
+/// Input for applying discount/coupon
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApplyCartDiscount {
+    pub coupon_code: String,
+}
+
+/// Cart filter for querying
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct CartFilter {
+    pub customer_id: Option<CustomerId>,
+    pub customer_email: Option<String>,
+    pub status: Option<CartStatus>,
+    pub has_items: Option<bool>,
+    pub is_abandoned: Option<bool>,
+    pub created_after: Option<DateTime<Utc>>,
+    pub created_before: Option<DateTime<Utc>>,
+    pub limit: Option<u32>,
+    pub offset: Option<u32>,
+}
+
+/// Checkout result after completing a cart
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CheckoutResult {
+    pub cart_id: CartId,
+    pub order_id: OrderId,
+    pub order_number: String,
+    pub payment_id: Option<PaymentId>,
+    pub total_charged: Decimal,
+    pub currency: CurrencyCode,
+}
+
+/// Governed request to atomically turn a checkout-ready cart into a confirmed
+/// order. Payment settlement is intentionally separate: this command never
+/// marks an order paid without a durable payment or settlement command.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CommitCheckout {
+    pub cart_id: CartId,
+    /// Inventory policy for tracked SKUs. Omission preserves historical backorders.
+    /// The policy is enforced inside the checkout transaction, in preview and apply.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stock_policy: Option<super::order::StockPolicy>,
+    /// Fingerprint issued with the quote, checked under the checkout transaction.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_cart_fingerprint: Option<String>,
+}
+
+/// Governed request to add one line to an active cart (`carts.item.add`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AddCartItemCommand {
+    pub cart_id: CartId,
+    pub item: AddCartItem,
+}
+
+/// Governed request to set a cart's shipping address
+/// (`carts.shipping_address.set`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SetCartShippingAddress {
+    pub cart_id: CartId,
+    pub address: CartAddress,
+}
+
+/// Governed request to record a cart's payment method
+/// (`carts.payment_method.set`). The token is never echoed on the receipt.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SetCartPaymentMethod {
+    pub cart_id: CartId,
+    pub payment: SetCartPayment,
+}
+
+/// Governed request to redeem a coupon on a cart (`carts.coupon.apply`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ApplyCartCoupon {
+    pub cart_id: CartId,
+    pub coupon_code: String,
+}
+
+/// Governed request to price a cart's tax from its shipping address and
+/// write the total onto the cart (`carts.tax.calculate`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CalculateCartTax {
+    pub cart_id: CartId,
+}
+
+/// Receipt result of `carts.tax.calculate`: the repriced cart and the tax
+/// breakdown written onto it.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CartTaxCalculated {
+    pub cart: Cart,
+    pub calculation: super::tax::TaxCalculationResult,
+}
+
+impl CommitCheckout {
+    /// Legacy checkout behavior with optional quote constraints unset.
+    #[must_use]
+    pub const fn new(cart_id: CartId) -> Self {
+        Self { cart_id, stock_policy: None, expected_cart_fingerprint: None }
+    }
+}
+
+impl Cart {
+    /// Versioned commitment to the complete cart snapshot. Sorting line identities
+    /// makes database row order irrelevant; changing even same-price goods,
+    /// addresses, customer identity, metadata, or expiry requires a fresh quote.
+    pub fn checkout_fingerprint(&self) -> Result<String> {
+        use sha2::{Digest, Sha256};
+        let mut snapshot = self.clone();
+        snapshot.items.sort_by_key(|item| item.id);
+        let bytes =
+            serde_jcs::to_vec(&("stateset.checkout.cart.v1", snapshot)).map_err(|error| {
+                crate::CommerceError::from(crate::errors::DbError::serialization_error(
+                    "checkout_fingerprint",
+                    error.to_string(),
+                ))
+            })?;
+        Ok(format!("sha256:{:x}", Sha256::digest(bytes)))
+    }
+
+    /// Validate a quote's snapshot commitment without mutating commerce state.
+    pub fn verify_checkout_fingerprint(&self, expected: Option<&str>) -> Result<()> {
+        if let Some(expected) = expected {
+            if expected != self.checkout_fingerprint()? {
+                return Err(crate::CommerceError::Conflict(
+                    "quoted cart fingerprint does not match current cart".into(),
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    /// Check if cart has items
+    #[must_use]
+    pub fn has_items(&self) -> bool {
+        !self.items.is_empty()
+    }
+
+    /// Get total item count
+    #[must_use]
+    pub fn item_count(&self) -> i32 {
+        self.items.iter().map(|i| i.quantity).sum()
+    }
+
+    /// Check if cart requires shipping
+    #[must_use]
+    pub fn requires_shipping(&self) -> bool {
+        self.items.iter().any(|i| i.requires_shipping)
+    }
+
+    /// Check if the cart's lifecycle status permits it to be checked out into
+    /// an order.
+    ///
+    /// A cart in a terminal/non-checkoutable state ([`CartStatus::Cancelled`],
+    /// [`CartStatus::Abandoned`], or [`CartStatus::Expired`]) can never be
+    /// completed into a real order. [`CartStatus::Completed`] is excluded here
+    /// too — completion of an already-completed cart is handled separately as an
+    /// idempotent short-circuit, not via this readiness check.
+    #[must_use]
+    pub const fn is_checkoutable_status(&self) -> bool {
+        matches!(
+            self.status,
+            CartStatus::Active | CartStatus::ReadyForPayment | CartStatus::PaymentPending
+        )
+    }
+
+    /// Check if cart is ready for checkout
+    #[must_use]
+    pub fn is_ready_for_checkout(&self) -> bool {
+        // A cancelled/abandoned/expired (or already-completed) cart must never be
+        // minted into a new order, regardless of whether its items/customer/address
+        // fields happen to be populated.
+        if !self.is_checkoutable_status() {
+            return false;
+        }
+
+        // A cart whose `expires_at` has passed is dead even if the expiry
+        // sweep has not flipped its status yet.
+        if self.is_expired() {
+            return false;
+        }
+
+        if self.items.is_empty() {
+            return false;
+        }
+
+        // Must have customer info (either customer_id or email)
+        if self.customer_id.is_none() && self.customer_email.is_none() {
+            return false;
+        }
+
+        // Must have shipping address if requires shipping
+        if self.requires_shipping() && self.shipping_address.is_none() {
+            return false;
+        }
+
+        true
+    }
+
+    /// Check if cart can be modified
+    #[must_use]
+    pub const fn can_modify(&self) -> bool {
+        matches!(self.status, CartStatus::Active)
+    }
+
+    /// Check if cart can be completed
+    #[must_use]
+    pub const fn can_complete(&self) -> bool {
+        matches!(self.status, CartStatus::ReadyForPayment | CartStatus::PaymentPending)
+    }
+
+    /// Check if cart can be cancelled
+    #[must_use]
+    pub const fn can_cancel(&self) -> bool {
+        matches!(
+            self.status,
+            CartStatus::Active | CartStatus::ReadyForPayment | CartStatus::PaymentPending
+        )
+    }
+
+    /// Check if cart is abandoned
+    #[must_use]
+    pub fn is_abandoned(&self) -> bool {
+        self.status == CartStatus::Abandoned
+    }
+
+    /// Check if cart is expired
+    #[must_use]
+    pub fn is_expired(&self) -> bool {
+        if let Some(expires_at) = self.expires_at { Utc::now() > expires_at } else { false }
+    }
+
+    /// Guard for money written straight onto the cart — the tax and shipping
+    /// amounts, which do not come from a line and therefore bypass every
+    /// line-level check.
+    ///
+    /// Three things must hold, and none of them held before:
+    ///
+    /// - the cart must still be open (`can_modify`). A completed cart's
+    ///   totals are settled against a minted order and a
+    ///   cancelled/abandoned/expired cart's are dead; re-taxing either one
+    ///   rewrites money nobody will ever collect.
+    /// - the amount must not be negative. A negative tax or shipping charge
+    ///   *lowers* `grand_total`, which is a discount with no coupon, no cap
+    ///   and no audit trail.
+    /// - the amount must be expressible in the cart's currency (invariant M1,
+    ///   `commerce.money.scale_exceeds_currency`): the totals are rounded to
+    ///   the minor unit, so a sub-cent amount silently loses money.
+    ///
+    /// `field` names the amount in the error message (`"tax"`, `"shipping"`).
+    ///
+    /// # Errors
+    ///
+    /// [`crate::CommerceError::Conflict`] when the cart is not modifiable,
+    /// [`crate::CommerceError::ValidationError`] for a negative amount, and
+    /// [`crate::CommerceError::MoneyScaleExceedsCurrency`] for a sub-minor-unit
+    /// amount.
+    pub fn ensure_money_settable(&self, field: &str, amount: Decimal) -> Result<()> {
+        if !self.can_modify() {
+            return Err(crate::errors::CommerceError::Conflict(format!(
+                "Cart {} cannot have its {field} changed in status: {}",
+                self.id, self.status
+            )));
+        }
+        if amount < Decimal::ZERO {
+            return Err(crate::errors::CommerceError::ValidationError(format!(
+                "Cart {field} must not be negative, got {amount}"
+            )));
+        }
+        crate::validation::validate_money_scale(self.currency, amount)
+    }
+
+    /// Recalculate totals from items
+    pub fn recalculate_totals(&mut self) {
+        self.subtotal = self
+            .items
+            .iter()
+            .map(|i| (i.unit_price * Decimal::from(i.quantity)) - i.discount_amount)
+            .sum();
+        self.grand_total =
+            self.subtotal + self.tax_amount + self.shipping_amount - self.discount_amount;
+    }
+}
+
+impl CartItem {
+    /// Calculate a line item's money total in `currency`, rounded to its
+    /// minor unit so the stored total is a real money amount rather than a
+    /// sub-minor-unit value like `9.999` (USD) or `100.5` (JPY).
+    #[must_use]
+    pub fn calculate_total_for_currency(
+        quantity: i32,
+        unit_price: Decimal,
+        discount: Decimal,
+        tax: Decimal,
+        currency: CurrencyCode,
+    ) -> Decimal {
+        let subtotal = unit_price * Decimal::from(quantity);
+        (subtotal - discount + tax).round_dp(u32::from(currency.decimal_places()))
+    }
+
+    /// Calculate a line item's money total with the legacy USD 2-dp fallback.
+    ///
+    /// Prefer [`Self::calculate_total_for_currency`] when the cart currency
+    /// is known.
+    #[must_use]
+    pub fn calculate_total(
+        quantity: i32,
+        unit_price: Decimal,
+        discount: Decimal,
+        tax: Decimal,
+    ) -> Decimal {
+        Self::calculate_total_for_currency(
+            quantity,
+            unit_price,
+            discount,
+            tax,
+            CurrencyCode::default(),
+        )
+    }
+
+    /// Recalculate this item's total
+    pub fn recalculate(&mut self) {
+        self.total = Self::calculate_total(
+            self.quantity,
+            self.unit_price,
+            self.discount_amount,
+            self.tax_amount,
+        );
+    }
+}
+
+impl Validate for AddCartItem {
+    /// Validate an item being added to a cart.
+    ///
+    /// Rejects empty SKU/name, a non-positive quantity, and a negative unit
+    /// or original price. A zero unit price is allowed (e.g. a free/gift item),
+    /// but a negative price never is.
+    fn validate(&self) -> Result<()> {
+        ValidationBuilder::new()
+            .required("sku", &self.sku)
+            .required("name", &self.name)
+            .positive_i32("quantity", self.quantity)
+            .non_negative("unit_price", self.unit_price)
+            .non_negative("original_price", self.original_price.unwrap_or(Decimal::ZERO))
+            .build()
+    }
+}
+
+impl Validate for CreateCart {
+    /// Validate a cart create request.
+    ///
+    /// Validates each provided line item; an empty/no-items cart is allowed at
+    /// create time since items are commonly added afterward.
+    fn validate(&self) -> Result<()> {
+        if let Some(items) = &self.items {
+            for item in items {
+                item.validate()?;
+            }
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_cart_item_total_calculation() {
+        let total = CartItem::calculate_total(2, dec!(10.00), dec!(0), dec!(1.60));
+        assert_eq!(total, dec!(21.60));
+    }
+
+    #[test]
+    fn cart_line_total_rounds_to_cart_currency() {
+        assert_eq!(
+            CartItem::calculate_total_for_currency(
+                1,
+                dec!(100),
+                dec!(0),
+                dec!(0.6),
+                CurrencyCode::JPY
+            ),
+            dec!(101)
+        );
+        assert_eq!(
+            CartItem::calculate_total_for_currency(
+                1,
+                dec!(10.006),
+                dec!(0),
+                dec!(0),
+                CurrencyCode::USD
+            ),
+            dec!(10.01)
+        );
+    }
+
+    #[test]
+    fn test_cart_is_ready_for_checkout() {
+        let mut cart = Cart {
+            id: CartId::new(),
+            cart_number: "CART-001".to_string(),
+            customer_id: Some(CustomerId::new()),
+            status: CartStatus::Active,
+            currency: CurrencyCode::USD,
+            items: vec![CartItem {
+                id: Uuid::new_v4(),
+                cart_id: CartId::new(),
+                product_id: None,
+                variant_id: None,
+                sku: "SKU-001".to_string(),
+                name: "Test Item".to_string(),
+                description: None,
+                image_url: None,
+                quantity: 1,
+                unit_price: dec!(10.00),
+                original_price: None,
+                discount_amount: dec!(0),
+                tax_amount: dec!(0.80),
+                total: dec!(10.80),
+                weight: None,
+                requires_shipping: true,
+                metadata: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            }],
+            subtotal: dec!(10.00),
+            tax_amount: dec!(0.80),
+            shipping_amount: dec!(5.00),
+            discount_amount: dec!(0),
+            grand_total: dec!(15.80),
+            customer_email: None,
+            customer_phone: None,
+            customer_name: None,
+            shipping_address: None,
+            billing_address: None,
+            billing_same_as_shipping: true,
+            fulfillment_type: Some(FulfillmentType::Shipping),
+            shipping_method: None,
+            shipping_carrier: None,
+            estimated_delivery: None,
+            payment_method: None,
+            payment_token: None,
+            payment_status: CartPaymentStatus::None,
+            coupon_code: None,
+            discount_description: None,
+            order_id: None,
+            order_number: None,
+            notes: None,
+            metadata: None,
+            inventory_reserved: false,
+            reservation_expires_at: None,
+            x402_payment: None,
+            expires_at: None,
+            completed_at: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+
+        // Not ready - no shipping address
+        assert!(!cart.is_ready_for_checkout());
+
+        // Add shipping address
+        cart.shipping_address = Some(CartAddress {
+            first_name: "John".to_string(),
+            last_name: "Doe".to_string(),
+            company: None,
+            line1: "123 Main St".to_string(),
+            line2: None,
+            city: "Anytown".to_string(),
+            state: Some("CA".to_string()),
+            postal_code: "12345".to_string(),
+            country: "US".to_string(),
+            phone: None,
+            email: None,
+        });
+
+        // Now ready
+        assert!(cart.is_ready_for_checkout());
+    }
+
+    /// Build a fully-populated cart that satisfies the item/customer/address
+    /// requirements of [`Cart::is_ready_for_checkout`], with the given status.
+    fn ready_cart_with_status(status: CartStatus) -> Cart {
+        Cart {
+            id: CartId::new(),
+            cart_number: "CART-READY".to_string(),
+            customer_id: Some(CustomerId::new()),
+            status,
+            currency: CurrencyCode::USD,
+            items: vec![CartItem {
+                id: Uuid::new_v4(),
+                cart_id: CartId::new(),
+                product_id: None,
+                variant_id: None,
+                sku: "SKU-001".to_string(),
+                name: "Test Item".to_string(),
+                description: None,
+                image_url: None,
+                quantity: 1,
+                unit_price: dec!(10.00),
+                original_price: None,
+                discount_amount: dec!(0),
+                tax_amount: dec!(0.80),
+                total: dec!(10.80),
+                weight: None,
+                requires_shipping: true,
+                metadata: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            }],
+            subtotal: dec!(10.00),
+            tax_amount: dec!(0.80),
+            shipping_amount: dec!(5.00),
+            discount_amount: dec!(0),
+            grand_total: dec!(15.80),
+            customer_email: None,
+            customer_phone: None,
+            customer_name: None,
+            shipping_address: Some(CartAddress {
+                first_name: "John".to_string(),
+                last_name: "Doe".to_string(),
+                company: None,
+                line1: "123 Main St".to_string(),
+                line2: None,
+                city: "Anytown".to_string(),
+                state: Some("CA".to_string()),
+                postal_code: "12345".to_string(),
+                country: "US".to_string(),
+                phone: None,
+                email: None,
+            }),
+            billing_address: None,
+            billing_same_as_shipping: true,
+            fulfillment_type: Some(FulfillmentType::Shipping),
+            shipping_method: None,
+            shipping_carrier: None,
+            estimated_delivery: None,
+            payment_method: None,
+            payment_token: None,
+            payment_status: CartPaymentStatus::None,
+            coupon_code: None,
+            discount_description: None,
+            order_id: None,
+            order_number: None,
+            notes: None,
+            metadata: None,
+            inventory_reserved: false,
+            reservation_expires_at: None,
+            x402_payment: None,
+            expires_at: None,
+            completed_at: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }
+    }
+
+    /// Money written straight onto a cart (tax, shipping) is guarded: the
+    /// cart must still be open, the amount must not be negative, and it must
+    /// fit the currency's minor unit.
+    #[test]
+    fn ensure_money_settable_guards_status_sign_and_scale() {
+        let cart = ready_cart_with_status(CartStatus::Active);
+        cart.ensure_money_settable("tax", dec!(1.23)).expect("a real amount on an open cart");
+        cart.ensure_money_settable("tax", Decimal::ZERO).expect("zero clears the amount");
+
+        let err = cart.ensure_money_settable("tax", dec!(-0.01)).expect_err("negative tax");
+        assert!(
+            matches!(&err, crate::errors::CommerceError::ValidationError(m)
+                if m.contains("must not be negative")),
+            "got {err:?}"
+        );
+
+        let err = cart.ensure_money_settable("shipping", dec!(1.234)).expect_err("sub-cent");
+        assert!(
+            matches!(err, crate::errors::CommerceError::MoneyScaleExceedsCurrency { .. }),
+            "got {err:?}"
+        );
+
+        for status in [
+            CartStatus::Completed,
+            CartStatus::Cancelled,
+            CartStatus::Abandoned,
+            CartStatus::Expired,
+            CartStatus::ReadyForPayment,
+            CartStatus::PaymentPending,
+        ] {
+            let cart = ready_cart_with_status(status);
+            let err = cart
+                .ensure_money_settable("tax", dec!(1.00))
+                .expect_err("a cart that is not active must not be re-taxed");
+            assert!(matches!(err, crate::errors::CommerceError::Conflict(_)), "got {err:?}");
+        }
+    }
+
+    #[test]
+    fn test_is_checkoutable_status() {
+        // Active/in-flight statuses are checkoutable.
+        assert!(ready_cart_with_status(CartStatus::Active).is_checkoutable_status());
+        assert!(ready_cart_with_status(CartStatus::ReadyForPayment).is_checkoutable_status());
+        assert!(ready_cart_with_status(CartStatus::PaymentPending).is_checkoutable_status());
+
+        // Terminal/non-checkoutable statuses are not.
+        assert!(!ready_cart_with_status(CartStatus::Completed).is_checkoutable_status());
+        assert!(!ready_cart_with_status(CartStatus::Cancelled).is_checkoutable_status());
+        assert!(!ready_cart_with_status(CartStatus::Abandoned).is_checkoutable_status());
+        assert!(!ready_cart_with_status(CartStatus::Expired).is_checkoutable_status());
+    }
+
+    #[test]
+    fn test_ready_for_checkout_rejects_terminal_status() {
+        // A fully-populated Active cart is ready for checkout.
+        assert!(ready_cart_with_status(CartStatus::Active).is_ready_for_checkout());
+
+        // The same cart is NOT ready once it is cancelled/abandoned/expired,
+        // even though its items/customer/address are all still populated.
+        for status in [CartStatus::Cancelled, CartStatus::Abandoned, CartStatus::Expired] {
+            let cart = ready_cart_with_status(status);
+            assert!(
+                !cart.is_ready_for_checkout(),
+                "cart in status {status:?} must not be ready for checkout"
+            );
+        }
+    }
+
+    #[test]
+    fn test_ready_for_checkout_rejects_past_expires_at() {
+        // An Active cart whose expiry has passed (sweep not yet run) is dead.
+        let mut cart = ready_cart_with_status(CartStatus::Active);
+        cart.expires_at = Some(Utc::now() - chrono::Duration::minutes(1));
+        assert!(cart.is_expired());
+        assert!(!cart.is_ready_for_checkout());
+
+        cart.expires_at = Some(Utc::now() + chrono::Duration::minutes(30));
+        assert!(cart.is_ready_for_checkout());
+    }
+
+    #[test]
+    fn test_add_cart_item_validate_rejects_negative_and_zero_quantity() {
+        // Negative unit price is rejected.
+        let mut item = AddCartItem { sku: "SKU".into(), name: "Item".into(), ..Default::default() };
+        item.unit_price = dec!(-1.00);
+        assert!(item.validate().is_err());
+
+        // Zero quantity is rejected (quantity must be positive).
+        let mut item = AddCartItem { sku: "SKU".into(), name: "Item".into(), ..Default::default() };
+        item.quantity = 0;
+        assert!(item.validate().is_err());
+
+        // Negative quantity is rejected.
+        let mut item = AddCartItem { sku: "SKU".into(), name: "Item".into(), ..Default::default() };
+        item.quantity = -3;
+        assert!(item.validate().is_err());
+
+        // A free item ($0 unit price) with positive quantity is valid.
+        let item = AddCartItem {
+            sku: "FREE".into(),
+            name: "Free Gift".into(),
+            quantity: 1,
+            unit_price: dec!(0),
+            ..Default::default()
+        };
+        assert!(item.validate().is_ok());
+    }
+
+    #[test]
+    fn test_create_cart_validate() {
+        // No-items cart is allowed at create time.
+        assert!(CreateCart::default().validate().is_ok());
+
+        // A cart carrying an invalid item is rejected.
+        let bad = CreateCart {
+            items: Some(vec![AddCartItem {
+                sku: "SKU".into(),
+                name: "Item".into(),
+                quantity: -1,
+                unit_price: dec!(5.00),
+                ..Default::default()
+            }]),
+            ..Default::default()
+        };
+        assert!(bad.validate().is_err());
+
+        // A cart carrying a valid item is accepted.
+        let good = CreateCart {
+            items: Some(vec![AddCartItem {
+                sku: "SKU".into(),
+                name: "Item".into(),
+                quantity: 2,
+                unit_price: dec!(5.00),
+                ..Default::default()
+            }]),
+            ..Default::default()
+        };
+        assert!(good.validate().is_ok());
+    }
+
+    #[test]
+    fn test_cart_status_from_str() {
+        use std::str::FromStr;
+
+        assert_eq!(CartStatus::from_str("active").unwrap(), CartStatus::Active);
+        assert_eq!(CartStatus::from_str("ready_for_payment").unwrap(), CartStatus::ReadyForPayment);
+        assert_eq!(CartStatus::from_str("paymentpending").unwrap(), CartStatus::PaymentPending);
+        assert_eq!(CartStatus::from_str("canceled").unwrap(), CartStatus::Cancelled);
+    }
+
+    #[test]
+    fn test_cart_status_can_transition_to() {
+        // Open states move among themselves and into every terminal state.
+        assert!(CartStatus::Active.can_transition_to(CartStatus::ReadyForPayment));
+        assert!(CartStatus::Active.can_transition_to(CartStatus::PaymentPending));
+        assert!(CartStatus::Active.can_transition_to(CartStatus::Completed));
+        assert!(CartStatus::Active.can_transition_to(CartStatus::Cancelled));
+        assert!(CartStatus::Active.can_transition_to(CartStatus::Abandoned));
+        assert!(CartStatus::Active.can_transition_to(CartStatus::Expired));
+        assert!(CartStatus::ReadyForPayment.can_transition_to(CartStatus::PaymentPending));
+        assert!(CartStatus::ReadyForPayment.can_transition_to(CartStatus::Completed));
+        assert!(CartStatus::PaymentPending.can_transition_to(CartStatus::ReadyForPayment));
+        assert!(CartStatus::PaymentPending.can_transition_to(CartStatus::Completed));
+
+        // Self-transitions are idempotent (matches OrderStatus).
+        for status in [
+            CartStatus::Active,
+            CartStatus::ReadyForPayment,
+            CartStatus::PaymentPending,
+            CartStatus::Completed,
+            CartStatus::Cancelled,
+            CartStatus::Abandoned,
+            CartStatus::Expired,
+        ] {
+            assert!(status.can_transition_to(status), "self-transition {status:?}");
+        }
+
+        // Terminal states are closed, and nothing returns to Active.
+        for terminal in [
+            CartStatus::Completed,
+            CartStatus::Cancelled,
+            CartStatus::Abandoned,
+            CartStatus::Expired,
+        ] {
+            for next in [
+                CartStatus::ReadyForPayment,
+                CartStatus::PaymentPending,
+                CartStatus::Completed,
+                CartStatus::Cancelled,
+                CartStatus::Abandoned,
+                CartStatus::Expired,
+            ] {
+                if core::mem::discriminant(&terminal) == core::mem::discriminant(&next) {
+                    continue;
+                }
+                assert!(
+                    !terminal.can_transition_to(next),
+                    "{terminal:?} must not transition to {next:?}"
+                );
+            }
+            assert!(
+                !terminal.can_transition_to(CartStatus::Active),
+                "{terminal:?} must never return to Active"
+            );
+        }
+        assert!(!CartStatus::ReadyForPayment.can_transition_to(CartStatus::Active));
+        assert!(!CartStatus::PaymentPending.can_transition_to(CartStatus::Active));
+    }
+
+    #[test]
+    fn test_cart_payment_status_from_str() {
+        use std::str::FromStr;
+
+        assert_eq!(
+            CartPaymentStatus::from_str("method_selected").unwrap(),
+            CartPaymentStatus::MethodSelected
+        );
+        assert_eq!(
+            CartPaymentStatus::from_str("methodselected").unwrap(),
+            CartPaymentStatus::MethodSelected
+        );
+        assert_eq!(
+            CartPaymentStatus::from_str("authorized").unwrap(),
+            CartPaymentStatus::Authorized
+        );
+        assert_eq!(CartPaymentStatus::from_str("captured").unwrap(), CartPaymentStatus::Captured);
+    }
+
+    #[test]
+    fn test_fulfillment_type_from_str() {
+        use std::str::FromStr;
+
+        assert_eq!(FulfillmentType::from_str("shipping").unwrap(), FulfillmentType::Shipping);
+        assert_eq!(FulfillmentType::from_str("pick_up").unwrap(), FulfillmentType::Pickup);
+        assert_eq!(FulfillmentType::from_str("digital").unwrap(), FulfillmentType::Digital);
+    }
+
+    #[test]
+    fn test_recalculate_totals_does_not_double_count_tax() {
+        let mut cart = Cart {
+            id: CartId::new(),
+            cart_number: "CART-002".to_string(),
+            customer_id: None,
+            status: CartStatus::Active,
+            currency: CurrencyCode::USD,
+            items: vec![CartItem {
+                id: Uuid::new_v4(),
+                cart_id: CartId::new(),
+                product_id: None,
+                variant_id: None,
+                sku: "SKU-TAX".to_string(),
+                name: "Taxed Item".to_string(),
+                description: None,
+                image_url: None,
+                quantity: 1,
+                unit_price: dec!(10.00),
+                original_price: None,
+                discount_amount: Decimal::ZERO,
+                tax_amount: dec!(0.80),
+                total: dec!(10.80),
+                weight: None,
+                requires_shipping: false,
+                metadata: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            }],
+            subtotal: Decimal::ZERO,
+            tax_amount: dec!(0.80),
+            shipping_amount: Decimal::ZERO,
+            discount_amount: Decimal::ZERO,
+            grand_total: Decimal::ZERO,
+            customer_email: None,
+            customer_phone: None,
+            customer_name: None,
+            shipping_address: None,
+            billing_address: None,
+            billing_same_as_shipping: true,
+            fulfillment_type: None,
+            shipping_method: None,
+            shipping_carrier: None,
+            estimated_delivery: None,
+            payment_method: None,
+            payment_token: None,
+            payment_status: CartPaymentStatus::None,
+            coupon_code: None,
+            discount_description: None,
+            order_id: None,
+            order_number: None,
+            notes: None,
+            metadata: None,
+            inventory_reserved: false,
+            reservation_expires_at: None,
+            x402_payment: None,
+            expires_at: None,
+            completed_at: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+
+        cart.recalculate_totals();
+
+        assert_eq!(cart.subtotal, dec!(10.00));
+        assert_eq!(cart.grand_total, dec!(10.80));
+    }
+}

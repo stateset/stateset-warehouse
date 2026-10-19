@@ -120,7 +120,7 @@ async fn current_and_lineage_reads_bind_literal_cursors_tenant_roles_and_mcp() {
             .as_array()
             .expect("administrator catalog")
             .len(),
-        68
+        70
     );
     assert_eq!(get(&app, "/v1/serial-observations", &q).await.0, 422);
     let mut changed = q.clone();

@@ -1,0 +1,28 @@
+{
+  "name": "@stateset/warehouse-tui",
+  "version": "0.2.0",
+  "description": "Warehouse terminal operations over the canonical StateSet WMS API",
+  "license": "MIT OR Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "bin": {
+    "stateset-warehouse-tui": "warehouse-tui.mjs"
+  },
+  "files": [
+    "warehouse-tui.mjs",
+    "lib",
+    "README.md",
+    "LICENSE*"
+  ],
+  "scripts": {
+    "start": "node warehouse-tui.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stateset/stateset-warehouse.git",
+    "directory": "cli"
+  }
+}

@@ -1,0 +1,247 @@
+#!/usr/bin/env node
+import { createInterface } from 'node:readline';
+import { homedir } from 'node:os';
+import path from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
+import { Client, originUrl, parseJson, safeText, tokenFromEnv } from './lib/client.mjs';
+import { Journal, boundSession, sendOriginal } from './lib/journal.mjs';
+import { commandForm, visibleCommands, needsSerialPlan } from './lib/commands.mjs';
+
+export function argumentsFor(argv) {
+  const result = {};
+  for (let i = 0; i < argv.length; i++) {
+    const name = argv[i];
+    if (name === '--help' || name === '-h') { result.help = true; continue; }
+    if (!['--url', '--warehouse', '--state-dir', '--once'].includes(name) || !argv[i + 1] || argv[i + 1].startsWith('--')) throw new Error(`Unknown or incomplete option: ${safeText(name)}`);
+    if (result[name.slice(2)] !== undefined) throw new Error(`Repeated option: ${name}`);
+    result[name.slice(2)] = argv[++i];
+  }
+  return result;
+}
+const help = `StateSet Warehouse TUI — Node.js >=22.12
+Usage: stateset-warehouse-tui [--url ORIGIN] [--warehouse ID] [--state-dir DIRECTORY]
+       stateset-warehouse-tui --once session|warehouses|inventory|orders|receipts|reconciliation|recovery
+
+Set WMS_URL (default http://127.0.0.1:8088) and WMS_TOKEN or WMS_TOKEN_FILE.
+Use an individual operator credential. Credentials are never saved in recovery files.
+Recovery defaults to $XDG_STATE_HOME/stateset-warehouse or ~/.local/state/stateset-warehouse.
+Commands record whole each units and actually observed serial labels.
+Uncertain work keeps its exact original request until resolved. The repository's
+cli/README.md describes recovery and terminal workflows. q exits menus; Ctrl-C exits safely.`;
+
+class Terminal {
+  constructor(input = process.stdin, output = process.stdout) {
+    this.input = input; this.output = output; this.lines = []; this.waiter = null; this.closed = false;
+    this.rl = createInterface({ input, output, terminal: input.isTTY && output.isTTY });
+    this.rl.on('line', line => { if (this.waiter) { const resolve = this.waiter; this.waiter = null; resolve(line); } else this.lines.push(line); });
+    this.rl.on('close', () => { this.closed = true; this.waiter?.(null); this.waiter = null; });
+    this.rl.on('SIGINT', () => this.rl.close());
+  }
+  print(text = '') { this.output.write(`${text}\n`); }
+  async ask(prompt) {
+    if (this.closed && !this.lines.length) return null;
+    this.output.write(prompt);
+    if (this.lines.length) return this.lines.shift();
+    return new Promise(resolve => { this.waiter = resolve; });
+  }
+  screen(title) { if (this.output.isTTY) this.output.write('\x1b[2J\x1b[H'); this.print(`StateSet Warehouse | ${safeText(title)}\n`); }
+  json(value) { this.print(JSON.stringify(value, (_key, item) => typeof item === 'string' ? safeText(item) : item, 2)); }
+  async menu(title, items) {
+    this.screen(title); items.forEach(([label], index) => this.print(`${index + 1}. ${safeText(label)}`)); this.print('q. Back / exit');
+    for (;;) {
+      const answer = await this.ask('\nSelect: ');
+      if (answer === null || answer === 'q') return null;
+      const index = Number(answer) - 1;
+      if (/^\d+$/.test(answer) && items[index]) return items[index][1];
+    }
+  }
+  async pause() { await this.ask('\nEnter to continue: '); }
+  close() { this.rl.close(); }
+}
+function scopeFor(client, session, warehouse) { return { origin: client.origin, tenant: session.identity.tenant, actor: session.identity.actor, warehouse }; }
+async function selectWarehouse(client, ui) {
+  let after = '';
+  for (;;) {
+    const page = await client.read(`/v1/warehouses?limit=100${after ? `&after=${encodeURIComponent(after)}` : ''}`);
+    const items = page.warehouses.map(({ warehouse: row }) => [`${row.code} — ${row.name} (${row.id})`, row.id]);
+    if (page.next_after) items.push(['Next page', '__next__']);
+    const choice = await ui.menu('Select facility', items);
+    if (choice === '__next__') { after = page.next_after; continue; }
+    return choice;
+  }
+}
+export async function collectSerials(client, warehouse, snapshot, command, ask) {
+  if (!needsSerialPlan.has(command.type)) return [];
+  const planId = randomUUID();
+  const reply = await client.call('POST', client.warehousePath(warehouse, '/serial-observation-plan'), { plan_id: planId, command });
+  if (!reply.ok) throw new Error(`Observation plan held: HTTP ${reply.status}; ${safeText(reply.data.error ?? 'unknown error')}`);
+  const plan = reply.data;
+  if (plan.plan_id !== planId || plan.warehouse_id !== warehouse || plan.command_type !== command.type || plan.observed_warehouse_version !== snapshot.version || !Array.isArray(plan.targets) || plan.targets.length > 100 || !Number.isSafeInteger(plan.required_labels) || plan.required_labels > 10000) throw new Error('Observation plan changed or does not match this reviewed work; review again');
+  const inputs = []; const seen = new Set(); let total = 0;
+  for (const target of plan.targets) {
+    if (!Number.isSafeInteger(target.each_quantity) || target.each_quantity < 0 || total + target.each_quantity > 10000 || !Array.isArray(target.target) || target.target.length > 3 || !target.target.every(v => typeof v === 'string') || typeof target.sku !== 'string') throw new Error('Malformed observation target');
+    total += target.each_quantity;
+    const serials = [];
+    if (!target.each_quantity && await ask(`Confirm physically observed zero labels for ${safeText(target.sku)} ${safeText(JSON.stringify(target.target))} (yes/no): `) !== 'yes') throw new Error('Empty count was not physically confirmed');
+    for (let i = 0; i < target.each_quantity; i++) {
+      const label = await ask(`Scan actual ${safeText(target.sku)} ${safeText(JSON.stringify(target.target))} label ${i + 1}/${target.each_quantity}: `);
+      if (label === null || !label || label.trim() !== label || Buffer.byteLength(label) > 240 || /[\x00-\x1f\x7f-\x9f]/.test(label)) throw new Error('Invalid literal label; no request sent');
+      const id = JSON.stringify([target.sku, label]);
+      if (seen.has(id)) throw new Error('Duplicate literal serial observation; no request sent');
+      seen.add(id); serials.push(label);
+    }
+    inputs.push({ target: target.target, sku: target.sku, serials });
+  }
+  if (total !== plan.required_labels) throw new Error('Observation plan total disagrees');
+  return inputs;
+}
+async function perform(client, journal, scope, ui, supplied) {
+  if ((await journal.listForIdentity(scope)).some(record => !['committed', 'not_committed'].includes(record.stage))) throw new Error('Resolve your original pending work in Recovery before recording new work');
+  const session = await boundSession(client, scope);
+  let snapshot = await client.read(client.warehousePath(scope.warehouse));
+  let command = supplied;
+  if (!command) {
+    const spec = await ui.menu('Record warehouse work', visibleCommands(session.identity.role).map(c => [c.label, c]));
+    if (!spec) return;
+    command = await commandForm(spec, prompt => ui.ask(prompt));
+  }
+  if (session.identity.role === 'oms' && command.type === 'create_order' && !command.source_order_id) throw new Error('OMS orders require an original source_order_id');
+  if (command.type === 'create_warehouse') {
+    scope = { ...scope, warehouse: `wh-${randomUUID()}` };
+    snapshot = { version: 0 };
+    ui.print(`New facility identity: ${scope.warehouse} | reviewed version 0`);
+  }
+  const serial_inputs = await collectSerials(client, scope.warehouse, snapshot, command, prompt => ui.ask(prompt));
+  const request = { request_id: randomUUID(), expected_version: snapshot.version, command, ...(serial_inputs.length ? { serial_inputs } : {}) };
+  ui.print(`\nReview actual work | ${safeText(scope.tenant)} | ${safeText(scope.actor)} | ${safeText(scope.warehouse)}`); ui.json(request);
+  if (await ui.ask('Record this observed work? Type yes: ') !== 'yes') return;
+  const record = await journal.prepare(scope, request);
+  const outcome = await sendOriginal(client, journal, record);
+  ui.print(`\nRecovery status: ${outcome.stage}; original request ${request.request_id}`); ui.json(outcome.events.at(-1).details);
+  await ui.pause();
+  if (command.type === 'create_warehouse' && outcome.stage === 'committed') return scope.warehouse;
+}
+async function recover(client, journal, scope, ui) {
+  const records = await journal.listForIdentity(scope);
+  const record = await ui.menu('Original request recovery — all your facilities', records.map(r => [`${r.stage} | ${r.original.scope.warehouse} | ${r.request.command.type} | ${r.request.request_id}`, r]));
+  if (!record) return;
+  ui.json({ scope: record.original.scope, request: record.request, stage: record.stage });
+  if (['committed', 'not_committed'].includes(record.stage)) { ui.json(record.events.at(-1).details); await ui.pause(); return; }
+  const action = await ui.menu('Recovery action', [['Look up original actor-owned command receipt', 'lookup'], ['Resend complete exact original request', 'retry']]);
+  if (!action) return;
+  if (action === 'lookup') {
+    await boundSession(client, record.original.scope);
+    const receipt = await client.read(client.warehousePath(record.original.scope.warehouse, `/commands/${encodeURIComponent(record.request.request_id)}`));
+    if (receipt.found === true && receipt.result) {
+      await journal.append(record, 'committed', { receipt }); ui.print('Original command receipt found and preserved.');
+    } else ui.print('No receipt found. Outcome remains uncertain; preserve the original request.');
+  } else if (await ui.ask('Resend the exact original request? Type yes: ') === 'yes') {
+    const outcome = await sendOriginal(client, journal, record); ui.print(`Status: ${outcome.stage}`); ui.json(outcome.events.at(-1).details);
+  }
+  await ui.pause();
+}
+async function inspectRows(ui, title, rows) {
+  let offset = 0;
+  for (;;) {
+    ui.screen(`${title} | ${rows.length} rows | ${offset + 1}–${Math.min(offset + 20, rows.length)}`);
+    ui.json(rows.slice(offset, offset + 20));
+    const answer = await ui.ask('\nn next | p previous | /text filter | Enter back: ');
+    if (answer === 'n' && offset + 20 < rows.length) offset += 20;
+    else if (answer === 'p') offset = Math.max(0, offset - 20);
+    else if (answer?.startsWith('/')) { rows = rows.filter(row => JSON.stringify(row).includes(answer.slice(1))); offset = 0; }
+    else return;
+  }
+}
+async function readView(client, scope, ui, kind) {
+  const base = client.warehousePath(scope.warehouse);
+  if (['stocks', 'products', 'locations', 'orders', 'receipts', 'exceptions', 'activity', 'movements'].includes(kind)) {
+    const snapshot = await client.read(base);
+    await inspectRows(ui, `${kind} | reviewed version ${snapshot.version}`, snapshot[kind]); return;
+  }
+  if (kind === 'serials' || kind === 'serial-history') {
+    const sku = await ui.ask('Exact SKU: '); const serial = await ui.ask('Exact serial (empty for page): ');
+    if (!sku || serial === null) return;
+    if (kind === 'serial-history' && !serial) throw new Error('Serial history requires the original literal serial');
+    let after = '';
+    for (;;) {
+      const page = await client.read(`/v1/${kind}?warehouse_id=${encodeURIComponent(scope.warehouse)}&sku=${encodeURIComponent(sku)}${serial ? `&serial=${encodeURIComponent(serial)}` : ''}&limit=100${after ? `&after=${encodeURIComponent(after)}` : ''}`);
+      ui.json(page);
+      if (!page.next_cursor || await ui.ask('Next page? (yes/no): ') !== 'yes') break;
+      after = page.next_cursor;
+    }
+  } else if (kind === 'order-detail' || kind === 'receipt-detail') {
+    const id = await ui.ask('Original record ID: '); if (!id) return;
+    const type = kind === 'order-detail' ? 'orders' : 'receipts';
+    ui.json(await client.read(`${base}/${type}/${encodeURIComponent(id)}`));
+    if (type === 'orders') {
+      ui.json(await client.read(`${base}/orders/${encodeURIComponent(id)}/shipments`));
+      ui.json(await client.read(`${base}/orders/${encodeURIComponent(id)}/return-eligibility`));
+    }
+  } else if (kind === 'history') {
+    const section = await ui.menu('Retained history', ['orders', 'receipts', 'movements', 'activity', 'exceptions'].map(s => [s, s])); if (!section) return;
+    let before = '';
+    for (;;) {
+      const page = await client.read(`${base}/history/${section}?limit=100${before ? `&before=${before}` : ''}`); ui.json(page);
+      if (!page.next_cursor || await ui.ask('Next page? (yes/no): ') !== 'yes') break;
+      before = page.next_cursor;
+    }
+  } else {
+    const endpoint = { reconciliation: `${base}/reconciliation`, transfers: `${base}/transfers?limit=100`, lots: `${base}/lots?limit=100`, operations: '/v1/operations/health' }[kind];
+    ui.json(await client.read(endpoint));
+  }
+  await ui.pause();
+}
+async function interop(client, journal, scope, ui) {
+  const choice = await ui.menu('iCommerce interoperability', [['Preview an upstream MoveInventory or CreateInventoryItem', 'preview'], ['Export actual iCommerce inventory with explicit location IDs', 'inventory']]);
+  if (!choice) return;
+  ui.print(choice === 'preview' ? 'Enter the strict preview JSON (kind, input and mappings/category). Decimal quantities must be strings.' : 'Enter mappings JSON: {"locations":{"7":"RECV-01",...},"lots":{}}');
+  const raw = await ui.ask('JSON: '); if (!raw) return;
+  parseJson(raw); // Reject unsafe numeric precision without rewriting wire fields.
+  const response = await client.call('POST', client.warehousePath(scope.warehouse, `/icommerce/${choice}`), raw); ui.json(response.data);
+  if (!response.ok) { await ui.pause(); return; }
+  if (choice === 'preview' && await ui.ask('Review this canonical command for actual execution? (yes/no): ') === 'yes') {
+    // Refresh the execution review visibly; never translate an uncertain request.
+    await perform(client, journal, scope, ui, response.data.command);
+  } else await ui.pause();
+}
+export async function main(argv = process.argv.slice(2), env = process.env) {
+  const args = argumentsFor(argv); if (args.help) { console.log(help); return; }
+  const [major, minor] = process.versions.node.split('.').map(Number);
+  if (major < 22 || major === 22 && minor < 12) throw new Error('Node.js >=22.12 is required');
+  const client = new Client(originUrl(args.url ?? env.WMS_URL ?? 'http://127.0.0.1:8088'), await tokenFromEnv(env));
+  let session = await client.session(); let warehouse = args.warehouse ?? env.WMS_WAREHOUSE ?? session.default_warehouse_id;
+  if (!warehouse) throw new Error('Select an explicit warehouse');
+  const journal = new Journal(args['state-dir'] ?? env.WMS_TUI_STATE_DIR ?? path.join(env.XDG_STATE_HOME ?? path.join(homedir(), '.local/state'), 'stateset-warehouse'));
+  if (args.once) {
+    const scope = scopeFor(client, session, warehouse); let data;
+    if (args.once === 'session') data = session;
+    else if (args.once === 'warehouses') data = await client.read('/v1/warehouses?limit=100');
+    else if (args.once === 'recovery') data = (await journal.listForIdentity(scope)).map(r => ({ warehouse_id: r.original.scope.warehouse, request_id: r.request.request_id, command_type: r.request.command.type, stage: r.stage }));
+    else if (args.once === 'reconciliation') data = await client.read(client.warehousePath(warehouse, '/reconciliation'));
+    else if (['inventory', 'orders', 'receipts'].includes(args.once)) { const snapshot = await client.read(client.warehousePath(warehouse)); data = { scope, version: snapshot.version, items: snapshot[args.once === 'inventory' ? 'stocks' : args.once] }; }
+    else throw new Error('Unknown --once view; see --help');
+    console.log(JSON.stringify(data, null, 2)); return;
+  }
+  if (!process.stdin.isTTY || !process.stdout.isTTY) throw new Error('Interactive mode requires a terminal; use --once for read-only automation');
+  const ui = new Terminal();
+  try {
+    for (;;) {
+      session = await client.session(); const scope = scopeFor(client, session, warehouse);
+      const action = await ui.menu(`${session.identity.tenant} | ${session.identity.actor} (${session.identity.role}) | ${warehouse}${session.demo ? ' | SYNTHETIC DEMO' : ''}`, [
+        ['Record observed warehouse work', 'work'], ['Inventory', 'stocks'], ['Products', 'products'], ['Bins', 'locations'], ['Orders', 'orders'], ['Receiving / returns', 'receipts'], ['Original order and shipment review', 'order-detail'], ['Original receiving record', 'receipt-detail'], ['Lots and holds', 'lots'], ['Facility transfers', 'transfers'], ['Serial custody', 'serials'], ['Serial history', 'serial-history'], ['Exceptions', 'exceptions'], ['Retained history', 'history'], ['Reconciliation', 'reconciliation'], ['Operations', 'operations'], ['Original request recovery', 'recovery'], ['iCommerce interop', 'interop'], ['Select facility', 'warehouse'],
+      ]);
+      if (!action) break;
+      try {
+        if (action === 'work') warehouse = await perform(client, journal, scope, ui) ?? warehouse;
+        else if (action === 'recovery') await recover(client, journal, scope, ui);
+        else if (action === 'warehouse') warehouse = await selectWarehouse(client, ui) ?? warehouse;
+        else if (action === 'interop') await interop(client, journal, scope, ui);
+        else await readView(client, scope, ui, action);
+      } catch (error) { ui.print(`\nHeld: ${safeText(error.message)}\nExisting original requests remain in Recovery.`); await ui.pause(); }
+    }
+  } finally { ui.close(); }
+}
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  main().catch(error => { console.error(`Warehouse TUI: ${safeText(error.message)}`); process.exitCode = 1; });
+}

@@ -1,0 +1,55 @@
+{
+  "scope": "Original failed gate and read-only diagnostic observations; no production acceptance",
+  "image_id": "sha256:87dc0ff7feb1a4599a01f6345cdbb355caf776ea20682b5fcb024ece38d13dd8",
+  "failure_at_utc": "2026-10-19T18:45:08Z",
+  "operation": "GET /v1/warehouses/wh-main/reconciliation",
+  "request_id": "b3ea4c5d-3a7c-49c1-a780-4d11573380d9",
+  "http_status": 503,
+  "sqlstate": "57014",
+  "statement_timeout_seconds": 10,
+  "reported_elapsed_milliseconds": 11608,
+  "source_function_context": "wms_serial_event_valid_read_source resolving wms_serial_event_skus; cumulative timeout location is not an established root cause",
+  "completed_untracked_timed_moves_replays": 4975,
+  "untracked_elapsed_seconds": 300.255,
+  "serial_registered_labels": 16000,
+  "serial_timed_moves_logged_before_final_proof_failure": 716,
+  "serial_timed_interval_seconds_lower_bound": 300,
+  "serial_final_complete_proof_passed": false,
+  "serial_final_report_produced": false,
+  "both_serial_after_write_crashes_recovered_and_exactly_replayed": true,
+  "all49_committed_table_fingerprints_unchanged_after_each_serial_crash": true,
+  "durable_original_request_checkpoints_preserved_privately": 57,
+  "four_read_only_same_image_repeats": [
+    {
+      "attempt": 1,
+      "replica": 0,
+      "http_status": 503,
+      "elapsed_seconds": 11.674925956991501
+    },
+    {
+      "attempt": 1,
+      "replica": 1,
+      "http_status": 503,
+      "elapsed_seconds": 11.673473536036909
+    },
+    {
+      "attempt": 2,
+      "replica": 0,
+      "http_status": 503,
+      "elapsed_seconds": 10.98485032201279
+    },
+    {
+      "attempt": 2,
+      "replica": 1,
+      "http_status": 503,
+      "elapsed_seconds": 11.286251767014619
+    }
+  ],
+  "repeated_read_all49_table_fingerprints_unchanged": true,
+  "diagnostic_wrapper_exit_code": 1,
+  "diagnostic_wrapper_failure": "After capturing all four responses and stopping owned containers, Python3.8 rejected a dict-union formatting expression; offline reconstruction preserves that failure",
+  "later_clone_observations": "Restored-clone original SQL results varied across runs, including 10-second cancellations and passes around6.6-8.6seconds. Statistics refresh and several larger prototypes did not establish a stable improvement. These are shared-host diagnostics, not a qualified fix or controlled speedup.",
+  "current_accepted_release": "../release-20261019-serial-after-write-v1/summary.json",
+  "original_gate_remains_failed": true,
+  "private_evidence_retained": true
+}

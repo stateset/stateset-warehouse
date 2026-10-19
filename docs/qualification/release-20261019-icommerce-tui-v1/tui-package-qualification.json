@@ -1,0 +1,57 @@
+{
+  "version": "0.2.0",
+  "package": "stateset-warehouse-tui-0.2.0.tgz",
+  "sha256": "37979fc15b38f39c12a2c3a94a1c5cd759170bfdbe2ea3589076c61bc0c1afd1",
+  "bytes": 17999,
+  "files": [
+    {
+      "path": "package/LICENSE",
+      "bytes": 240,
+      "sha256": "bbbe090bf86b0ca4cc6a1d8510e5552e65d6f43bb98c00023c615eb7b046fed4"
+    },
+    {
+      "path": "package/LICENSE-APACHE",
+      "bytes": 10836,
+      "sha256": "a5717beca8467c307a0d24a41bcd0b83db7e30702eeccb167d001b62d23239a1"
+    },
+    {
+      "path": "package/LICENSE-MIT",
+      "bytes": 1066,
+      "sha256": "bba83f79a8d87b2dc0b66334f0c325d952d654d742331291959e3dcadf4a3dd6"
+    },
+    {
+      "path": "package/package.json",
+      "bytes": 627,
+      "sha256": "2717da4c290a0f11c56f62ff2b9be7dedc9cf84a5987375abedbbf60698c2bf6"
+    },
+    {
+      "path": "package/README.md",
+      "bytes": 4986,
+      "sha256": "25e37d2e04401d2355703fa56670f694d2f7172d7f20f4f69d3b2fedbb8a4b58"
+    },
+    {
+      "path": "package/lib/client.mjs",
+      "bytes": 3783,
+      "sha256": "af713ab2e375dbd86f2b8100368e01a46f3c04c61033b73e25ca51092d27c1a4"
+    },
+    {
+      "path": "package/lib/commands.mjs",
+      "bytes": 5953,
+      "sha256": "b8bb4d3bfd750bba524f278071fee99510c130020be5ace637aa9e04638e6fe7"
+    },
+    {
+      "path": "package/lib/journal.mjs",
+      "bytes": 10025,
+      "sha256": "6462b17e88d1fc951e17fb1d09cc8fc1887881cab0ef89c7a2050a570acc92e8"
+    },
+    {
+      "path": "package/warehouse-tui.mjs",
+      "bytes": 17718,
+      "sha256": "66f3664fbee37a489e2790c74cbf0da7f2ced8d6b13d4ab6303795225dcdfd15"
+    }
+  ],
+  "runtime_dependencies": 0,
+  "all_three_license_files_included": true,
+  "extracted_executable_help_passed": true,
+  "published": false
+}

@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "ok": true,
-  "stable_software_inputs_sha256": "396d2a5d23dbdea4711a9549aa440b596bebeedd6f78bc220e656b973b93f5bb",
-  "image_id": "sha256:ae3ddcef83357fbb00359fe3868c4c88e75e141bfd7f04ddc6db4038771bd343",
-  "image_source_inputs_sha256": "4fe60a9996e2f272752e93f01bb53115ab407482fbdc4f2104419494562f651c",
+  "stable_software_inputs_sha256": "7e23e604097aafb08ba63bb97568b2d4b1b22e00f04fd2e3f68da102925b7f7b",
+  "image_id": "sha256:3985d87ba81878be49ed10ffc05d7115c88c91ae67cd4d0f37a9f33a6d8c1ebd",
+  "image_source_inputs_sha256": "7d59f80d543801c9237fa9a7dac313f00b31228f81b699a100e34f531343be89",
   "restore_container_resilience_migrations_identical": true,
   "migrations": {
     "025_serial_resolved_read_sources": "d255984a2eb4e7a1e7e9212c1406b30e40dcd24944f6bb0e35fa7c58027fdf32",

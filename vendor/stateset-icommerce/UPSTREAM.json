@@ -1,0 +1,865 @@
+{
+  "schema_version": 1,
+  "repository": "https://github.com/stateset/stateset-icommerce",
+  "revision": "b8a5c6db885998defa9fd74e2b12f0d1add21e1c",
+  "version": "1.39.0",
+  "license": "MIT OR Apache-2.0",
+  "packages": [
+    "stateset-primitives",
+    "stateset-crypto",
+    "stateset-core",
+    "stateset-test-utils"
+  ],
+  "packaging_changes": [
+    "Consumer workspace limits members to four dependency packages; upstream inherited package metadata/lints/dependencies retained.",
+    "Unused crypto fuzz workspace omitted; no crate source or package manifest changed."
+  ],
+  "files": [
+    {
+      "path": "crates/stateset-primitives/Cargo.toml",
+      "git_blob_sha1": "f4934c94e1866235428bd999d1baf4a935d48fe1",
+      "sha256": "2da91edca8879e26dc3e37db2285d9743947fb6bb7fd61f0c66385d01f119f0a"
+    },
+    {
+      "path": "crates/stateset-primitives/README.md",
+      "git_blob_sha1": "b88269bcbee09cf91631ba18dbb449a8c9f2d342",
+      "sha256": "ff72015262550313ac0fcbbb007346b9272fb8e87674cecaf64298e6fd718677"
+    },
+    {
+      "path": "crates/stateset-primitives/src/id.rs",
+      "git_blob_sha1": "7a3e3e52c570ee53bc6e2cf926ec52c3380c1f56",
+      "sha256": "9d308733e234d6de25be3d25052afde5df0f63ddabbdf515cd2ea02609956a6f"
+    },
+    {
+      "path": "crates/stateset-primitives/src/lib.rs",
+      "git_blob_sha1": "a47f38e421b388936ff2ebd2ef8bd13dd4e9f72d",
+      "sha256": "809407a3a90b21fb75a5c57c64132d57060572078c852fbbf7bd5746841101d0"
+    },
+    {
+      "path": "crates/stateset-primitives/src/money.rs",
+      "git_blob_sha1": "7e7f7d3f29397604e3ce772905527c3a1b7bb518",
+      "sha256": "2f70663ab9b00fe3ff551d3f4f015cb9c157018acad92431c4b51063f74a5178"
+    },
+    {
+      "path": "crates/stateset-primitives/src/sku.rs",
+      "git_blob_sha1": "08bb41cff71112e8049085bc7de14b7fbcc2810a",
+      "sha256": "80b39fa9cb786cb85d369b69b3293ebf90dafe10b9cb60589e99643f21823031"
+    },
+    {
+      "path": "crates/stateset-crypto/Cargo.toml",
+      "git_blob_sha1": "806c3ecd28581fa18b32c1656012695124f717fb",
+      "sha256": "3ca65dc543ba60dc3d5f19e148c250ee4507e6e465ae91dee3f0a57c0df22b32"
+    },
+    {
+      "path": "crates/stateset-crypto/README.md",
+      "git_blob_sha1": "ff1eb54f92e37af39d85290098956886f6d9ff41",
+      "sha256": "bd7532715222c35e46ef950fdd5d506d23d46d0266213b92231edc7e3f06533e"
+    },
+    {
+      "path": "crates/stateset-crypto/src/canonicalize.rs",
+      "git_blob_sha1": "1b6e042603f45b68e540a5cb1482c98cc7e74094",
+      "sha256": "0f23e851d2257d54ed92aa044ab2152ae3c1dc0860816a33a4e692b70c46052b"
+    },
+    {
+      "path": "crates/stateset-crypto/src/encoding.rs",
+      "git_blob_sha1": "d92e054c6f39b12d4eb248dfcd28c0a372bdb768",
+      "sha256": "944fe7c0d587a8e71f81a7d90a04474a112cf4bbdfce4dcb9061bbd8bfb9f20d"
+    },
+    {
+      "path": "crates/stateset-crypto/src/encrypt.rs",
+      "git_blob_sha1": "357223844cfd4d9fce94989dbc280b27fe022c92",
+      "sha256": "2774a0674849b982843dcca2c9ab11fdad0dd393cbd0dc66b088c28710d47e0a"
+    },
+    {
+      "path": "crates/stateset-crypto/src/error.rs",
+      "git_blob_sha1": "6c4e9b5b7aa358b7e8203f85238ef45b9d6f1df0",
+      "sha256": "cda9960d9d38007c91b742db11bcfb058ff627713ead22be89bf6d66a37aa773"
+    },
+    {
+      "path": "crates/stateset-crypto/src/hash.rs",
+      "git_blob_sha1": "769abeef0786e848de15805fa84f8c49f6e8c670",
+      "sha256": "ed21cdd977481524bbae8b585bf8f15fa694dad7d0475f875173198300c0bedb"
+    },
+    {
+      "path": "crates/stateset-crypto/src/lib.rs",
+      "git_blob_sha1": "f3e904c82f21678962a513f1dfff339dc7c653ee",
+      "sha256": "6cb71d87e1772433a8acfeb7f20545cb168096d014e62bf5b4c9259da4f948e7"
+    },
+    {
+      "path": "crates/stateset-crypto/src/merkle.rs",
+      "git_blob_sha1": "e688aff38c4d1e182d4f19610a1109d30c064891",
+      "sha256": "2a3201e87bb939dc1ba8c483a528a84cc4718c4baba4f28a11cbde5057020347"
+    },
+    {
+      "path": "crates/stateset-crypto/src/pqc.rs",
+      "git_blob_sha1": "efbb8b231ef8d79397f11897aa0527f7fe2d3e1d",
+      "sha256": "1d17b09c90da6026394a00cd4ec7535345bb9df1ae00400fc40c5d0033bef49d"
+    },
+    {
+      "path": "crates/stateset-crypto/src/pqc_backend.rs",
+      "git_blob_sha1": "f1c1e15b6ce94f7d12f14ccd9b7f513a3e6b6d3c",
+      "sha256": "5927430b6e8c7d08a995cdaea6cea3c8557267995942e829d078564e44ca16fa"
+    },
+    {
+      "path": "crates/stateset-crypto/src/sign.rs",
+      "git_blob_sha1": "511ef04f884968cca4ac2a732a7dd23e5b5f4ea1",
+      "sha256": "fbc7506deaf131ab9e0b57f55ceed389721a663daff03f854674480311d9934c"
+    },
+    {
+      "path": "crates/stateset-crypto/tests/cross_binding_vectors.rs",
+      "git_blob_sha1": "d6a8b5529c9fe272692c84d02fbcc297106cfb43",
+      "sha256": "fbe3c9b5bcec8fa8c9be2afefa85e9c17582d391330cd8ad0e8dd98622f2c4a8"
+    },
+    {
+      "path": "crates/stateset-crypto/tests/crypto_expanded.rs",
+      "git_blob_sha1": "d1411859c3209eaeaf5a2861e7da496129ffe908",
+      "sha256": "ff24be13db0389de817528af9728d809c72a29f3dd3c46cf7600f25c767f1195"
+    },
+    {
+      "path": "crates/stateset-crypto/tests/proptest_crypto.rs",
+      "git_blob_sha1": "78235a0adf62eddf343c164ed39c402adae01fd4",
+      "sha256": "3e7ad0f36ffdbd0f210300a1a9f2fb26ea5617d38490b8d4330477a8bd50049b"
+    },
+    {
+      "path": "crates/stateset-crypto/tests/test_vectors.rs",
+      "git_blob_sha1": "b99f3ff72ccea94fde4532d9c63df8cde3005044",
+      "sha256": "456f4f9dda1ea8d9407703aa9f7c01b25d838c50232946cee89f9088f5223f67"
+    },
+    {
+      "path": "crates/stateset-core/Cargo.toml",
+      "git_blob_sha1": "78302d5c9fe549a3eb972975c6a96a8f0d7e5f14",
+      "sha256": "0b261dfa3b27139f5e58e8e28ef77ad24a1cd0dbd863cbc00813aec857120b42"
+    },
+    {
+      "path": "crates/stateset-core/README.md",
+      "git_blob_sha1": "ae59dfd9ae5e018fffeea041905253ff239924c5",
+      "sha256": "ccbf0832c45bed5d9742e71ff77bf88ef06fd84f8a198de7a93aaca9882ab05f"
+    },
+    {
+      "path": "crates/stateset-core/benches/core_benchmarks.rs",
+      "git_blob_sha1": "59f755b20343a66c522ad4e59a0b2a0e6c12ba54",
+      "sha256": "d622a87b429972cb2c99c275847ebc35eeb4cbd1394c4adb0fb78739511e03fb"
+    },
+    {
+      "path": "crates/stateset-core/src/economic.rs",
+      "git_blob_sha1": "fc7559ceac8046e5322484cf63d4d55faab242b6",
+      "sha256": "d8cc3647a36bb522179d1c748f673d9b76ff47cc6f264414b891ffe89ae16599"
+    },
+    {
+      "path": "crates/stateset-core/src/errors/customer.rs",
+      "git_blob_sha1": "8af4cc757c478410b3e25a9104cc3701bbaf1b6f",
+      "sha256": "643500ec29d25aef41dbc86abad7d661e5c93b1fae932bb7ba3452fa75e0968b"
+    },
+    {
+      "path": "crates/stateset-core/src/errors/inventory.rs",
+      "git_blob_sha1": "bf939e737230ca2d0672fe40160995d747957fc9",
+      "sha256": "3aabdcbffef9e9ee87d447e76d1045b2cb55691082d43594850bb62e0ab61594"
+    },
+    {
+      "path": "crates/stateset-core/src/errors/mod.rs",
+      "git_blob_sha1": "b6997b962a3be58576ddf85c927b0c0f9b3e572a",
+      "sha256": "6e960715b7214603474ee6704390eef7ee99e2bb2b141150c7bdd19d7f92b698"
+    },
+    {
+      "path": "crates/stateset-core/src/errors/order.rs",
+      "git_blob_sha1": "d1ffb8754a49e9718f0b9e6a2a99b53b07953270",
+      "sha256": "ca925d79fc091f17e8c87f141f8c1261018f035243a0a5a43079a4322736135f"
+    },
+    {
+      "path": "crates/stateset-core/src/errors/payment.rs",
+      "git_blob_sha1": "1585b5b32aa13e7f36de81a15941c06d0a2ad38e",
+      "sha256": "487659b942cb2010bf15566c1f6943210f80565031ef3b950c0737787cced1a9"
+    },
+    {
+      "path": "crates/stateset-core/src/errors/product.rs",
+      "git_blob_sha1": "00852c72938e7e54d1c2973cea926ee7be70ad86",
+      "sha256": "e55fd8b5d1814c9462436e9b56f475d1efa3d5df92e786e3eb3a5a7fa66ae538"
+    },
+    {
+      "path": "crates/stateset-core/src/errors/returns.rs",
+      "git_blob_sha1": "0e75149fa958b235136be69ef7d8b4420ebb9a0a",
+      "sha256": "20196e222bb5e26a7938deb3947307d374ae5e4843b68133abb95db5e9dd2aaf"
+    },
+    {
+      "path": "crates/stateset-core/src/errors/shipping.rs",
+      "git_blob_sha1": "4cb797bfe4f15f2d17745df27a188f6e77207535",
+      "sha256": "2d864876bb9b8dfb25401238edb69efb64c0a6172db00be5373a607115ace4ac"
+    },
+    {
+      "path": "crates/stateset-core/src/errors/transition.rs",
+      "git_blob_sha1": "a61863b60de0f143fea3f6e8214e56f183813410",
+      "sha256": "faffc8dcd1d64af0975bb59b7ffef6f8027134c936a610d65211dca2e0433ee1"
+    },
+    {
+      "path": "crates/stateset-core/src/events.rs",
+      "git_blob_sha1": "48b36324a95f6b9495987844d39895a9eaeb4ffd",
+      "sha256": "59c2fdb30bb29a1d344b235673e0a5c3649b20473902f1f2be6187bf08642646"
+    },
+    {
+      "path": "crates/stateset-core/src/fixtures/profile-restricted-refund-policy.json",
+      "git_blob_sha1": "3db670a9c466d5a6b9b87b80d8104d10857ba750",
+      "sha256": "83e755e071983a7829e19f987d8285425683c9fa54dc33e94f287b5f7ae68aab"
+    },
+    {
+      "path": "crates/stateset-core/src/kernel.rs",
+      "git_blob_sha1": "1b30c60e7c5c3b990813cdb5458d9d78914dd63f",
+      "sha256": "38ec2e7e5ad080b3af50de97f897bf3df59cd7574fe2d0e50833d06773c3cdd2"
+    },
+    {
+      "path": "crates/stateset-core/src/lib.rs",
+      "git_blob_sha1": "1c40abc97bb6d5c5ad05e28e6472121c6ae906a6",
+      "sha256": "2e6d1b397ce69a2a7bef622edf9cf02e3e9abf9ec4d8488b67349edc65827b5e"
+    },
+    {
+      "path": "crates/stateset-core/src/metrics.rs",
+      "git_blob_sha1": "52e0b8209fb439aeb72204941022e84181726db0",
+      "sha256": "7205911233c47cf66a6aea593bc1c52c7fdfe7997087f2783d9a391306223a58"
+    },
+    {
+      "path": "crates/stateset-core/src/models/a2a.rs",
+      "git_blob_sha1": "8dee6c5af24231deacfdf93e5a26677456664f60",
+      "sha256": "c2ccb2f14b9045dff45cd7a9542a3cc487bb908d337a70f83d8ddbcfb0fe70d0"
+    },
+    {
+      "path": "crates/stateset-core/src/models/a2a_skill.rs",
+      "git_blob_sha1": "3467811c34b3ed6fe6df45e33a57a870fe375a58",
+      "sha256": "83e2564518f162f6813331161899bf7882c8729c600607dd574e90e70ac2431e"
+    },
+    {
+      "path": "crates/stateset-core/src/models/accounts_payable.rs",
+      "git_blob_sha1": "41667eca8f93686b0cd45a98793d61158f3d4924",
+      "sha256": "65f1bc7d7c4b9dbf549457c6f7ac3dedda4f7346cfa04459078caf879c5f7c5e"
+    },
+    {
+      "path": "crates/stateset-core/src/models/accounts_receivable.rs",
+      "git_blob_sha1": "8351d76f4cf6b043f9889daa2790abf05058b994",
+      "sha256": "bc683975449c65f8aa07d7500c8dec81a59cb5751fae2db95351be08bef5ca4e"
+    },
+    {
+      "path": "crates/stateset-core/src/models/activity_log.rs",
+      "git_blob_sha1": "b4016cffa3e613035c59b6b32f46ef708cc3f684",
+      "sha256": "614a93158edb6ae2db183a42ff92a0452c2be72d5cc71bad7d83fba37d8b28b1"
+    },
+    {
+      "path": "crates/stateset-core/src/models/agent_card.rs",
+      "git_blob_sha1": "b0cc18ef8cbdc9830b9817d5d68fe11cf2a2d23e",
+      "sha256": "7d3446b277170da225a01b37f84aee3433df1b7d1c60e533e6c286158a27ceda"
+    },
+    {
+      "path": "crates/stateset-core/src/models/analytics.rs",
+      "git_blob_sha1": "a759666d5dba66fa09654ce16390b232e4b50a52",
+      "sha256": "078c4b8baf449961e7240d0219d5a00fe7a62bc951c2cb913290ba84c6b27f99"
+    },
+    {
+      "path": "crates/stateset-core/src/models/backorder.rs",
+      "git_blob_sha1": "2b97704bcca3a6c6e71b6a11d869115dc95337d5",
+      "sha256": "edd061aadeb7a9025196811a3157cc443a0cf77e0c5574ce1f21e27263721c2b"
+    },
+    {
+      "path": "crates/stateset-core/src/models/cart.rs",
+      "git_blob_sha1": "5cda3e22e1c42e35c464f35a3790e1d480c2415c",
+      "sha256": "692eba3e8a9b5ef29a19f9a7ebd953d8c1049a8217f537a9ef4115b7d95446a3"
+    },
+    {
+      "path": "crates/stateset-core/src/models/channel.rs",
+      "git_blob_sha1": "a26b6810a83698aafb3879239a6c331462303ba7",
+      "sha256": "ba9f92e2470b979263028704bc3837cbdf0b9c053f4b63d66678f818df0090b4"
+    },
+    {
+      "path": "crates/stateset-core/src/models/close_books_report.rs",
+      "git_blob_sha1": "3d818efcc9b5012536425ee6066549273df8746f",
+      "sha256": "697edf864a5095242f88ba60079dd76c2bdeea3ff8c48cb9155e023383647904"
+    },
+    {
+      "path": "crates/stateset-core/src/models/close_month.rs",
+      "git_blob_sha1": "f57e38780a71986fd0adb12e574afa23870a2d8d",
+      "sha256": "9f89e6b655fa6415433b8a319cee4deb8ebad31df7cbef78bfccbde344e6bb3f"
+    },
+    {
+      "path": "crates/stateset-core/src/models/cogs_report.rs",
+      "git_blob_sha1": "9826b8a5066f205ee5e71356230a683ffabe587b",
+      "sha256": "15b7c2273e892def6ff2fe4c2b8438fd23618818218c75295ea18786a21278e3"
+    },
+    {
+      "path": "crates/stateset-core/src/models/company.rs",
+      "git_blob_sha1": "46d09259b12b08e5950a14b918be564fb329cdb6",
+      "sha256": "8499d9fbe9c94f86286806f178e43b8f07716007eae243d1fca84b79c2dabbfb"
+    },
+    {
+      "path": "crates/stateset-core/src/models/consumption_report.rs",
+      "git_blob_sha1": "28af7970987ea790ec23e83f2218b2fe22e97ac5",
+      "sha256": "53b21b1e07fa8c0930c8ee03bfeaaef8e93a8e83187134f769ae8bf9be7ed04d"
+    },
+    {
+      "path": "crates/stateset-core/src/models/cost_accounting.rs",
+      "git_blob_sha1": "2c39f978b57c5f806a9820433352470ac93dd494",
+      "sha256": "349e81334e3221116c595e2d1dbe7107d8c716d5c6a29f2a76895a081bc29bbe"
+    },
+    {
+      "path": "crates/stateset-core/src/models/credit.rs",
+      "git_blob_sha1": "b0d4d8be823a52adaf225340a63d3f8544860a2c",
+      "sha256": "be9ed51e59f439e916b6c9dfedb6a28e5ba339018de135cc96196bade740789f"
+    },
+    {
+      "path": "crates/stateset-core/src/models/currency.rs",
+      "git_blob_sha1": "4dcdb0185e7a91a07a41bfbc51c34cb4f0e63664",
+      "sha256": "7fa2aae59f8641db1180695e13682eefa62e9821cef47a57362a3d8e9f878365"
+    },
+    {
+      "path": "crates/stateset-core/src/models/custom_object.rs",
+      "git_blob_sha1": "4ec85f0eaf7b32250b34ab728172e2a2e2888c14",
+      "sha256": "970677422816a43582fa8090f5eb0447ec16514cbb3bf7c20cbd9507d9c9eb16"
+    },
+    {
+      "path": "crates/stateset-core/src/models/customer.rs",
+      "git_blob_sha1": "543f30f245c781b206ba9f59525aea2209cb2216",
+      "sha256": "82d55f2952a3ac44afb51d44095329fdb08167d8e54ae5bc6f1952a9d3e42ab1"
+    },
+    {
+      "path": "crates/stateset-core/src/models/cycle_count.rs",
+      "git_blob_sha1": "d8460a4a6d5a2679035ff49452370f7835b120ce",
+      "sha256": "1e75cc35fc9acea2cbae59b2d3213ca060b317db80a307c17df27f34fbed4a0f"
+    },
+    {
+      "path": "crates/stateset-core/src/models/edi_document.rs",
+      "git_blob_sha1": "811329e857830d1da3216fa2cd86a37c1e24b414",
+      "sha256": "bef67e76a978e94036228d645d34b6365be55139c64f5d03824aedeb0d28a25a"
+    },
+    {
+      "path": "crates/stateset-core/src/models/erc8004.rs",
+      "git_blob_sha1": "f7f51d30ac33a6ea3c6be69c4ddb8458f56ee120",
+      "sha256": "006f9537b9c8f2e9a90da3acfdbee2fb3e3a0cda92b9462780f4b4c4b1a273ee"
+    },
+    {
+      "path": "crates/stateset-core/src/models/fixed_asset.rs",
+      "git_blob_sha1": "ca8ee9bf1472399139e8f2b0aad463f53d1293f6",
+      "sha256": "1330b6de9fc07db3af92957736b9d7eadce121252da17c8d5ce7d01f10209824"
+    },
+    {
+      "path": "crates/stateset-core/src/models/forecasting.rs",
+      "git_blob_sha1": "18f2ffe82a566bfe41597567f507428ed0190f81",
+      "sha256": "76d6d51adce483eadc3e264276d5cc9e48789a73746165b2ebb09d4d2d94de30"
+    },
+    {
+      "path": "crates/stateset-core/src/models/fraud.rs",
+      "git_blob_sha1": "ec6ab400e899d174eb51d7904f0341bf219bc506",
+      "sha256": "628871238744b90c643527ae653d7e8db2ec4d2913cb225c87a70e4497076ecb"
+    },
+    {
+      "path": "crates/stateset-core/src/models/fulfillment.rs",
+      "git_blob_sha1": "dc7ec4b9ec328957d7f4b104cd6eaf756702e312",
+      "sha256": "320b4f6aab37293d7b32042e11c428253bd7035a248b20ad0e0823c5e0b95b8f"
+    },
+    {
+      "path": "crates/stateset-core/src/models/general_ledger.rs",
+      "git_blob_sha1": "7cb9742188117c8c6f12a02cb351129c31e6ec05",
+      "sha256": "1896f5573a0a3a555138df64c2a331cbeae7c4bacb4096564d8cde875260ee39"
+    },
+    {
+      "path": "crates/stateset-core/src/models/gift_card.rs",
+      "git_blob_sha1": "d79d28e7e300121bb2c76788d39be92f94e9efa9",
+      "sha256": "55e3d8d3d41e15a0ad0bef7b64906ddc0b587543c1da1611683101f534b1da18"
+    },
+    {
+      "path": "crates/stateset-core/src/models/inbound_shipment.rs",
+      "git_blob_sha1": "dc077586f47619ee0cc0122d0d6e128f508cf35f",
+      "sha256": "f3dbad0091e05c0ccefcc2c86286d108dad79ac63c8a1f4763d95816936cc782"
+    },
+    {
+      "path": "crates/stateset-core/src/models/integration_field_mapping.rs",
+      "git_blob_sha1": "562e98e4c0ad3ec2c95a79a6d05dd12599733ed9",
+      "sha256": "28fc9d467e9c836d43ce3a5441f4f9e63584a08a0c03bd8a01fd95461a1aeac0"
+    },
+    {
+      "path": "crates/stateset-core/src/models/integration_mapping.rs",
+      "git_blob_sha1": "2ec41ff3675af327b0efd8ad25f4ec4552bb2ccd",
+      "sha256": "6eb5fab5772daadf653c139004bdb450e56449bf6ec6a68bbe45530e20c0ccc7"
+    },
+    {
+      "path": "crates/stateset-core/src/models/inventory.rs",
+      "git_blob_sha1": "2ce25444b7de7cfec871ab5d5d3e8d1c3d60ab43",
+      "sha256": "b3752c75a26824cc37222d0e82d7256d5fd0b51b34eae296bb35846c881e2edf"
+    },
+    {
+      "path": "crates/stateset-core/src/models/inventory_aging.rs",
+      "git_blob_sha1": "e581ff426ef15bcb50d43227e4a5e360505799bf",
+      "sha256": "26ac04d8011995099834c9ef3ce65dc3ae215198308b4ef446ebbe1c015605b3"
+    },
+    {
+      "path": "crates/stateset-core/src/models/invoice.rs",
+      "git_blob_sha1": "3eecf6ae9450d8e5dd980a526a11b0f108274f0d",
+      "sha256": "9b1ab6dc178dccaa30782bc84d17703a1e1151f27ad34073fa927a9bf977683c"
+    },
+    {
+      "path": "crates/stateset-core/src/models/lot.rs",
+      "git_blob_sha1": "c999fe0e6a0943b45da01ca3d9a6bc09093bac2a",
+      "sha256": "8df74e9d68809cf6308f65c1991fcb5b56241d4e0c8e1ba93e6ce7eba9e68171"
+    },
+    {
+      "path": "crates/stateset-core/src/models/loyalty.rs",
+      "git_blob_sha1": "74b3bdf1071767977a5aaf38316c2f66d089f2b4",
+      "sha256": "7db0979dfd7086c5442792047ae8204ec70fe362d7ad6f9220f074e757402859"
+    },
+    {
+      "path": "crates/stateset-core/src/models/manufacturing.rs",
+      "git_blob_sha1": "e5b5256eca9e3e44cb24086d10493e8c38f392e0",
+      "sha256": "4e797465f5b3ea253f6addc0fc2f87271526249b8aa07659a9357c2e83f9ccde"
+    },
+    {
+      "path": "crates/stateset-core/src/models/metrics.rs",
+      "git_blob_sha1": "9531dc7d07d42abdb20db3cd00c87e7fd4a7337e",
+      "sha256": "d214710ce153e8892e9fd6f1b567bf933852cbc410352ca9534d9fb270d28fc2"
+    },
+    {
+      "path": "crates/stateset-core/src/models/mod.rs",
+      "git_blob_sha1": "5b59296ee532e2c5f1b35a0feb568e5de95901cd",
+      "sha256": "ba2c9b072d203dee276732042e5a7d3b8fb06d38647e069d790fae37a906ef86"
+    },
+    {
+      "path": "crates/stateset-core/src/models/order.rs",
+      "git_blob_sha1": "265935d0d15aac8273ac6d4c7eecee7bd8af5d74",
+      "sha256": "e4361a40eb0da7adc2b23e39760d70f505d39d4bb846edc11f0dc36b480cff5a"
+    },
+    {
+      "path": "crates/stateset-core/src/models/payment.rs",
+      "git_blob_sha1": "294204c968f07f9b11b44b56aa76831f064e21c8",
+      "sha256": "7067af42ee1f7780651dd4fe36718e9bff6795d4573c6194b4368ba2d0bdbeba"
+    },
+    {
+      "path": "crates/stateset-core/src/models/payment_obligation.rs",
+      "git_blob_sha1": "fbb552ed93ad296bcec7e0ccef0bd4c480bf2732",
+      "sha256": "1d7aeb47597e25a128a2d3ea341dc867e54248afb0db30aa5604117370c04ddc"
+    },
+    {
+      "path": "crates/stateset-core/src/models/prepayment.rs",
+      "git_blob_sha1": "4b49bd4753c0bacd8770ab47876bba2be042314b",
+      "sha256": "0e01cdcbab35552f3c90a24c1ab7023b8811a56c5acff37ea1fef2bdf2a97f82"
+    },
+    {
+      "path": "crates/stateset-core/src/models/price_level.rs",
+      "git_blob_sha1": "9fce1d641c0babb6c3c4ff44b9c9438292efdbbf",
+      "sha256": "e9d24d7d6ecaa6bb5c68f6d4619ded2aa4716632253b7944b8471d39a5b8cf91"
+    },
+    {
+      "path": "crates/stateset-core/src/models/price_schedule.rs",
+      "git_blob_sha1": "f96d129719d86f8d1766ad076773df1af41fdebf",
+      "sha256": "0dbc6b07ead746df2b2beace605bcc533e211fffdc6d21cd5e89b106f010dd5c"
+    },
+    {
+      "path": "crates/stateset-core/src/models/print_station.rs",
+      "git_blob_sha1": "8f91dfa8cd67533d86e1887bd2f47ed7651c4c98",
+      "sha256": "a2b3f682fdb5a731802660de4d981d1649e9e5e508838e8ee34c6c0bcf30e122"
+    },
+    {
+      "path": "crates/stateset-core/src/models/product.rs",
+      "git_blob_sha1": "45dbbbd9b1714e3d6eb194dedf77fb1f4195a2ec",
+      "sha256": "8b583fb3bb0b1c91318c8d0baabd24b897e0d5da751022e1345ee29d28411cce"
+    },
+    {
+      "path": "crates/stateset-core/src/models/production_batch.rs",
+      "git_blob_sha1": "e471c79a513f54aa58ed95734c3cd04285c7ba96",
+      "sha256": "e43af8932b3443ff238277902c20602faade2a2c97865d6294ff89f23d55c363"
+    },
+    {
+      "path": "crates/stateset-core/src/models/promotion.rs",
+      "git_blob_sha1": "8bd399a56d62f778503893b558c649113726ac79",
+      "sha256": "1afbe051d51557ada5ac77a77b35ac9c6a19a6155b154ad7125cd88390092648"
+    },
+    {
+      "path": "crates/stateset-core/src/models/purchase_order.rs",
+      "git_blob_sha1": "71271be9da81e9aedb70beea188672e6d829c198",
+      "sha256": "e2bcf49e3f70cba7890fd0141e728d6bdfbe41a170fab08d39f14d973a512b1c"
+    },
+    {
+      "path": "crates/stateset-core/src/models/purgatory.rs",
+      "git_blob_sha1": "b541274f678afe7c7dfeff8a80389f0c166c598c",
+      "sha256": "edea809d5afca62c6db5f55e05dc15fe17adf76113c042912c1388d54a8157df"
+    },
+    {
+      "path": "crates/stateset-core/src/models/quality.rs",
+      "git_blob_sha1": "fbb2cbb1f53023d9304d47ca3bf41f0842fd71d1",
+      "sha256": "3b8bd0752be408e12115c39638bbff95f1163a49136359eaba393f66d3fc31de"
+    },
+    {
+      "path": "crates/stateset-core/src/models/receiving.rs",
+      "git_blob_sha1": "f6d68f53b9b1ed645d2f327f7d91257438d56092",
+      "sha256": "880478fe4b9ea864f2187c8f53434282bd10387f007ad593f4d7908f356f29bf"
+    },
+    {
+      "path": "crates/stateset-core/src/models/returns.rs",
+      "git_blob_sha1": "e5e40558f37bec220b3353f56127dcace00383dc",
+      "sha256": "3982245f22b21ca3629b8110e9aa9870dfeea80091d94a02d005b9ed6ee6bcb7"
+    },
+    {
+      "path": "crates/stateset-core/src/models/revenue_recognition.rs",
+      "git_blob_sha1": "dcfa5af42aee4cc2b5336bb9f9d429572092c75b",
+      "sha256": "b3fef3e236e64a7123bfefc757ab5d510ffc70dfee45b2bfd89e7efd8664bc02"
+    },
+    {
+      "path": "crates/stateset-core/src/models/review.rs",
+      "git_blob_sha1": "8440118d1b21dfef89125a3697c3e558068c9acb",
+      "sha256": "c39e1aa0dc976857f57082e7c5e08d815dfb40e35fa1c1bac7cb1e69f6f06f36"
+    },
+    {
+      "path": "crates/stateset-core/src/models/sales_report.rs",
+      "git_blob_sha1": "b7b2951a256d6fe695c820a808885b4e4680cecc",
+      "sha256": "9059735a926388dcac1462b0de8637576d53042ff6096a858669616665d9f867"
+    },
+    {
+      "path": "crates/stateset-core/src/models/search_config.rs",
+      "git_blob_sha1": "47584f06b2c456da91024a1cb4aaa3793f1036c1",
+      "sha256": "bade21b1498a0df2180505eb0d18ec10ae73cb89aed1d559b61e398c9410f8af"
+    },
+    {
+      "path": "crates/stateset-core/src/models/segment.rs",
+      "git_blob_sha1": "91e1106fa3c6381ed709699b40c1b197c7f4a77e",
+      "sha256": "7695401c0e6192e95b234426972718329b472da0b064f199b10fa4150f964ec3"
+    },
+    {
+      "path": "crates/stateset-core/src/models/serial.rs",
+      "git_blob_sha1": "3e5e7a9cfb96b393e171910a3ea9e7a503c41399",
+      "sha256": "8816df90fd0370d9c65da6cdff9f14132e459e167598a8a3141f74daef404b52"
+    },
+    {
+      "path": "crates/stateset-core/src/models/shipment.rs",
+      "git_blob_sha1": "0be87721408e03ea10d1e879f769dd031a14a806",
+      "sha256": "f561edc930cb3cd940d46846542aa02a671475f4a368d35f892f90aaeafee6cc"
+    },
+    {
+      "path": "crates/stateset-core/src/models/shipping_zone.rs",
+      "git_blob_sha1": "d5bff373270201555da1ef0a10173abf9db9f81b",
+      "sha256": "8a6019b6f335289e3ca1d0fe25277d45661a37c00e0df95febc787230b396974"
+    },
+    {
+      "path": "crates/stateset-core/src/models/stock_snapshot.rs",
+      "git_blob_sha1": "b2265f51bc48c44fb05321e4dc0d2bc80ec7082b",
+      "sha256": "55d3cb8596ef482253b3e8bae07f7fbef47a0f7039773dd69514b0cb45244b74"
+    },
+    {
+      "path": "crates/stateset-core/src/models/store_credit.rs",
+      "git_blob_sha1": "da542308b3d2224c037018b72f006eb0c9377adc",
+      "sha256": "1915323d979f0adae4b17f341999ae226e898924a3728d0a861bfeeb37705ee7"
+    },
+    {
+      "path": "crates/stateset-core/src/models/subscription.rs",
+      "git_blob_sha1": "b94e824b216ab6405862cffa1ecc394fda654bb0",
+      "sha256": "d1faa534f3af590fd46e3e01f2bdd3c172c2b8d520e90c220029ea0d80ede1d9"
+    },
+    {
+      "path": "crates/stateset-core/src/models/supplier_sku.rs",
+      "git_blob_sha1": "1d3a9fc470739275ca9d4521039e0cfaa53f7467",
+      "sha256": "bc69008d7c26483f87c896e8b4337eeb721c27d3d13eec0a12b4bb05f84f4ca9"
+    },
+    {
+      "path": "crates/stateset-core/src/models/tax.rs",
+      "git_blob_sha1": "0dbd0a6c4c607d6e9ed4b423715261a7c2dcd8c9",
+      "sha256": "d438d8ac8a3facd7c4862b275159903bf5d51237895e2b5a7ba7cbeeca34324e"
+    },
+    {
+      "path": "crates/stateset-core/src/models/topology_snapshot.rs",
+      "git_blob_sha1": "cd0e779c245a544a9154d1b9c478cc635f98dc8f",
+      "sha256": "0564e3b5ca1af21eabb41aa03fb41ad9fcd88a433b2845c4339eee2956888f19"
+    },
+    {
+      "path": "crates/stateset-core/src/models/transfer_order.rs",
+      "git_blob_sha1": "f17de8611f127c725ce986ab6c8b7ec1d4b88e7e",
+      "sha256": "3beb4546384f8543cf7658330913f624c0ea6451953e5c6cd5498034df48a072"
+    },
+    {
+      "path": "crates/stateset-core/src/models/unit_of_measure.rs",
+      "git_blob_sha1": "99b044073877244f8fbb02ddcf7d8d7ca06e3ffd",
+      "sha256": "5f4d16fec0ce541de88111a36340d0e54232d3680b7b9d4535f00cc6211dda44"
+    },
+    {
+      "path": "crates/stateset-core/src/models/vector.rs",
+      "git_blob_sha1": "09fe102fb2026d4c890b652ebd2044f71f76e8cf",
+      "sha256": "ee5fe794e9c3cc1e20c7c02f187250ea4f4efb06df42b83ff9769cb6744a17e9"
+    },
+    {
+      "path": "crates/stateset-core/src/models/vendor_credit.rs",
+      "git_blob_sha1": "6d476e3a41e127b6c5e1c0afcfb4e8b4d04f1b55",
+      "sha256": "c3b0092158581a0b2bcaadccac1c0788287ba787a70f1b9bbe3742615d1f7ffd"
+    },
+    {
+      "path": "crates/stateset-core/src/models/vendor_return.rs",
+      "git_blob_sha1": "9005a6517295d3005da449af46bfbc1ddfeecc68",
+      "sha256": "e39a962079aaa23b3abb0e72330b1b0b6ef53fad3d0e32e5bf16a6a484f14fb4"
+    },
+    {
+      "path": "crates/stateset-core/src/models/warehouse.rs",
+      "git_blob_sha1": "d448563325054499cc137d1d09db4a58348aa2e8",
+      "sha256": "abc0665ebe4071d87e705b5e2a36d19e43fa93fa475f5faa3ea9c8af2bded3c9"
+    },
+    {
+      "path": "crates/stateset-core/src/models/warranty.rs",
+      "git_blob_sha1": "194940861c8ad2981cb66a652cc06c50a4b2fa86",
+      "sha256": "85642a4119974dc1041b7c193c3cf8f6d1c3701321ab853aec93c3d6778d97d1"
+    },
+    {
+      "path": "crates/stateset-core/src/models/wishlist.rs",
+      "git_blob_sha1": "3ac5af324368d654638a9bd01dd92ab4d90f6b5a",
+      "sha256": "99b11f4bf7e496e6e9e78f1611c02fadba3f047e363317d19148d7065fb34a4e"
+    },
+    {
+      "path": "crates/stateset-core/src/models/x402.rs",
+      "git_blob_sha1": "2474e70fceb1e2e871a022f39939f1e015d8639a",
+      "sha256": "17c9ffc860b4f946a3ddce5b393c7398e5bda02aca28fd45ee2ad0834cd0fe04"
+    },
+    {
+      "path": "crates/stateset-core/src/services/embeddings.rs",
+      "git_blob_sha1": "59b6bb78a66fbbbbcf6122f9438a3c7f5b00aca8",
+      "sha256": "4ee8a58cd1273549cbbec0b7152349d028510bd70e0ebb3e3bf36b3be3a8cfe9"
+    },
+    {
+      "path": "crates/stateset-core/src/services/mod.rs",
+      "git_blob_sha1": "2e22ebe6d7afaa16f0b926e5914bf89176d1b23a",
+      "sha256": "cc2c8dfc137973021226c16cb3f04a0d558a5f8b5c4814f4017c026741f213a0"
+    },
+    {
+      "path": "crates/stateset-core/src/traits/agentic.rs",
+      "git_blob_sha1": "31fb4800655cf1a5fef369b25b95f81dff34ffa2",
+      "sha256": "dfe83199d45a9881fd68bfcf12f401858a87c4b0fb5907b0e90d59a1ea668fb3"
+    },
+    {
+      "path": "crates/stateset-core/src/traits/analytics.rs",
+      "git_blob_sha1": "668ff759022648b66e872ea9dcdb6c26a4ca0fee",
+      "sha256": "a803b013a22d27fe4690647f2da6028aaa8b076815bac2828c8a84e57ac551a3"
+    },
+    {
+      "path": "crates/stateset-core/src/traits/catalog.rs",
+      "git_blob_sha1": "344d386ff3b923a22724099dd5c9f8fc437c3199",
+      "sha256": "e547bc61a3e5f7d2e6c5275bfcb2ae5af6ed8382f38e80cb9a63487a76408005"
+    },
+    {
+      "path": "crates/stateset-core/src/traits/customers.rs",
+      "git_blob_sha1": "b7c19ff99498b61fd838c06bbf0cbee60bc0e464",
+      "sha256": "3e6fac04d5bc4313ea18eb187a9c0ca058590888cb42fbc5d92da3d88b768045"
+    },
+    {
+      "path": "crates/stateset-core/src/traits/events.rs",
+      "git_blob_sha1": "3613d3e5d25d563180dff4671322761b236f8b9c",
+      "sha256": "470850d11799bd13534c9e625e4d58739f2163ea3e66b3b509e7d194d1342fc3"
+    },
+    {
+      "path": "crates/stateset-core/src/traits/finance.rs",
+      "git_blob_sha1": "3a77bb7d6c68d95d97b4638cff54fe8c67498e1d",
+      "sha256": "660b7c38ae20d7b79e39fd904ff1db7b597c312b0a7b71e2517a41e6d50cc488"
+    },
+    {
+      "path": "crates/stateset-core/src/traits/fulfillment.rs",
+      "git_blob_sha1": "71d7049e5d82edceef2addc091e118450a495633",
+      "sha256": "a341ab0070940d11c0c057669ddf7d308b82316553d2add84c6b29e143fee6b4"
+    },
+    {
+      "path": "crates/stateset-core/src/traits/inventory.rs",
+      "git_blob_sha1": "7b1ba087554462943511d1192b1e4d286388888b",
+      "sha256": "d845fb5955b1d8652afd37a28394c214765926da6553acd24ec09e2792580ce3"
+    },
+    {
+      "path": "crates/stateset-core/src/traits/manufacturing.rs",
+      "git_blob_sha1": "e956d3398b356d27ab31232c2eb97d4979d02b2c",
+      "sha256": "740e7d5d90a508d6737e1841209e97a0f88ede0d87a0c89dec2ee8bbef03a80c"
+    },
+    {
+      "path": "crates/stateset-core/src/traits/mod.rs",
+      "git_blob_sha1": "72b51849b1366326395b1dea64ca2e676e92bc33",
+      "sha256": "07727f2cf4fb67bc40fa6049720d47fb6e8d54091464366b5421ef6532ef8a2d"
+    },
+    {
+      "path": "crates/stateset-core/src/traits/orders.rs",
+      "git_blob_sha1": "c1bf543e2b85ad8a028af490c726a00dc4cb3460",
+      "sha256": "1d5db76cffcb538c95639c28a06713457324736463fd0cbcb54ea0d04e979788"
+    },
+    {
+      "path": "crates/stateset-core/src/traits/payments.rs",
+      "git_blob_sha1": "591f0e74e4ec7831f65ee894d0eee8e057c39138",
+      "sha256": "0229f5e3f031a763c483278fab06cb09f20a793ec3ca8e5c2dd4dabc7b4d5b1e"
+    },
+    {
+      "path": "crates/stateset-core/src/traits/platform.rs",
+      "git_blob_sha1": "b50b88bac44622aea47099ea32c9d8ebec410033",
+      "sha256": "c158a708fd3e574fc266a2ca23af035d1d885d7254292502319f02dbe295ea3e"
+    },
+    {
+      "path": "crates/stateset-core/src/traits/purchasing.rs",
+      "git_blob_sha1": "963ce34bcbe08e0250ec0cf2cadc2f4abf5e1561",
+      "sha256": "3fd7baf2b7849f4a6a56e8f36584bd50cb866993c2b10050224c4caecc48b176"
+    },
+    {
+      "path": "crates/stateset-core/src/traits/repository.rs",
+      "git_blob_sha1": "d3ab18724546f57dacc37219cd89adbfbdc235e4",
+      "sha256": "8da26a15eeaf5efdd7dcc8b930a656f18ace6819bb789fab481555776e5f2f20"
+    },
+    {
+      "path": "crates/stateset-core/src/traits/returns.rs",
+      "git_blob_sha1": "66aed2c360afb6326e2a5a651d6516440288d4a9",
+      "sha256": "cf10781df2fcd55807804a73fd40d4f41a2931dcb36ee77af78f72062bd44e26"
+    },
+    {
+      "path": "crates/stateset-core/src/traits/warehouse.rs",
+      "git_blob_sha1": "c2d96580f72a3b842ebab73743629efffbb7fc52",
+      "sha256": "1d82c2728fbd9219be65531f47376e89a5049177ac8f002edc040e0b44535914"
+    },
+    {
+      "path": "crates/stateset-core/src/validation.rs",
+      "git_blob_sha1": "0ec08ea4e8b8c5b22aaf867f74b09ec074f9bcfe",
+      "sha256": "59f52228c1f326f3e27dd4f2337f743ade9bd1a79cb881dcbe4f583de6b5b974"
+    },
+    {
+      "path": "crates/stateset-core/tests/finance_properties.rs",
+      "git_blob_sha1": "3c9d6478d5fd8155c22905c01fa8434591866b1b",
+      "sha256": "9582daaebc27193333171856d186bdf3c08cada65d980a3a156f3fb66fbcc9d3"
+    },
+    {
+      "path": "crates/stateset-core/tests/proptest_models.rs",
+      "git_blob_sha1": "2eec1a777e85669cc27476d6ad6f8b0b881c95d3",
+      "sha256": "b2236243933ef118394b64dc611e1fde5d6eb43a6251ebe8a97e3788ad21ad82"
+    },
+    {
+      "path": "crates/stateset-core/tests/reservation_formal_conformance.rs",
+      "git_blob_sha1": "3e1b60bf86a460abea806b6de74100b9fc0028db",
+      "sha256": "6ac36e16bdc2ed1d42a3f29863b3ec02823905f5c64cc4abc06d5dbed0fecbaa"
+    },
+    {
+      "path": "crates/stateset-core/tests/snapshot_serialization.rs",
+      "git_blob_sha1": "12557c83978064a53aa89bd4a167e6a93bd34f7b",
+      "sha256": "b0d4e628fbb919e886310c114114aace0a7101f11ee1617de14f7acf9c81ce5c"
+    },
+    {
+      "path": "crates/stateset-core/tests/snapshots/snapshot_serialization__create_order_input.snap",
+      "git_blob_sha1": "63e58f9a15e5ce3423d33c26c62c5f46ced20236",
+      "sha256": "97f9b2f4b77cef46752e0dcea5e3f0e737ef943a781dd4160c6feca8dfe92a50"
+    },
+    {
+      "path": "crates/stateset-core/tests/snapshots/snapshot_serialization__customer_status_variants.snap",
+      "git_blob_sha1": "e325edb6743c3401eb0fbfd6e8b0b74cd29e1a81",
+      "sha256": "5f6502eb6703434f5ea566303512a88040a1173e5b238c0bf9af0635dc2a053a"
+    },
+    {
+      "path": "crates/stateset-core/tests/snapshots/snapshot_serialization__fraud_decision_variants.snap",
+      "git_blob_sha1": "752436f2ce36945a3505f94b7701bb3e53079c3e",
+      "sha256": "6be4bdbcf1666ca8267ae034abb422513dd1bc0a8bdd4fed6bdc90d48b717c3c"
+    },
+    {
+      "path": "crates/stateset-core/tests/snapshots/snapshot_serialization__fraud_signal_type_variants.snap",
+      "git_blob_sha1": "7b062b80b2fed87ce86f5cce1aa8ff824f89c9f0",
+      "sha256": "b0157ae9550b309b23432804e96031445bd8e70c49a95780170a507d57deef8d"
+    },
+    {
+      "path": "crates/stateset-core/tests/snapshots/snapshot_serialization__gift_card_status_variants.snap",
+      "git_blob_sha1": "584c6eeb69cb316300f09b8480f104739153b768",
+      "sha256": "5669c9986c273ee88d696c1a89ab9f015f67886870676fb9c6e1387b1fa29a03"
+    },
+    {
+      "path": "crates/stateset-core/tests/snapshots/snapshot_serialization__gift_card_transaction_type_variants.snap",
+      "git_blob_sha1": "80b8df9d89139c79c617f9e0236ea0731c67337c",
+      "sha256": "451544f265e393c89643b0fa16f6341a2fc8c64181773f10030c1711f09b7c80"
+    },
+    {
+      "path": "crates/stateset-core/tests/snapshots/snapshot_serialization__inventory_transaction_types.snap",
+      "git_blob_sha1": "6ebd2ffd7bfa42f6c20519c1f485d905336498cc",
+      "sha256": "c1a1f9ae9773f1b525cffa32044cc17d2b0b68e3f8e0587ed77e03b3e6bed471"
+    },
+    {
+      "path": "crates/stateset-core/tests/snapshots/snapshot_serialization__loyalty_program_status_variants.snap",
+      "git_blob_sha1": "26d46c3c8cd821c7379c072f602cd6ff6f21d04a",
+      "sha256": "60379b87ee12e4bebd4063f0d418e0ea9abbf3233ef485cbd4cfa965619efdca"
+    },
+    {
+      "path": "crates/stateset-core/tests/snapshots/snapshot_serialization__loyalty_transaction_type_variants.snap",
+      "git_blob_sha1": "8dd78183e76d6286265ace4c6ddd38f812f556fe",
+      "sha256": "94ea8bfee263ba2b2bc27e617c9c45809fb66b50591a87f887862eff4b516c74"
+    },
+    {
+      "path": "crates/stateset-core/tests/snapshots/snapshot_serialization__order.snap",
+      "git_blob_sha1": "7bb47996d6a51f875fee3d8e8b1747432fbbee7f",
+      "sha256": "f5898ee51f84b3247edce7e1886148fcf236f6c798d9ccaac25889e013014842"
+    },
+    {
+      "path": "crates/stateset-core/tests/snapshots/snapshot_serialization__order_status_variants.snap",
+      "git_blob_sha1": "93694b2f1b9623a0b9a925cb3778abb48d0a85dd",
+      "sha256": "3c94d3230a19e9f0b8da607f4b7427b2c60a58e05df417e0c428c5fceeb34c5d"
+    },
+    {
+      "path": "crates/stateset-core/tests/snapshots/snapshot_serialization__payment_status_variants.snap",
+      "git_blob_sha1": "7cf8176193b40214fc74dde0ef1b6386b4483729",
+      "sha256": "800b185e292ed55d1cbe75f4341b1adb05f862d9df167012c0b6ca6a8d0315b9"
+    },
+    {
+      "path": "crates/stateset-core/tests/snapshots/snapshot_serialization__product_status_variants.snap",
+      "git_blob_sha1": "c1a599a5496f505b968cd28c0e05c03d14b0c62b",
+      "sha256": "646e864f20153761557355c8aeed843b757627e6db5880dfa9fb45762c9b824d"
+    },
+    {
+      "path": "crates/stateset-core/tests/snapshots/snapshot_serialization__return_status_variants.snap",
+      "git_blob_sha1": "eb8e0d0d5b940dcdb8318001e9cf6c2072435d1f",
+      "sha256": "090c0865efb4dbba57ba4622257174fcb3f2ba00b21bb38cb645e354a62b560f"
+    },
+    {
+      "path": "crates/stateset-core/tests/snapshots/snapshot_serialization__review_status_variants.snap",
+      "git_blob_sha1": "2ff0e3c8bfe07c6dd6b606086b8b2c12ff74a1b0",
+      "sha256": "788d118178ac4c1d0e52647faa0307080de993e733ab7c7ee16abc60004a2de6"
+    },
+    {
+      "path": "crates/stateset-core/tests/snapshots/snapshot_serialization__reward_type_variants.snap",
+      "git_blob_sha1": "3d72fc69c6d2870493f535a9164f367c6b342571",
+      "sha256": "20089fed37219c00f70b5f291d40a2168de641c4ddc3c75f0fa67242a1824fd0"
+    },
+    {
+      "path": "crates/stateset-core/tests/snapshots/snapshot_serialization__segment_operator_variants.snap",
+      "git_blob_sha1": "ef5e5aec6bf8c5c2811047edec55784e7c286826",
+      "sha256": "87cf83a71d5359a37f3245d7ec19f99162ca6cccd7e29d4113212b6964a1b9a5"
+    },
+    {
+      "path": "crates/stateset-core/tests/snapshots/snapshot_serialization__segment_type_variants.snap",
+      "git_blob_sha1": "6158b2d0875f3360395b78f131d23bfc1f5fb57b",
+      "sha256": "c47c1ed1540238aaf31e633430ec8ddd85ce90deeeac80f6050126921a12be5b"
+    },
+    {
+      "path": "crates/stateset-core/tests/snapshots/snapshot_serialization__shipping_method_type_variants.snap",
+      "git_blob_sha1": "d30cc035340dde546259a33bebf35793fb1a41c4",
+      "sha256": "0b06aef755312cd2c984e926cebc24453c1080177a250550c2ec9b5876e74b27"
+    },
+    {
+      "path": "crates/stateset-core/tests/snapshots/snapshot_serialization__store_credit_status_variants.snap",
+      "git_blob_sha1": "a8f01282324cf61fb7fc71397e56ebf23eab1eca",
+      "sha256": "7ff42b6cbdf544ee7a439020e2791fee62c2fa6622a6eb28b3794693aef19a3e"
+    },
+    {
+      "path": "crates/stateset-test-utils/Cargo.toml",
+      "git_blob_sha1": "bc15c18f83a7532c0c87f200f70a685ccb162153",
+      "sha256": "87d5f829481a462dff412251be1308ca588537b0026258a88e7ec801aa855151"
+    },
+    {
+      "path": "crates/stateset-test-utils/src/assertions.rs",
+      "git_blob_sha1": "6bf85503b9d96c9253c3a75d634526e8c3ac95d0",
+      "sha256": "48c3566ac1957b6ff38b1a5d1ba129dd1e1e0cc0524c4b88bc48b4a683515180"
+    },
+    {
+      "path": "crates/stateset-test-utils/src/fixtures.rs",
+      "git_blob_sha1": "5e41940587edd7008ed775ce8e784fb3f9bb1f0b",
+      "sha256": "43f626e0d7dc7dca9e278015a1375e349f3a7f61cc106fff7e87b78a56bc3163"
+    },
+    {
+      "path": "crates/stateset-test-utils/src/lib.rs",
+      "git_blob_sha1": "4120c732e955bcc64a299c7b9e7281486351ccaf",
+      "sha256": "da46e3ed3fde642f390117a000982db62f4f29cbe5b7a8b4bfbea058aaebcd5f"
+    },
+    {
+      "path": "LICENSE",
+      "git_blob_sha1": "9bf3d1fcd2daaf0a5447df4494c0134cbf5583c1",
+      "sha256": "bbbe090bf86b0ca4cc6a1d8510e5552e65d6f43bb98c00023c615eb7b046fed4"
+    },
+    {
+      "path": "LICENSE-APACHE",
+      "git_blob_sha1": "02bf66359b699b17dcdb2e3f7de19c1ef6333746",
+      "sha256": "a5717beca8467c307a0d24a41bcd0b83db7e30702eeccb167d001b62d23239a1"
+    },
+    {
+      "path": "LICENSE-MIT",
+      "git_blob_sha1": "7db11a31fd2f3eb72f8f90bf546389cee6e6f700",
+      "sha256": "bba83f79a8d87b2dc0b66334f0c325d952d654d742331291959e3dcadf4a3dd6"
+    }
+  ],
+  "consumer_workspace_sha256": "048641cee00fd6639285b4a5eee63fb0247879ed88e50d54204cb54973a6b713"
+}

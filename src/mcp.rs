@@ -269,6 +269,18 @@ fn catalog() -> &'static Vec<Definition> {
 fn build_catalog() -> Vec<Definition> {
     let mut tools = vec![
         definition(
+            "wms_icommerce_preview",
+            "Validate an actual iCommerce MoveInventory or CreateInventoryItem against this facility without saving. Explicit mappings retain original labels. Whole each quantities only. Preserve a complete canonical WMS request before execution; never retranslate uncertain work.",
+            "POST", "/v1/warehouses/{warehouse_id}/icommerce/preview", Rights::Worker,
+            &[], Some(crate::icommerce::preview_schema()), true, false, true,
+        ),
+        definition(
+            "wms_icommerce_inventory",
+            "Read actual iCommerce StockLevel projections using explicit numeric location mappings. Original lot positions and controls remain included. Physical minus reserved does not establish expiry/quarantine eligibility. This tool never writes inventory.",
+            "POST", "/v1/warehouses/{warehouse_id}/icommerce/inventory", Rights::Any,
+            &[], Some(crate::icommerce::mappings_schema()), true, false, true,
+        ),
+        definition(
             "wms_session",
             "Read your authenticated tenant, actor, role and default warehouse. Identity cannot be chosen in tool arguments.",
             "GET",

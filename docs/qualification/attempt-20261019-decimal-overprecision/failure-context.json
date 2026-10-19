@@ -1,0 +1,19 @@
+{
+  "recorded_at": "2026-10-19T19:51:20.651058+00:00",
+  "candidate": "source43/0.2.0",
+  "result": "Intentionally interrupted before publication after a confirmed decimal boundary gap",
+  "source_inputs_sha256": "b4057d5b0bc79c90e6dca6075f3613cc9aae7c6d299b142ceb122a4fe6a6f75a",
+  "software_checks_passed_before_new_case": {
+    "rust": 330,
+    "python": 74,
+    "terminal": 12,
+    "offline_browser": 149
+  },
+  "typed_input": "MoveInventory.quantity string1.00000000000000000000000000001",
+  "original_preview_result": "Ok(MoveStock quantity1): upstream Decimal string decoding rounded beyond precision before whole-unit validation",
+  "guard": "Exact decimal-string parsing before upstream decoding; numeric JSON and unsupported precision rejected. New regression added for move and product Decimal fields.",
+  "stop": "SIGINT to the exact owned cargo release-build child; gate traps and native-wrapper cleanup completed",
+  "new_image_built": false,
+  "native_server_stopped": true,
+  "production_qualified": false
+}

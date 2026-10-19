@@ -1,0 +1,134 @@
+[workspace]
+resolver = "3"
+members = ["crates/stateset-primitives", "crates/stateset-crypto", "crates/stateset-core", "crates/stateset-test-utils"]
+
+[workspace.package]
+version = "1.39.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+homepage = "https://github.com/stateset/stateset-icommerce"
+repository = "https://github.com/stateset/stateset-icommerce"
+authors = ["StateSet <support@stateset.com>"]
+
+# ---------------------------------------------------------------------------
+# Workspace-wide lints (inherited by crates via `[lints] workspace = true`)
+# Modeled on reth, foundry, and alloy conventions.
+# ---------------------------------------------------------------------------
+[workspace.lints.rust]
+missing_debug_implementations = "warn"
+unreachable_pub = "warn"
+unused_must_use = "deny"
+rust_2018_idioms = { level = "deny", priority = -1 }
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(miri)'] }
+
+[workspace.lints.rustdoc]
+all = "warn"
+
+[workspace.lints.clippy]
+# Enable all default lints as warnings
+all = { level = "warn", priority = -1 }
+# Nursery / pedantic lints worth enforcing
+borrow_as_ptr = "warn"
+cloned_instead_of_copied = "warn"
+derive_partial_eq_without_eq = "warn"
+doc_markdown = "warn"
+explicit_iter_loop = "warn"
+flat_map_option = "warn"
+implicit_clone = "warn"
+manual_string_new = "warn"
+missing_const_for_fn = "warn"
+needless_pass_by_ref_mut = "warn"
+redundant_clone = "warn"
+use_self = "warn"
+# Promoted to deny — must not ship in production code.
+# (Production crates apply `cfg_attr(not(test), deny(...))` for unwrap_used;
+# these three are denied unconditionally because they should never appear
+# in a clean tree at all.)
+dbg_macro = "deny"
+todo = "deny"
+unimplemented = "deny"
+# Allowed — we have large error enums by design
+result_large_err = "allow"
+
+# ---------------------------------------------------------------------------
+# Profiles
+# ---------------------------------------------------------------------------
+
+# Speed up dev builds by reducing debug info (like reth/foundry).
+[workspace.dependencies]
+# Core dependencies (minimal)
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.4", features = ["v4", "serde"] }
+rust_decimal = { version = "1.36", features = ["serde"] }
+rust_decimal_macros = "1.36"
+thiserror = "2.0"
+base64 = "0.22"
+hex = "0.4"
+serde_jcs = "0.1"
+sha2 = "0.10"
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+once_cell = "1.19"
+prometheus = "0.14"
+auto_impl = "1"
+async-trait = "0.1"
+strum = { version = "0.26", features = ["derive"] }
+
+
+# Database (SQLite)
+rusqlite = { version = "0.32.1", features = ["bundled", "functions"] }
+r2d2 = "0.8"
+r2d2_sqlite = "0.25"
+
+# Database (PostgreSQL)
+# Avoid `sqlx` default features (notably `any`), which pull in MySQL and other
+# unused database stacks. This keeps `cargo audit` green and dependency trees
+# smaller while still supporting PostgreSQL.
+sqlx = { version = "0.8.1", default-features = false, features = ["runtime-tokio", "postgres", "macros", "json", "uuid", "chrono", "rust_decimal", "tls-rustls-ring-native-roots"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"] }
+
+# HTTP client (for embeddings service)
+# Use rustls TLS to avoid a hard runtime dependency on OpenSSL (libssl.so.1.1),
+# which breaks in minimal container images and newer distros.
+reqwest = { version = "0.12", default-features = false, features = ["json", "blocking", "rustls-tls"] }
+
+# Proc-macro support
+syn = { version = "2", features = ["full", "extra-traits"] }
+quote = "1"
+proc-macro2 = "1"
+
+# Policy engine
+regex = "1"
+serde_norway = "0.9.42"
+tempfile = "3.10"
+
+# Internal crates
+stateset-primitives = { path = "crates/stateset-primitives", version = "1.39.0" }
+stateset-core = { path = "crates/stateset-core", version = "1.39.0" }
+stateset-db = { path = "crates/stateset-db", version = "1.39.0" }
+stateset-embedded = { path = "crates/stateset-embedded", version = "1.39.0" }
+stateset-observability = { path = "crates/stateset-observability", version = "1.39.0" }
+stateset-crypto = { path = "crates/stateset-crypto", version = "1.39.0" }
+# Intentionally version-less: stateset-test-utils is `publish = false`, and cargo
+# only strips a path dev-dependency when it carries no version requirement. With a
+# version here, packaging any publishable crate that dev-depends on it fails with
+# "no matching package named `stateset-test-utils` found".
+stateset-test-utils = { path = "crates/stateset-test-utils" }
+stateset-macros = { path = "crates/stateset-macros", version = "1.39.0" }
+stateset-policy = { path = "crates/stateset-policy", version = "1.39.0" }
+stateset-a2a = { path = "crates/stateset-a2a", version = "1.39.0" }
+stateset-sync = { path = "crates/stateset-sync", version = "1.39.0" }
+stateset-jobs = { path = "crates/stateset-jobs", version = "1.39.0" }
+stateset-sdk = { path = "crates/stateset-sdk", version = "1.39.0" }
+stateset-http = { path = "crates/stateset-http", version = "1.39.0" }
+stateset-ffi = { path = "crates/stateset-ffi", version = "1.39.0" }
+stateset-pricing = { path = "crates/stateset-pricing", version = "1.39.0" }
+stateset-migrations = { path = "crates/stateset-migrations", version = "1.39.0" }
+stateset-authz = { path = "crates/stateset-authz", version = "1.39.0" }
+
+# Testing
+insta = { version = "1.34", features = ["json"] }
+
+# Note: Testing dependencies (criterion, proptest) are added to individual crates

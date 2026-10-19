@@ -1,22 +1,34 @@
 [
   {
+    "path": "upstream-source-review.json",
+    "sha256": "7571e6db646e9709d3c7910883e5e4ed13ba5e2381f4e3703e0c870d7fe9cd2b"
+  },
+  {
     "path": "independent-audit.json",
-    "sha256": "ebb8e0704d19fcdeb91dc33247bcc97f94ee782dee24f4cdfc900c474f156670"
+    "sha256": "cfa7c38a7963228aad8b84b37dcbdf1bfb18000834c79ad217c987840e00f0b1"
   },
   {
     "path": "live-browser-coverage.json",
-    "sha256": "41de8e6353553778285bc748755f8525d20330f9e55d8c4cc0f67fe5700764cf"
+    "sha256": "dde161a1eaeab070be6ece96262c5ead9d88c4e56c3b8d75c414eb4b404b7302"
   },
   {
     "path": "qualification-limits.json",
-    "sha256": "0f3446a0ba0fb542ee7a0e5c60d113281f06d0d40a29d014ff606deca3a3cc26"
-  },
-  {
-    "path": "build-storage-plan.json",
-    "sha256": "87cebc6b7decf9dd4cb39fd3a9269d45efcaeec547e4f588e281655020a3fe53"
+    "sha256": "d84c42eff03dda6fe65890c9696f6d5fa6f15cd910d2aa9a70b72fc711ffcb67"
   },
   {
     "path": "image-retention-observation.json",
-    "sha256": "bcedf236b94e59c521df1e9a35804d9fe66d1b44aab18798ecba036d9d2e47ec"
+    "sha256": "54764c3b307e9e1b3d4f705176d921eb89eb4f9242c63e675d8c9ab5a24fea3e"
+  },
+  {
+    "path": "crash-journal-audit.json",
+    "sha256": "38586c9e0a790dc9b9be464b1de3c8f3c5b39332e9cd17ed235defe80d99809e"
+  },
+  {
+    "path": "tui-package-qualification.json",
+    "sha256": "ab0012aab8cfe3b9028b1e37ccf09c25be5f537527360468fd9bf39e4a73ac5a"
+  },
+  {
+    "path": "distribution-license-review.json",
+    "sha256": "95e55df8fb104460d07fc4fe385872dbd84928a99da75a69df9a41dc3dd5ac9f"
   }
 ]

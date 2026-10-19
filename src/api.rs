@@ -330,6 +330,14 @@ pub(crate) fn business_routes() -> Router<App> {
     Router::new()
         .route("/v1/session", get(session))
         .route("/v1/warehouses", get(warehouses))
+        .route(
+            "/v1/warehouses/{warehouse}/icommerce/preview",
+            post(crate::icommerce::preview),
+        )
+        .route(
+            "/v1/warehouses/{warehouse}/icommerce/inventory",
+            post(crate::icommerce::inventory_endpoint),
+        )
         .route("/v1/lot-trace", get(crate::lot_trace::page))
         .route("/v1/serials", get(crate::serial_reads::current))
         .route(

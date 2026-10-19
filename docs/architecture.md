@@ -2,19 +2,19 @@
 
 ## Source evidence and ownership
 
-`/home/dom/stateset-sync-server` is the OMS. It owns commercial orders and orchestration. `src/domain/warehouse_os.rs` and `src/services/warehouseos.rs` show its existing WarehouseOS adapter; this is a third-party contract, not an existing native StateSet WMS connector.
+`stateset-sync-server` is the OMS. It owns commercial orders and orchestration. `src/domain/warehouse_os.rs` and `src/services/warehouseos.rs` show its existing WarehouseOS adapter; this is a third-party contract, not an existing native StateSet WMS connector.
 
-`/home/dom/stateset-warehouse` is the WMS. It owns the physical warehouse ledger, location balances, reservations, receipt execution, and pick/pack/handoff evidence. Its balances are authoritative for warehouses explicitly managed here. Do not also mutate those warehouses in iCommerce or WarehouseOS. An OMS copy of availability must be a projection, not an independent writer.
+`stateset-warehouse` is the WMS. It owns the physical warehouse ledger, location balances, reservations, receipt execution, and pick/pack/handoff evidence. Its balances are authoritative for warehouses explicitly managed here. Do not also mutate those warehouses in iCommerce or WarehouseOS. An OMS copy of availability must be a projection, not an independent writer.
 
-`/home/dom/stateset-freight` is the TMS. `src/integrations.rs` and `src/domain.rs` implement transportation, carrier procurement, stops, tracking and Sync writeback. This WMS records the physical handoff; a freight dispatch or delivery event does not authorize it to ship inventory a second time.
+`stateset-freight` is the TMS. `src/integrations.rs` and `src/domain.rs` implement transportation, carrier procurement, stops, tracking and Sync writeback. This WMS records the physical handoff; a freight dispatch or delivery event does not authorize it to ship inventory a second time.
 
-`/home/dom/stateset-edi/src/transactions/receipt944.rs`, `adjustment947.rs`, and the warehouse lifecycle in `src/lifecycle.rs` establish document responsibilities. EDI owns X12 parsing/transport. This repository emits warehouse events and does not implement another EDI parser.
+`stateset-edi/src/transactions/receipt944.rs`, `adjustment947.rs`, and the warehouse lifecycle in `src/lifecycle.rs` establish document responsibilities. EDI owns X12 parsing/transport. This repository emits warehouse events and does not implement another EDI parser.
 
-`/home/dom/next-temporal-rs/crates/engine-workflows` supplies existing durable orchestration. The WMS does not need a Temporal worker to commit a local stock movement. Cross-service orchestration can consume its durable events.
+`next-temporal-rs/crates/engine-workflows` supplies existing durable orchestration. The WMS does not need a Temporal worker to commit a local stock movement. Cross-service orchestration can consume its durable events.
 
-`/home/dom/stateset-app/package.json` establishes React and TypeScript UI conventions; the newer EDI/Sync/engine dashboards establish React/Vite. The WMS uses Rust 1.90, Axum 0.8, Tokio, SQLx/Postgres and React/TypeScript/Vite.
+`stateset-app/package.json` establishes React and TypeScript UI conventions; the newer EDI/Sync/engine dashboards establish React/Vite. The WMS uses Rust 1.90, Axum 0.8, Tokio, SQLx/Postgres and React/TypeScript/Vite.
 
-iCommerce's `crates/stateset-core/src/models/warehouse.rs` and `crates/stateset-db/src/postgres/warehouse.rs` provide warehouse design references. Its `crates/stateset-migrations/migrations/080_reservation_order_line.sql`, `083_inventory_balance_guards.sql` and `092_inventory_balance_identity.sql` establish reservation ownership and balance identity/protection. The `postgres_inventory_oversell.rs`, `postgres_move_inventory_concurrency.rs` and shipment atomicity cases provide regression inputs. This is design and validation reuse. The WMS implements its own execution logic, schema and physical ledger; its [Rust dependencies](../Cargo.toml) and [dashboard dependencies](../dashboard/package.json) include no iCommerce engine, crate or SDK. Sync and Freight connect through the explicit [HTTP adapters](native-integrations.md).
+iCommerce's `crates/stateset-core/src/models/warehouse.rs` and `crates/stateset-db/src/postgres/warehouse.rs` provide warehouse design references. Its `crates/stateset-migrations/migrations/080_reservation_order_line.sql`, `083_inventory_balance_guards.sql` and `092_inventory_balance_identity.sql` establish reservation ownership and balance identity/protection. The `postgres_inventory_oversell.rs`, `postgres_move_inventory_concurrency.rs` and shipment atomicity cases provide regression inputs. The WMS in version 0.2.0 also compiles pinned `stateset-core` and `stateset-primitives` crates for typed interoperability, upstream validation and read-only inventory projections. The [compatibility adapter](icommerce.md) preserves explicit IDs and exact whole-each semantics. The WMS retains its own execution logic, PostgreSQL schema and physical ledger; no iCommerce database engine or second inventory writer is introduced. Sync and Freight connect through the explicit [HTTP adapters](native-integrations.md).
 
 ## Inventory contract
 
@@ -151,7 +151,7 @@ A checked original pack observation accompanies the durable command request; the
 
 ## Serial identity backend in progress
 
-The [locally qualified serial release](qualification/release-20261019-serial-after-write-v1/summary.json) includes REST/MCP command admission, bounded identity reads and durable operator collection/recovery, with migrations 021–029. Its complete gate covers an image workload with 500 products and 16,000 labels, after-mutation API/PostgreSQL serial write recovery and restore of a populated archive with 49 tables. Device/deployment/facility acceptance remains separate. See the [serial command contract](api.md#serial-command-admission).
+The [locally qualified serial release](qualification/release-20261019-icommerce-tui-v1/summary.json) includes the canonical serial REST/MCP workflows, iCommerce interoperability and warehouse terminal on version0.2.0. The complete gate covers both 500-product image workloads, serial after-mutation crash recovery and restoration of 49 populated tables. Device/deployment/facility acceptance remains separate. See [evidence and limits](evidence.md).
 
 The identity key is `(tenant, SKU, literal serial)`, with case-sensitive labels and an immutable original lot. Tracking mode is chosen when the tenant/SKU is first introduced and must agree at every facility. Existing products remain untracked; the migration invents no historical IDs. A serial represents one each. Pack conversions require every resulting each identity, retaining the original definition and literal observations in the same request.
 

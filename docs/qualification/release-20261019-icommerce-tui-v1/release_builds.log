@@ -1,0 +1,29 @@
+   Compiling stateset-warehouse v0.2.0 (/home/dom/stateset-warehouse)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 10.37s
+   Compiling rust_decimal v1.43.0
+   Compiling sqlx-core v0.8.6
+   Compiling ml-kem v0.3.2
+   Compiling ml-dsa v0.1.1
+   Compiling ed25519-dalek v2.2.0
+   Compiling x25519-dalek v2.0.1
+   Compiling md-5 v0.10.6
+   Compiling atoi v2.0.0
+   Compiling schemars v1.2.2
+   Compiling stateset-primitives v1.39.0 (/home/dom/stateset-warehouse/vendor/stateset-icommerce/crates/stateset-primitives)
+   Compiling stateset-crypto v1.39.0 (/home/dom/stateset-warehouse/vendor/stateset-icommerce/crates/stateset-crypto)
+   Compiling strum v0.26.3
+   Compiling serde_jcs v0.1.0
+   Compiling sqlx-postgres v0.8.6
+   Compiling reqwest v0.13.5
+   Compiling rs_merkle v1.5.0
+   Compiling auto_impl v1.4.0
+   Compiling axum v0.8.9
+   Compiling rmcp v3.5.1
+   Compiling stateset-core v1.39.0 (/home/dom/stateset-warehouse/vendor/stateset-icommerce/crates/stateset-core)
+   Compiling chrono-tz v0.10.4
+   Compiling sqlx v0.8.6
+   Compiling reqwest v0.12.28
+   Compiling jsonwebtoken v10.4.0
+   Compiling proptest v1.11.0
+   Compiling stateset-warehouse v0.2.0 (/home/dom/stateset-warehouse)
+    Finished `release` profile [optimized] target(s) in 5m 01s

@@ -53,7 +53,7 @@ WMS_TEST_DATABASE_URL="postgresql:///wms_local_test?host=$wms_test_root/socket&p
 export WMS_TEST_DATABASE_URL
 
 if [[ "$#" == 0 ]]; then
-  cargo test --locked --lib --test postgres --test persistence_acceptance --test mcp --test persistence_guards --test native_api --test oms_fulfillment_api --test oms_receiver --test operations --test startup --test serial_admission --test serial_registry -- --ignored --test-threads=1
+  cargo test --locked --lib --test postgres --test persistence_acceptance --test mcp --test persistence_guards --test native_api --test oms_fulfillment_api --test oms_receiver --test operations --test startup --test serial_admission --test serial_registry --test icommerce -- --ignored --test-threads=1
 else
   "$@"
 fi

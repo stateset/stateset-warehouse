@@ -1,0 +1,15 @@
+name: Feature request
+description: Describe a warehouse workflow and the result it needs.
+body:
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Workflow and required behavior
+      description: Use synthetic examples. Identify physical observations, ownership, quantities and recovery needs.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Describe how the result can be verified and any operational constraints.

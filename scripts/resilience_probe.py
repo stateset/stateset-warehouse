@@ -19,6 +19,7 @@ import urllib.parse
 
 from serial_traffic_proof import serial_proof
 from serial_crash_barrier import barrier_sql, literal
+from crash_journal import CrashJournal
 import uuid
 
 
@@ -100,6 +101,7 @@ class Probe:
                 "scripts/resilience_probe.py",
                 "scripts/serial_traffic_proof.py",
                 "scripts/serial_crash_barrier.py",
+                "scripts/crash_journal.py",
             )
         }
 
@@ -665,7 +667,11 @@ class Probe:
             keys = (180121, int(uuid.uuid4().hex[:7], 16) + 1)
             name = "wms_resilience_serial_" + self.args.run.replace("-", "_")
             marker = "wms-serial-after-write-" + self.args.run
-            self.sql(barrier_sql(name, marker, request, self.credentials[token]["actor"], baseline, keys))
+            sql = barrier_sql(name, marker, request, self.credentials[token]["actor"], baseline, keys)
+            self.crash_journal.record("barrier_planned", baseline=baseline, sql=sql,
+                                      name=name, marker=marker, keys=keys)
+            self.sql(sql)
+            self.crash_journal.record("barrier_installed")
             self.serial_barrier = {"name": name, "marker": marker, "keys": keys,
                                    "original_request": request, "actor": self.credentials[token]["actor"],
                                    "before": baseline}
@@ -723,6 +729,7 @@ class Probe:
                                  "exact serial HTTP transaction after custody/event/receipt mutations")
             require(len(evidence) == 1, "More than one writer reached the owned serial barrier")
             barrier["blocking_evidence"] = evidence[0]
+            self.crash_journal.record("writer_blocked", evidence=evidence[0])
             return
         self.wait(
             lambda: self.sql(
@@ -731,12 +738,14 @@ class Probe:
             == "t",
             "actual HTTP write blocked behind row lock",
         )
+        self.crash_journal.record("writer_blocked", warehouse_row_lock=True)
 
     def remove_serial_barrier(self):
         if getattr(self.args, "serial_units", 0):
             name = self.serial_barrier["name"]
             self.sql(f"DROP TRIGGER {name} ON wms_outbox; DROP FUNCTION {name}();")
             self.serial_barrier["owned_fault_trigger_removed"] = True
+            self.crash_journal.record("barrier_removed", name=name)
 
     def crash_barrier_evidence(self):
         if not getattr(self.args, "serial_units", 0):
@@ -775,9 +784,13 @@ class Probe:
         )
         token = self.operators[0][1]
         request = self.recovery_request(False, token)
+        self.crash_journal = CrashJournal(self.root, "api_sigkill", self.args.run,
+                                          self.credentials[token]["actor"], request)
         before = self.fingerprints() if getattr(self.args, "serial_units", 0) else None
+        self.crash_journal.record("baseline_captured", fingerprints=before)
         application, locker = self.locker(request, token)
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            self.crash_journal.record("original_send_requested", replica=0)
             pending = pool.submit(
                 self.http,
                 self.bases[0],
@@ -790,12 +803,15 @@ class Probe:
             try:
                 self.wait_blocked(application)
                 self.owned(self.args.api[0])
+                self.crash_journal.record("fault_requested", container=self.args.api[0], signal="KILL")
                 self.docker("kill", "--signal=KILL", self.args.api[0])
                 interrupted = self.consume_future(pending)
+                self.crash_journal.record("interrupted_response_observed", response=interrupted)
                 require(
                     self.owned(self.args.api[0])["State"]["ExitCode"] == 137,
                     "API was not abruptly killed",
                 )
+                self.crash_journal.record("fault_verified", exit_code=137)
                 require(
                     self.http(self.bases[1], "GET", "/ready")[0] == 200,
                     "Surviving API lost readiness",
@@ -809,6 +825,7 @@ class Probe:
         if before is not None:
             require(self.fingerprints() == before,
                     "Serial API crash did not roll back all committed table fingerprints")
+            self.crash_journal.record("rollback_verified")
         status, receipt = self.http(
             self.bases[1],
             "GET",
@@ -819,6 +836,8 @@ class Probe:
             status == 200 and receipt == {"found": False},
             "Killed blocked request unexpectedly committed",
         )
+        self.crash_journal.record("original_absent")
+        self.crash_journal.record("original_recovery_requested", replica=1)
         status, committed = self.http(
             self.bases[1], "POST", self.route + "/commands", token, request
         )
@@ -827,6 +846,7 @@ class Probe:
             "Original request did not recover on surviving API",
         )
         self.retain(request, committed["result"], token)
+        self.crash_journal.record("original_committed", result=committed["result"])
         if getattr(self.args, "serial_units", 0):
             self.serial_recovery_requests.append(request["request_id"])
         restart_started = time.monotonic()
@@ -836,7 +856,10 @@ class Probe:
         self.ready()
         restart_to_readiness = time.monotonic() - restart_started
         self.replay(request, token, self.bases[0])
+        self.crash_journal.record("exact_replay_verified", replica=0)
+        self.crash_journal.record("completed")
         self.phase_evidence["api_sigkill"] = {
+            "crash_journal": self.crash_journal.manifest(),
             **self.crash_barrier_evidence(),
             **({"all_table_fingerprints_unchanged": before} if before is not None else {}),
             "database_blocking_pid_barrier": True,
@@ -856,9 +879,13 @@ class Probe:
         )
         token = self.operators[1][1]
         request = self.recovery_request(True, token)
+        self.crash_journal = CrashJournal(self.root, "postgres_sigkill", self.args.run,
+                                          self.credentials[token]["actor"], request)
         before = self.fingerprints()
+        self.crash_journal.record("baseline_captured", fingerprints=before)
         application, locker = self.locker(request, token)
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            self.crash_journal.record("original_send_requested", replica=1)
             pending = pool.submit(
                 self.http,
                 self.bases[1],
@@ -870,13 +897,16 @@ class Probe:
             )
             self.wait_blocked(application)
             self.owned(self.args.postgres)
+            self.crash_journal.record("fault_requested", container=self.args.postgres, signal="KILL")
             self.docker("kill", "--signal=KILL", self.args.postgres)
             interrupted = self.consume_future(pending)
+            self.crash_journal.record("interrupted_response_observed", response=interrupted)
             locker.communicate(timeout=10)
         require(
             self.owned(self.args.postgres)["State"]["ExitCode"] == 137,
             "PostgreSQL was not abruptly killed",
         )
+        self.crash_journal.record("fault_verified", exit_code=137)
         readiness = []
         liveness = []
         for base in self.bases:
@@ -900,6 +930,7 @@ class Probe:
             before == after,
             "Previously committed table data changed across database crash recovery",
         )
+        self.crash_journal.record("rollback_verified")
         self.remove_serial_barrier()
         status, receipt = self.http(
             self.bases[0],
@@ -911,6 +942,8 @@ class Probe:
             status == 200 and receipt == {"found": False},
             "Interrupted database transaction unexpectedly committed",
         )
+        self.crash_journal.record("original_absent")
+        self.crash_journal.record("original_recovery_requested", replica=0)
         status, committed = self.http(
             self.bases[0], "POST", self.route + "/commands", token, request
         )
@@ -919,9 +952,11 @@ class Probe:
             "Original interrupted request could not recover after database restart",
         )
         self.retain(request, committed["result"], token)
+        self.crash_journal.record("original_committed", result=committed["result"])
         if getattr(self.args, "serial_units", 0):
             self.serial_recovery_requests.append(request["request_id"])
         self.replay(request, token, self.bases[1])
+        self.crash_journal.record("exact_replay_verified", replica=1)
         logged = subprocess.run(
             ["docker", "logs", self.args.postgres],
             capture_output=True,
@@ -938,7 +973,9 @@ class Probe:
             recovery_observed,
             "PostgreSQL did not report actual unclean-shutdown recovery",
         )
+        self.crash_journal.record("completed")
         self.phase_evidence["postgres_sigkill"] = {
+            "crash_journal": self.crash_journal.manifest(),
             **self.crash_barrier_evidence(),
             "database_blocking_pid_barrier": True,
             "exit_code": 137,

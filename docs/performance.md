@@ -1,5 +1,9 @@
 # Workload qualification
 
+## Current 0.2.0 image profiles — 2026-10-19
+
+The [full gate](qualification/release-20261019-icommerce-tui-v1/summary.json) uses the same 500-product / 100-bin / two-lot / 500-order / eight-operator / two-replica profile, with 300 requested seconds per mode. Untracked work records 9,676 moves/replays, 32.232 moves/s and 279.478ms action p95. Serial work records 988 timed moves/replays/source reviews, 3.269 moves/s and 2935.849ms action p95 across 16,000 labels. Both final complete proofs pass at unchanged SQL timeouts with zero errors/conflicts. Serial setup (611.263s) and two recovered crash commands are excluded from throughput. Eight fixed labels move in the timed window. Shared-host results establish no controlled improvement, broad-label capacity or facility SLO. See [limits](qualification/release-20261019-icommerce-tui-v1/qualification-limits.json).
+
 The [workload executable](../examples/workload.rs) measures current operational data and concurrent operators against real PostgreSQL. A historical-audit retention test alone cannot establish warehouse capacity. Scoped physical commands load their SKUs and owning work plus independently derived foreign holds; full operational snapshot reads and global-version commands still load current warehouse data. Writes serialize within each warehouse. This harness makes those costs and version conflicts visible before selecting a facility workload.
 
 ## Current serial after-write image qualification — 2026-10-19

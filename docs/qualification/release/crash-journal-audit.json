@@ -1,0 +1,43 @@
+{
+  "ok": true,
+  "private_journals": [
+    {
+      "profile": "resilience",
+      "phase": "api_sigkill",
+      "original_request_id": "00ca0c4c-5e5f-4b27-bcea-5ea1be62dadc",
+      "actor": "operator:resilience-0",
+      "http_body_sha256": "2485c689586d1b9f4f33a9d81481b7078e7e28a0e7ccd3fb406a33425d9ee548",
+      "checkpoints": 12,
+      "verified": true
+    },
+    {
+      "profile": "resilience",
+      "phase": "postgres_sigkill",
+      "original_request_id": "8b5195f3-cd0f-4fc1-88ba-2b8f20fb6901",
+      "actor": "operator:resilience-1",
+      "http_body_sha256": "6d4ad2f882dbbba63275ddb71321d2e58232f220d2584030bd3f4b48c1c4fae7",
+      "checkpoints": 13,
+      "verified": true
+    },
+    {
+      "profile": "serial-resilience",
+      "phase": "api_sigkill",
+      "original_request_id": "adfc2de2-bc46-40d4-8b02-5d863d97945f",
+      "actor": "operator:resilience-0",
+      "http_body_sha256": "b2ee7e107777c74c8151e2cfce60be7ff6cacf510de2fc7ef89587dadc639588",
+      "checkpoints": 16,
+      "verified": true
+    },
+    {
+      "profile": "serial-resilience",
+      "phase": "postgres_sigkill",
+      "original_request_id": "6aba8cd8-ff2b-4f81-a405-f0f5f8945a4b",
+      "actor": "operator:resilience-1",
+      "http_body_sha256": "151da6873f2531b61ccd679ebc31c1edee43d740769f1828dee2ec510db6dc09",
+      "checkpoints": 16,
+      "verified": true
+    }
+  ],
+  "raw_credentials_in_journals": false,
+  "scope": "Original requests/checkpoints persisted before each owned local fault; no host-loss or physical acceptance claim"
+}

@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "scope": "Interrupted local software release candidate; see failure-context for intentional stop reason",
+  "recorded_at": "2026-10-19T19:47:50.220278+00:00",
+  "result": "failed",
+  "production_qualified": false,
+  "synthetic": true,
+  "release_revision": "icommerce-tui-source43-from-c1e21f6",
+  "elapsed_seconds": 523,
+  "stages": [
+    {
+      "name": "prerequisites",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 1.984
+    },
+    {
+      "name": "software_checks",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 505.239
+    },
+    {
+      "name": "observability_rules",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 1.458
+    },
+    {
+      "name": "release_builds",
+      "status": "failed",
+      "exit_code": 130,
+      "elapsed_seconds": 13.887
+    },
+    {
+      "name": "standard_workload",
+      "status": "not_run"
+    },
+    {
+      "name": "archive_restore",
+      "status": "not_run"
+    },
+    {
+      "name": "live_browsers",
+      "status": "not_run"
+    },
+    {
+      "name": "production_container",
+      "status": "not_run"
+    },
+    {
+      "name": "image_resilience",
+      "status": "not_run"
+    },
+    {
+      "name": "stable_source_inputs",
+      "status": "not_run"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "dependency-licenses.json",
+      "sha256": "426e6b168e17800ec36359365316f47fe81debfb8e4626f84ef684a923602eb9"
+    },
+    {
+      "path": "failure-context.json",
+      "sha256": "887befb3ad280ab6261a97ed3f5f1991e2fc75761e013185ff1a8a0c11da5ff2"
+    },
+    {
+      "path": "source-inputs-before.json",
+      "sha256": "c2101c2632778d145e444d1962b916e1f10438b1f0d049d4ea2f78894ac443e5"
+    },
+    {
+      "path": "tool-versions.json",
+      "sha256": "fb353776fcb627064e6ae049b0f4af0fa62007cc594ca9b5063098dd9946e8b5"
+    },
+    {
+      "path": "typed-preview-probe.log",
+      "sha256": "a9f09210676a1377224bc9f879ec00fdf74eae4320d58033af0b6479f44547dd"
+    }
+  ],
+  "not_performed": [
+    "Release gate intentionally stopped at release_builds after independent typed-preview probe confirmed a decimal precision gap",
+    "No newer image or software qualification accepted",
+    "Deployed-client, facility and production acceptance remain unperformed"
+  ],
+  "limits": [
+    "All inventory and native-service fixtures are synthetic",
+    "Performance results apply to the recorded profiles and host",
+    "Process/database restart is not managed database failover",
+    "Published logs are sanitized; private raw artifacts stay in the fresh evidence directory"
+  ]
+}

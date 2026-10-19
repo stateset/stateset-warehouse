@@ -1,5 +1,9 @@
 # One reproducible software release gate
 
+## Current 0.2.0 qualification — 2026-10-19
+
+The [0.2.0 complete gate](qualification/release-20261019-icommerce-tui-v1/summary.json) and [independent audit](qualification/release-20261019-icommerce-tui-v1/independent-audit.json) pass on frozen source44, including 331 Rust, 74 Python, 13 terminal and 170 browser checks. Both full 300-second image profiles, final serial reconciliation, populated archive restore and four API/PostgreSQL crash recoveries pass. Durable original-request checkpoints precede each fault. Earlier failed attempts remain retained. Deployed identity/native/MCP-client and physical facility acceptance remain separate.
+
 Run `scripts/qualify-release.sh` locally and in GitHub Actions to execute the same release checks. The local gate remains available when hosted runners are unavailable. Local software evidence, hosted CI results, deployed OMS/Freight acceptance and physical warehouse approval are recorded separately.
 
 The gate requires an explicitly selected isolated PostgreSQL database whose name contains `test`, a role with CREATEDB for disposable restore databases, matching `psql`/`pg_dump`/`pg_restore` clients, Rust 1.90, Node 22.12+, installed dashboard dependencies/Playwright browser, Python 3.8+, OpenSSL, curl and Docker access. The selected database receives synthetic test tenants and workload fixtures; choose a disposable database. The container and resilience stages create their own isolated PostgreSQL instances.

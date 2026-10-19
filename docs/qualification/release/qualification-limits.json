@@ -1,24 +1,28 @@
 {
   "production_qualified": false,
   "physical_acceptance_performed": false,
-  "goal_remains_active": true,
   "pending_serial_write_crash_qualified": true,
   "pending_serial_write_crash_command_types": [
     "move_stock"
   ],
-  "pending_serial_write_crash_scope": "Exact after-custody/history/event/receipt barrier before outbox/commit; API SIGKILL and PostgreSQL SIGKILL on one static literal label moved out and back. Both original requests recover and replay. All 49 committed table fingerprints remain unchanged after each interrupted transaction.",
-  "lost_success_proxy_fixture_serial_controlled": false,
+  "pending_serial_write_crash_scope": "Exact original serial request interrupted after custody/history/event/receipt mutation, before commit. All 49 committed fingerprints remain unchanged; original requests recover once and replay.",
+  "durable_crash_journals_verified": true,
+  "tui_real_api_pg_pty_checked": true,
+  "tui_checked_flows": [
+    "Literal case-sensitive physical serial move",
+    "Lost-success exact original replay and actor fencing",
+    "New-facility creation at version zero and automatic selection",
+    "Unknown new-facility original recovery across facilities (unit fixture)"
+  ],
+  "tui_limits": [
+    "POSIX/Linux; Node22.12+; no browser sign-in or automatic token refresh",
+    "Forms use strict warehouse versions and whole each quantities; pack scans remain in dashboard/API",
+    "No automatic physical confirmation; generic failed/unknown writes remain held for original recovery"
+  ],
   "timed_serial_labels": 8,
   "serial_labels_static_during_timed_window": 15992,
   "additional_recovery_label_outside_timed_window": 1,
   "recovered_serial_commands_excluded_from_timed_move_counts": 2,
-  "remaining_serial_write_cost": {
-    "samples": 1045,
-    "p50_ms": 2193.369,
-    "p95_ms": 2303.012,
-    "p99_ms": 2471.786,
-    "max_ms": 2752.543
-  },
   "limits": [
     "Local synthetic single-host API survival and PostgreSQL restart recovery; no managed failover or host-loss proof.",
     "The after-write crash matrix covers two move_stock transactions on one literal label. Interrupted serial count/receive/pick/package/handoff/transfer commands are not separately killed by this protocol.",
@@ -27,6 +31,6 @@
     "Shared-host aggregate latency observations are not controlled capacity comparisons or facility SLOs.",
     "Deployed identity/native/MCP-client, scanner-device and physical facility acceptance remain separate. Production and A+ are not claimed."
   ],
-  "prior_same_image_diagnostic": "../../performance/serial-write-source-set-diagnostic-20261019.json",
-  "actual_populated_upgrade": "../../performance/serial-write-source-set-upgrade-20261019.json"
+  "repository_visibility": "private; public launch not performed",
+  "packages_or_images_published": false
 }

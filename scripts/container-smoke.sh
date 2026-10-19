@@ -45,7 +45,7 @@ import hashlib, json, pathlib, sys
 root = pathlib.Path.cwd()
 files = [root / p for p in ("Dockerfile", ".dockerignore", "docker-compose.yml", "Cargo.toml", "Cargo.lock")]
 excluded = {"node_modules", "dist", "test-results", "playwright-report"}
-for name in ("src", "migrations", "dashboard"):
+for name in ("src", "migrations", "dashboard", "vendor"):
     files += [p for p in (root / name).rglob("*") if p.is_file() and not excluded.intersection(p.parts)
               and not p.name.startswith(".env") and not p.name.endswith(".log")]
 inputs = [{"path": str(p.relative_to(root)), "sha256": hashlib.sha256(p.read_bytes()).hexdigest()}

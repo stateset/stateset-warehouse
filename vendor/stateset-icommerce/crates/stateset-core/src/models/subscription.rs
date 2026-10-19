@@ -1,0 +1,1336 @@
+//! Subscription domain models
+//!
+//! Comprehensive subscription management supporting:
+//! - Subscription plans with flexible billing intervals
+//! - Customer subscriptions with lifecycle management
+//! - Billing cycles and payment tracking
+//! - Pause, resume, skip, and cancel functionality
+//! - Trial periods and promotional pricing
+//! - Product swapping and quantity changes
+
+use chrono::{DateTime, Months, Utc};
+use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
+use stateset_primitives::{CurrencyCode, CustomerId, OrderId, ProductId, SubscriptionId};
+use strum::{Display, EnumString};
+use uuid::Uuid;
+
+use super::{Address, Payment, PaymentMethodType};
+
+// ============================================================================
+// Subscription Enums
+// ============================================================================
+
+/// Billing interval for subscriptions
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, Display, EnumString,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case", ascii_case_insensitive)]
+#[non_exhaustive]
+pub enum BillingInterval {
+    /// Weekly billing
+    Weekly,
+    /// Every two weeks
+    #[strum(serialize = "biweekly", serialize = "bi_weekly", serialize = "bi-weekly")]
+    Biweekly,
+    /// Monthly billing
+    #[default]
+    Monthly,
+    /// Every two months
+    #[strum(serialize = "bimonthly", serialize = "bi_monthly", serialize = "bi-monthly")]
+    Bimonthly,
+    /// Quarterly (every 3 months)
+    Quarterly,
+    /// Every 6 months
+    #[strum(serialize = "semiannual", serialize = "semi_annual", serialize = "semi-annual")]
+    Semiannual,
+    /// Annual billing
+    #[strum(serialize = "annual", serialize = "yearly")]
+    Annual,
+    /// Custom interval in days
+    Custom,
+}
+
+impl BillingInterval {
+    /// Get the number of days in this interval
+    #[must_use]
+    pub const fn days(&self) -> i64 {
+        match self {
+            Self::Weekly => 7,
+            Self::Biweekly => 14,
+            Self::Monthly => 30,
+            Self::Bimonthly => 60,
+            Self::Quarterly => 90,
+            Self::Semiannual => 180,
+            Self::Annual => 365,
+            Self::Custom => 30, // Default, should use custom_interval_days
+        }
+    }
+
+    /// Advance `from` by exactly one billing interval.
+    ///
+    /// Unlike [`Self::days`] — which reports a nominal length and models a
+    /// month as a flat 30 days — this uses real calendar arithmetic for the
+    /// month-based intervals, so a monthly subscription billed on the 15th
+    /// stays on the 15th instead of drifting ~5 days backwards over a year.
+    /// End-of-month dates clamp the way `chrono` clamps them (Jan 31 + 1
+    /// month = Feb 28/29).
+    ///
+    /// `custom_interval_days` is only consulted for
+    /// [`BillingInterval::Custom`] and defaults to 30 days when absent,
+    /// matching [`Self::days`].
+    #[must_use]
+    pub fn advance(self, from: DateTime<Utc>, custom_interval_days: Option<i32>) -> DateTime<Utc> {
+        match self {
+            Self::Weekly => from + chrono::Duration::days(7),
+            Self::Biweekly => from + chrono::Duration::days(14),
+            Self::Monthly => from + Months::new(1),
+            Self::Bimonthly => from + Months::new(2),
+            Self::Quarterly => from + Months::new(3),
+            Self::Semiannual => from + Months::new(6),
+            Self::Annual => from + Months::new(12),
+            Self::Custom => {
+                from + chrono::Duration::days(i64::from(custom_interval_days.unwrap_or(30)))
+            }
+        }
+    }
+}
+
+/// Schedule for a subscription resuming at `now` from a pause that began at
+/// `paused_at`, given the paid-through date it had then (`period_end`).
+///
+/// Returns `(next_billing_date, status, trial_ends_at override)`: the paid
+/// remainder `period_end - paused_at` (never negative — an overdue
+/// subscription resumes due now) is added to `now`, so pausing never forfeits
+/// paid time nor drifts the billing anchor; a subscription paused mid-trial
+/// resumes into `Trial` with its trial end moved by the same amount,
+/// otherwise `Active`. Both storage backends use this.
+#[must_use]
+pub fn resumed_schedule(
+    now: DateTime<Utc>,
+    paused_at: Option<DateTime<Utc>>,
+    period_end: DateTime<Utc>,
+    trial_ends_at: Option<DateTime<Utc>>,
+) -> (DateTime<Utc>, SubscriptionStatus, Option<DateTime<Utc>>) {
+    let paused_at = paused_at.unwrap_or(now);
+    let remainder = (period_end - paused_at).max(chrono::Duration::zero());
+    let next_billing_date = now + remainder;
+    let in_trial = trial_ends_at.is_some_and(|t| t > paused_at);
+    if in_trial {
+        (next_billing_date, SubscriptionStatus::Trial, Some(next_billing_date))
+    } else {
+        (next_billing_date, SubscriptionStatus::Active, None)
+    }
+}
+
+/// Status of a subscription
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, Display, EnumString,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case", ascii_case_insensitive)]
+#[non_exhaustive]
+pub enum SubscriptionStatus {
+    /// Trial period (no charge yet)
+    Trial,
+    /// Active and billing normally
+    #[default]
+    Active,
+    /// Paused by customer (no billing, can resume)
+    Paused,
+    /// Past due - payment failed, in retry period
+    #[strum(serialize = "past_due", serialize = "pastdue")]
+    PastDue,
+    /// Cancelled - will end at period end
+    #[strum(serialize = "cancelled", serialize = "canceled")]
+    Cancelled,
+    /// Expired - subscription has ended
+    Expired,
+    /// Pending - awaiting initial payment/activation
+    Pending,
+}
+
+impl SubscriptionStatus {
+    /// Check if a status transition is allowed.
+    #[must_use]
+    pub fn can_transition_to(self, next: Self) -> bool {
+        if self == next {
+            return true;
+        }
+        match self {
+            Self::Pending => matches!(next, Self::Trial | Self::Active | Self::Cancelled),
+            Self::Trial => matches!(next, Self::Active | Self::Cancelled | Self::Expired),
+            Self::Active => {
+                matches!(next, Self::Paused | Self::PastDue | Self::Cancelled | Self::Expired)
+            }
+            Self::Paused => matches!(next, Self::Active | Self::Cancelled),
+            Self::PastDue => matches!(next, Self::Active | Self::Cancelled | Self::Expired),
+            Self::Cancelled | Self::Expired => false,
+        }
+    }
+
+    /// Returns true if this status is a terminal state.
+    #[must_use]
+    pub const fn is_terminal(self) -> bool {
+        matches!(self, Self::Cancelled | Self::Expired)
+    }
+}
+
+/// Status of a subscription plan
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, Display, EnumString,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case", ascii_case_insensitive)]
+#[non_exhaustive]
+pub enum PlanStatus {
+    /// Draft - not yet available
+    Draft,
+    /// Active - available for new subscriptions
+    #[default]
+    Active,
+    /// Archived - no new subscriptions, existing continue
+    Archived,
+}
+
+impl PlanStatus {
+    /// Check if a plan status transition is allowed.
+    ///
+    /// A plan moves forward only: `Draft -> Active -> Archived`. Archiving is
+    /// terminal — un-archiving would put a retired price back in front of new
+    /// subscribers, so a replacement plan must be created instead. Repeating
+    /// the current status is a no-op and allowed, so `activate_plan` /
+    /// `archive_plan` stay idempotent.
+    #[must_use]
+    pub fn can_transition_to(self, next: Self) -> bool {
+        if self == next {
+            return true;
+        }
+        match self {
+            Self::Draft => matches!(next, Self::Active | Self::Archived),
+            Self::Active => matches!(next, Self::Archived),
+            Self::Archived => false,
+        }
+    }
+
+    /// Returns true if this status is a terminal state.
+    #[must_use]
+    pub const fn is_terminal(self) -> bool {
+        matches!(self, Self::Archived)
+    }
+}
+
+/// Status of a billing cycle
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, Display, EnumString,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case", ascii_case_insensitive)]
+#[non_exhaustive]
+pub enum BillingCycleStatus {
+    /// Scheduled for future billing
+    #[default]
+    Scheduled,
+    /// Payment is being processed
+    Processing,
+    /// Successfully billed
+    Paid,
+    /// Payment failed
+    Failed,
+    /// Skipped by customer request
+    Skipped,
+    /// Refunded
+    Refunded,
+    /// Voided/cancelled
+    Voided,
+}
+
+impl BillingCycleStatus {
+    /// Check if a billing-cycle status transition is allowed.
+    ///
+    /// The allowlist exists so a worker cannot re-apply an outcome that has
+    /// already moved money or already advanced the subscription:
+    ///
+    /// * `Paid` may only be refunded or voided. Re-marking a paid cycle paid
+    ///   would double-advance `next_billing_date`/`billing_cycle_count` and
+    ///   double-bill the customer, so it is refused rather than ignored.
+    /// * `Refunded`/`Voided` are terminal (see [`Self::is_terminal`]).
+    /// * `Failed -> Failed` is the ONE permitted self-transition: each call
+    ///   models a genuine subsequent collection attempt and legitimately
+    ///   increments `retry_count`. Every other self-transition is refused, so
+    ///   a retry loop cannot inflate `retry_count` on a settled cycle.
+    /// * `Processing -> Scheduled` returns an accepted charge that never
+    ///   reached the processor to the billing queue.
+    #[must_use]
+    pub const fn can_transition_to(self, next: Self) -> bool {
+        match self {
+            Self::Scheduled => matches!(
+                next,
+                Self::Processing | Self::Paid | Self::Failed | Self::Skipped | Self::Voided
+            ),
+            Self::Processing => {
+                matches!(next, Self::Scheduled | Self::Paid | Self::Failed | Self::Voided)
+            }
+            Self::Paid => matches!(next, Self::Refunded | Self::Voided),
+            Self::Failed => matches!(
+                next,
+                Self::Scheduled
+                    | Self::Processing
+                    | Self::Paid
+                    | Self::Failed
+                    | Self::Skipped
+                    | Self::Voided
+            ),
+            Self::Skipped => matches!(next, Self::Voided),
+            Self::Refunded | Self::Voided => false,
+        }
+    }
+
+    /// Returns true if this status is a terminal state for a billing cycle.
+    #[must_use]
+    pub const fn is_terminal(self) -> bool {
+        matches!(self, Self::Refunded | Self::Voided)
+    }
+
+    /// Returns true if reaching this status means the cycle has settled and
+    /// the subscription's billing clock must move on by one interval.
+    #[must_use]
+    pub const fn advances_subscription(self) -> bool {
+        matches!(self, Self::Paid)
+    }
+}
+
+/// Type of subscription event
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Display, EnumString)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case", ascii_case_insensitive)]
+#[non_exhaustive]
+pub enum SubscriptionEventType {
+    /// Subscription created
+    Created,
+    /// Subscription activated
+    Activated,
+    /// Trial started
+    #[strum(serialize = "trial_started", serialize = "trialstarted")]
+    TrialStarted,
+    /// Trial ended
+    #[strum(serialize = "trial_ended", serialize = "trialended")]
+    TrialEnded,
+    /// Successfully renewed/billed
+    Renewed,
+    /// Payment failed
+    #[strum(serialize = "payment_failed", serialize = "paymentfailed")]
+    PaymentFailed,
+    /// Payment retry succeeded
+    #[strum(serialize = "payment_retry_succeeded", serialize = "paymentretrysucceeded")]
+    PaymentRetrySucceeded,
+    /// Subscription paused
+    Paused,
+    /// Subscription resumed
+    Resumed,
+    /// Upcoming renewal skipped
+    Skipped,
+    /// Subscription cancelled
+    #[strum(serialize = "cancelled", serialize = "canceled")]
+    Cancelled,
+    /// Subscription expired
+    Expired,
+    /// Plan changed
+    #[strum(serialize = "plan_changed", serialize = "planchanged")]
+    PlanChanged,
+    /// Items modified
+    #[strum(serialize = "items_modified", serialize = "itemsmodified")]
+    ItemsModified,
+    /// Quantity changed
+    #[strum(serialize = "quantity_changed", serialize = "quantitychanged")]
+    QuantityChanged,
+    /// Address updated
+    #[strum(serialize = "address_updated", serialize = "addressupdated")]
+    AddressUpdated,
+    /// Payment method updated
+    #[strum(serialize = "payment_method_updated", serialize = "paymentmethodupdated")]
+    PaymentMethodUpdated,
+    /// Discount applied
+    #[strum(serialize = "discount_applied", serialize = "discountapplied")]
+    DiscountApplied,
+    /// Discount removed
+    #[strum(serialize = "discount_removed", serialize = "discountremoved")]
+    DiscountRemoved,
+    /// Refund issued
+    Refunded,
+}
+
+// ============================================================================
+// Subscription Plan Model
+// ============================================================================
+
+/// A subscription plan template
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubscriptionPlan {
+    pub id: Uuid,
+    /// Unique code for the plan
+    pub code: String,
+    /// Display name
+    pub name: String,
+    /// Description
+    pub description: Option<String>,
+    pub status: PlanStatus,
+
+    // Billing configuration
+    pub billing_interval: BillingInterval,
+    /// Custom interval in days (when `billing_interval` is Custom)
+    pub custom_interval_days: Option<i32>,
+    /// Base price per billing cycle
+    pub price: Decimal,
+    /// Setup/activation fee (charged once)
+    pub setup_fee: Option<Decimal>,
+    pub currency: CurrencyCode,
+
+    // Trial configuration
+    /// Trial period in days (0 = no trial)
+    pub trial_days: i32,
+    /// Whether payment method is required for trial
+    pub trial_requires_payment_method: bool,
+
+    // Limits
+    /// Minimum number of billing cycles
+    pub min_cycles: Option<i32>,
+    /// Maximum number of billing cycles (None = unlimited)
+    pub max_cycles: Option<i32>,
+
+    // Included products/items
+    pub items: Vec<SubscriptionPlanItem>,
+
+    // Discounts
+    /// Percentage discount for this plan
+    pub discount_percent: Option<Decimal>,
+    /// Fixed discount amount
+    pub discount_amount: Option<Decimal>,
+
+    // Metadata
+    pub metadata: Option<serde_json::Value>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// An item included in a subscription plan
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubscriptionPlanItem {
+    pub id: Uuid,
+    pub plan_id: Uuid,
+    pub product_id: ProductId,
+    pub variant_id: Option<Uuid>,
+    pub sku: String,
+    pub name: String,
+    /// Default quantity
+    pub quantity: i32,
+    /// Minimum quantity (for customizable plans)
+    pub min_quantity: Option<i32>,
+    /// Maximum quantity (for customizable plans)
+    pub max_quantity: Option<i32>,
+    /// Whether customer can remove this item
+    pub is_required: bool,
+    /// Unit price override (None = use plan price)
+    pub unit_price: Option<Decimal>,
+}
+
+// ============================================================================
+// Subscription Model
+// ============================================================================
+
+/// A customer's subscription
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Subscription {
+    pub id: SubscriptionId,
+    /// Human-readable subscription number
+    pub subscription_number: String,
+    pub customer_id: CustomerId,
+    pub plan_id: Uuid,
+    /// Snapshot of plan name at time of subscription
+    pub plan_name: String,
+    pub status: SubscriptionStatus,
+
+    // Billing
+    pub billing_interval: BillingInterval,
+    pub custom_interval_days: Option<i32>,
+    /// Current price per cycle
+    pub price: Decimal,
+    pub currency: CurrencyCode,
+    /// Payment method ID (from payment provider)
+    pub payment_method_id: Option<String>,
+
+    // Dates
+    /// When the subscription started
+    pub started_at: DateTime<Utc>,
+    /// When current billing period started
+    pub current_period_start: DateTime<Utc>,
+    /// When current billing period ends
+    pub current_period_end: DateTime<Utc>,
+    /// Next billing date
+    pub next_billing_date: Option<DateTime<Utc>>,
+    /// Trial end date (if applicable)
+    pub trial_ends_at: Option<DateTime<Utc>>,
+    /// When subscription was cancelled (if applicable)
+    pub cancelled_at: Option<DateTime<Utc>>,
+    /// When subscription ends (for cancelled subscriptions)
+    pub ends_at: Option<DateTime<Utc>>,
+    /// When subscription was paused
+    pub paused_at: Option<DateTime<Utc>>,
+    /// When to auto-resume (if paused with a date)
+    pub resume_at: Option<DateTime<Utc>>,
+
+    // Cycle tracking
+    /// Number of completed billing cycles
+    pub billing_cycle_count: i32,
+    /// Number of failed payment attempts in current cycle
+    pub failed_payment_attempts: i32,
+
+    // Billing claim lease (see `SubscriptionRepository::claim_due_for_billing`)
+    /// Worker that currently holds the billing lease, if any.
+    #[serde(default)]
+    pub billing_lease_owner: Option<String>,
+    /// When the billing lease expires; a lease past this instant is dead.
+    #[serde(default)]
+    pub billing_lease_until: Option<DateTime<Utc>>,
+
+    // Items
+    pub items: Vec<SubscriptionItem>,
+
+    // Addresses
+    pub shipping_address: Option<Address>,
+    pub billing_address: Option<Address>,
+
+    // Applied discounts
+    pub discount_percent: Option<Decimal>,
+    pub discount_amount: Option<Decimal>,
+    /// Coupon code applied (if any)
+    pub coupon_code: Option<String>,
+
+    // Metadata
+    pub metadata: Option<serde_json::Value>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// A line item in a subscription
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubscriptionItem {
+    pub id: Uuid,
+    pub subscription_id: SubscriptionId,
+    pub product_id: ProductId,
+    pub variant_id: Option<Uuid>,
+    pub sku: String,
+    pub name: String,
+    pub quantity: i32,
+    /// Price per unit
+    pub unit_price: Decimal,
+    /// Line total (quantity * `unit_price`)
+    pub line_total: Decimal,
+}
+
+// ============================================================================
+// Billing Cycle Model
+// ============================================================================
+
+/// A billing cycle/period for a subscription
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BillingCycle {
+    pub id: Uuid,
+    pub subscription_id: SubscriptionId,
+    /// Cycle number (1, 2, 3, ...)
+    pub cycle_number: i32,
+    pub status: BillingCycleStatus,
+
+    // Period
+    pub period_start: DateTime<Utc>,
+    pub period_end: DateTime<Utc>,
+    /// When billing was attempted
+    pub billed_at: Option<DateTime<Utc>>,
+
+    // Amounts
+    pub subtotal: Decimal,
+    pub discount: Decimal,
+    pub tax: Decimal,
+    pub total: Decimal,
+    pub currency: CurrencyCode,
+
+    // Payment
+    /// Payment ID from payment provider
+    pub payment_id: Option<String>,
+    /// Order ID if an order was created
+    pub order_id: Option<OrderId>,
+    /// Invoice ID if an invoice was created
+    pub invoice_id: Option<Uuid>,
+
+    // Failure tracking
+    pub failure_reason: Option<String>,
+    pub retry_count: i32,
+    pub next_retry_at: Option<DateTime<Utc>>,
+
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+// ============================================================================
+// Subscription Event (Audit Log)
+// ============================================================================
+
+/// An event in a subscription's history
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubscriptionEvent {
+    pub id: Uuid,
+    pub subscription_id: SubscriptionId,
+    pub event_type: SubscriptionEventType,
+    /// Human-readable description
+    pub description: String,
+    /// Detailed event data
+    pub data: Option<serde_json::Value>,
+    /// Who triggered this event (`customer_id`, "system", "admin")
+    pub triggered_by: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+// ============================================================================
+// CRUD DTOs
+// ============================================================================
+
+/// Create a new subscription plan
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct CreateSubscriptionPlan {
+    pub code: Option<String>,
+    pub name: String,
+    pub description: Option<String>,
+    pub billing_interval: BillingInterval,
+    pub custom_interval_days: Option<i32>,
+    pub price: Decimal,
+    pub setup_fee: Option<Decimal>,
+    pub currency: Option<CurrencyCode>,
+    pub trial_days: Option<i32>,
+    pub trial_requires_payment_method: Option<bool>,
+    pub min_cycles: Option<i32>,
+    pub max_cycles: Option<i32>,
+    pub items: Option<Vec<CreateSubscriptionPlanItem>>,
+    pub discount_percent: Option<Decimal>,
+    pub discount_amount: Option<Decimal>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+/// Item definition for creating a subscription plan
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateSubscriptionPlanItem {
+    pub product_id: ProductId,
+    pub variant_id: Option<Uuid>,
+    pub sku: String,
+    pub name: String,
+    pub quantity: i32,
+    pub min_quantity: Option<i32>,
+    pub max_quantity: Option<i32>,
+    pub is_required: Option<bool>,
+    pub unit_price: Option<Decimal>,
+}
+
+/// Update a subscription plan
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct UpdateSubscriptionPlan {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub status: Option<PlanStatus>,
+    pub price: Option<Decimal>,
+    pub setup_fee: Option<Decimal>,
+    pub trial_days: Option<i32>,
+    pub trial_requires_payment_method: Option<bool>,
+    pub min_cycles: Option<i32>,
+    pub max_cycles: Option<i32>,
+    pub discount_percent: Option<Decimal>,
+    pub discount_amount: Option<Decimal>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+/// Create a new subscription
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateSubscription {
+    pub customer_id: CustomerId,
+    pub plan_id: Uuid,
+    /// Override plan items with custom items
+    pub items: Option<Vec<CreateSubscriptionItem>>,
+    /// Override plan price
+    pub price: Option<Decimal>,
+    pub payment_method_id: Option<String>,
+    pub shipping_address: Option<Address>,
+    pub billing_address: Option<Address>,
+    /// Skip trial period
+    pub skip_trial: Option<bool>,
+    /// Start date (default: now)
+    pub start_date: Option<DateTime<Utc>>,
+    /// Coupon code to apply
+    pub coupon_code: Option<String>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+impl Default for CreateSubscription {
+    fn default() -> Self {
+        Self {
+            customer_id: CustomerId::nil(),
+            plan_id: Uuid::nil(),
+            items: None,
+            price: None,
+            payment_method_id: None,
+            shipping_address: None,
+            billing_address: None,
+            skip_trial: None,
+            start_date: None,
+            coupon_code: None,
+            metadata: None,
+        }
+    }
+}
+
+/// Item override when creating a subscription
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateSubscriptionItem {
+    pub product_id: ProductId,
+    pub variant_id: Option<Uuid>,
+    pub sku: String,
+    pub name: String,
+    pub quantity: i32,
+    pub unit_price: Option<Decimal>,
+}
+
+/// Update a subscription
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct UpdateSubscription {
+    pub status: Option<SubscriptionStatus>,
+    pub price: Option<Decimal>,
+    pub payment_method_id: Option<String>,
+    pub shipping_address: Option<Address>,
+    pub billing_address: Option<Address>,
+    pub next_billing_date: Option<DateTime<Utc>>,
+    pub discount_percent: Option<Decimal>,
+    pub discount_amount: Option<Decimal>,
+    pub coupon_code: Option<String>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+/// Pause subscription request
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct PauseSubscription {
+    /// Optional resume date
+    pub resume_at: Option<DateTime<Utc>>,
+    pub reason: Option<String>,
+}
+
+/// Cancel subscription request
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct CancelSubscription {
+    /// Cancel immediately or at period end
+    pub immediate: Option<bool>,
+    pub reason: Option<String>,
+    /// Feedback for cancellation
+    pub feedback: Option<String>,
+}
+
+/// Skip next billing cycle
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct SkipBillingCycle {
+    pub reason: Option<String>,
+}
+
+/// Create a billing cycle for a subscription.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateBillingCycle {
+    pub subscription_id: SubscriptionId,
+    pub cycle_number: i32,
+    pub period_start: DateTime<Utc>,
+    pub period_end: DateTime<Utc>,
+    /// The billing worker creating this cycle, when it holds a claim lease
+    /// from `claim_due_for_billing`. A subscription whose LIVE lease belongs
+    /// to a different worker refuses the cycle with `Conflict`; `None` is
+    /// treated as an unclaimed caller and is refused while any live lease
+    /// exists.
+    #[serde(default)]
+    pub claimed_by: Option<String>,
+}
+
+/// Governed request to begin collecting a subscription billing cycle.
+///
+/// Execution creates a pending payment instruction and moves the cycle to
+/// `processing`; it does not claim that an external processor has settled it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ChargeSubscription {
+    pub billing_cycle_id: Uuid,
+    pub payment_method: PaymentMethodType,
+    pub processor: Option<String>,
+}
+
+/// Atomic result of accepting a subscription collection request.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubscriptionCharge {
+    pub billing_cycle: BillingCycle,
+    pub payment: Payment,
+}
+
+/// Change subscription plan
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChangeSubscriptionPlan {
+    pub new_plan_id: Uuid,
+    /// Prorate charges (default: true)
+    pub prorate: Option<bool>,
+    /// Apply immediately or at next billing
+    pub immediate: Option<bool>,
+}
+
+/// Modify subscription items
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModifySubscriptionItems {
+    /// Items to add
+    pub add: Option<Vec<CreateSubscriptionItem>>,
+    /// Item IDs to remove
+    pub remove: Option<Vec<Uuid>>,
+    /// Items to update (id -> new quantity)
+    pub update_quantities: Option<Vec<UpdateItemQuantity>>,
+}
+
+/// Update quantity for an existing subscription item
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateItemQuantity {
+    pub item_id: Uuid,
+    pub quantity: i32,
+}
+
+// ============================================================================
+// Filter DTOs
+// ============================================================================
+
+/// Filter for listing subscription plans
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct SubscriptionPlanFilter {
+    pub status: Option<PlanStatus>,
+    pub billing_interval: Option<BillingInterval>,
+    pub search: Option<String>,
+    pub limit: Option<u32>,
+    pub offset: Option<u32>,
+}
+
+/// Filter for listing subscriptions
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct SubscriptionFilter {
+    pub customer_id: Option<CustomerId>,
+    pub plan_id: Option<Uuid>,
+    pub status: Option<SubscriptionStatus>,
+    pub from_date: Option<DateTime<Utc>>,
+    pub to_date: Option<DateTime<Utc>>,
+    pub search: Option<String>,
+    pub limit: Option<u32>,
+    pub offset: Option<u32>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::TimeZone;
+    use std::collections::HashSet;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_billing_interval_from_str() {
+        assert_eq!(BillingInterval::from_str("biweekly").unwrap(), BillingInterval::Biweekly);
+        assert_eq!(BillingInterval::from_str("semi-annual").unwrap(), BillingInterval::Semiannual);
+    }
+
+    #[test]
+    fn test_subscription_status_from_str() {
+        assert_eq!(SubscriptionStatus::from_str("past_due").unwrap(), SubscriptionStatus::PastDue);
+        assert_eq!(SubscriptionStatus::from_str("pastdue").unwrap(), SubscriptionStatus::PastDue);
+        assert_eq!(
+            SubscriptionStatus::from_str("canceled").unwrap(),
+            SubscriptionStatus::Cancelled
+        );
+    }
+
+    #[test]
+    fn test_plan_status_from_str() {
+        assert_eq!(PlanStatus::from_str("draft").unwrap(), PlanStatus::Draft);
+        assert_eq!(PlanStatus::from_str("archived").unwrap(), PlanStatus::Archived);
+    }
+
+    #[test]
+    fn test_billing_cycle_status_from_str() {
+        assert_eq!(
+            BillingCycleStatus::from_str("processing").unwrap(),
+            BillingCycleStatus::Processing
+        );
+        assert_eq!(BillingCycleStatus::from_str("voided").unwrap(), BillingCycleStatus::Voided);
+    }
+
+    #[test]
+    fn test_subscription_event_type_from_str() {
+        assert_eq!(
+            SubscriptionEventType::from_str("trial_started").unwrap(),
+            SubscriptionEventType::TrialStarted
+        );
+        assert_eq!(
+            SubscriptionEventType::from_str("trialstarted").unwrap(),
+            SubscriptionEventType::TrialStarted
+        );
+        assert_eq!(
+            SubscriptionEventType::from_str("payment_retry_succeeded").unwrap(),
+            SubscriptionEventType::PaymentRetrySucceeded
+        );
+    }
+
+    #[test]
+    fn test_generate_subscription_number_prefix_and_shape() {
+        let generated = generate_subscription_number();
+        assert!(generated.starts_with("SUB-"));
+        assert!(generated.len() > 12);
+    }
+
+    #[test]
+    fn test_generate_subscription_number_sample_uniqueness() {
+        let mut generated = HashSet::new();
+        for _ in 0..1000 {
+            generated.insert(generate_subscription_number());
+        }
+        assert_eq!(generated.len(), 1000);
+    }
+
+    #[test]
+    fn subscription_status_valid_transitions() {
+        use SubscriptionStatus::*;
+        assert!(Pending.can_transition_to(Trial));
+        assert!(Pending.can_transition_to(Active));
+        assert!(Pending.can_transition_to(Cancelled));
+        assert!(Trial.can_transition_to(Active));
+        assert!(Trial.can_transition_to(Cancelled));
+        assert!(Trial.can_transition_to(Expired));
+        assert!(Active.can_transition_to(Paused));
+        assert!(Active.can_transition_to(PastDue));
+        assert!(Active.can_transition_to(Cancelled));
+        assert!(Active.can_transition_to(Expired));
+        assert!(Paused.can_transition_to(Active));
+        assert!(Paused.can_transition_to(Cancelled));
+        assert!(PastDue.can_transition_to(Active));
+        assert!(PastDue.can_transition_to(Cancelled));
+        assert!(PastDue.can_transition_to(Expired));
+    }
+
+    #[test]
+    fn subscription_status_invalid_transitions() {
+        use SubscriptionStatus::*;
+        assert!(!Pending.can_transition_to(Paused));
+        assert!(!Pending.can_transition_to(PastDue));
+        assert!(!Trial.can_transition_to(Paused));
+        assert!(!Paused.can_transition_to(Trial));
+        assert!(!Cancelled.can_transition_to(Active));
+        assert!(!Expired.can_transition_to(Active));
+    }
+
+    #[test]
+    fn billing_cycle_status_allowlist() {
+        use BillingCycleStatus::*;
+        // Happy paths.
+        assert!(Scheduled.can_transition_to(Processing));
+        assert!(Scheduled.can_transition_to(Paid));
+        assert!(Processing.can_transition_to(Paid));
+        assert!(Failed.can_transition_to(Paid));
+        assert!(Paid.can_transition_to(Refunded));
+        // A settled cycle cannot be re-applied or reopened.
+        assert!(!Paid.can_transition_to(Paid));
+        assert!(!Paid.can_transition_to(Failed));
+        assert!(!Paid.can_transition_to(Scheduled));
+        assert!(!Skipped.can_transition_to(Paid));
+        assert!(!Refunded.can_transition_to(Paid));
+        assert!(!Voided.can_transition_to(Failed));
+        // `Failed -> Failed` is the one permitted self transition.
+        assert!(Failed.can_transition_to(Failed));
+        assert!(!Scheduled.can_transition_to(Scheduled));
+        assert!(!Processing.can_transition_to(Processing));
+    }
+
+    #[test]
+    fn billing_cycle_status_terminal_and_advancing() {
+        use BillingCycleStatus::*;
+        assert!(Refunded.is_terminal());
+        assert!(Voided.is_terminal());
+        assert!(!Paid.is_terminal());
+        assert!(Paid.advances_subscription());
+        assert!(!Failed.advances_subscription());
+        assert!(!Skipped.advances_subscription());
+    }
+
+    #[test]
+    fn plan_status_transitions() {
+        use PlanStatus::*;
+        assert!(Draft.can_transition_to(Active));
+        assert!(Draft.can_transition_to(Archived));
+        assert!(Active.can_transition_to(Archived));
+        assert!(Active.can_transition_to(Active), "re-activating is idempotent");
+        assert!(!Archived.can_transition_to(Active));
+        assert!(!Archived.can_transition_to(Draft));
+        assert!(!Active.can_transition_to(Draft));
+        assert!(Archived.is_terminal());
+    }
+
+    #[test]
+    fn resumed_schedule_carries_the_paid_remainder_forward() {
+        // Paid on Jan 1 for the calendar month (period end Feb 1), paused on
+        // Jan 10 with 22 paid days left, resumed on Jan 20: the next bill is
+        // Jan 20 + 22 days = Feb 11, not Feb 20 (a fresh interval) and not
+        // Feb 1 (the original anchor, which would forfeit the pause).
+        let period_end = Utc.with_ymd_and_hms(2026, 2, 1, 0, 0, 0).unwrap();
+        let paused_at = Utc.with_ymd_and_hms(2026, 1, 10, 0, 0, 0).unwrap();
+        let now = Utc.with_ymd_and_hms(2026, 1, 20, 0, 0, 0).unwrap();
+        let (next, status, trial) = resumed_schedule(now, Some(paused_at), period_end, None);
+        assert_eq!(next, Utc.with_ymd_and_hms(2026, 2, 11, 0, 0, 0).unwrap());
+        assert_eq!(status, SubscriptionStatus::Active);
+        assert_eq!(trial, None);
+        // A 31-day custom period paid Jan 1 ends Feb 1 as well; a 30-day one
+        // ends Jan 31, leaving 21 days: resume Jan 20 -> Feb 10.
+        let period_end_30 = Utc.with_ymd_and_hms(2026, 1, 31, 0, 0, 0).unwrap();
+        let (next, _, _) = resumed_schedule(now, Some(paused_at), period_end_30, None);
+        assert_eq!(next, Utc.with_ymd_and_hms(2026, 2, 10, 0, 0, 0).unwrap());
+    }
+
+    #[test]
+    fn resumed_schedule_never_forfeits_or_backdates() {
+        let period_end = Utc.with_ymd_and_hms(2026, 2, 1, 0, 0, 0).unwrap();
+        let now = Utc.with_ymd_and_hms(2026, 3, 15, 0, 0, 0).unwrap();
+        // Paused past the paid-through date (overdue): resumes due NOW, never
+        // in the past.
+        let paused_late = Utc.with_ymd_and_hms(2026, 2, 5, 0, 0, 0).unwrap();
+        let (next, status, _) = resumed_schedule(now, Some(paused_late), period_end, None);
+        assert_eq!(next, now);
+        assert_eq!(status, SubscriptionStatus::Active);
+        // Exactly at the paid-through date: zero remainder, due now.
+        let (next, _, _) = resumed_schedule(now, Some(period_end), period_end, None);
+        assert_eq!(next, now);
+        // No recorded pause instant: the remainder is measured from `now`, so
+        // a still-paid subscription keeps its original paid-through date.
+        let early = Utc.with_ymd_and_hms(2026, 1, 20, 0, 0, 0).unwrap();
+        let (next, _, _) = resumed_schedule(early, None, period_end, None);
+        assert_eq!(next, period_end);
+    }
+
+    #[test]
+    fn resumed_schedule_keeps_a_mid_trial_pause_in_trial() {
+        // Trial ends Jan 15 (= paid-through), paused Jan 10 with 5 trial days
+        // left, resumed Jan 20: back into Trial, trial now ends Jan 25.
+        let trial_end = Utc.with_ymd_and_hms(2026, 1, 15, 0, 0, 0).unwrap();
+        let paused_at = Utc.with_ymd_and_hms(2026, 1, 10, 0, 0, 0).unwrap();
+        let now = Utc.with_ymd_and_hms(2026, 1, 20, 0, 0, 0).unwrap();
+        let (next, status, trial) =
+            resumed_schedule(now, Some(paused_at), trial_end, Some(trial_end));
+        let expected = Utc.with_ymd_and_hms(2026, 1, 25, 0, 0, 0).unwrap();
+        assert_eq!(next, expected);
+        assert_eq!(status, SubscriptionStatus::Trial);
+        assert_eq!(trial, Some(expected));
+        // A trial that had already ended before the pause resumes Active and
+        // leaves `trial_ends_at` alone.
+        let old_trial = Utc.with_ymd_and_hms(2025, 12, 1, 0, 0, 0).unwrap();
+        let period_end = Utc.with_ymd_and_hms(2026, 2, 1, 0, 0, 0).unwrap();
+        let (_, status, trial) =
+            resumed_schedule(now, Some(paused_at), period_end, Some(old_trial));
+        assert_eq!(status, SubscriptionStatus::Active);
+        assert_eq!(trial, None);
+    }
+
+    #[test]
+    fn billing_interval_advance_uses_calendar_months() {
+        let jan_31 = Utc.with_ymd_and_hms(2026, 1, 31, 12, 0, 0).unwrap();
+        // A calendar month, clamped to the end of a short month.
+        assert_eq!(
+            BillingInterval::Monthly.advance(jan_31, None),
+            Utc.with_ymd_and_hms(2026, 2, 28, 12, 0, 0).unwrap()
+        );
+        // Not the legacy flat 30 days.
+        assert_ne!(
+            BillingInterval::Monthly.advance(jan_31, None),
+            jan_31 + chrono::Duration::days(30)
+        );
+        // The day of month is preserved over a full year, where 12 x 30 days
+        // would have drifted back by five days.
+        let mut cursor = Utc.with_ymd_and_hms(2026, 1, 15, 12, 0, 0).unwrap();
+        for _ in 0..12 {
+            cursor = BillingInterval::Monthly.advance(cursor, None);
+        }
+        assert_eq!(cursor, Utc.with_ymd_and_hms(2027, 1, 15, 12, 0, 0).unwrap());
+    }
+
+    #[test]
+    fn billing_interval_advance_day_based_variants() {
+        let anchor = Utc.with_ymd_and_hms(2026, 3, 10, 0, 0, 0).unwrap();
+        assert_eq!(
+            BillingInterval::Weekly.advance(anchor, None),
+            anchor + chrono::Duration::days(7)
+        );
+        assert_eq!(
+            BillingInterval::Biweekly.advance(anchor, None),
+            anchor + chrono::Duration::days(14)
+        );
+        assert_eq!(
+            BillingInterval::Custom.advance(anchor, Some(45)),
+            anchor + chrono::Duration::days(45)
+        );
+        // Custom without an explicit length falls back to 30 days, matching
+        // `BillingInterval::days`.
+        assert_eq!(
+            BillingInterval::Custom.advance(anchor, None),
+            anchor + chrono::Duration::days(30)
+        );
+        assert_eq!(
+            BillingInterval::Annual.advance(anchor, None),
+            Utc.with_ymd_and_hms(2027, 3, 10, 0, 0, 0).unwrap()
+        );
+    }
+
+    #[test]
+    fn subscription_status_terminal_states() {
+        use SubscriptionStatus::*;
+        assert!(Cancelled.is_terminal());
+        assert!(Expired.is_terminal());
+        assert!(!Pending.is_terminal());
+        assert!(!Trial.is_terminal());
+        assert!(!Active.is_terminal());
+        assert!(!Paused.is_terminal());
+        assert!(!PastDue.is_terminal());
+    }
+}
+
+/// Filter for listing billing cycles
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct BillingCycleFilter {
+    pub subscription_id: Option<SubscriptionId>,
+    pub status: Option<BillingCycleStatus>,
+    pub from_date: Option<DateTime<Utc>>,
+    pub to_date: Option<DateTime<Utc>>,
+    pub limit: Option<u32>,
+    pub offset: Option<u32>,
+}
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/// Generate a unique subscription number
+#[must_use]
+pub fn generate_subscription_number() -> String {
+    let timestamp_ms = Utc::now().timestamp_millis();
+    let id = Uuid::new_v4();
+    let bytes = id.as_bytes();
+    let random = u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+    format!("SUB-{timestamp_ms}-{random:08X}")
+}
+
+/// Generate a unique plan code
+#[must_use]
+pub fn generate_plan_code(name: &str) -> String {
+    let slug: String = name
+        .to_uppercase()
+        .chars()
+        .filter(|c| c.is_alphanumeric() || *c == ' ')
+        .take(20)
+        .collect::<String>()
+        .trim()
+        .replace(' ', "-");
+
+    let id = Uuid::new_v4();
+    let bytes = id.as_bytes();
+    let random = u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) % 10000;
+
+    if slug.is_empty() { format!("PLAN-{random:04}") } else { format!("{slug}-{random:04}") }
+}
+
+impl Subscription {
+    /// `(subtotal, discount, total)` for one billing cycle, rounded to the
+    /// currency's minor unit (banker's rounding, as the cart does) so
+    /// `19.99 x 15%` yields a chargeable `3.00` discount rather than `2.9985`.
+    /// The discount never exceeds the subtotal.
+    #[must_use]
+    pub fn billing_cycle_amounts(&self) -> (Decimal, Decimal, Decimal) {
+        let dp = u32::from(self.currency.decimal_places());
+        let subtotal = self.calculate_total().round_dp(dp);
+        let discount = (self.discount_amount.unwrap_or(Decimal::ZERO)
+            + (self.discount_percent.unwrap_or(Decimal::ZERO) * subtotal))
+            .round_dp(dp)
+            .min(subtotal)
+            .max(Decimal::ZERO);
+        let total = (subtotal - discount).max(Decimal::ZERO);
+        (subtotal, discount, total)
+    }
+
+    /// Check if subscription is in an active billing state
+    #[must_use]
+    pub const fn is_active(&self) -> bool {
+        matches!(self.status, SubscriptionStatus::Active | SubscriptionStatus::Trial)
+    }
+
+    /// Check if subscription can be paused
+    #[must_use]
+    pub const fn can_pause(&self) -> bool {
+        matches!(self.status, SubscriptionStatus::Active | SubscriptionStatus::Trial)
+    }
+
+    /// Check if subscription can be resumed
+    #[must_use]
+    pub fn can_resume(&self) -> bool {
+        self.status == SubscriptionStatus::Paused
+    }
+
+    /// Check if subscription can be cancelled
+    #[must_use]
+    pub const fn can_cancel(&self) -> bool {
+        !matches!(self.status, SubscriptionStatus::Cancelled | SubscriptionStatus::Expired)
+    }
+
+    /// Check if subscription is in trial period
+    #[must_use]
+    pub fn is_in_trial(&self) -> bool {
+        if self.status != SubscriptionStatus::Trial {
+            return false;
+        }
+
+        if let Some(trial_ends) = self.trial_ends_at {
+            return Utc::now() < trial_ends;
+        }
+
+        false
+    }
+
+    /// Calculate remaining trial days
+    #[must_use]
+    pub fn trial_days_remaining(&self) -> Option<i64> {
+        if !self.is_in_trial() {
+            return None;
+        }
+
+        self.trial_ends_at.map(|ends| {
+            let now = Utc::now();
+            if ends > now { (ends - now).num_days() } else { 0 }
+        })
+    }
+
+    /// Calculate total subscription value
+    #[must_use]
+    pub fn calculate_total(&self) -> Decimal {
+        if self.items.is_empty() {
+            self.price
+        } else {
+            self.items.iter().map(|item| item.line_total).sum()
+        }
+    }
+
+    /// Get next billing amount (after discounts)
+    #[must_use]
+    pub fn next_billing_amount(&self) -> Decimal {
+        let subtotal = self.calculate_total();
+        let mut total = subtotal;
+
+        if let Some(pct) = self.discount_percent {
+            total -= subtotal * pct;
+        }
+        if let Some(amt) = self.discount_amount {
+            total -= amt;
+        }
+
+        if total < Decimal::ZERO { Decimal::ZERO } else { total }
+    }
+}
+
+impl SubscriptionItem {
+    /// Calculate line total
+    #[must_use]
+    pub fn calculate_total(quantity: i32, unit_price: Decimal) -> Decimal {
+        unit_price * Decimal::from(quantity)
+    }
+}
+
+impl BillingCycle {
+    /// Check if cycle can be refunded
+    #[must_use]
+    pub fn can_refund(&self) -> bool {
+        self.status == BillingCycleStatus::Paid
+    }
+
+    /// Check if cycle can be retried
+    #[must_use]
+    pub fn can_retry(&self) -> bool {
+        self.status == BillingCycleStatus::Failed
+    }
+}
+
+// ============================================================================
+// Validation
+// ============================================================================
+
+use crate::validation::{Validate, ValidationBuilder};
+
+/// Shared pricing checks: money fields non-negative, `discount_percent` a
+/// fraction in `[0, 1]` (the billing computation multiplies it directly by
+/// the subtotal, so `10` would mean 1000%).
+fn pricing_checks(
+    builder: ValidationBuilder,
+    price: Option<Decimal>,
+    setup_fee: Option<Decimal>,
+    discount_percent: Option<Decimal>,
+    discount_amount: Option<Decimal>,
+) -> ValidationBuilder {
+    builder
+        .check("price", price.is_none_or(|p| p >= Decimal::ZERO), "cannot be negative")
+        .check("setup_fee", setup_fee.is_none_or(|f| f >= Decimal::ZERO), "cannot be negative")
+        .check(
+            "discount_percent",
+            discount_percent.is_none_or(|p| p >= Decimal::ZERO && p <= Decimal::ONE),
+            "must be a fraction between 0 and 1",
+        )
+        .check(
+            "discount_amount",
+            discount_amount.is_none_or(|a| a >= Decimal::ZERO),
+            "cannot be negative",
+        )
+}
+
+impl Validate for CreateSubscriptionPlan {
+    fn validate(&self) -> crate::Result<()> {
+        pricing_checks(
+            ValidationBuilder::new(),
+            Some(self.price),
+            self.setup_fee,
+            self.discount_percent,
+            self.discount_amount,
+        )
+        .build()
+    }
+}
+
+impl Validate for UpdateSubscriptionPlan {
+    fn validate(&self) -> crate::Result<()> {
+        pricing_checks(
+            ValidationBuilder::new(),
+            self.price,
+            self.setup_fee,
+            self.discount_percent,
+            self.discount_amount,
+        )
+        .build()
+    }
+}
+
+impl Validate for CreateSubscription {
+    fn validate(&self) -> crate::Result<()> {
+        pricing_checks(ValidationBuilder::new(), self.price, None, None, None).build()
+    }
+}
+
+impl Validate for UpdateSubscription {
+    fn validate(&self) -> crate::Result<()> {
+        pricing_checks(
+            ValidationBuilder::new(),
+            self.price,
+            None,
+            self.discount_percent,
+            self.discount_amount,
+        )
+        .build()
+    }
+}

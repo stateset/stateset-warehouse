@@ -1,0 +1,24 @@
+name: Bug report
+description: Report a reproducible defect using synthetic warehouse data.
+body:
+  - type: markdown
+    attributes:
+      value: "For vulnerabilities, use security@stateset.io. Never attach credentials, customer data, production dumps, private qualification files or recovery journals."
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction with synthetic data
+      description: Include expected behavior, actual behavior and the interface used (dashboard, terminal, REST or MCP).
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment and relevant sanitized errors
+      description: Include Rust/Node/PostgreSQL versions and whether this is local, containerized or deployed. Preserve uncertain command requests privately.

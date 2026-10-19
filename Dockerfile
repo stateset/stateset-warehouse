@@ -9,6 +9,7 @@ FROM rust:1.90-bookworm AS api
 WORKDIR /build
 ARG CARGO_BUILD_JOBS=4
 COPY Cargo.toml Cargo.lock ./
+COPY vendor ./vendor
 COPY src ./src
 COPY migrations ./migrations
 # Keep downloaded crates and compiler intermediates out of persistent layers.

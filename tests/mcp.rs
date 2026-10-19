@@ -165,6 +165,8 @@ async fn discovery_and_every_call_use_current_http_identity() {
         "all WMS commands plus read and integration tools"
     );
     for name in [
+        "wms_icommerce_preview",
+        "wms_icommerce_inventory",
         "wms_serials",
         "wms_serial_history",
         "wms_serial_observations",
@@ -1160,4 +1162,77 @@ async fn real_mcp_pack_observations_keep_original_definition_replay_and_authorit
         .await,
         404,
     );
+}
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL"]
+async fn icommerce_tools_are_read_only_and_execution_uses_the_canonical_actor_owned_command() {
+    let (store, who, app) = database().await;
+    let original = serde_json::to_value(
+        store
+            .state(&who.tenant, "wh-main")
+            .await
+            .expect("original state"),
+    )
+    .expect("JSON");
+    let input = json!({"kind":"create_inventory_item","category":"Parts","input":{"sku":"CORE-PART","name":"Typed upstream product","reorder_point":"2","unit_of_measure":"EA"}});
+    let reviewed = payload(
+        &tool(
+            &app,
+            "admin",
+            "wms_icommerce_preview",
+            json!({"warehouse_id":"wh-main","request":input.clone()}),
+        )
+        .await,
+        200,
+    );
+    assert_eq!(reviewed["committed"], false);
+    assert_eq!(reviewed["actor"], "alice");
+    assert_eq!(
+        serde_json::to_value(
+            store
+                .state(&who.tenant, "wh-main")
+                .await
+                .expect("unchanged state")
+        )
+        .expect("JSON"),
+        original
+    );
+    payload(
+        &tool(
+            &app,
+            "worker",
+            "wms_icommerce_preview",
+            json!({"warehouse_id":"wh-main","request":input}),
+        )
+        .await,
+        403,
+    );
+    let request = json!({"request_id":uuid::Uuid::new_v4().to_string(),"expected_version":reviewed["reviewed_version"],"command":reviewed["command"]});
+    let committed = payload(
+        &tool(
+            &app,
+            "admin",
+            "wms_create_product",
+            json!({"warehouse_id":"wh-main","request":request.clone()}),
+        )
+        .await,
+        200,
+    );
+    let replay = payload(
+        &tool(
+            &app,
+            "admin",
+            "wms_create_product",
+            json!({"warehouse_id":"wh-main","request":request}),
+        )
+        .await,
+        200,
+    );
+    assert_eq!(replay["replayed"], true);
+    assert_eq!(replay["result"], committed["result"]);
+    let export = payload(&tool(&app,"viewer","wms_icommerce_inventory",json!({"warehouse_id":"wh-main","request":{"locations":{"1":"RECV-01","2":"STAGE-01"}}})).await,200);
+    assert_eq!(export["read_only"], true);
+    assert_eq!(export["inventory"][0]["sku"], "CORE-PART");
+    assert_eq!(export["source_positions"], json!([]));
 }

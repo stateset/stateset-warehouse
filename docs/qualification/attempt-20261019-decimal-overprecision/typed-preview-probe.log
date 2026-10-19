@@ -1,0 +1,1 @@
+Ok(MoveStock { sku: "SKU-1", lot: "UNTRACKED", from: "A", to: "B", quantity: 1 })

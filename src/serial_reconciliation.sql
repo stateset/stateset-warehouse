@@ -81,7 +81,10 @@ WITH required_events AS MATERIALIZED (
  UNION ALL
  SELECT e.id,e.warehouse_id,wms_serial_event_valid_read_source(e.tenant,e.warehouse_id,e.id)
  FROM required_events e WHERE NOT e.direct
-), original AS (
+-- The final JSON references each verdict twice. Evaluate these complete
+-- STABLE proofs once in this statement, rather than letting CTE folding
+-- duplicate their checks. Nothing survives the original read snapshot.
+), original AS MATERIALIZED (
  SELECT
   NOT EXISTS(SELECT 1 FROM wms_serial_modes m WHERE m.tenant=$1 AND NOT wms_serial_mode_original(m))
   AND NOT EXISTS(SELECT 1 FROM wms_serial_modes m WHERE m.tenant=$1 AND m.controlled
@@ -100,7 +103,7 @@ WITH required_events AS MATERIALIZED (
     AND s.lot=u.lot AND s.revision=u.revision AND s.event_id=u.last_event_id AND s.after_place=u.place)
    OR EXISTS(SELECT 1 FROM wms_serial_steps s WHERE s.tenant=u.tenant AND s.sku=u.sku AND s.serial=u.serial AND s.revision>u.revision)
   )) AS ok
-), physical AS (
+), physical AS MATERIALIZED (
  SELECT wms_serial_scope_current_valid($1,$2) AND wms_serial_scope_transit_valid($1,$2) AS ok
 )
 SELECT jsonb_build_object(

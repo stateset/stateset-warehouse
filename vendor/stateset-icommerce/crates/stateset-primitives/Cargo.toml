@@ -1,0 +1,36 @@
+[package]
+name = "stateset-primitives"
+description = "Strongly-typed primitive types for StateSet iCommerce"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+readme = "README.md"
+keywords = ["commerce", "ecommerce", "types", "newtype", "domain"]
+categories = ["data-structures"]
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
+uuid = { version = "1.4", default-features = false, features = ["serde"] }
+rust_decimal = { version = "1.36", default-features = false, features = ["serde"] }
+proptest = { version = "1.4", optional = true }
+sqlx = { workspace = true, optional = true, default-features = false, features = ["postgres", "uuid"] }
+rusqlite = { workspace = true, optional = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+rust_decimal_macros = { workspace = true }
+proptest = "1.4"
+proptest-derive = "0.5"
+
+[features]
+default = ["std"]
+std = ["serde/std", "uuid/rng-getrandom", "uuid/std", "uuid/v4", "rust_decimal/std"]
+arbitrary = ["dep:proptest"]
+sqlx-postgres = ["dep:sqlx"]
+rusqlite = ["dep:rusqlite"]

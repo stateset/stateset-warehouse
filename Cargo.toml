@@ -1,11 +1,16 @@
 [package]
 name = "stateset-warehouse"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 rust-version = "1.90"
 description = "StateSet warehouse execution and inventory authority"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/stateset/stateset-warehouse"
 
 [dependencies]
+stateset-core = { version = "=1.39.0", path = "vendor/stateset-icommerce/crates/stateset-core" }
+stateset-primitives = { version = "=1.39.0", path = "vendor/stateset-icommerce/crates/stateset-primitives" }
+rust_decimal = "1.36"
 axum = "0.8"
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }

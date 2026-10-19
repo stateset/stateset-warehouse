@@ -1,0 +1,387 @@
+//! Shipment models for tracking order fulfillment and delivery
+
+use chrono::{DateTime, Utc};
+use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
+use stateset_primitives::{OrderId, ProductId, ShipmentId};
+use strum::{Display, EnumString};
+use uuid::Uuid;
+
+/// Shipping carrier for deliveries
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, Display, EnumString,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case", ascii_case_insensitive)]
+#[non_exhaustive]
+pub enum ShippingCarrier {
+    #[default]
+    Other,
+    Ups,
+    #[strum(serialize = "fedex", serialize = "fed_ex")]
+    FedEx,
+    Usps,
+    Dhl,
+    #[strum(serialize = "ontrac", serialize = "on_trac")]
+    OnTrac,
+    #[strum(serialize = "lasership", serialize = "laser_ship")]
+    LaserShip,
+}
+
+impl ShippingCarrier {
+    /// Get the tracking URL base for this carrier
+    #[must_use]
+    pub const fn tracking_url_base(&self) -> Option<&'static str> {
+        match self {
+            Self::Ups => Some("https://www.ups.com/track?tracknum="),
+            Self::FedEx => Some("https://www.fedex.com/apps/fedextrack/?tracknumbers="),
+            Self::Usps => Some("https://tools.usps.com/go/TrackConfirmAction?tLabels="),
+            Self::Dhl => Some(
+                "https://www.dhl.com/us-en/home/tracking/tracking-express.html?submit=1&tracking-id=",
+            ),
+            Self::OnTrac => Some("https://www.ontrac.com/tracking/?number="),
+            Self::LaserShip => Some("https://www.lasership.com/track/"),
+            Self::Other => None,
+        }
+    }
+
+    /// Generate a full tracking URL for a tracking number
+    #[must_use]
+    pub fn tracking_url(&self, tracking_number: &str) -> Option<String> {
+        self.tracking_url_base().map(|base| format!("{base}{tracking_number}"))
+    }
+}
+
+/// Shipping method/speed
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, Display, EnumString,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case", ascii_case_insensitive)]
+#[non_exhaustive]
+pub enum ShippingMethod {
+    #[default]
+    Standard,
+    Express,
+    Overnight,
+    #[strum(serialize = "two_day", serialize = "twoday")]
+    TwoDay,
+    Ground,
+    International,
+    #[strum(serialize = "same_day", serialize = "sameday")]
+    SameDay,
+    Freight,
+}
+
+/// Status of a shipment through its lifecycle
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, Display, EnumString,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case", ascii_case_insensitive)]
+#[non_exhaustive]
+pub enum ShipmentStatus {
+    /// Initial state - shipment created but not yet processed
+    #[default]
+    Pending,
+    /// Being prepared for shipping
+    Processing,
+    /// Packed and ready to ship
+    #[strum(serialize = "ready_to_ship", serialize = "readytoship")]
+    ReadyToShip,
+    /// Handed off to carrier
+    Shipped,
+    /// In carrier's network
+    #[strum(serialize = "in_transit", serialize = "intransit")]
+    InTransit,
+    /// On delivery vehicle
+    #[strum(serialize = "out_for_delivery", serialize = "outfordelivery")]
+    OutForDelivery,
+    /// Successfully delivered
+    Delivered,
+    /// Delivery attempt failed
+    Failed,
+    /// Returned to sender
+    Returned,
+    /// Shipment cancelled
+    #[strum(serialize = "cancelled", serialize = "canceled")]
+    Cancelled,
+    /// On hold for investigation
+    #[strum(serialize = "on_hold", serialize = "onhold")]
+    OnHold,
+}
+
+impl ShipmentStatus {
+    /// Check if this status can transition to the target status
+    #[must_use]
+    pub const fn can_transition_to(&self, target: Self) -> bool {
+        use ShipmentStatus::{
+            Cancelled, Delivered, Failed, InTransit, OnHold, OutForDelivery, Pending, Processing,
+            ReadyToShip, Returned, Shipped,
+        };
+        matches!(
+            (self, target),
+            // Forward flow
+            (Pending | OnHold, Processing)
+                | (Pending | Processing | ReadyToShip | OnHold, Cancelled)
+                | (Processing, ReadyToShip | OnHold)
+                | (ReadyToShip, Shipped)
+                | (Shipped | Failed, InTransit)
+                | (InTransit, OutForDelivery | Failed)
+                | (OutForDelivery, Delivered | Failed)
+                | (Failed | Delivered, Returned)
+                | (Pending, OnHold)
+        )
+    }
+
+    /// Check if this is a terminal status
+    #[must_use]
+    pub const fn is_terminal(&self) -> bool {
+        matches!(self, Self::Delivered | Self::Cancelled | Self::Returned)
+    }
+}
+
+/// A shipment tracks the physical delivery of items from an order
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Shipment {
+    /// Unique identifier
+    pub id: ShipmentId,
+    /// Human-readable shipment number (e.g., "SHP-ABC123")
+    pub shipment_number: String,
+    /// Order this shipment belongs to
+    pub order_id: OrderId,
+    /// Current status
+    pub status: ShipmentStatus,
+    /// Shipping carrier
+    pub carrier: ShippingCarrier,
+    /// Shipping method/speed
+    pub shipping_method: ShippingMethod,
+    /// Carrier tracking number
+    pub tracking_number: Option<String>,
+    /// Auto-generated tracking URL
+    pub tracking_url: Option<String>,
+
+    // Recipient information
+    /// Recipient name
+    pub recipient_name: String,
+    /// Recipient email for notifications
+    pub recipient_email: Option<String>,
+    /// Recipient phone
+    pub recipient_phone: Option<String>,
+    /// Full shipping address
+    pub shipping_address: String,
+
+    // Package details
+    /// Package weight in kg
+    pub weight_kg: Option<Decimal>,
+    /// Package dimensions (e.g., "10x8x6 cm")
+    pub dimensions: Option<String>,
+    /// Shipping cost
+    pub shipping_cost: Option<Decimal>,
+    /// Insurance amount
+    pub insurance_amount: Option<Decimal>,
+    /// Whether signature is required on delivery
+    pub signature_required: bool,
+
+    // Timestamps
+    /// When the shipment was handed to carrier
+    pub shipped_at: Option<DateTime<Utc>>,
+    /// Expected delivery date
+    pub estimated_delivery: Option<DateTime<Utc>>,
+    /// Actual delivery timestamp
+    pub delivered_at: Option<DateTime<Utc>>,
+
+    /// Notes about the shipment
+    pub notes: Option<String>,
+    /// Items in this shipment
+    pub items: Vec<ShipmentItem>,
+    /// Tracking events/history
+    pub events: Vec<ShipmentEvent>,
+    /// Version for optimistic locking
+    pub version: i32,
+
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl Shipment {
+    /// Generate a unique shipment number based on timestamp
+    #[must_use]
+    pub fn generate_shipment_number() -> String {
+        let now = chrono::Utc::now();
+        let suffix = Uuid::new_v4().simple().to_string();
+        let short_suffix = suffix[..8].to_uppercase();
+        format!("SHP-{}-{short_suffix}", now.format("%Y%m%d%H%M%S"))
+    }
+
+    /// Calculate transit time in days (if delivered)
+    #[must_use]
+    pub fn transit_days(&self) -> Option<f64> {
+        match (self.shipped_at, self.delivered_at) {
+            (Some(shipped), Some(delivered)) => {
+                let duration = delivered - shipped;
+                Some(duration.num_hours() as f64 / 24.0)
+            }
+            _ => None,
+        }
+    }
+
+    /// Check if delivery is late
+    #[must_use]
+    pub fn is_late(&self) -> bool {
+        match (self.estimated_delivery, self.delivered_at) {
+            (Some(estimated), Some(delivered)) => delivered > estimated,
+            (Some(estimated), None) if !self.status.is_terminal() => Utc::now() > estimated,
+            _ => false,
+        }
+    }
+}
+
+/// An item within a shipment
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShipmentItem {
+    pub id: Uuid,
+    pub shipment_id: ShipmentId,
+    /// Reference to order item
+    pub order_item_id: Option<Uuid>,
+    /// Product being shipped
+    pub product_id: Option<ProductId>,
+    /// SKU of the item
+    pub sku: String,
+    /// Item name/description
+    pub name: String,
+    /// Quantity in this shipment
+    pub quantity: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// A tracking event in a shipment's history
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShipmentEvent {
+    pub id: Uuid,
+    pub shipment_id: ShipmentId,
+    /// Type of event (e.g., "`picked_up`", "`departed_facility`", "`arrived_at_hub`")
+    pub event_type: String,
+    /// Location where event occurred
+    pub location: Option<String>,
+    /// Description of the event
+    pub description: Option<String>,
+    /// When the event occurred (may differ from `created_at` for imported events)
+    pub event_time: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Input for creating a new shipment
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct CreateShipment {
+    pub order_id: OrderId,
+    pub carrier: Option<ShippingCarrier>,
+    pub shipping_method: Option<ShippingMethod>,
+    pub tracking_number: Option<String>,
+    pub recipient_name: String,
+    pub recipient_email: Option<String>,
+    pub recipient_phone: Option<String>,
+    pub shipping_address: String,
+    pub weight_kg: Option<Decimal>,
+    pub dimensions: Option<String>,
+    pub shipping_cost: Option<Decimal>,
+    pub insurance_amount: Option<Decimal>,
+    pub signature_required: Option<bool>,
+    pub estimated_delivery: Option<DateTime<Utc>>,
+    pub notes: Option<String>,
+    pub items: Option<Vec<CreateShipmentItem>>,
+}
+
+/// Input for creating a shipment item
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct CreateShipmentItem {
+    /// Must belong to the shipment's order. Omit only when the SKU identifies one order line.
+    pub order_item_id: Option<Uuid>,
+    /// Must match the order line when supplied; otherwise filled from that line.
+    pub product_id: Option<ProductId>,
+    pub sku: String,
+    pub name: String,
+    pub quantity: i32,
+}
+
+/// Input for updating a shipment
+#[derive(Debug, Clone, Default)]
+pub struct UpdateShipment {
+    /// Reject this update if another writer has changed the shipment version.
+    pub expected_version: Option<i32>,
+    pub status: Option<ShipmentStatus>,
+    pub carrier: Option<ShippingCarrier>,
+    pub tracking_number: Option<String>,
+    pub recipient_name: Option<String>,
+    pub recipient_email: Option<String>,
+    pub recipient_phone: Option<String>,
+    pub shipping_address: Option<String>,
+    pub weight_kg: Option<Decimal>,
+    pub dimensions: Option<String>,
+    pub shipping_cost: Option<Decimal>,
+    pub estimated_delivery: Option<DateTime<Utc>>,
+    pub notes: Option<String>,
+}
+
+/// Input for adding a tracking event
+#[derive(Debug, Clone)]
+pub struct AddShipmentEvent {
+    pub event_type: String,
+    pub location: Option<String>,
+    pub description: Option<String>,
+    pub event_time: Option<DateTime<Utc>>,
+}
+
+/// Filter for querying shipments
+#[derive(Debug, Clone, Default)]
+pub struct ShipmentFilter {
+    pub order_id: Option<OrderId>,
+    pub status: Option<ShipmentStatus>,
+    pub carrier: Option<ShippingCarrier>,
+    pub tracking_number: Option<String>,
+    pub limit: Option<u32>,
+    pub offset: Option<u32>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_shipment_status_from_str() {
+        assert_eq!(ShipmentStatus::from_str("pending").unwrap(), ShipmentStatus::Pending);
+        assert_eq!(ShipmentStatus::from_str("ready_to_ship").unwrap(), ShipmentStatus::ReadyToShip);
+        assert_eq!(
+            ShipmentStatus::from_str("outfordelivery").unwrap(),
+            ShipmentStatus::OutForDelivery
+        );
+        assert_eq!(ShipmentStatus::from_str("canceled").unwrap(), ShipmentStatus::Cancelled);
+    }
+
+    #[test]
+    fn test_shipping_carrier_from_str() {
+        assert_eq!(ShippingCarrier::from_str("ups").unwrap(), ShippingCarrier::Ups);
+        assert_eq!(ShippingCarrier::from_str("fed_ex").unwrap(), ShippingCarrier::FedEx);
+        assert_eq!(ShippingCarrier::from_str("on_trac").unwrap(), ShippingCarrier::OnTrac);
+        assert_eq!(ShippingCarrier::from_str("other").unwrap(), ShippingCarrier::Other);
+    }
+
+    #[test]
+    fn test_shipping_method_from_str() {
+        assert_eq!(ShippingMethod::from_str("standard").unwrap(), ShippingMethod::Standard);
+        assert_eq!(ShippingMethod::from_str("two_day").unwrap(), ShippingMethod::TwoDay);
+        assert_eq!(ShippingMethod::from_str("sameday").unwrap(), ShippingMethod::SameDay);
+    }
+
+    #[test]
+    fn shipment_numbers_are_unique_within_the_same_second() {
+        let first = Shipment::generate_shipment_number();
+        let second = Shipment::generate_shipment_number();
+
+        assert!(first.starts_with("SHP-"));
+        assert!(second.starts_with("SHP-"));
+        assert_ne!(first, second);
+    }
+}

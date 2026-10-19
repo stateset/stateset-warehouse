@@ -1,0 +1,1414 @@
+//! Payment domain models
+//!
+//! Handles payment processing, refunds, and payment method management.
+
+use crate::errors::Result;
+use crate::validation::{Validate, ValidationBuilder, validate_money_scale};
+use chrono::{DateTime, Utc};
+use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
+use stateset_primitives::{CurrencyCode, CustomerId, OrderId, PaymentId};
+use strum::{Display, EnumString};
+use uuid::Uuid;
+
+/// Payment transaction status in the processing lifecycle
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, Display, EnumString,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case", ascii_case_insensitive)]
+#[non_exhaustive]
+pub enum PaymentTransactionStatus {
+    /// Payment is pending processing
+    #[default]
+    Pending,
+    /// Payment is being processed
+    Processing,
+    /// Payment requires additional action (e.g., 3D Secure)
+    RequiresAction,
+    /// Payment was successfully completed
+    Completed,
+    /// Payment failed
+    Failed,
+    /// Payment was cancelled
+    #[strum(serialize = "cancelled", serialize = "canceled")]
+    Cancelled,
+    /// Payment was refunded (fully)
+    Refunded,
+    /// Payment was partially refunded
+    PartiallyRefunded,
+    /// Payment is disputed/chargeback
+    Disputed,
+}
+
+impl PaymentTransactionStatus {
+    /// Check if a status transition is allowed.
+    #[must_use]
+    pub fn can_transition_to(self, next: Self) -> bool {
+        if self == next {
+            return true;
+        }
+        match self {
+            Self::Pending => matches!(next, Self::Processing | Self::Cancelled | Self::Failed),
+            Self::Processing => matches!(
+                next,
+                Self::RequiresAction | Self::Completed | Self::Failed | Self::Cancelled
+            ),
+            Self::RequiresAction => {
+                matches!(next, Self::Processing | Self::Completed | Self::Failed | Self::Cancelled)
+            }
+            Self::Completed => {
+                matches!(next, Self::Refunded | Self::PartiallyRefunded | Self::Disputed)
+            }
+            Self::PartiallyRefunded => matches!(next, Self::Refunded | Self::Disputed),
+            Self::Disputed => matches!(next, Self::Completed | Self::Refunded | Self::Cancelled),
+            Self::Failed | Self::Cancelled | Self::Refunded => false,
+        }
+    }
+
+    /// Returns true if this status is a terminal state.
+    #[must_use]
+    pub const fn is_terminal(self) -> bool {
+        matches!(self, Self::Failed | Self::Cancelled | Self::Refunded)
+    }
+
+    /// Returns true if this status represents a successful payment.
+    #[must_use]
+    pub const fn is_successful(self) -> bool {
+        matches!(self, Self::Completed | Self::PartiallyRefunded)
+    }
+
+    /// Returns true if this payment is still in progress.
+    #[must_use]
+    pub const fn is_in_progress(self) -> bool {
+        matches!(self, Self::Pending | Self::Processing | Self::RequiresAction)
+    }
+
+    /// Returns true if a payment in this status may be refunded.
+    ///
+    /// Only successfully captured funds can be refunded: a `Completed`
+    /// payment, or one that is already `PartiallyRefunded` (so the remaining
+    /// balance can be returned). `Pending`, `Processing`, `RequiresAction`,
+    /// `Failed`, `Cancelled`, `Disputed`, and fully `Refunded` payments are
+    /// not refundable.
+    #[must_use]
+    pub const fn is_refundable(self) -> bool {
+        matches!(self, Self::Completed | Self::PartiallyRefunded)
+    }
+
+    /// Whether moving a payment from `self` to `next` records a **lost
+    /// chargeback**: a `Disputed` payment resolved against the merchant
+    /// (`Disputed -> Refunded`). A dispute won is `Disputed -> Completed`.
+    ///
+    /// The card network has already reversed the charge, so the payment's
+    /// whole remaining balance has left the merchant. The storage backends
+    /// record it in the same transaction as the status write: a completed
+    /// refund-ledger row for the remaining balance, stamped with
+    /// [`LOST_CHARGEBACK_REFUND_REASON`] (a reversal forced by the network,
+    /// not a refund the merchant issued), `amount_refunded = amount`, and the
+    /// order's payment status re-derived from the ledger (full order lost ->
+    /// `refunded`, part of it -> `partially_refunded`).
+    #[must_use]
+    pub const fn is_lost_chargeback(self, next: Self) -> bool {
+        matches!((self, next), (Self::Disputed, Self::Refunded))
+    }
+}
+
+/// Refund `reason` stamped on the refund-ledger row a lost chargeback writes
+/// (see [`PaymentTransactionStatus::is_lost_chargeback`]), so reports can tell
+/// money the card network reversed from refunds the merchant issued.
+pub const LOST_CHARGEBACK_REFUND_REASON: &str = "chargeback_lost";
+
+/// Payment method type
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, Display, EnumString,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case", ascii_case_insensitive)]
+#[non_exhaustive]
+pub enum PaymentMethodType {
+    /// Credit card
+    #[default]
+    CreditCard,
+    /// Debit card
+    DebitCard,
+    /// Bank transfer / ACH
+    #[strum(serialize = "bank_transfer", serialize = "ach")]
+    BankTransfer,
+    /// `PayPal`
+    #[strum(serialize = "paypal")]
+    PayPal,
+    /// Apple Pay
+    ApplePay,
+    /// Google Pay
+    GooglePay,
+    /// Cryptocurrency (native tokens)
+    #[strum(serialize = "crypto", serialize = "cryptocurrency")]
+    Crypto,
+    /// Stablecoin (USDC, USDT, ssUSD)
+    #[strum(serialize = "stablecoin", serialize = "usdc", serialize = "usdt", serialize = "ssusd")]
+    Stablecoin,
+    /// Store credit
+    StoreCredit,
+    /// Gift card
+    GiftCard,
+    /// Cash on delivery
+    #[strum(serialize = "cash_on_delivery", serialize = "cod")]
+    CashOnDelivery,
+    /// Invoice / Net terms
+    Invoice,
+    /// Other payment method
+    Other,
+}
+
+/// Blockchain network for crypto/stablecoin payments
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, Display, EnumString,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case", ascii_case_insensitive)]
+#[non_exhaustive]
+pub enum BlockchainNetwork {
+    /// Solana mainnet
+    #[default]
+    #[strum(serialize = "solana", serialize = "solana_mainnet", serialize = "mainnet-beta")]
+    Solana,
+    /// Solana devnet (testing)
+    #[strum(serialize = "solana_devnet", serialize = "devnet")]
+    SolanaDevnet,
+    /// SET Chain L2 (StateSet native)
+    #[strum(serialize = "set_chain", serialize = "set", serialize = "ssc")]
+    SetChain,
+    /// SET Chain testnet
+    #[strum(serialize = "set_chain_testnet", serialize = "set_testnet")]
+    SetChainTestnet,
+    /// Ethereum mainnet
+    #[strum(serialize = "ethereum", serialize = "eth")]
+    Ethereum,
+    /// Base L2 (Coinbase)
+    Base,
+    /// Arbitrum L2
+    #[strum(serialize = "arbitrum", serialize = "arb")]
+    Arbitrum,
+    /// NEAR Protocol
+    Near,
+    /// Cosmos Hub
+    #[strum(serialize = "cosmos", serialize = "atom")]
+    Cosmos,
+}
+
+/// Stablecoin token type
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, Display, EnumString,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(ascii_case_insensitive)]
+#[non_exhaustive]
+pub enum StablecoinType {
+    /// USD Coin
+    #[default]
+    #[strum(serialize = "USDC")]
+    Usdc,
+    /// Tether
+    #[strum(serialize = "USDT", serialize = "TETHER")]
+    Usdt,
+    /// StateSet USD (native yield-bearing stablecoin)
+    #[strum(serialize = "ssUSD", serialize = "SSUSD", serialize = "SS_USD")]
+    SsUsd,
+    /// Wrapped StateSet USD (ERC4626)
+    #[strum(serialize = "wssUSD", serialize = "WSSUSD", serialize = "WSS_USD")]
+    WssUsd,
+    /// DAI
+    #[strum(serialize = "DAI")]
+    Dai,
+}
+
+/// Card brand for credit/debit cards
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, Display, EnumString,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case", ascii_case_insensitive)]
+#[non_exhaustive]
+pub enum CardBrand {
+    #[default]
+    Unknown,
+    Visa,
+    Mastercard,
+    #[strum(serialize = "amex", serialize = "american_express")]
+    Amex,
+    Discover,
+    #[strum(serialize = "diners_club", serialize = "diners")]
+    DinersClub,
+    Jcb,
+    #[strum(serialize = "union_pay", serialize = "unionpay")]
+    UnionPay,
+}
+
+/// Refund status
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, Display, EnumString,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case", ascii_case_insensitive)]
+#[non_exhaustive]
+pub enum RefundStatus {
+    /// Refund is pending
+    #[default]
+    Pending,
+    /// Refund is being processed
+    Processing,
+    /// Refund completed successfully
+    Completed,
+    /// Refund failed
+    Failed,
+    /// Refund was cancelled
+    #[strum(serialize = "cancelled", serialize = "canceled")]
+    Cancelled,
+}
+
+impl RefundStatus {
+    /// Check if a status transition is allowed.
+    #[must_use]
+    pub fn can_transition_to(self, next: Self) -> bool {
+        if self == next {
+            return true;
+        }
+        match self {
+            Self::Pending => matches!(next, Self::Processing | Self::Cancelled | Self::Failed),
+            Self::Processing => matches!(next, Self::Completed | Self::Failed),
+            Self::Completed | Self::Failed | Self::Cancelled => false,
+        }
+    }
+
+    /// Returns true if this refund is still in progress.
+    #[must_use]
+    pub const fn is_in_progress(self) -> bool {
+        matches!(self, Self::Pending | Self::Processing)
+    }
+
+    /// Returns true if this status is a terminal state.
+    #[must_use]
+    pub const fn is_terminal(self) -> bool {
+        matches!(self, Self::Completed | Self::Failed | Self::Cancelled)
+    }
+}
+
+/// A payment transaction
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Payment {
+    /// Unique payment ID
+    pub id: PaymentId,
+    /// Human-readable payment number
+    pub payment_number: String,
+    /// Associated order ID (optional - can be standalone payment)
+    pub order_id: Option<OrderId>,
+    /// Associated invoice ID (optional)
+    pub invoice_id: Option<Uuid>,
+    /// Customer ID
+    pub customer_id: Option<CustomerId>,
+    /// Payment status
+    pub status: PaymentTransactionStatus,
+    /// Payment method used
+    pub payment_method: PaymentMethodType,
+    /// Payment amount
+    pub amount: Decimal,
+    /// Currency code (ISO 4217)
+    pub currency: CurrencyCode,
+    /// Amount refunded
+    pub amount_refunded: Decimal,
+    /// External payment processor ID (e.g., Stripe payment intent ID)
+    pub external_id: Option<String>,
+    /// Idempotency key for safely retrying payment creation
+    pub idempotency_key: Option<String>,
+    /// Payment processor/gateway used
+    pub processor: Option<String>,
+    /// Card brand (if card payment)
+    pub card_brand: Option<CardBrand>,
+    /// Last 4 digits of card (if card payment)
+    pub card_last4: Option<String>,
+    /// Card expiry month (if card payment)
+    pub card_exp_month: Option<i32>,
+    /// Card expiry year (if card payment)
+    pub card_exp_year: Option<i32>,
+    // =========================================================================
+    // Blockchain/Stablecoin Payment Fields
+    // =========================================================================
+    /// Blockchain network (for crypto/stablecoin payments)
+    pub blockchain_network: Option<BlockchainNetwork>,
+    /// Stablecoin type (USDC, USDT, ssUSD, etc.)
+    pub stablecoin_type: Option<StablecoinType>,
+    /// Sender wallet address
+    pub from_wallet_address: Option<String>,
+    /// Recipient wallet address
+    pub to_wallet_address: Option<String>,
+    /// On-chain transaction hash/signature
+    pub tx_hash: Option<String>,
+    /// Block number where transaction was confirmed
+    pub block_number: Option<i64>,
+    /// Number of on-chain confirmations
+    pub confirmations: Option<i32>,
+    /// Token contract/mint address (for token transfers)
+    pub token_address: Option<String>,
+    /// VES payment intent ID (for audit trail)
+    pub ves_intent_id: Option<String>,
+    // =========================================================================
+    /// Billing email
+    pub billing_email: Option<String>,
+    /// Billing name
+    pub billing_name: Option<String>,
+    /// Billing address
+    pub billing_address: Option<String>,
+    /// Payment description
+    pub description: Option<String>,
+    /// Failure reason (if failed)
+    pub failure_reason: Option<String>,
+    /// Failure code from processor
+    pub failure_code: Option<String>,
+    /// Metadata (JSON)
+    pub metadata: Option<String>,
+    /// When payment was completed
+    pub paid_at: Option<DateTime<Utc>>,
+    /// Version for optimistic locking
+    pub version: i32,
+    /// When payment was created
+    pub created_at: DateTime<Utc>,
+    /// When payment was last updated
+    pub updated_at: DateTime<Utc>,
+}
+
+impl Payment {
+    /// The amount of this payment that has not yet been refunded.
+    #[must_use]
+    pub fn refundable_remaining(&self) -> Decimal {
+        self.amount - self.amount_refunded
+    }
+
+    /// Check that a `create` request replayed under this payment's idempotency
+    /// key is the SAME request.
+    ///
+    /// An idempotency key promises "this exact operation, at most once". A
+    /// second request with the same key but a different amount, order,
+    /// customer, invoice, currency, method, processor reference, card, billing
+    /// details, description or metadata is not a retry — it is a different
+    /// payment that would silently be answered with the first one's row (and
+    /// money). Every field of [`CreatePayment`] that both backends persist is
+    /// compared; the first difference is named in the error.
+    ///
+    /// Both backends call this before returning the stored payment for a
+    /// duplicate key, on the fast path and on the UNIQUE-conflict race path.
+    ///
+    /// The blockchain fields of [`CreatePayment`]
+    /// (`blockchain_network`/`stablecoin_type`/wallet addresses/`token_address`)
+    /// are deliberately NOT compared: neither backend's `create` persists them,
+    /// so the stored payment always reads them back as `None` and comparing
+    /// them would reject a byte-identical retry.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::CommerceError::Conflict`] naming the first differing
+    /// field when the request does not match the stored payment.
+    pub fn check_idempotent_replay(&self, input: &CreatePayment) -> crate::Result<()> {
+        use crate::CommerceError;
+
+        let key = self.idempotency_key.as_deref().unwrap_or_default();
+        let mismatch = self.first_replay_mismatch(input);
+        match mismatch {
+            Some(diff) => Err(CommerceError::Conflict(format!(
+                "Idempotency key '{key}' was already used for payment {} with different parameters ({diff})",
+                self.id
+            ))),
+            None => Ok(()),
+        }
+    }
+
+    /// The first [`CreatePayment`] field that differs from this payment, as a
+    /// `field stored != requested` string. Split out of
+    /// [`Self::check_idempotent_replay`] so the comparison list stays one
+    /// readable table.
+    fn first_replay_mismatch(&self, input: &CreatePayment) -> Option<String> {
+        /// Compare two `Option<impl Display>` and render the difference.
+        macro_rules! opt {
+            ($field:literal, $stored:expr, $requested:expr) => {{
+                let stored = $stored;
+                let requested = $requested;
+                if stored != requested {
+                    return Some(format!(
+                        "{} {} != {}",
+                        $field,
+                        stored.map_or_else(|| "none".to_string(), |v| v.to_string()),
+                        requested.map_or_else(|| "none".to_string(), |v| v.to_string()),
+                    ));
+                }
+            }};
+        }
+
+        // Money and identity first: these are the differences that would move
+        // funds, so they are the ones worth naming when several fields differ.
+        if self.amount != input.amount {
+            return Some(format!("amount {} != {}", self.amount, input.amount));
+        }
+        opt!("order_id", self.order_id, input.order_id);
+        opt!("invoice_id", self.invoice_id, input.invoice_id);
+        opt!("customer_id", self.customer_id, input.customer_id);
+        let requested_currency = input.currency.unwrap_or_default();
+        if self.currency != requested_currency {
+            return Some(format!("currency {} != {}", self.currency, requested_currency));
+        }
+        if self.payment_method != input.payment_method {
+            return Some(format!(
+                "payment_method {} != {}",
+                self.payment_method, input.payment_method
+            ));
+        }
+
+        // Processor/card/billing/free-text fields: not money by themselves, but
+        // they identify the request, and a key reused with different ones is a
+        // different payment, not a retry.
+        opt!("external_id", self.external_id.as_ref(), input.external_id.as_ref());
+        opt!("processor", self.processor.as_ref(), input.processor.as_ref());
+        opt!("card_brand", self.card_brand, input.card_brand);
+        opt!("card_last4", self.card_last4.as_ref(), input.card_last4.as_ref());
+        opt!("card_exp_month", self.card_exp_month, input.card_exp_month);
+        opt!("card_exp_year", self.card_exp_year, input.card_exp_year);
+        opt!("billing_email", self.billing_email.as_ref(), input.billing_email.as_ref());
+        opt!("billing_name", self.billing_name.as_ref(), input.billing_name.as_ref());
+        opt!("billing_address", self.billing_address.as_ref(), input.billing_address.as_ref());
+        opt!("description", self.description.as_ref(), input.description.as_ref());
+        opt!("metadata", self.metadata.as_ref(), input.metadata.as_ref());
+        None
+    }
+
+    /// Validate and resolve a refund request against this payment.
+    ///
+    /// `requested` is the caller-supplied refund amount; when `None` the full
+    /// remaining refundable balance is used. Returns the resolved refund amount
+    /// on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::CommerceError::ValidationError`] when:
+    /// - the payment is not in a refundable status (only `Completed` /
+    ///   `PartiallyRefunded` payments can be refunded), or
+    /// - the requested (or resolved) amount is zero or negative.
+    ///
+    /// Returns [`crate::CommerceError::RefundExceedsCaptured`] (invariant
+    /// `commerce.refund.exceeds_captured`) when the requested amount exceeds
+    /// the remaining refundable balance.
+    pub fn validate_refund(&self, requested: Option<Decimal>) -> crate::Result<Decimal> {
+        use crate::CommerceError;
+
+        if !self.status.is_refundable() {
+            return Err(CommerceError::ValidationError(format!(
+                "Cannot refund a payment in status '{}'; only completed or partially refunded payments are refundable",
+                self.status
+            )));
+        }
+
+        let remaining = self.refundable_remaining();
+        let amount = requested.unwrap_or(remaining);
+
+        if amount <= Decimal::ZERO {
+            return Err(CommerceError::ValidationError(
+                "Refund amount must be greater than zero".into(),
+            ));
+        }
+
+        if amount > remaining {
+            return Err(CommerceError::RefundExceedsCaptured {
+                payment_id: self.id.into_uuid(),
+                captured: self.amount.to_string(),
+                already_refunded: self.amount_refunded.to_string(),
+                requested: amount.to_string(),
+            });
+        }
+
+        Ok(amount)
+    }
+}
+
+/// Input for creating a new payment
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct CreatePayment {
+    /// Associated order ID
+    pub order_id: Option<OrderId>,
+    /// Associated invoice ID
+    pub invoice_id: Option<Uuid>,
+    /// Customer ID
+    pub customer_id: Option<CustomerId>,
+    /// Payment method
+    pub payment_method: PaymentMethodType,
+    /// Payment amount
+    pub amount: Decimal,
+    /// Currency code (defaults to USD)
+    pub currency: Option<CurrencyCode>,
+    /// External payment processor ID
+    pub external_id: Option<String>,
+    /// Idempotency key for safely retrying payment creation
+    pub idempotency_key: Option<String>,
+    /// Payment processor/gateway
+    pub processor: Option<String>,
+    /// Card brand
+    pub card_brand: Option<CardBrand>,
+    /// Last 4 digits of card
+    pub card_last4: Option<String>,
+    /// Card expiry month
+    pub card_exp_month: Option<i32>,
+    /// Card expiry year
+    pub card_exp_year: Option<i32>,
+    // =========================================================================
+    // Blockchain/Stablecoin Payment Fields
+    // =========================================================================
+    /// Blockchain network (solana, `set_chain`, base, etc.)
+    pub blockchain_network: Option<BlockchainNetwork>,
+    /// Stablecoin type (USDC, USDT, ssUSD)
+    pub stablecoin_type: Option<StablecoinType>,
+    /// Sender wallet address
+    pub from_wallet_address: Option<String>,
+    /// Recipient wallet address
+    pub to_wallet_address: Option<String>,
+    /// Token contract/mint address
+    pub token_address: Option<String>,
+    // =========================================================================
+    /// Billing email
+    pub billing_email: Option<String>,
+    /// Billing name
+    pub billing_name: Option<String>,
+    /// Billing address
+    pub billing_address: Option<String>,
+    /// Payment description
+    pub description: Option<String>,
+    /// Additional metadata
+    pub metadata: Option<String>,
+}
+
+impl Validate for CreatePayment {
+    /// Validate a payment create request.
+    ///
+    /// Rejects a negative amount and a malformed billing email (when present).
+    /// A zero amount is permitted (e.g. a $0 authorization / free order); only
+    /// a negative amount is rejected.
+    fn validate(&self) -> Result<()> {
+        ValidationBuilder::new()
+            .non_negative("amount", self.amount)
+            .email_if_present("billing_email", self.billing_email.as_deref())
+            .build()?;
+        validate_money_scale(self.currency.unwrap_or_default(), self.amount)
+    }
+}
+
+/// Input for updating a payment
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UpdatePayment {
+    /// Update status
+    pub status: Option<PaymentTransactionStatus>,
+    /// Update external ID
+    pub external_id: Option<String>,
+    /// Update failure reason
+    pub failure_reason: Option<String>,
+    /// Update failure code
+    pub failure_code: Option<String>,
+    /// Update metadata
+    pub metadata: Option<String>,
+    // NOTE: the blockchain/stablecoin fields (`tx_hash`, `block_number`,
+    // `confirmations`, `ves_intent_id`) were removed from this struct. Neither
+    // backend's `payments` table has those columns, so both UPDATE paths
+    // silently dropped them; on-chain settlement state lives on the x402 /
+    // A2A payment-intent tables instead. Reinstate them here only together
+    // with a migration that adds the columns and UPDATE statements that
+    // persist them.
+}
+
+/// Filter for listing payments
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PaymentFilter {
+    /// Filter by order ID
+    pub order_id: Option<OrderId>,
+    /// Filter by invoice ID
+    pub invoice_id: Option<Uuid>,
+    /// Filter by customer ID
+    pub customer_id: Option<CustomerId>,
+    /// Filter by status
+    pub status: Option<PaymentTransactionStatus>,
+    /// Filter by payment method
+    pub payment_method: Option<PaymentMethodType>,
+    /// Filter by processor
+    pub processor: Option<String>,
+    /// Filter by currency
+    pub currency: Option<CurrencyCode>,
+    /// Filter by minimum amount
+    pub min_amount: Option<Decimal>,
+    /// Filter by maximum amount
+    pub max_amount: Option<Decimal>,
+    /// Filter by date range start
+    pub from_date: Option<DateTime<Utc>>,
+    /// Filter by date range end
+    pub to_date: Option<DateTime<Utc>>,
+    /// Maximum number of results
+    pub limit: Option<u32>,
+    /// Offset for pagination
+    pub offset: Option<u32>,
+}
+
+/// A refund for a payment
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Refund {
+    /// Unique refund ID
+    pub id: Uuid,
+    /// Human-readable refund number
+    pub refund_number: String,
+    /// Associated payment ID
+    pub payment_id: PaymentId,
+    /// Refund status
+    pub status: RefundStatus,
+    /// Refund amount
+    pub amount: Decimal,
+    /// Currency code
+    pub currency: CurrencyCode,
+    /// Reason for refund
+    pub reason: Option<String>,
+    /// External refund ID from processor
+    pub external_id: Option<String>,
+    /// Idempotency key for safely retrying refund creation
+    pub idempotency_key: Option<String>,
+    /// Failure reason (if failed)
+    pub failure_reason: Option<String>,
+    /// Additional notes
+    pub notes: Option<String>,
+    /// When refund was completed
+    pub refunded_at: Option<DateTime<Utc>>,
+    /// When refund was created
+    pub created_at: DateTime<Utc>,
+    /// When refund was last updated
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Kernel command payload marking a pending/processing payment captured
+/// (`payments.complete`). The state machine and the order's capture capacity
+/// are re-checked under the payment row lock.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CompletePayment {
+    pub payment_id: PaymentId,
+}
+
+/// Input for creating a refund
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct CreateRefund {
+    /// Payment to refund
+    pub payment_id: PaymentId,
+    /// Refund amount (defaults to full payment amount)
+    pub amount: Option<Decimal>,
+    /// Reason for refund
+    pub reason: Option<String>,
+    /// External refund ID
+    pub external_id: Option<String>,
+    /// Idempotency key for safely retrying refund creation
+    pub idempotency_key: Option<String>,
+    /// Additional notes
+    pub notes: Option<String>,
+}
+
+impl Validate for CreateRefund {
+    /// Validate a refund create request.
+    ///
+    /// Requires a non-nil payment reference. The amount-specific rules
+    /// (positivity and not exceeding the remaining refundable balance) are
+    /// enforced against the live payment in [`Payment::validate_refund`], which
+    /// is where the refund's monetary semantics belong; this structural check
+    /// only guards the payment reference itself.
+    fn validate(&self) -> Result<()> {
+        ValidationBuilder::new().uuid_not_nil("payment_id", self.payment_id.into_uuid()).build()
+    }
+}
+
+impl CreateRefund {
+    /// Validate the request once the payment currency is known.
+    ///
+    /// A refund intentionally does not carry an independently selectable
+    /// currency: it inherits the captured payment's currency.
+    pub fn validate_for_currency(&self, currency: CurrencyCode) -> Result<()> {
+        self.validate()?;
+        if let Some(amount) = self.amount {
+            validate_money_scale(currency, amount)?;
+        }
+        Ok(())
+    }
+}
+
+/// A stored payment method for a customer
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PaymentMethod {
+    /// Unique ID
+    pub id: Uuid,
+    /// Customer ID
+    pub customer_id: CustomerId,
+    /// Payment method type
+    pub method_type: PaymentMethodType,
+    /// Whether this is the default payment method
+    pub is_default: bool,
+    /// Card brand (if card)
+    pub card_brand: Option<CardBrand>,
+    /// Last 4 digits (if card)
+    pub card_last4: Option<String>,
+    /// Expiry month (if card)
+    pub card_exp_month: Option<i32>,
+    /// Expiry year (if card)
+    pub card_exp_year: Option<i32>,
+    /// Cardholder name
+    pub cardholder_name: Option<String>,
+    /// Bank name (if bank transfer)
+    pub bank_name: Option<String>,
+    /// Last 4 of account (if bank)
+    pub account_last4: Option<String>,
+    // =========================================================================
+    // Blockchain/Wallet Fields (for Stablecoin/Crypto payment methods)
+    // =========================================================================
+    /// Wallet address (for crypto/stablecoin payments)
+    pub wallet_address: Option<String>,
+    /// Preferred blockchain network
+    pub blockchain_network: Option<BlockchainNetwork>,
+    /// Preferred stablecoin type
+    pub stablecoin_type: Option<StablecoinType>,
+    // =========================================================================
+    /// External ID from payment processor
+    pub external_id: Option<String>,
+    /// Billing address
+    pub billing_address: Option<String>,
+    /// When the method was created
+    pub created_at: DateTime<Utc>,
+    /// When the method was last updated
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Input for creating a payment method
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct CreatePaymentMethod {
+    /// Customer ID
+    pub customer_id: CustomerId,
+    /// Payment method type
+    pub method_type: PaymentMethodType,
+    /// Set as default
+    pub is_default: Option<bool>,
+    /// Card brand
+    pub card_brand: Option<CardBrand>,
+    /// Last 4 digits
+    pub card_last4: Option<String>,
+    /// Expiry month
+    pub card_exp_month: Option<i32>,
+    /// Expiry year
+    pub card_exp_year: Option<i32>,
+    /// Cardholder name
+    pub cardholder_name: Option<String>,
+    /// Bank name
+    pub bank_name: Option<String>,
+    /// Account last 4
+    pub account_last4: Option<String>,
+    // =========================================================================
+    // Blockchain/Wallet Fields (for Stablecoin/Crypto payment methods)
+    // =========================================================================
+    /// Wallet address (for receiving payments)
+    pub wallet_address: Option<String>,
+    /// Preferred blockchain network
+    pub blockchain_network: Option<BlockchainNetwork>,
+    /// Preferred stablecoin type
+    pub stablecoin_type: Option<StablecoinType>,
+    // =========================================================================
+    /// External ID
+    pub external_id: Option<String>,
+    /// Billing address
+    pub billing_address: Option<String>,
+}
+
+/// Generate a unique payment number
+#[must_use]
+pub fn generate_payment_number() -> String {
+    generate_number("PAY")
+}
+
+/// Generate a unique refund number
+#[must_use]
+pub fn generate_refund_number() -> String {
+    generate_number("REF")
+}
+
+fn generate_number(prefix: &str) -> String {
+    let now = chrono::Utc::now();
+    let timestamp = now.timestamp_millis();
+    let entropy = uuid::Uuid::new_v4().simple().to_string();
+    format!("{prefix}-{timestamp}-{}", entropy[..12].to_ascii_uppercase())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Every status, via an exhaustive match: adding a variant fails to
+    /// compile here until the TLA+ spec and its golden file are updated too.
+    fn all_payment_statuses() -> Vec<PaymentTransactionStatus> {
+        use PaymentTransactionStatus as S;
+        let all = vec![
+            S::Pending,
+            S::Processing,
+            S::RequiresAction,
+            S::Completed,
+            S::Failed,
+            S::Cancelled,
+            S::Refunded,
+            S::PartiallyRefunded,
+            S::Disputed,
+        ];
+        for status in &all {
+            match status {
+                S::Pending
+                | S::Processing
+                | S::RequiresAction
+                | S::Completed
+                | S::Failed
+                | S::Cancelled
+                | S::Refunded
+                | S::PartiallyRefunded
+                | S::Disputed => {}
+            }
+        }
+        all
+    }
+
+    /// The state machine is formally specified in
+    /// `formal/tla/payments/PaymentRefunds.tla`, and TLC checks every
+    /// interleaving of the refund protocol against it. That proof is about
+    /// the SPEC; this test is what makes it about the CODE. It holds
+    /// `can_transition_to` to `can_transition.golden`, and
+    /// `formal/tla/check.sh` holds the spec's `CanTransition` to the same
+    /// file, so neither side can drift from the other without a failure.
+    #[test]
+    fn can_transition_to_matches_the_tla_spec() {
+        let golden_path =
+            concat!(env!("CARGO_MANIFEST_DIR"), "/../../formal/tla/payments/can_transition.golden");
+        let golden = std::fs::read_to_string(golden_path).expect("read can_transition.golden");
+        let allowed: std::collections::HashSet<(String, String)> = golden
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .map(|line| {
+                let (from, to) = line.split_once(" -> ").expect("`from -> to`");
+                (from.to_string(), to.to_string())
+            })
+            .collect();
+        assert!(!allowed.is_empty(), "the golden file must not be empty");
+
+        let statuses = all_payment_statuses();
+        let mut disagreements = Vec::new();
+        for from in &statuses {
+            for to in &statuses {
+                let in_spec = from == to || allowed.contains(&(from.to_string(), to.to_string()));
+                if from.can_transition_to(*to) != in_spec {
+                    disagreements.push(format!(
+                        "{from} -> {to}: code says {}, spec says {in_spec}",
+                        from.can_transition_to(*to)
+                    ));
+                }
+            }
+        }
+        assert!(disagreements.is_empty(), "code and spec disagree:\n{}", disagreements.join("\n"));
+
+        // Every golden line must name real statuses, or it would be dead weight.
+        let names: std::collections::HashSet<String> =
+            statuses.iter().map(ToString::to_string).collect();
+        for (from, to) in &allowed {
+            assert!(
+                names.contains(from) && names.contains(to),
+                "unknown status in golden: {from} -> {to}"
+            );
+        }
+    }
+
+    #[test]
+    fn payment_number_has_prefix_and_entropy_suffix() {
+        let value = generate_payment_number();
+        assert!(value.starts_with("PAY-"));
+        let parts: Vec<&str> = value.split('-').collect();
+        assert_eq!(parts.len(), 3);
+        assert_eq!(parts[2].len(), 12);
+    }
+
+    #[test]
+    fn refund_number_has_prefix_and_entropy_suffix() {
+        let value = generate_refund_number();
+        assert!(value.starts_with("REF-"));
+        let parts: Vec<&str> = value.split('-').collect();
+        assert_eq!(parts.len(), 3);
+        assert_eq!(parts[2].len(), 12);
+    }
+
+    #[test]
+    fn generated_numbers_are_not_equal() {
+        assert_ne!(generate_payment_number(), generate_payment_number());
+        assert_ne!(generate_refund_number(), generate_refund_number());
+    }
+
+    #[test]
+    fn payment_status_valid_transitions() {
+        use PaymentTransactionStatus::*;
+        // Pending transitions
+        assert!(Pending.can_transition_to(Processing));
+        assert!(Pending.can_transition_to(Cancelled));
+        assert!(Pending.can_transition_to(Failed));
+        // Processing transitions
+        assert!(Processing.can_transition_to(RequiresAction));
+        assert!(Processing.can_transition_to(Completed));
+        assert!(Processing.can_transition_to(Failed));
+        assert!(Processing.can_transition_to(Cancelled));
+        // RequiresAction transitions
+        assert!(RequiresAction.can_transition_to(Processing));
+        assert!(RequiresAction.can_transition_to(Completed));
+        // Completed transitions
+        assert!(Completed.can_transition_to(Refunded));
+        assert!(Completed.can_transition_to(PartiallyRefunded));
+        assert!(Completed.can_transition_to(Disputed));
+        // PartiallyRefunded transitions
+        assert!(PartiallyRefunded.can_transition_to(Refunded));
+        assert!(PartiallyRefunded.can_transition_to(Disputed));
+        // Disputed transitions
+        assert!(Disputed.can_transition_to(Completed));
+        assert!(Disputed.can_transition_to(Refunded));
+        assert!(Disputed.can_transition_to(Cancelled));
+    }
+
+    #[test]
+    fn payment_status_invalid_transitions() {
+        use PaymentTransactionStatus::*;
+        assert!(!Pending.can_transition_to(Completed));
+        assert!(!Pending.can_transition_to(Refunded));
+        assert!(!Completed.can_transition_to(Pending));
+        assert!(!Completed.can_transition_to(Processing));
+        assert!(!PartiallyRefunded.can_transition_to(Pending));
+    }
+
+    #[test]
+    fn payment_status_terminal_states() {
+        use PaymentTransactionStatus::*;
+        assert!(Failed.is_terminal());
+        assert!(Cancelled.is_terminal());
+        assert!(Refunded.is_terminal());
+        assert!(!Pending.is_terminal());
+        assert!(!Processing.is_terminal());
+        assert!(!Completed.is_terminal());
+        // Terminal states reject all transitions
+        assert!(!Failed.can_transition_to(Pending));
+        assert!(!Cancelled.can_transition_to(Processing));
+        assert!(!Refunded.can_transition_to(Completed));
+    }
+
+    #[test]
+    fn payment_status_self_transitions() {
+        use PaymentTransactionStatus::*;
+        assert!(Pending.can_transition_to(Pending));
+        assert!(Processing.can_transition_to(Processing));
+        assert!(Failed.can_transition_to(Failed));
+    }
+
+    #[test]
+    fn payment_status_is_successful() {
+        use PaymentTransactionStatus::*;
+        assert!(Completed.is_successful());
+        assert!(PartiallyRefunded.is_successful());
+        assert!(!Pending.is_successful());
+        assert!(!Failed.is_successful());
+        assert!(!Refunded.is_successful());
+    }
+
+    #[test]
+    fn refund_status_valid_transitions() {
+        use RefundStatus::*;
+        assert!(Pending.can_transition_to(Processing));
+        assert!(Pending.can_transition_to(Cancelled));
+        assert!(Pending.can_transition_to(Failed));
+        assert!(Processing.can_transition_to(Completed));
+        assert!(Processing.can_transition_to(Failed));
+    }
+
+    #[test]
+    fn refund_status_invalid_transitions() {
+        use RefundStatus::*;
+        assert!(!Pending.can_transition_to(Completed));
+        assert!(!Processing.can_transition_to(Cancelled));
+        assert!(!Completed.can_transition_to(Pending));
+        assert!(!Failed.can_transition_to(Processing));
+    }
+
+    #[test]
+    fn refund_status_terminal_states() {
+        use RefundStatus::*;
+        assert!(Completed.is_terminal());
+        assert!(Failed.is_terminal());
+        assert!(Cancelled.is_terminal());
+        assert!(!Pending.is_terminal());
+        assert!(!Processing.is_terminal());
+    }
+
+    #[test]
+    fn payment_status_is_refundable() {
+        use PaymentTransactionStatus::*;
+        // Only successfully captured funds are refundable.
+        assert!(Completed.is_refundable());
+        assert!(PartiallyRefunded.is_refundable());
+        // Everything else is not.
+        assert!(!Pending.is_refundable());
+        assert!(!Processing.is_refundable());
+        assert!(!RequiresAction.is_refundable());
+        assert!(!Failed.is_refundable());
+        assert!(!Cancelled.is_refundable());
+        assert!(!Refunded.is_refundable());
+        assert!(!Disputed.is_refundable());
+    }
+
+    /// Build a minimal `Payment` for refund-validation tests.
+    fn payment_for_refund(
+        status: PaymentTransactionStatus,
+        amount: Decimal,
+        amount_refunded: Decimal,
+    ) -> Payment {
+        let now = Utc::now();
+        Payment {
+            id: PaymentId::new(),
+            payment_number: generate_payment_number(),
+            order_id: None,
+            invoice_id: None,
+            customer_id: None,
+            status,
+            payment_method: PaymentMethodType::CreditCard,
+            amount,
+            currency: CurrencyCode::default(),
+            amount_refunded,
+            external_id: None,
+            idempotency_key: None,
+            processor: None,
+            card_brand: None,
+            card_last4: None,
+            card_exp_month: None,
+            card_exp_year: None,
+            blockchain_network: None,
+            stablecoin_type: None,
+            from_wallet_address: None,
+            to_wallet_address: None,
+            tx_hash: None,
+            block_number: None,
+            confirmations: None,
+            token_address: None,
+            ves_intent_id: None,
+            billing_email: None,
+            billing_name: None,
+            billing_address: None,
+            description: None,
+            failure_reason: None,
+            failure_code: None,
+            metadata: None,
+            paid_at: None,
+            version: 1,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+
+    #[test]
+    fn validate_refund_rejects_disputed_payment_even_with_captured_balance() {
+        use rust_decimal_macros::dec;
+        // A disputed payment still holds captured money, but it must be
+        // resolved (won -> Completed, lost -> Cancelled) before a refund can
+        // be issued against it.
+        let payment = payment_for_refund(PaymentTransactionStatus::Disputed, dec!(100), dec!(0));
+        assert_eq!(payment.refundable_remaining(), dec!(100));
+        let err = payment.validate_refund(None).expect_err("disputed must be rejected");
+        assert!(
+            matches!(err, crate::CommerceError::ValidationError(ref m) if m.contains("disputed")),
+            "{err:?}"
+        );
+        let err = payment.validate_refund(Some(dec!(1))).expect_err("disputed must be rejected");
+        assert!(matches!(err, crate::CommerceError::ValidationError(_)), "{err:?}");
+    }
+
+    #[test]
+    fn idempotent_replay_accepts_same_request_and_rejects_different_one() {
+        use rust_decimal_macros::dec;
+        let mut stored = payment_for_refund(PaymentTransactionStatus::Pending, dec!(100), dec!(0));
+        stored.idempotency_key = Some("key-1".into());
+        stored.order_id = Some(OrderId::new());
+        let same = CreatePayment {
+            order_id: stored.order_id,
+            amount: dec!(100),
+            currency: None, // defaults to USD, which is what the payment stores
+            payment_method: stored.payment_method,
+            idempotency_key: Some("key-1".into()),
+            ..Default::default()
+        };
+        stored.check_idempotent_replay(&same).expect("identical replay is idempotent");
+
+        for (label, different) in [
+            ("amount", CreatePayment { amount: dec!(99), ..same.clone() }),
+            ("order", CreatePayment { order_id: Some(OrderId::new()), ..same.clone() }),
+            ("currency", CreatePayment { currency: Some(CurrencyCode::EUR), ..same.clone() }),
+            ("method", CreatePayment { payment_method: PaymentMethodType::BankTransfer, ..same }),
+        ] {
+            let err = stored
+                .check_idempotent_replay(&different)
+                .expect_err("a different request under the same key must conflict");
+            assert!(
+                matches!(err, crate::CommerceError::Conflict(ref m) if m.contains("key-1")),
+                "{label}: {err:?}"
+            );
+        }
+    }
+
+    /// A stored payment with every persisted `CreatePayment` field populated,
+    /// and the `CreatePayment` that produced it.
+    fn populated_replay_pair() -> (Payment, CreatePayment) {
+        use rust_decimal_macros::dec;
+        let mut stored = payment_for_refund(PaymentTransactionStatus::Pending, dec!(100), dec!(0));
+        stored.idempotency_key = Some("key-1".into());
+        stored.order_id = Some(OrderId::new());
+        stored.invoice_id = Some(Uuid::new_v4());
+        stored.customer_id = Some(CustomerId::new());
+        stored.external_id = Some("pi_123".into());
+        stored.processor = Some("stripe".into());
+        stored.card_brand = Some(CardBrand::Visa);
+        stored.card_last4 = Some("4242".into());
+        stored.card_exp_month = Some(12);
+        stored.card_exp_year = Some(2031);
+        stored.billing_email = Some("payer@example.com".into());
+        stored.billing_name = Some("Ada Lovelace".into());
+        stored.billing_address = Some("1 Market St".into());
+        stored.description = Some("Order 1234".into());
+        stored.metadata = Some(r#"{"channel":"web"}"#.into());
+
+        let input = CreatePayment {
+            order_id: stored.order_id,
+            invoice_id: stored.invoice_id,
+            customer_id: stored.customer_id,
+            payment_method: stored.payment_method,
+            amount: stored.amount,
+            currency: Some(stored.currency),
+            external_id: stored.external_id.clone(),
+            idempotency_key: stored.idempotency_key.clone(),
+            processor: stored.processor.clone(),
+            card_brand: stored.card_brand,
+            card_last4: stored.card_last4.clone(),
+            card_exp_month: stored.card_exp_month,
+            card_exp_year: stored.card_exp_year,
+            billing_email: stored.billing_email.clone(),
+            billing_name: stored.billing_name.clone(),
+            billing_address: stored.billing_address.clone(),
+            description: stored.description.clone(),
+            metadata: stored.metadata.clone(),
+            ..Default::default()
+        };
+        (stored, input)
+    }
+
+    #[test]
+    fn idempotent_replay_compares_every_persisted_request_field() {
+        use rust_decimal_macros::dec;
+        let (stored, same) = populated_replay_pair();
+        stored.check_idempotent_replay(&same).expect("a byte-identical replay is idempotent");
+
+        // Every field the backends persist must be able to break the replay: a
+        // reused key carrying any of them differently is a DIFFERENT payment,
+        // not a retry, and must never be answered with the stored row.
+        for (field, different) in [
+            ("amount", CreatePayment { amount: dec!(99), ..same.clone() }),
+            ("order_id", CreatePayment { order_id: Some(OrderId::new()), ..same.clone() }),
+            ("order_id", CreatePayment { order_id: None, ..same.clone() }),
+            ("invoice_id", CreatePayment { invoice_id: Some(Uuid::new_v4()), ..same.clone() }),
+            ("invoice_id", CreatePayment { invoice_id: None, ..same.clone() }),
+            ("customer_id", CreatePayment { customer_id: Some(CustomerId::new()), ..same.clone() }),
+            ("customer_id", CreatePayment { customer_id: None, ..same.clone() }),
+            ("currency", CreatePayment { currency: Some(CurrencyCode::EUR), ..same.clone() }),
+            (
+                "payment_method",
+                CreatePayment { payment_method: PaymentMethodType::BankTransfer, ..same.clone() },
+            ),
+            ("external_id", CreatePayment { external_id: Some("pi_999".into()), ..same.clone() }),
+            ("processor", CreatePayment { processor: Some("adyen".into()), ..same.clone() }),
+            ("card_brand", CreatePayment { card_brand: Some(CardBrand::Amex), ..same.clone() }),
+            ("card_last4", CreatePayment { card_last4: Some("1881".into()), ..same.clone() }),
+            ("card_exp_month", CreatePayment { card_exp_month: Some(1), ..same.clone() }),
+            ("card_exp_year", CreatePayment { card_exp_year: Some(2032), ..same.clone() }),
+            (
+                "billing_email",
+                CreatePayment { billing_email: Some("other@example.com".into()), ..same.clone() },
+            ),
+            (
+                "billing_name",
+                CreatePayment { billing_name: Some("Grace Hopper".into()), ..same.clone() },
+            ),
+            (
+                "billing_address",
+                CreatePayment { billing_address: Some("2 Market St".into()), ..same.clone() },
+            ),
+            (
+                "description",
+                CreatePayment { description: Some("Order 5678".into()), ..same.clone() },
+            ),
+            ("metadata", CreatePayment { metadata: Some(r#"{"channel":"pos"}"#.into()), ..same }),
+        ] {
+            let err = match stored.check_idempotent_replay(&different) {
+                Ok(()) => panic!("{field}: a different request must conflict"),
+                Err(error) => error,
+            };
+            match err {
+                crate::CommerceError::Conflict(ref message) => {
+                    assert!(message.contains("key-1"), "{field}: {message}");
+                    assert!(
+                        message.contains(field),
+                        "{field}: the conflict must name the differing field, got {message}"
+                    );
+                }
+                other => panic!("{field}: expected Conflict, got {other:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn idempotent_replay_ignores_fields_no_backend_persists() {
+        // `create` drops the blockchain fields on both backends, so the stored
+        // payment always reads them back as `None`. Comparing them would reject
+        // a byte-identical retry of a stablecoin payment.
+        let (stored, same) = populated_replay_pair();
+        let with_chain = CreatePayment {
+            blockchain_network: Some(BlockchainNetwork::Base),
+            stablecoin_type: Some(StablecoinType::Usdc),
+            from_wallet_address: Some("0xfrom".into()),
+            to_wallet_address: Some("0xto".into()),
+            token_address: Some("0xtoken".into()),
+            ..same
+        };
+        stored
+            .check_idempotent_replay(&with_chain)
+            .expect("unpersisted fields cannot break a replay");
+    }
+
+    #[test]
+    fn validate_refund_resolves_full_remaining_when_amount_omitted() {
+        use rust_decimal_macros::dec;
+        let payment = payment_for_refund(PaymentTransactionStatus::Completed, dec!(100), dec!(40));
+        // Remaining refundable balance is 100 - 40 = 60.
+        assert_eq!(payment.validate_refund(None).expect("resolved"), dec!(60));
+    }
+
+    #[test]
+    fn validate_refund_rejects_non_refundable_status() {
+        use rust_decimal_macros::dec;
+        for status in [
+            PaymentTransactionStatus::Pending,
+            PaymentTransactionStatus::Processing,
+            PaymentTransactionStatus::RequiresAction,
+            PaymentTransactionStatus::Failed,
+            PaymentTransactionStatus::Cancelled,
+            PaymentTransactionStatus::Refunded,
+            PaymentTransactionStatus::Disputed,
+        ] {
+            let payment = payment_for_refund(status, dec!(100), dec!(0));
+            let err = payment
+                .validate_refund(Some(dec!(10)))
+                .expect_err("non-refundable status must be rejected");
+            assert!(matches!(err, crate::CommerceError::ValidationError(_)), "{status}: {err:?}");
+        }
+    }
+
+    #[test]
+    fn validate_refund_rejects_non_positive_amount() {
+        use rust_decimal_macros::dec;
+        let payment = payment_for_refund(PaymentTransactionStatus::Completed, dec!(100), dec!(0));
+        assert!(payment.validate_refund(Some(dec!(0))).is_err());
+        assert!(payment.validate_refund(Some(dec!(-1))).is_err());
+    }
+
+    #[test]
+    fn validate_refund_rejects_amount_exceeding_remaining() {
+        use rust_decimal_macros::dec;
+        let payment =
+            payment_for_refund(PaymentTransactionStatus::PartiallyRefunded, dec!(100), dec!(70));
+        // Only 30 remains refundable; 31 must be rejected, 30 must pass.
+        assert!(payment.validate_refund(Some(dec!(31))).is_err());
+        assert_eq!(payment.validate_refund(Some(dec!(30))).expect("ok"), dec!(30));
+    }
+
+    #[test]
+    fn create_payment_rejects_negative_amount() {
+        use crate::Validate;
+        use rust_decimal_macros::dec;
+        let input = CreatePayment { amount: dec!(-1), ..Default::default() };
+        let err = input.validate().expect_err("negative amount must be rejected");
+        assert!(
+            matches!(err, crate::CommerceError::InvalidInput { ref field, .. } if field == "amount")
+        );
+    }
+
+    #[test]
+    fn create_payment_accepts_zero_and_positive_amount() {
+        use crate::Validate;
+        use rust_decimal_macros::dec;
+        // A zero authorization is legitimate; only negatives are rejected.
+        assert!(CreatePayment { amount: dec!(0), ..Default::default() }.validate().is_ok());
+        assert!(CreatePayment { amount: dec!(99.99), ..Default::default() }.validate().is_ok());
+    }
+
+    #[test]
+    fn create_payment_rejects_malformed_billing_email() {
+        use crate::Validate;
+        use rust_decimal_macros::dec;
+        let input = CreatePayment {
+            amount: dec!(10),
+            billing_email: Some("not-an-email".to_string()),
+            ..Default::default()
+        };
+        let err = input.validate().expect_err("malformed billing email must be rejected");
+        assert!(
+            matches!(err, crate::CommerceError::InvalidInput { ref field, .. } if field == "billing_email")
+        );
+    }
+
+    #[test]
+    fn create_payment_accepts_valid_billing_email() {
+        use crate::Validate;
+        use rust_decimal_macros::dec;
+        let input = CreatePayment {
+            amount: dec!(10),
+            billing_email: Some("alice@example.com".to_string()),
+            ..Default::default()
+        };
+        assert!(input.validate().is_ok());
+    }
+
+    #[test]
+    fn create_refund_rejects_nil_payment_id() {
+        use crate::Validate;
+        use rust_decimal_macros::dec;
+        let input = CreateRefund {
+            payment_id: PaymentId::from_uuid(Uuid::nil()),
+            amount: Some(dec!(5)),
+            ..Default::default()
+        };
+        let err = input.validate().expect_err("a nil payment reference must be rejected");
+        assert!(
+            matches!(err, crate::CommerceError::InvalidInput { ref field, .. } if field == "payment_id")
+        );
+    }
+
+    #[test]
+    fn create_refund_accepts_valid_payment_reference() {
+        use crate::Validate;
+        use rust_decimal_macros::dec;
+        let id = PaymentId::new();
+        // Structural validation passes regardless of amount; the amount's
+        // positivity/balance rules are enforced by `Payment::validate_refund`.
+        assert!(
+            CreateRefund { payment_id: id, amount: None, ..Default::default() }.validate().is_ok()
+        );
+        assert!(
+            CreateRefund { payment_id: id, amount: Some(dec!(25)), ..Default::default() }
+                .validate()
+                .is_ok()
+        );
+    }
+}

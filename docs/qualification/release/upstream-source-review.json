@@ -1,0 +1,11 @@
+{
+  "recorded_at": "2026-10-19T20:19:13.884148+00:00",
+  "ok": true,
+  "upstream_repository": "https://github.com/stateset/stateset-icommerce",
+  "upstream_commit": "b8a5c6db885998defa9fd74e2b12f0d1add21e1c",
+  "upstream_tree": "7c9a8a45d9a4513a4c399af58f61afe6cd12e1cf",
+  "official_tree_truncated": false,
+  "files_verified_against_official_git_blob_identity": 169,
+  "unmodified_package_manifests_and_sources": true,
+  "consumer_workspace_sha256": "048641cee00fd6639285b4a5eee63fb0247879ed88e50d54204cb54973a6b713"
+}

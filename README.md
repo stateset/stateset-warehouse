@@ -6,7 +6,9 @@ Warehouse execution and physical inventory authority for StateSet. **Sync is the
 
 Rust 1.90+, Axum, Tokio, SQLx/Postgres, React, TypeScript and Vite, following the existing StateSet services and dashboards.
 
-The [current local software release](docs/qualification/release-20261019-serial-after-write-v1/summary.json) passes all ten stages on version `0.1.1`: **319 Rust, 64 Python and 170 browser checks**, including populated archive restore and both full image workloads. Serial API and PostgreSQL crashes interrupt the write after custody/history/event/receipt mutations; all 49 committed table fingerprints remain unchanged, and both original requests recover and replay exactly. Production, deployed-client and physical facility acceptance remain separate.
+The [current local software release](docs/qualification/release-20261019-icommerce-tui-v1/summary.json) passes all ten stages on version `0.2.0`: **331 Rust, 74 Python, 13 terminal and 170 browser checks**. It includes pinned iCommerce crate interoperability, the warehouse TUI, populated archive restore and both full image/crash workloads. Production, deployed-client and physical facility acceptance remain separate.
+
+Version 0.2.0 includes [iCommerce crate interoperability](docs/icommerce.md), a [warehouse terminal](cli/README.md), and [open-source release preparation](docs/open-source-release.md). The repository remains private; packages and images have not been published.
 
 ## Run
 
@@ -32,7 +34,7 @@ Open **http://127.0.0.1:8088**. Localhost is a secure browser context; use HTTPS
 
 ## Implemented warehouse work
 
-- Native [MCP server](docs/mcp.md) at `/mcp` with 68 administrator tools, authenticated discovery, tenant/role enforcement, typed warehouse commands and original-request recovery through the same journal as REST.
+- Native [MCP server](docs/mcp.md) at `/mcp` with 70 administrator tools, authenticated discovery, tenant/role enforcement, typed warehouse commands and original-request recovery through the same journal as REST.
 - Create and select multiple facilities with independent stock, catalog, work and versions. Admin creation uses the same immutable command journal; pending warehouse/native saves hold switching, and reload restores their original warehouse. The paginated picker keeps the active facility visible on mobile.
 - Catalog products and receiving/storage locations; configure facility name, code, city and IANA timezone from Locations.
 - [Lot expiry and quarantine controls](docs/api.md#lot-expiry-quarantine-and-availability) with server-owned cutoff checks, optional required expiry labels, earliest-expiry allocation, independent reasoned holds and protected physical recovery. Inventory distinguishes physical/reserved custody from usable stock.
@@ -93,7 +95,7 @@ Run the required live Postgres suite against a separate database with `test` in 
 WMS_TEST_DATABASE_URL=postgres://warehouse:warehouse@127.0.0.1:5548/warehouse_test bash scripts/check.sh --postgres
 ```
 
-The live suite includes persistence, concurrency, HTTP warehouse lifecycle, native API recovery, conditional OMS receiver races and database guard tests. Explicit invocation fails without a database; default `cargo test` marks these tests ignored. The default check runs domain, authorization, native contract and offline browser tests. CI is configured to run both live database and live browser checks; its current GitHub run is blocked by organization billing/spending limits.
+The live suite includes persistence, concurrency, HTTP warehouse lifecycle, native API recovery, conditional OMS receiver races and database guard tests. Explicit invocation fails without a database; default `cargo test` marks these tests ignored. The default check runs domain, authorization, native contract and offline browser tests. CI is configured to run both live database and live browser checks; the previous hosted run was blocked by organization billing/spending limits. Check the new commit’s run independently.
 
 For disposable socket-only PostgreSQL verification, `bash scripts/local-postgres.sh` initializes an isolated temporary cluster and runs the database suites. `bash scripts/local-postgres.sh bash scripts/check.sh --postgres` runs the complete local check against that cluster. Where sockets are unavailable, `python3 scripts/check-sql.py` applies all migrations in an isolated single-user backend, type-checks runtime SQL, executes independent reconciliation, and verifies receipt/reservation constraints, append-only history and fault-injected rollback. That check does not establish SQLx bindings or concurrent client behavior.
 
@@ -114,3 +116,7 @@ The API serves static dashboard assets, `/health` liveness and `/ready` database
 Persistence stores current products, locations, stock, receipt lines, orders and allocation ownership in normalized PostgreSQL rows. Scoped physical commands load their SKUs and owning work, deriving other orders' source/staging holds directly from allocation rows; full snapshots and independent historical proofs still cover the warehouse. Operational reads serialize typed state directly and compute their physical/reservation proof once; structural validation uses catalog/location indexes. Movements and activity are append-only records; bounded operational views and keyset history pages keep growing history out of each command's write set. The former 8 MiB warehouse aggregate limit is removed. Startup applies tracked migrations and verifies legacy evidence before importing an older snapshot.
 
 Writes serialize within each warehouse. The [workload harness and measured profiles](docs/performance.md) expose the cost of active work rather than claiming production capacity. The [restore rehearsal](docs/operations.md) has exercised an actual archive round-trip, complete table hashes, full reconciliation and recovered request journals. Real physical counts, actual scanner/device acceptance and deployed cross-service tenant mappings still require facility evidence. See [the evidence report](docs/evidence.md) for executed checks and limits.
+
+## License
+
+Available under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option. See [third-party notices](THIRD_PARTY_NOTICES.md), [contributing](CONTRIBUTING.md) and [private security reporting](SECURITY.md).
