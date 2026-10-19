@@ -1,4 +1,4 @@
-import { fit, wrap } from './terminal.mjs';
+import { fit, wrap } from './format.mjs';
 import { safeText } from './client.mjs';
 
 // Columns are in priority order: narrow panes retain identity and operational
@@ -30,42 +30,114 @@ export function tableLines(kind, rows, columns, offset = 0) {
     ...rows.map((row, index) => render([fit(offset + index + 1, numberSize, true), ...chosen.map(col => fit(col.value(row), col.size, col.numeric))])),
   ];
 }
-export async function inspectJson(ui, title, value) {
-  const raw = JSON.stringify(value, null, 2); let offset = 0;
+export async function inspectJson(ui, title, value, { prompt = '\nn next | p previous | Enter back: ' } = {}) {
+  return inspectText(ui, title, JSON.stringify(value, null, 2), { prompt });
+}
+export async function inspectText(ui, title, raw, { prompt = '\nn next | p previous | Enter back: ' } = {}) {
+  let offset = 0;
   for (;;) {
     const lines = raw.split('\n').flatMap(line => wrap(line, ui.columns));
-    const count = Math.max(1, ui.rows - 8);
+    const count = Math.max(1, ui.rows - 5 - wrap(title, ui.columns).length - prompt.split('\n').reduce((total, line) => total + wrap(line, ui.columns).length, 0));
     offset = Math.min(offset, Math.max(0, lines.length - 1));
     ui.screen(title); lines.slice(offset, offset + count).forEach(line => ui.print(line));
     ui.line(`Lines ${offset + 1}–${Math.min(offset + count, lines.length)} of ${lines.length}`);
-    const answer = await ui.ask('\nn next | p previous | Enter back: ');
+    const answer = await (ui.action ? ui.action(prompt) : ui.ask(prompt));
+    if (answer && typeof answer === 'object') {
+      if (answer.key === 'escape') return false;
+      if (answer.key === 'up') offset = Math.max(0, offset - 1);
+      if (answer.key === 'down') offset = Math.min(Math.max(0, lines.length - count), offset + 1);
+      if (['pageup', 'left'].includes(answer.key)) offset = Math.max(0, offset - count);
+      if (['pagedown', 'right'].includes(answer.key)) offset = Math.min(Math.max(0, lines.length - count), offset + count);
+      if (answer.key === 'home') offset = 0;
+      if (answer.key === 'end') offset = Math.max(0, lines.length - count);
+      continue;
+    }
     if (answer === 'n' && offset + count < lines.length) offset += count;
     else if (answer === 'p') offset = Math.max(0, offset - count);
-    else if (!answer || answer === 'q') return;
+    else if (answer === null || answer === 'q') return false;
+    else if (answer === '') return true;
   }
 }
+export async function keyboardHelp(ui) {
+  return inspectText(ui, 'Keyboard guide', `NAVIGATION
+↑ / ↓ or Tab / Shift-Tab  Move through menu actions
+Enter                    Open the highlighted action
+Home / End               First / last action
+PgUp / PgDn or ← / →      Change page
+/text then Enter         Search; / then Enter clears
+Number then Enter        Open the original numbered action
+Esc                      Return; cancel a form or review
+Ctrl-C                   Exit, preserving original requests
+
+HOME SHORTCUTS (then Enter)
+i inventory · o orders · w observed work · c recovery
+r refresh · q exit · F1 or ? help
+
+TABLES
+↑ / ↓ selects a row; Enter opens its complete details.
+A displayed row number also opens details.
+n / p page; j opens page JSON; r refreshes the view.
+Enter returns when no row is selected; Esc always returns.
+Detail views support arrows, Home/End and paging keys.
+
+OBSERVED WORK
+Scan actual literal labels; case and spaces are preserved.
+Paste one field at a time. Multi-line paste is ignored.
+Review the complete paged request, then explicitly type yes.
+Esc before submission cancels entry; it cannot undo sent work.
+Recover uncertain work using its complete original request.
+Arrow keys never record a physical warehouse action.`);
+}
 export async function inspectRows(ui, kind, load) {
-  let snapshot = await load(); let query = ''; let page = 0; let message = '';
+  let snapshot = await load(); let query = ''; let page = 0; let message = ''; let selected = null;
   for (;;) {
     const all = snapshot.rows;
     const filtered = query ? all.filter(row => JSON.stringify(row).toLowerCase().includes(query.toLowerCase())) : all;
-    const count = Math.max(1, ui.rows - 13);
+    const range = (start, end) => `${start}–${end} of ${filtered.length} rows${query ? ` · ${all.length} total · /${query}` : ''}`;
+    const footer = ['Row # details · /text search · / clear · r refresh', `n next · p previous · j page JSON · ${selected === null ? 'Enter back' : 'Esc back'}`];
+    if (ui.keys) footer.push(selected === null ? '↑↓ select · PgUp/PgDn page · Esc back' : '↑↓ select · Enter details · Esc back');
+    const empty = all.length ? 'No matches. Enter / to clear the search.' : 'No records in this snapshot.';
+    const reserved = 8 + wrap(snapshot.title, ui.columns).length + wrap(range(filtered.length, filtered.length), ui.columns).length
+      + footer.reduce((total, line) => total + wrap(line, ui.columns).length, 0)
+      + (message ? wrap(message, ui.columns).length : 0) + (!filtered.length ? wrap(empty, ui.columns).length : 0);
+    const count = Math.max(1, ui.rows - reserved);
+    if (selected !== null) page = Math.floor(selected / count);
     page = Math.min(page, Math.max(0, Math.ceil(filtered.length / count) - 1));
     const offset = page * count; const rows = filtered.slice(offset, offset + count);
     ui.screen(snapshot.title);
-    ui.line(`${filtered.length ? offset + 1 : 0}–${offset + rows.length} of ${filtered.length} rows${query ? ` · ${all.length} total · /${query}` : ''}`);
-    tableLines(kind, rows, ui.columns, offset).forEach(line => ui.print(line));
-    if (!rows.length) ui.line(all.length ? 'No matches. Enter / to clear the search.' : 'No records in this snapshot.');
-    ui.line('Row # details · /text search · / clear · r refresh');
-    ui.line('n next · p previous · j page JSON · Enter back');
+    ui.line(range(filtered.length ? offset + 1 : 0, offset + rows.length));
+    tableLines(kind, rows, ui.columns, offset).forEach((line, index) => {
+      const row = rows[index - 2];
+      const tone = index === 0 ? 'accent' : index === 1 ? 'muted' : selected === offset + index - 2 ? 'selected'
+        : row?.priority === 'urgent' ? 'danger' : row?.status === 'open' ? 'warning' : ['shipped', 'received'].includes(row?.status) ? 'success' : '';
+      ui.print(ui.style ? ui.style(line, tone) : line);
+    });
+    if (!rows.length) ui.line(empty);
+    footer.forEach(line => ui.line(line, 'muted'));
     if (message) ui.line(message);
-    const answer = await ui.ask('\nView: ');
+    let answer = await (ui.action ? ui.action('\nView: ') : ui.ask('\nView: '));
+    if (answer && typeof answer === 'object') {
+      if (answer.key === 'escape') return;
+      if (answer.key === 'f1') { await keyboardHelp(ui); continue; }
+      if (['left', 'pageup', 'right', 'pagedown'].includes(answer.key)) {
+        page = Math.max(0, Math.min(page + (['left', 'pageup'].includes(answer.key) ? -1 : 1), Math.max(0, Math.ceil(filtered.length / count) - 1)));
+        selected = null;
+      } else if (['up', 'down', 'home', 'end'].includes(answer.key) && filtered.length) {
+        if (selected === null) selected = offset;
+        else selected = Math.max(0, Math.min(filtered.length - 1, selected + (answer.key === 'up' ? -1 : answer.key === 'down' ? 1 : 0)));
+        if (answer.key === 'home') selected = 0;
+        if (answer.key === 'end') selected = filtered.length - 1;
+        page = Math.floor(selected / count);
+      }
+      continue;
+    }
+    if (answer === '' && selected !== null && filtered[selected]) answer = String(selected + 1);
     if (!answer || answer === 'q') return;
     message = '';
-    if (answer === 'n') page = Math.min(page + 1, Math.max(0, Math.ceil(filtered.length / count) - 1));
-    else if (answer === 'p') page = Math.max(0, page - 1);
-    else if (answer.startsWith('/')) { query = answer.slice(1); page = 0; }
-    else if (answer === 'r') { snapshot = await load(); page = 0; }
+    if (answer === 'n') { page = Math.min(page + 1, Math.max(0, Math.ceil(filtered.length / count) - 1)); selected = null; }
+    else if (answer === 'p') { page = Math.max(0, page - 1); selected = null; }
+    else if (answer.startsWith('/')) { query = answer.slice(1); page = 0; selected = null; }
+    else if (answer === 'r') { snapshot = await load(); page = 0; selected = null; }
     else if (answer === 'j') await inspectJson(ui, `${snapshot.title} | page JSON`, rows);
     else if (/^[1-9]\d*$/.test(answer) && Number(answer) > offset && Number(answer) <= offset + rows.length) {
       await inspectJson(ui, `${snapshot.title} | row ${answer}`, filtered[Number(answer) - 1]);

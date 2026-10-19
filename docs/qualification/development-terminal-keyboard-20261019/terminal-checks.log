@@ -1,0 +1,197 @@
+TAP version 13
+# Subtest: one scanner chunk preserves exact case and CRLF boundaries across prompts
+ok 1 - one scanner chunk preserves exact case and CRLF boundaries across prompts
+  ---
+  duration_ms: 14.549293
+  type: 'test'
+  ...
+# Subtest: keyboard editing preserves Unicode graphemes and literal surrounding spaces
+ok 2 - keyboard editing preserves Unicode graphemes and literal surrounding spaces
+  ---
+  duration_ms: 4.598829
+  type: 'test'
+  ...
+# Subtest: queued navigation and form entry are delivered to the right prompts
+ok 3 - queued navigation and form entry are delivered to the right prompts
+  ---
+  duration_ms: 5.709648
+  type: 'test'
+  ...
+# Subtest: bracketed paste preserves single fields and does not submit pasted lines
+ok 4 - bracketed paste preserves single fields and does not submit pasted lines
+  ---
+  duration_ms: 3.77947
+  type: 'test'
+  ...
+# Subtest: Ctrl-C and EOF restore terminal mode without accepting partial entry
+ok 5 - Ctrl-C and EOF restore terminal mode without accepting partial entry
+  ---
+  duration_ms: 1.534483
+  type: 'test'
+  ...
+# Subtest: Escape cancels a form and oversized paste never accepts a truncated identity
+ok 6 - Escape cancels a form and oversized paste never accepts a truncated identity
+  ---
+  duration_ms: 2.227696
+  type: 'test'
+  ...
+# Subtest: arrow selection, search and Escape work without changing command numbers or leaking ANSI
+ok 7 - arrow selection, search and Escape work without changing command numbers or leaking ANSI
+  ---
+  duration_ms: 8.280298
+  type: 'test'
+  ...
+# Subtest: resize and paging retain numbered actions, help returns, and colours stay optional
+ok 8 - resize and paging retain numbered actions, help returns, and colours stay optional
+  ---
+  duration_ms: 55.035281
+  type: 'test'
+  ...
+# Subtest: resizing a field preserves partially entered literal scanner text
+ok 9 - resizing a field preserves partially entered literal scanner text
+  ---
+  duration_ms: 9.316083
+  type: 'test'
+  ...
+# Subtest: real API/PG terminal work, lost-success recovery, actor fencing and PTY navigation
+ok 10 - real API/PG terminal work, lost-success recovery, actor fencing and PTY navigation
+  ---
+  duration_ms: 7131.01584
+  type: 'test'
+  ...
+# Private synthetic TUI evidence retained: /tmp/wms-tui-live-4AbVpr
+# Subtest: a lost successful response survives process restart and replays exact original bytes once
+ok 11 - a lost successful response survives process restart and replays exact original bytes once
+  ---
+  duration_ms: 169.952003
+  type: 'test'
+  ...
+# Subtest: changed actor, tenant or server cannot replay original work
+ok 12 - changed actor, tenant or server cannot replay original work
+  ---
+  duration_ms: 28.618235
+  type: 'test'
+  ...
+# Subtest: disk failure before send intent prevents transmission; original request remains recoverable
+ok 13 - disk failure before send intent prevents transmission; original request remains recoverable
+  ---
+  duration_ms: 34.522293
+  type: 'test'
+  ...
+# Subtest: disk failure after committed HTTP response preserves original request and send intent
+ok 14 - disk failure after committed HTTP response preserves original request and send intent
+  ---
+  duration_ms: 26.543574
+  type: 'test'
+  ...
+# Subtest: only a fully bound definitive stale proof resolves rejected work
+ok 15 - only a fully bound definitive stale proof resolves rejected work
+  ---
+  duration_ms: 128.695303
+  type: 'test'
+  ...
+# Subtest: tampering, incomplete history, unsafe permissions and symlink directories are held
+ok 16 - tampering, incomplete history, unsafe permissions and symlink directories are held
+  ---
+  duration_ms: 65.794999
+  type: 'test'
+  ...
+# Subtest: concurrent journal changes prevent a stale process from sending
+ok 17 - concurrent journal changes prevent a stale process from sending
+  ---
+  duration_ms: 33.408658
+  type: 'test'
+  ...
+# Subtest: different outcomes racing for one journal position cannot fork original recovery
+ok 18 - different outcomes racing for one journal position cannot fork original recovery
+  ---
+  duration_ms: 61.152805
+  type: 'test'
+  ...
+# Subtest: separate terminal processes publish only one outcome at each journal position
+ok 19 - separate terminal processes publish only one outcome at each journal position
+  ---
+  duration_ms: 270.28105
+  type: 'test'
+  ...
+# Subtest: legacy uncertain journals replay unchanged original bytes and keep all old checkpoints
+ok 20 - legacy uncertain journals replay unchanged original bytes and keep all old checkpoints
+  ---
+  duration_ms: 83.445193
+  type: 'test'
+  ...
+# Subtest: final checkpoint changes and invalid new-format filenames remain held
+ok 21 - final checkpoint changes and invalid new-format filenames remain held
+  ---
+  duration_ms: 83.18429
+  type: 'test'
+  ...
+# Subtest: HTTP transport refuses redirects and never sends credentials to the redirect target
+ok 22 - HTTP transport refuses redirects and never sends credentials to the redirect target
+  ---
+  duration_ms: 91.451692
+  type: 'test'
+  ...
+# Subtest: numeric precision, unsafe origins and terminal controls cannot silently change identities
+ok 23 - numeric precision, unsafe origins and terminal controls cannot silently change identities
+  ---
+  duration_ms: 1.273426
+  type: 'test'
+  ...
+# Subtest: serial collection requires real literal scans, preserves case and never uses custody labels
+ok 24 - serial collection requires real literal scans, preserves case and never uses custody labels
+  ---
+  duration_ms: 1.12375
+  type: 'test'
+  ...
+# Subtest: typed multi-line forms preserve exact labels and whole each values
+ok 25 - typed multi-line forms preserve exact labels and whole each values
+  ---
+  duration_ms: 0.764443
+  type: 'test'
+  ...
+# Subtest: unknown new-facility work is discoverable across facilities and remains bound to its original target
+ok 26 - unknown new-facility work is discoverable across facilities and remains bound to its original target
+  ---
+  duration_ms: 113.069119
+  type: 'test'
+  ...
+# Subtest: narrow tables preserve graphemes, align wide labels and escape terminal controls
+ok 27 - narrow tables preserve graphemes, align wide labels and escape terminal controls
+  ---
+  duration_ms: 17.530714
+  type: 'test'
+  ...
+# Subtest: table search always uses the full snapshot, clears, pages, refreshes and opens complete original details
+ok 28 - table search always uses the full snapshot, clears, pages, refreshes and opens complete original details
+  ---
+  duration_ms: 27.642718
+  type: 'test'
+  ...
+# Subtest: empty views stay usable and invalid row choices do not leave the table
+ok 29 - empty views stay usable and invalid row choices do not leave the table
+  ---
+  duration_ms: 5.46599
+  type: 'test'
+  ...
+# Subtest: overview distinguishes quantities, terminal orders, pending recovery and read failures
+ok 30 - overview distinguishes quantities, terminal orders, pending recovery and read failures
+  ---
+  duration_ms: 0.824392
+  type: 'test'
+  ...
+# Subtest: menu search keeps original command numbers and a short pane keeps its prompt visible
+ok 31 - menu search keeps original command numbers and a short pane keeps its prompt visible
+  ---
+  duration_ms: 13.682849
+  type: 'test'
+  ...
+1..31
+# tests 31
+# suites 0
+# pass 31
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7239.954673

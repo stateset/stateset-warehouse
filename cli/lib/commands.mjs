@@ -47,7 +47,7 @@ export function visibleCommands(role) {
   return commands.filter(c => role === 'admin' || role === 'operator' && c.role !== 'admin' || role === 'oms' && ['create_order', 'cancel_order', 'cancel_remainder'].includes(c.type));
 }
 export const needsSerialPlan = new Set(['count_stock', 'move_stock', 'receive', 'pick', 'unpick', 'receive_transfer', 'record_transfer_loss', 'reverse_transfer_loss', 'create_return', 'pack_shipment', 'dispatch_transfer']);
-export async function formFields(spec, ask) {
+export async function formFields(spec, ask, notice = () => {}) {
   const result = {};
   for (const field of spec.split(' ')) {
     const name = field.replace(/[#!?]$/, '');
@@ -58,29 +58,29 @@ export async function formFields(spec, ask) {
       if (field.endsWith('?') && value === '') { result[name] = null; break; }
       if (field.endsWith('#')) {
         const minimum = ['counted', 'reorder_point'].includes(name) ? 0 : 1;
-        if (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)) || Number(value) < minimum || Number(value) > 1_000_000) continue;
+        if (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)) || Number(value) < minimum || Number(value) > 1_000_000) { notice(`Enter a whole each quantity from ${minimum} to 1000000.`); continue; }
         result[name] = Number(value); break;
       }
       if (field.endsWith('!')) {
-        if (!['yes', 'no'].includes(value)) continue;
+        if (!['yes', 'no'].includes(value)) { notice('Enter yes or no.'); continue; }
         result[name] = value === 'yes'; break;
       }
-      if (!value || value.trim() !== value || Buffer.byteLength(value) > 240 || /[\x00-\x1f\x7f-\x9f]/.test(value)) continue;
-      if (choices && !choices.includes(value)) continue;
+      if (!value || value.trim() !== value || Buffer.byteLength(value) > 240 || /[\x00-\x1f\x7f-\x9f]/.test(value)) { notice('Enter an exact value, up to 240 UTF-8 bytes, without surrounding spaces or control characters.'); continue; }
+      if (choices && !choices.includes(value)) { notice(`Choose ${choices.join(', ')}.`); continue; }
       if (name === 'timezone') {
-        try { new Intl.DateTimeFormat('en', { timeZone: value }); } catch { continue; }
+        try { new Intl.DateTimeFormat('en', { timeZone: value }); } catch { notice('Enter a valid time zone, for example America/Vancouver.'); continue; }
       }
       result[name] = value; break;
     }
   }
   return result;
 }
-export async function commandForm(spec, ask) {
-  const command = { type: spec.type, ...await formFields(spec.fields, ask) };
+export async function commandForm(spec, ask, notice) {
+  const command = { type: spec.type, ...await formFields(spec.fields, ask, notice) };
   if (spec.rows) {
     const [field, rowSpec] = spec.rows; command[field] = [];
     for (let count = 0; count < 100; count++) {
-      command[field].push(await formFields(rowSpec, ask));
+      command[field].push(await formFields(rowSpec, ask, notice));
       if (await ask('Add another line? (yes/no): ') !== 'yes') break;
     }
   }

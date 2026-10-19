@@ -7,7 +7,7 @@ import { Client, originUrl, parseJson, safeText, tokenFromEnv } from './lib/clie
 import { Journal, boundSession, sendOriginal } from './lib/journal.mjs';
 import { commandForm, visibleCommands, needsSerialPlan } from './lib/commands.mjs';
 import { Terminal } from './lib/terminal.mjs';
-import { inspectRows, overviewLines } from './lib/views.mjs';
+import { inspectJson, inspectRows, overviewLines } from './lib/views.mjs';
 
 export function argumentsFor(argv) {
   const result = {};
@@ -78,7 +78,10 @@ async function perform(client, journal, scope, ui, supplied) {
   if (!command) {
     const spec = await ui.menu('Record warehouse work', visibleCommands(session.identity.role).map(c => [c.label, c]));
     if (!spec) return;
-    command = await commandForm(spec, prompt => ui.ask(prompt));
+    ui.screen(spec.label);
+    ui.line(`Facility: ${scope.warehouse} | reviewed v${snapshot.version}`);
+    ui.line('Enter observed values. Esc cancels; Ctrl-C exits.', 'muted');
+    command = await commandForm(spec, prompt => ui.ask(prompt), message => ui.line(message, 'warning'));
   }
   if (session.identity.role === 'oms' && command.type === 'create_order' && !command.source_order_id) throw new Error('OMS orders require an original source_order_id');
   if (command.type === 'create_warehouse') {
@@ -88,20 +91,20 @@ async function perform(client, journal, scope, ui, supplied) {
   }
   const serial_inputs = await collectSerials(client, scope.warehouse, snapshot, command, prompt => ui.ask(prompt));
   const request = { request_id: randomUUID(), expected_version: snapshot.version, command, ...(serial_inputs.length ? { serial_inputs } : {}) };
-  ui.print(`\nReview actual work | ${safeText(scope.tenant)} | ${safeText(scope.actor)} | ${safeText(scope.warehouse)}`); ui.json(request);
+  if (!await inspectJson(ui, `Review actual work | ${scope.warehouse} | v${snapshot.version}`, { scope, request }, { prompt: '\nn next | p previous | Enter to confirm: ' })) return;
+  ui.line(`Original request: ${request.request_id}`);
   if (await ui.ask('Record this observed work? Type yes: ') !== 'yes') return;
   const record = await journal.prepare(scope, request);
   const outcome = await sendOriginal(client, journal, record);
-  ui.print(`\nRecovery status: ${outcome.stage}; original request ${request.request_id}`); ui.json(outcome.events.at(-1).details);
-  await ui.pause();
+  await inspectJson(ui, `Recovery status: ${outcome.stage} | ${request.request_id}`, outcome.events.at(-1).details, { prompt: '\nn next | p previous | Enter to continue: ' });
   if (command.type === 'create_warehouse' && outcome.stage === 'committed') return scope.warehouse;
 }
 async function recover(client, journal, scope, ui) {
   const records = await journal.listForIdentity(scope);
   const record = await ui.menu('Original request recovery — all your facilities', records.map(r => [`${r.stage} | ${r.original.scope.warehouse} | ${r.request.command.type} | ${r.request.request_id}`, r]));
   if (!record) return;
-  ui.json({ scope: record.original.scope, request: record.request, stage: record.stage });
-  if (['committed', 'not_committed'].includes(record.stage)) { ui.json(record.events.at(-1).details); await ui.pause(); return; }
+  if (!await inspectJson(ui, 'Original request — preserved scope and complete body', { scope: record.original.scope, request: record.request, stage: record.stage })) return;
+  if (['committed', 'not_committed'].includes(record.stage)) { await inspectJson(ui, `Original outcome: ${record.stage}`, record.events.at(-1).details); return; }
   const action = await ui.menu('Recovery action', [['Look up original actor-owned command receipt', 'lookup'], ['Resend complete exact original request', 'retry']]);
   if (!action) return;
   if (action === 'lookup') {
@@ -111,7 +114,8 @@ async function recover(client, journal, scope, ui) {
       await journal.append(record, 'committed', { receipt }); ui.print('Original command receipt found and preserved.');
     } else ui.print('No receipt found. Outcome remains uncertain; preserve the original request.');
   } else if (await ui.ask('Resend the exact original request? Type yes: ') === 'yes') {
-    const outcome = await sendOriginal(client, journal, record); ui.print(`Status: ${outcome.stage}`); ui.json(outcome.events.at(-1).details);
+    const outcome = await sendOriginal(client, journal, record);
+    await inspectJson(ui, `Original recovery status: ${outcome.stage}`, outcome.events.at(-1).details); return;
   }
   await ui.pause();
 }
@@ -131,31 +135,35 @@ async function readView(client, scope, ui, kind) {
     let after = '';
     for (;;) {
       const page = await client.read(`/v1/${kind}?warehouse_id=${encodeURIComponent(scope.warehouse)}&sku=${encodeURIComponent(sku)}${serial ? `&serial=${encodeURIComponent(serial)}` : ''}&limit=100${after ? `&after=${encodeURIComponent(after)}` : ''}`);
-      ui.json(page);
+      if (!await inspectJson(ui, `${kind} | ${scope.warehouse}`, page)) return;
       if (!page.next_cursor || await ui.ask('Next page? (yes/no): ') !== 'yes') break;
       after = page.next_cursor;
     }
+    return;
   } else if (kind === 'order-detail' || kind === 'receipt-detail') {
     const id = await ui.ask('Original record ID: '); if (!id) return;
     const type = kind === 'order-detail' ? 'orders' : 'receipts';
-    ui.json(await client.read(`${base}/${type}/${encodeURIComponent(id)}`));
+    const record = await client.read(`${base}/${type}/${encodeURIComponent(id)}`);
     if (type === 'orders') {
-      ui.json(await client.read(`${base}/orders/${encodeURIComponent(id)}/shipments`));
-      ui.json(await client.read(`${base}/orders/${encodeURIComponent(id)}/return-eligibility`));
-    }
+      const shipments = await client.read(`${base}/orders/${encodeURIComponent(id)}/shipments`);
+      const returnEligibility = await client.read(`${base}/orders/${encodeURIComponent(id)}/return-eligibility`);
+      await inspectJson(ui, `Original order | ${id}`, { record, shipments, returnEligibility });
+    } else await inspectJson(ui, `Original receiving record | ${id}`, record);
+    return;
   } else if (kind === 'history') {
     const section = await ui.menu('Retained history', ['orders', 'receipts', 'movements', 'activity', 'exceptions'].map(s => [s, s])); if (!section) return;
     let before = '';
     for (;;) {
-      const page = await client.read(`${base}/history/${section}?limit=100${before ? `&before=${before}` : ''}`); ui.json(page);
+      const page = await client.read(`${base}/history/${section}?limit=100${before ? `&before=${before}` : ''}`);
+      if (!await inspectJson(ui, `Retained ${section} | ${scope.warehouse}`, page)) return;
       if (!page.next_cursor || await ui.ask('Next page? (yes/no): ') !== 'yes') break;
       before = page.next_cursor;
     }
+    return;
   } else {
     const endpoint = { reconciliation: `${base}/reconciliation`, transfers: `${base}/transfers?limit=100`, lots: `${base}/lots?limit=100`, operations: '/v1/operations/health' }[kind];
-    ui.json(await client.read(endpoint));
+    await inspectJson(ui, `${kind} | ${scope.warehouse}`, await client.read(endpoint));
   }
-  await ui.pause();
 }
 async function interop(client, journal, scope, ui) {
   const choice = await ui.menu('iCommerce interoperability', [['Preview an upstream MoveInventory or CreateInventoryItem', 'preview'], ['Export actual iCommerce inventory with explicit location IDs', 'inventory']]);
@@ -163,12 +171,13 @@ async function interop(client, journal, scope, ui) {
   ui.print(choice === 'preview' ? 'Enter the strict preview JSON (kind, input and mappings/category). Decimal quantities must be strings.' : 'Enter mappings JSON: {"locations":{"7":"RECV-01",...},"lots":{}}');
   const raw = await ui.ask('JSON: '); if (!raw) return;
   parseJson(raw); // Reject unsafe numeric precision without rewriting wire fields.
-  const response = await client.call('POST', client.warehousePath(scope.warehouse, `/icommerce/${choice}`), raw); ui.json(response.data);
-  if (!response.ok) { await ui.pause(); return; }
+  const response = await client.call('POST', client.warehousePath(scope.warehouse, `/icommerce/${choice}`), raw);
+  if (!await inspectJson(ui, `iCommerce ${choice} | HTTP ${response.status}`, response.data)) return;
+  if (!response.ok) return;
   if (choice === 'preview' && await ui.ask('Review this canonical command for actual execution? (yes/no): ') === 'yes') {
     // Refresh the execution review visibly; never translate an uncertain request.
     await perform(client, journal, scope, ui, response.data.command);
-  } else await ui.pause();
+  }
 }
 export async function main(argv = process.argv.slice(2), env = process.env) {
   const args = argumentsFor(argv); if (args.help) { console.log(help); return; }
@@ -189,7 +198,7 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
     console.log(JSON.stringify(data, null, 2)); return;
   }
   if (!process.stdin.isTTY || !process.stdout.isTTY) throw new Error('Interactive mode requires a terminal; use --once for read-only automation');
-  const ui = new Terminal();
+  const ui = new Terminal(process.stdin, process.stdout, env);
   try {
     for (;;) {
       session = await client.session(); const scope = scopeFor(client, session, warehouse);
@@ -203,6 +212,7 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
         ['Record observed warehouse work', 'work'], ['Inventory', 'stocks'], ['Products', 'products'], ['Bins', 'locations'], ['Orders', 'orders'], ['Receiving / returns', 'receipts'], ['Original order and shipment review', 'order-detail'], ['Original receiving record', 'receipt-detail'], ['Lots and holds', 'lots'], ['Facility transfers', 'transfers'], ['Serial custody', 'serials'], ['Serial history', 'serial-history'], ['Exceptions', 'exceptions'], ['Retained history', 'history'], ['Reconciliation', 'reconciliation'], ['Operations', 'operations'], ['Original request recovery', 'recovery'], ['iCommerce interop', 'interop'], ['Select facility', 'warehouse'],
       ], {
         intro: overviewLines(snapshot, pending, session, warehouse),
+        sections: { 1: 'WORK & INVENTORY', 9: 'TRACEABILITY & CONTROL', 16: 'SYSTEM & RECOVERY' },
         shortcuts: { i: 'stocks', o: 'orders', w: 'work', c: 'recovery', r: 'refresh' },
         hint: ['i inventory · o orders · w work · c recovery · r refresh', '/text search · ? help · q exit'],
       });
@@ -214,7 +224,10 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
         else if (action === 'warehouse') warehouse = await selectWarehouse(client, ui) ?? warehouse;
         else if (action === 'interop') await interop(client, journal, scope, ui);
         else await readView(client, scope, ui, action);
-      } catch (error) { ui.print(`\nHeld: ${safeText(error.message)}\nExisting original requests remain in Recovery.`); await ui.pause(); }
+      } catch (error) {
+        if (error.code === 'INPUT_CANCELLED') continue;
+        ui.print(`\nHeld: ${safeText(error.message)}\nExisting original requests remain in Recovery.`); await ui.pause();
+      }
     }
   } finally { ui.close(); }
 }

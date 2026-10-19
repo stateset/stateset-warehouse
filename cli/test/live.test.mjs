@@ -84,7 +84,7 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
       transcript += chunk.toString();
       while (handled < steps.length) {
         const [prompt, answer] = steps[handled]; const index = transcript.indexOf(prompt, position); if (index < 0) break;
-        position = index + prompt.length; handled++; terminal.stdin.write(`${answer}\n`);
+        position = index + prompt.length; handled++; terminal.stdin.write(typeof answer === 'object' ? answer.keys : `${answer}\n`);
       }
     };
     terminal.stdout.on('data', drive); terminal.stderr.on('data', drive);
@@ -101,14 +101,30 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
     ['Select: ', 'i'], ['View: ', '/tui-part'], ['View: ', '1'],
     ['n next | p previous | Enter back: ', ''], ['View: ', '/missing'],
     ['View: ', '/'], ['View: ', 'r'], ['View: ', ''],
-    ['Select: ', 'o'], ['View: ', ''], ['Select: ', 'r'], ['Select: ', 'q'],
+    ['Select: ', 'o'], ['View: ', ''],
+    ['Select: ', '11'], ['Exact SKU: ', 'TUI-PART'], ['Exact serial (empty for page): ', ''], ['n next | p previous | Enter back: ', ''],
+    ['Select: ', '12'], ['Exact SKU: ', 'TUI-PART'], ['Exact serial (empty for page): ', 'Original'], ['n next | p previous | Enter back: ', ''],
+    ['Select: ', '14'], ['Select: ', '3'], ['n next | p previous | Enter back: ', ''],
+    ['Select: ', '15'], ['n next | p previous | Enter back: ', ''],
+    ['Select: ', '?'], ['n next | p previous | Enter back: ', ''],
+    ['Select: ', 'r'], ['Select: ', 'q'],
   ], 'read-only-terminal.txt', { expectCommit: false });
   assert.ok(readTranscript.includes('On hand 3 ea · Reserved 0 ea'));
   assert.ok(readTranscript.includes('No matches. Enter / to clear the search.'));
   assert.ok(readTranscript.includes('"sku": "TUI-PART"'));
   assert.ok(readTranscript.includes('No records in this snapshot.'));
   assert.equal((await client.read(client.warehousePath('wh-main'))).version, committedVersion, 'overview, search, detail and refresh are read-only');
-  await driveTerminal([['Select: ', '1'], ['Select: ', '2'], ['sku: ', 'TUI-PART'], ['lot: ', 'UNTRACKED'], ['from: ', 'A'], ['to: ', 'B'], ['quantity (whole each): ', '1'], ['Scan actual TUI-PART [] label 1/1: ', 'original'], ['Record this observed work? Type yes: ', 'yes'], ['Enter to continue: ', ''], ['Select: ', 'q']], 'terminal.txt');
+  const arrowTranscript = await driveTerminal([
+    ['Select: ', { keys: '\x1b[B\n' }], ['View: ', { keys: '\x1b[B\n' }],
+    ['n next | p previous | Enter back: ', { keys: '\x1b' }],
+    ['View: ', { keys: '\x1b' }], ['Select: ', 'q'],
+  ], 'arrow-terminal.txt', { expectCommit: false });
+  assert.ok(arrowTranscript.includes('Inventory | wh-main | snapshot'));
+  assert.ok(arrowTranscript.includes('"sku": "TUI-PART"'));
+  assert.ok(arrowTranscript.includes('\x1b[?1049h') && arrowTranscript.includes('\x1b[?1049l'), 'terminal screen restored');
+  assert.equal((await client.read(client.warehousePath('wh-main'))).version, committedVersion);
+  const moveTranscript = await driveTerminal([['Select: ', '1'], ['Select: ', '2'], ['sku: ', 'TUI-PART'], ['lot: ', 'UNTRACKED'], ['from: ', 'A'], ['to: ', 'B'], ['quantity (whole each): ', '1.5'], ['quantity (whole each): ', '1'], ['Scan actual TUI-PART [] label 1/1: ', 'original'], ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'yes'], ['Enter to continue: ', ''], ['Select: ', 'q']], 'terminal.txt');
+  assert.ok(moveTranscript.includes('Enter a whole each quantity from 1 to 1000000.'));
   const final = await client.read(client.warehousePath('wh-main'));
   assert.equal(final.version, committedVersion + 1);
   assert.equal(final.stocks.find(s => s.location === 'A').on_hand, 1);
@@ -118,11 +134,22 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
   for (const label of ['Original', 'original']) assert.equal(custody.items.find(row => row.serial === label).place.location, 'B');
   assert.equal(custody.items.find(row => row.serial === 'Third').place.location, 'A');
   assert.equal((await client.read(client.warehousePath('wh-main', '/reconciliation'))).ok, true);
+  const recordsBeforeCancel = (await journal.listForIdentity(scope)).length;
+  const cancelled = await driveTerminal([
+    ['Select: ', '1'], ['Select: ', '2'], ['sku: ', { keys: '\x1b' }],
+    ['Select: ', '1'], ['Select: ', '2'], ['sku: ', 'TUI-PART'], ['lot: ', 'UNTRACKED'],
+    ['from: ', 'A'], ['to: ', 'B'], ['quantity (whole each): ', '1'],
+    ['Scan actual TUI-PART [] label 1/1: ', 'Third'],
+    ['Enter to confirm: ', { keys: '\x1b' }], ['Select: ', 'q'],
+  ], 'cancel-terminal.txt', { expectCommit: false });
+  assert.ok(!cancelled.includes('Record this observed work? Type yes: '), 'Escape from review does not enter confirmation');
+  assert.equal((await client.read(client.warehousePath('wh-main'))).version, final.version, 'cancelled form and observed review do not commit');
+  assert.equal((await journal.listForIdentity(scope)).length, recordsBeforeCancel, 'cancelled review does not fabricate an original request');
   // Facility creation must target a new identity at version zero. Exercise
   // the actual terminal form, automatic selection and durable original record.
   const createIndex = visibleCommands('admin').findIndex(c => c.type === 'create_warehouse') + 1;
   assert.ok(createIndex > 0);
-  const facilityTranscript = await driveTerminal([['Select: ', '1'], ['Select: ', String(createIndex)], ['code: ', 'TUI-NEW'], ['name: ', 'Synthetic new facility'], ['city: ', 'Synthetic City'], ['timezone: ', 'America/Vancouver'], ['Record this observed work? Type yes: ', 'yes'], ['Enter to continue: ', ''], ['Select: ', 'q']], 'facility-terminal.txt');
+  const facilityTranscript = await driveTerminal([['Select: ', '1'], ['Select: ', String(createIndex)], ['code: ', 'TUI-NEW'], ['name: ', 'Synthetic new facility'], ['city: ', 'Synthetic City'], ['timezone: ', 'America/Vancouver'], ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'yes'], ['Enter to continue: ', ''], ['Select: ', 'q']], 'facility-terminal.txt');
   const createdRecord = (await journal.listForIdentity(scope)).find(r => r.request.command.type === 'create_warehouse');
   assert.ok(createdRecord); assert.equal(createdRecord.stage, 'committed');
   assert.equal(createdRecord.request.expected_version, 0);

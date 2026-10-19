@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add terminal palette colours, highlighted arrow/Tab navigation, full-screen buffer restoration, resize handling and a paged keyboard guide. Preserve literal scanner bursts and CRLF input; cancel forms/reviews with Esc before submission. Page complete original write reviews, outcomes and long inspection views, and explain invalid field entries.
 - Add a responsive warehouse terminal overview, identity-wide pending recovery notice, menu search/shortcuts and searchable paged tables with complete record details. Preserve existing menu numbers, exact physical write reviews and headless JSON output; include 70-column real terminal acceptance.
 - Prevent terminal recovery histories from forking when separate processes publish different outcomes at the same sequence position. Checkpoints claim one shared filename regardless of outcome, include a payload checksum, and report a concurrent change without overwriting the winner.
 - Preserve exact original requests and existing checkpoints when continuing 0.2.0 journals. New journals use schema 2; close older terminal clients before upgrading. Previously forked histories remain held for review.

@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "scope": "targeted_terminal_keyboard_development",
+  "recorded_at": "2026-10-19T22:16:19.659162+00:00",
+  "result": "passed",
+  "production_qualified": false,
+  "baseline_tag": "v0.2.0",
+  "parent_commit": "9ce9d78f270db1b0fa3cbf911074d421ba3a71e1",
+  "terminal_checks_passed": 31,
+  "terminal_checks_skipped": 0,
+  "node_version": "22.18.0",
+  "test_command": "WMS_TEST_DATABASE_URL=<isolated-test-db> node --test cli/test/*.test.mjs",
+  "actual_pg_api_and_70_column_44_row_pty_passed": true,
+  "checks": [
+    "arrow menu and row selection",
+    "stable original menu numbers",
+    "resizing keeps selected action visible",
+    "resizing preserves partial literal input",
+    "Unicode grapheme editing",
+    "single-chunk scanner case and CRLF preservation",
+    "single-field bracketed paste",
+    "multiline paste does not submit fields",
+    "oversized paste cannot silently truncate identity",
+    "Ctrl-C and EOF restore input mode",
+    "normal exit restores alternate screen",
+    "palette colours optional through NO_COLOR",
+    "paged keyboard guide",
+    "read-only inventory/search/detail/refresh/orders",
+    "paged serial custody and exact serial history",
+    "retained movement history and reconciliation",
+    "invalid quantity feedback and re-entry",
+    "actual observed serial move with explicit paged review",
+    "Escape cancels form and physically observed review without request preparation or commit",
+    "facility creation selects its new identity",
+    "original lost-success replay and actor fencing",
+    "separate-process original recovery races and legacy continuation"
+  ],
+  "recovery_journal_module_unchanged_sha256": "c6ba9e83810940cd19ba9675cc25c337cc326d928913dd95483a6a5961c11e7d",
+  "qualified_backend_image_inputs_unchanged": 305,
+  "qualified_backend_image_inputs_sha256": "7d59f80d543801c9237fa9a7dac313f00b31228f81b699a100e34f531343be89",
+  "full_release_gate_rerun": false,
+  "npm_package_dry_run_files": 13,
+  "package_published": false,
+  "source_files": [
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "2b5d5c73f3c281007df7c4f1ed32f265a8aa5c06d38c627011e8f0401ab676fb"
+    },
+    {
+      "path": "cli/README.md",
+      "sha256": "66617e38232bd2381892aee24e228ce530656c81424c6010b171db6e793b052f"
+    },
+    {
+      "path": "cli/warehouse-tui.mjs",
+      "sha256": "4d247840f752ebd210c654beb95948b504b05164b7ee8b5230f6f0760a4047f0"
+    },
+    {
+      "path": "cli/lib/commands.mjs",
+      "sha256": "76ee05d1fcbbd1d5934d795139c03d92d80742c89253530d8a6e4285a82de784"
+    },
+    {
+      "path": "cli/lib/terminal.mjs",
+      "sha256": "abe16b3c211243ac17eb353476aa54270db605f4d206a598f6e93834a2c85914"
+    },
+    {
+      "path": "cli/lib/views.mjs",
+      "sha256": "2c9ee344a6d83aab0cd0821f6fbda42f162f80c5de7e26f9d39170468e384dd1"
+    },
+    {
+      "path": "cli/lib/format.mjs",
+      "sha256": "9eab17a2524403feab3b5e15422c2faf597d5f251a757c25d92432b8df7ca78a"
+    },
+    {
+      "path": "cli/lib/keys.mjs",
+      "sha256": "a34530747013716df26958d6567ee1a667af260b1ba71760740d36bf0e5a20f4"
+    },
+    {
+      "path": "cli/test/live.test.mjs",
+      "sha256": "c27f3eb60cd4ea1c1c833ecfb06a39c5c436212386089497fcfb448f6eae36a9"
+    },
+    {
+      "path": "cli/test/keys.test.mjs",
+      "sha256": "7922eb7f12a47273cb9002aaab497a20792729bd89b50e2058226e7e4dd2ebfb"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "terminal-checks.log",
+      "sha256": "1a5e5d3c3b2e05b697b82bf858446893e82e857c27951c2562e7b434336c2455"
+    }
+  ],
+  "limits": [
+    "Local synthetic tests do not establish deployed scanner hardware or physical facility acceptance.",
+    "The live right pane uses an isolated persistent synthetic demo database.",
+    "Checks are targeted terminal development checks, not a rerun of the full release gate.",
+    "The v0.2.0 tag and its qualified image remain unchanged."
+  ]
+}
