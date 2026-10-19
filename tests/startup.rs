@@ -113,6 +113,23 @@ fn settings() -> BTreeMap<String, String> {
 }
 
 #[tokio::test]
+async fn invalid_mcp_authorities_fail_before_database_access() {
+    for raw in [
+        r#"{"allowed_hosts":[]}"#,
+        r#"{"allowed_hosts":["*"]}"#,
+        r#"{"allowed_hosts":["warehouse.example"],"allowed_origins":["http://untrusted.example"]}"#,
+    ] {
+        let mut env = settings();
+        env.insert("WMS_MCP_JSON".into(), raw.into());
+        env.insert(
+            "DATABASE_URL".into(),
+            "postgres://unused@127.0.0.1:1/unused".into(),
+        );
+        Process::start(&env).rejects("MCP").await;
+    }
+}
+
+#[tokio::test]
 async fn malformed_receivers_are_rejected_before_database_access() {
     for destination in ["OMS", "TMS"] {
         for (url, token, tenant, diagnostic) in [

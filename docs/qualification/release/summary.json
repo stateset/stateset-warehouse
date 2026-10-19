@@ -1,107 +1,112 @@
 {
   "schema_version": 1,
   "scope": "software_release_gate",
-  "recorded_at": "2026-10-17T19:19:12.753908+00:00",
+  "recorded_at": "2026-10-19T14:55:20.694563+00:00",
   "result": "passed",
   "production_qualified": false,
   "synthetic": true,
-  "release_revision": "unrecorded-working-tree",
-  "elapsed_seconds": 829,
+  "release_revision": "source39-serial-scope-source-sets",
+  "elapsed_seconds": 2038,
   "stages": [
     {
       "name": "prerequisites",
       "status": "passed",
       "exit_code": 0,
-      "elapsed_seconds": 2.784
+      "elapsed_seconds": 0.363
     },
     {
       "name": "software_checks",
       "status": "passed",
       "exit_code": 0,
-      "elapsed_seconds": 294.179
+      "elapsed_seconds": 291.614
     },
     {
       "name": "observability_rules",
       "status": "passed",
       "exit_code": 0,
-      "elapsed_seconds": 34.731
+      "elapsed_seconds": 0.911
     },
     {
       "name": "release_builds",
       "status": "passed",
       "exit_code": 0,
-      "elapsed_seconds": 14.056
+      "elapsed_seconds": 70.818
     },
     {
       "name": "standard_workload",
       "status": "passed",
       "exit_code": 0,
-      "elapsed_seconds": 38.611
+      "elapsed_seconds": 135.186
     },
     {
       "name": "archive_restore",
       "status": "passed",
       "exit_code": 0,
-      "elapsed_seconds": 3.066
+      "elapsed_seconds": 27.644
     },
     {
       "name": "live_browsers",
       "status": "passed",
       "exit_code": 0,
-      "elapsed_seconds": 35.616
+      "elapsed_seconds": 99.158
     },
     {
       "name": "production_container",
       "status": "passed",
       "exit_code": 0,
-      "elapsed_seconds": 233.774
+      "elapsed_seconds": 163.65
     },
     {
       "name": "image_resilience",
       "status": "passed",
       "exit_code": 0,
-      "elapsed_seconds": 171.274
+      "elapsed_seconds": 1248.064
     },
     {
       "name": "stable_source_inputs",
       "status": "passed",
       "exit_code": 0,
-      "elapsed_seconds": 0.306
+      "elapsed_seconds": 0.145
     }
   ],
   "artifacts": [
     {
       "stage": "standard_workload",
       "path": "standard_workload.json",
-      "sha256": "06048825fca344460fd161823fe555eac269c95373a0bcaae37afcae351c7d9b"
+      "sha256": "b735ca3588d7e2bcf2177c24adf8050e20c3ab6dc2923924427ffe9943fc7587"
     },
     {
       "stage": "archive_restore",
       "path": "archive_restore.json",
-      "sha256": "137d773a87438fa030f1a5bc9369653f280769b0261907d6f81f512e0f3e4980"
+      "sha256": "713c5d17adccbd80fc0a2b1c74e2363e74af25af5ca3ed8cf2f754c8a80840f2"
     },
     {
       "stage": "observability_rules",
       "path": "observability_rules.json",
-      "sha256": "2ec826776c6ef502c9a4f460e284d4a27fa50f48c6a9a54348c769e44ba2431e"
+      "sha256": "c1be593ce5432209c34b032273cd2bc44ca87c1d8a69b653e588f0175398d01b"
     },
     {
       "stage": "production_container",
       "path": "production_container.json",
-      "sha256": "a15c96ad7fdbddbf02dc03fee3d9741146e8a2e8d443e5b52d082da6b03f9f33"
+      "sha256": "cea957c463b68850e20c4e8eb9f7ffb59b1fa8344091474e179cdeaa3b87d27f"
     },
     {
       "stage": "image_resilience",
       "path": "image_resilience.json",
-      "sha256": "cbf5de5694d5497e432033726eb0876cec20b1227951dc8ec7609d26a3e84170"
+      "sha256": "c6560389cd87f759991a36a97d062f4de0f9c3e61c259e32167dea73fd80acd8"
+    },
+    {
+      "stage": "image_serial_resilience",
+      "path": "image_serial_resilience.json",
+      "sha256": "ec108c80588047bc2595e7eb1970794895bbff8af4ff7129616fd2593e1f8812"
     },
     {
       "path": "source-inputs-before.json",
-      "sha256": "6501fb306f493cb40c806a057e529dcd54e4fdcae95cfbd81a8150aeb6a41c08"
+      "sha256": "cbfd88f9cf4e848bacaaf8a7470567089245e97315eab32e938a743969b0088d"
     },
     {
       "path": "source-inputs-after.json",
-      "sha256": "6501fb306f493cb40c806a057e529dcd54e4fdcae95cfbd81a8150aeb6a41c08"
+      "sha256": "cbfd88f9cf4e848bacaaf8a7470567089245e97315eab32e938a743969b0088d"
     },
     {
       "path": "tool-versions.json",
@@ -109,23 +114,23 @@
     },
     {
       "path": "provenance.json",
-      "sha256": "5eebac3fb1812fa905c0787490227fa8d97be402650a7a018c97b32c9332b849"
+      "sha256": "e70413d6601fbdd3dfd2791daf19f7d31a69269640db21f9e29009f8640b3a3a"
     },
     {
       "path": "archive_restore.log",
-      "sha256": "881de6a83cc78cb23f56585f8346d5e8b5d18722ca0f873ce18e0dc1c09802bb"
+      "sha256": "6f7eadec7c7d547e44c66a3ab96af99eca5caa90a4169c0ac54174326be43b6e"
     },
     {
       "path": "demo-api.log",
-      "sha256": "123cefbfcd69efd80208e96973bddb4b304830cbb860dd1a411cf471853984d4"
+      "sha256": "3172bb03d59bdb8f26a2ac10d7ab0dc897b9e4e0d38ace035fa1733058505c67"
     },
     {
       "path": "image_resilience.log",
-      "sha256": "689e10d6d796222cb4613b2d38d53b1674dee9a3394241a8e866e6a425a778a3"
+      "sha256": "8d9ca96fa4d62062e1c13125842640287e0f974834d0d8febfecadf24e32bdc0"
     },
     {
       "path": "live_browsers.log",
-      "sha256": "4d33b87e431676fc8ab22d0c23506e0e1ad161700aa8bee5b80da21693a54f0c"
+      "sha256": "71cc5a18cd8d92d868283a6f6311b7a54b2c4db70fe4876a4657e4a288648042"
     },
     {
       "path": "observability_rules.log",
@@ -137,19 +142,19 @@
     },
     {
       "path": "production_container.log",
-      "sha256": "a63173b3b8e9da0c3dc83c61e513776fb122631258c3a610802b47727b42df39"
+      "sha256": "0c1c95580d041646878485f8364b24ec8347ca26111ae3da8edf1ff9b4c798b7"
     },
     {
       "path": "release_builds.log",
-      "sha256": "b3a152eee1edf9a9b004164f0839e824e9a6071d270042576ebc1cb4209ab007"
+      "sha256": "867c68daf6dc6c472e0ff5d2f8f74bc7e6864eeb170ddab4d3a0ff13a35bd6f0"
     },
     {
       "path": "scanner-api.log",
-      "sha256": "6f71c2eaa321c648551af380870976bf4bc8e133c76fbc39930b39e7ba84bb2a"
+      "sha256": "cf03eb44d6ac9cdc4e978fb1a77ca22314a8a109a1f0c0ed98c192a1ef1ea93a"
     },
     {
       "path": "software_checks.log",
-      "sha256": "e66a88c60dc9d285c7d51a94acc904c233dab9ef6f6eb61843566d84798c2b15"
+      "sha256": "cf2b83d9a779b42f0b5291ded553b39141f2002de6a73ab64079b71d3b2feea6"
     },
     {
       "path": "stable_source_inputs.log",
@@ -157,7 +162,7 @@
     },
     {
       "path": "standard_workload.log",
-      "sha256": "a3a04b787238f32aa176a53aefcdbfcf6c6f12fc23a4821fe376b75d6d428254"
+      "sha256": "c72d4451289e8bc1f295d955fdb6c89012c93a986544bff5530013ea57acf603"
     }
   ],
   "not_performed": [

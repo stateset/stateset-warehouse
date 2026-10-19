@@ -173,6 +173,25 @@ test("scanner receiving and exact-line picking survive a concurrent operator cou
   await page.getByLabel("Physical quantity (each)").fill("2");
   await page.getByLabel("Physical quantity (each)").press("Enter");
   expect((await read()).version).toBe(beforeScan.version);
+  // A distinct operator counts an unrelated lot after these labels were
+  // verified. Refresh must retain this receipt's unaffected physical review.
+  await command(
+    {
+      type: "count_stock",
+      sku,
+      lot: `OTHER-${suffix}`,
+      location: storage,
+      counted: 0,
+      reason: "Independent lot review while receiving labels remain verified",
+    },
+    counterHeaders,
+  );
+  await page
+    .getByRole("button", { name: "Refresh warehouse", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Confirm scanned receipt", exact: true }),
+  ).toBeEnabled();
   await confirm("Confirm scanned receipt", 2);
   let canonicalReceipt = await read(`${root}/receipts/${receiptId}`);
   expect(
@@ -183,7 +202,8 @@ test("scanner receiving and exact-line picking survive a concurrent operator cou
   ).toBe(2);
   expect(
     (await read()).stocks.find(
-      (stock: any) => stock.sku === sku && stock.location === receiving,
+      (stock: any) =>
+        stock.sku === sku && stock.lot === lot && stock.location === receiving,
     ).on_hand,
   ).toBe(2);
 
@@ -211,7 +231,8 @@ test("scanner receiving and exact-line picking survive a concurrent operator cou
   await saved();
   expect(
     (await read()).stocks.find(
-      (stock: any) => stock.sku === sku && stock.location === storage,
+      (stock: any) =>
+        stock.sku === sku && stock.lot === lot && stock.location === storage,
     ).on_hand,
   ).toBe(5);
 
@@ -368,4 +389,224 @@ test("scanner receiving and exact-line picking survive a concurrent operator cou
     "full_append_only_ledger_and_order_line_allocations",
   );
   expect(pageErrors).toEqual([]);
+});
+
+test("replenishment moves and customer returns retain exact physical and source evidence", async ({
+  page,
+}) => {
+  test.setTimeout(120000);
+  page.setDefaultTimeout(10000);
+  const root = "/v1/warehouses/wh-main";
+  const token =
+    process.env.WMS_SCANNER_OPERATOR_TOKEN ||
+    "scanner-live-operator-credential-0001";
+  const headers = { Authorization: `Bearer ${token}` };
+  const suffix = randomUUID().slice(0, 8);
+  const sku = `WF-${suffix}`,
+    lot = `LOT-${suffix}`,
+    pick = `WF-PICK-${suffix}`,
+    reserve = `WF-RESERVE-${suffix}`;
+  const orderReference = `WF-ORDER-${suffix}`,
+    rma = `RMA-${suffix}`;
+  const get = async (path = root): Promise<any> => {
+    const response = await page.request.get(path, { headers });
+    expect(response.ok(), await response.text()).toBe(true);
+    return response.json();
+  };
+  const command = async (command: unknown): Promise<any> => {
+    const state = await get();
+    const response = await page.request.post(root + "/commands", {
+      headers,
+      data: {
+        request_id: randomUUID(),
+        expected_version: state.version,
+        command,
+      },
+    });
+    expect(response.ok(), await response.text()).toBe(true);
+    return response.json();
+  };
+  await command({
+    type: "create_product",
+    sku,
+    name: "Workflow qualification",
+    category: "Synthetic",
+    reorder_point: 2,
+  });
+  await command({
+    type: "create_location",
+    code: pick,
+    zone: "Pick",
+    kind: "storage",
+  });
+  await command({
+    type: "create_location",
+    code: reserve,
+    zone: `Reserve-${suffix}`,
+    kind: "storage",
+  });
+  await command({
+    type: "count_stock",
+    sku,
+    lot,
+    location: reserve,
+    counted: 10,
+    reason: "Synthetic opening count",
+  });
+  await page.goto("/");
+  await page.getByLabel("API credential", { exact: true }).fill(token);
+  await page
+    .getByRole("button", { name: "Connect to workspace", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Warehouse overview", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Inventory", exact: true }).click();
+  await page.getByText("Pick-face replenishment", { exact: true }).click();
+  await page.getByLabel("Replenishment SKU", { exact: true }).selectOption(sku);
+  await page
+    .getByLabel("Pick-face destination", { exact: true })
+    .selectOption(pick);
+  await page
+    .getByLabel("Reserve source zone", { exact: true })
+    .selectOption(`Reserve-${suffix}`);
+  await page.getByLabel("Minimum available (each)", { exact: true }).fill("2");
+  await page.getByLabel("Target available (each)", { exact: true }).fill("5");
+  await page
+    .getByRole("button", { name: "Plan replenishment", exact: true })
+    .click();
+  await expect(
+    page.getByText("0 available · 5 planned · 0 still unavailable", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  const moved = page.waitForResponse(
+    (r) =>
+      r.url().endsWith(root + "/commands") && r.request().method() === "POST",
+  );
+  await page
+    .getByRole("button", { name: "Confirm physical move", exact: true })
+    .click();
+  const moveResponse = await moved;
+  expect(moveResponse.ok()).toBe(true);
+  const submitted = moveResponse.request().postDataJSON();
+  expect(Object.keys(submitted.resource_versions)).toHaveLength(5);
+  const afterMove = await get();
+  expect(
+    afterMove.stocks.find((s: any) => s.sku === sku && s.location === pick)
+      .on_hand,
+  ).toBe(5);
+  expect(
+    afterMove.stocks.find((s: any) => s.sku === sku && s.location === reserve)
+      .on_hand,
+  ).toBe(5);
+  const created = await command({
+    type: "create_order",
+    reference: orderReference,
+    source_order_id: null,
+    customer: "Synthetic customer",
+    destination: "Synthetic destination",
+    priority: "normal",
+    lines: [
+      { id: `line-a-${suffix}`, sku, quantity: 2 },
+      { id: `line-b-${suffix}`, sku, quantity: 1 },
+    ],
+  });
+  const orderId = created.result.entity_id;
+  await command({ type: "allocate", order_id: orderId });
+  const allocated = await get(`${root}/orders/${orderId}`);
+  for (const a of allocated.allocations)
+    await command({
+      type: "pick",
+      order_id: orderId,
+      line_id: a.line_id,
+      location: a.location,
+      lot: a.lot,
+      quantity: a.quantity,
+    });
+  await command({ type: "pack", order_id: orderId });
+  await command({
+    type: "ship",
+    order_id: orderId,
+    carrier: "Synthetic carrier",
+    handoff_reference: `HANDOFF-${suffix}`,
+  });
+  await page
+    .getByRole("button", { name: "Refresh warehouse", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Fulfillment", exact: true }).click();
+  await page.getByRole("button", { name: orderReference, exact: true }).click();
+  await page
+    .getByRole("button", { name: "Review return allowance", exact: true })
+    .click();
+  await expect(
+    page.getByText("Allowance checked against the original recorded handoff.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.getByLabel("RMA reference", { exact: true }).fill(rma);
+  await page
+    .getByLabel("Original line and lot", { exact: true })
+    .selectOption(JSON.stringify([`line-a-${suffix}`, lot]));
+  await page.getByLabel("Return quantity (each)", { exact: true }).fill("1");
+  await page
+    .getByLabel("Return reason / inspection evidence", { exact: true })
+    .fill("Synthetic customer return; inspect before restocking");
+  const authorized = page.waitForResponse(
+    (r) =>
+      r.url().endsWith(root + "/commands") && r.request().method() === "POST",
+  );
+  await page
+    .getByRole("button", { name: "Authorize return receipt", exact: true })
+    .click();
+  expect((await authorized).ok()).toBe(true);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const afterAuthorization = await get();
+  expect(
+    afterAuthorization.stocks
+      .filter((s: any) => s.sku === sku)
+      .reduce((sum: number, s: any) => sum + s.on_hand, 0),
+  ).toBe(7);
+  const receipt = afterAuthorization.receipts.find(
+    (r: any) => r.reference === rma,
+  );
+  expect(receipt.return_source.order_id).toBe(orderId);
+  expect(Object.values(receipt.return_source.line_ids)).toEqual([
+    `line-a-${suffix}`,
+  ]);
+  await page.getByRole("button", { name: "Receiving", exact: true }).click();
+  await page.getByRole("button", { name: rma, exact: true }).click();
+  await expect(
+    page.getByText(`Customer return · original order ${orderId}`, {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Receive goods", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Confirm receipt", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const received = await get();
+  expect(
+    received.stocks.find((s: any) => s.sku === sku && s.location === "RECV-01")
+      .on_hand,
+  ).toBe(1);
+  const original = await get(`${root}/orders/${orderId}`);
+  expect(original.status).toBe("shipped");
+  const allowance = await get(`${root}/orders/${orderId}/return-eligibility`);
+  expect(
+    allowance.lines.find((l: any) => l.order_line_id === `line-a-${suffix}`)
+      .remaining,
+  ).toBe(1);
+  const proof = await get(root + "/reconciliation");
+  expect(proof.ok).toBe(true);
+  expect(proof.returns.find((r: any) => r.order_id === orderId)).toMatchObject({
+    authorized: 1,
+    received: 1,
+    shipped: 2,
+    ok: true,
+  });
 });

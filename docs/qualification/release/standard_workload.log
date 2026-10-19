@@ -1,52 +1,53 @@
-Seeding 100 products, 200 bin-lots and 100 open orders in capacity-4d702080-9875-4e2a-8bb0-e7a9b3a2274a
-Running 4 concurrent clients, 10 physical moves each
+Seeding 500 products, 1000 bin-lots and 500 open orders in capacity-a80c2ca1-fdb0-467a-8b93-5e0803d9de79
+Running 8 concurrent clients, 10 physical moves each
 {
   "concurrent_work": {
     "action_including_refresh_and_retries": {
-      "max_ms": 606.6108529999999,
-      "p50_ms": 98.308085,
-      "p95_ms": 288.568632,
-      "p99_ms": 606.6108529999999,
-      "samples": 40
+      "max_ms": 278.61256299999997,
+      "p50_ms": 213.099051,
+      "p95_ms": 242.803251,
+      "p99_ms": 278.61256299999997,
+      "samples": 80
     },
-    "actions_per_second": 27.934569999214755,
+    "actions_per_second": 36.629919293536915,
     "command_attempt": {
-      "max_ms": 50.362286,
-      "p50_ms": 13.438189999999999,
-      "p95_ms": 37.439114000000004,
-      "p99_ms": 42.242227,
-      "samples": 142
+      "max_ms": 112.689527,
+      "p50_ms": 32.41449,
+      "p95_ms": 74.849818,
+      "p99_ms": 112.689527,
+      "samples": 80
     },
     "frozen_replay": {
-      "max_ms": 33.851168,
-      "p50_ms": 1.652382,
-      "p95_ms": 12.553094000000002,
-      "p99_ms": 33.851168,
-      "samples": 40
+      "max_ms": 8.082036,
+      "p50_ms": 0.318585,
+      "p95_ms": 4.834731,
+      "p99_ms": 8.082036,
+      "samples": 80
     },
-    "physical_actions": 40,
-    "seconds": 1.431917513,
-    "stale_version_rejections": 102,
+    "physical_actions": 80,
+    "seconds": 2.184006996,
+    "stale_version_rejections": 0,
     "state_refresh": {
-      "max_ms": 99.693092,
-      "p50_ms": 19.045782,
-      "p95_ms": 40.75843,
-      "p99_ms": 49.427049000000004,
-      "samples": 142
+      "max_ms": 224.428024,
+      "p50_ms": 180.755373,
+      "p95_ms": 204.711379,
+      "p99_ms": 224.428024,
+      "samples": 80
     },
-    "successful_frozen_replays": 40,
+    "successful_frozen_replays": 80,
     "transient_503_attempts": 0,
     "unexpected_errors": 0
   },
   "config": {
     "actions_per_client": 10,
-    "clients": 4,
+    "clients": 8,
     "lots_per_product": 2,
     "max_action_p95_ms": null,
     "min_actions_per_second": null,
-    "open_orders": 100,
-    "products": 100,
-    "storage_bins": 20
+    "open_orders": 500,
+    "products": 500,
+    "scoped_reviews": true,
+    "storage_bins": 100
   },
   "configured_thresholds_passed": true,
   "environment": {
@@ -64,16 +65,16 @@ Running 4 concurrent clients, 10 physical moves each
     "PostgreSQL and harness may share CPU; no production throughput or HA claim"
   ],
   "memory": {
-    "process_peak_after_clients_kib": 12948,
-    "process_peak_before_clients_kib": 7296,
+    "process_peak_after_clients_kib": 54852,
+    "process_peak_before_clients_kib": 11820,
     "scope": "Rust workload process high-water mark; excludes PostgreSQL and is not a constant-memory proof"
   },
   "proof": {
-    "activity": 517,
-    "commands": 517,
+    "activity": 2437,
+    "commands": 2437,
     "display_activity": 100,
     "display_movements": 100,
-    "events": 517,
+    "events": 2437,
     "exactly_once_totals": true,
     "history_page_sizes": [
       25,
@@ -92,22 +93,22 @@ Running 4 concurrent clients, 10 physical moves each
       "physical_actions": 1,
       "stale_version_rejections": 1
     },
-    "physical_custody_total": 20000008,
-    "physical_movements": 244,
+    "physical_custody_total": 100000008,
+    "physical_movements": 1084,
     "receipt_movement_quantity": 7,
     "received": 7,
-    "reserved_total": 50
+    "reserved_total": 250
   },
-  "recorded_at": "2026-10-17T19:11:48.130998217+00:00",
+  "recorded_at": "2026-10-19T14:29:41.834707894+00:00",
   "schema_version": 1,
   "seed": {
-    "allocated_orders": 50,
-    "bin_lot_balances": 207,
-    "commands": 476,
-    "open_orders": 100,
-    "products": 101,
-    "seconds": 34.204502005,
-    "storage_bins": 21
+    "allocated_orders": 250,
+    "bin_lot_balances": 1011,
+    "commands": 2356,
+    "open_orders": 500,
+    "products": 501,
+    "seconds": 131.739265898,
+    "storage_bins": 101
   },
-  "tenant": "capacity-4d702080-9875-4e2a-8bb0-e7a9b3a2274a"
+  "tenant": "capacity-a80c2ca1-fdb0-467a-8b93-5e0803d9de79"
 }

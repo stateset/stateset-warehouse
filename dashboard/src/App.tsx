@@ -10,6 +10,19 @@ import {
 import NativePanel from "./NativePanel";
 import ScannerPanel from "./ScannerPanel";
 import OperationsPanel from "./OperationsPanel";
+import ReplenishmentPanel from "./ReplenishmentPanel";
+import LotControlsPanel from "./LotControlsPanel";
+import LotTracePanel from "./LotTracePanel";
+import {
+  availability,
+  availabilityLabel,
+  useAvailabilityTime,
+} from "./lotAvailability";
+import ReturnForm from "./ReturnForm";
+import ShipmentsPanel from "./ShipmentsPanel";
+import TransfersPanel from "./TransfersPanel";
+import WarehousePicker from "./WarehousePicker";
+import { reviewedVersions, sameVersions } from "./concurrency";
 import {
   Activity as ActivityIcon,
   ArrowDownLeft,
@@ -61,7 +74,21 @@ import type {
   Session,
   Stock,
   WarehouseState,
+  UnitInput,
 } from "./types";
+
+import UnitQuantityInput from "./UnitQuantityInput";
+import UnitPacksPanel from "./UnitPacksPanel";
+import { validUnitInputs } from "./unitInputs";
+import {
+  serialCommands,
+  validSerialInputs,
+  validSerialTargets,
+  type SerialTarget,
+} from "./serialInputs";
+import SerialObservationForm from "./SerialObservationForm";
+import SerialTracePanel from "./SerialTracePanel";
+import type { SerialInput } from "./types";
 
 type Tab =
   | "overview"
@@ -73,7 +100,8 @@ type Tab =
   | "activity"
   | "integrations"
   | "scanner"
-  | "operations";
+  | "operations"
+  | "transfers";
 type Field = {
   name: string;
   label: string;
@@ -92,6 +120,7 @@ type FormSpec = {
   submit: string;
   build: (data: Record<string, string>) => Command;
   lines?: "receipt" | "order";
+  unitSku?: string;
 };
 type Modal =
   | FormSpec
@@ -110,8 +139,23 @@ type ReconciliationProof = {
   ok: boolean;
   rows: Record<string, unknown>[];
   receipts?: Record<string, unknown>[];
+  shipments?: Record<string, unknown>[];
+  transfers?: Record<string, unknown>[];
+  packages?: Record<string, unknown>[];
   version: number;
   method?: string;
+  units?: {
+    ok: boolean;
+    definition_changes: number;
+    quantity_observations: number;
+    method: string;
+  };
+  lot_controls?: {
+    ok: boolean;
+    baseline_version: number;
+    policy_changes: number;
+    eligibility_decisions: number;
+  };
 };
 function mergeRecords<T extends { id: string }>(
   current: T[],
@@ -127,6 +171,7 @@ const nav: { id: Tab; title: string; icon: typeof Box }[] = [
   { id: "inventory", title: "Inventory", icon: Boxes },
   { id: "fulfillment", title: "Fulfillment", icon: PackageCheck },
   { id: "scanner", title: "Scanner", icon: ScanLine },
+  { id: "transfers", title: "Facility transfers", icon: Truck },
   { id: "locations", title: "Locations", icon: MapPin },
   { id: "exceptions", title: "Exceptions", icon: AlertTriangle },
   { id: "activity", title: "Movement ledger", icon: ActivityIcon },
@@ -141,7 +186,10 @@ const when = (s: string) =>
     hour: "numeric",
     minute: "2-digit",
   });
-const label = (s: string) => s.replaceAll("_", " ").replaceAll(".", " ");
+const label = (s: string) =>
+  s === "closed_partial"
+    ? "Part shipped · remainder cancelled"
+    : s.replaceAll("_", " ").replaceAll(".", " ");
 class ApiError extends Error {
   constructor(
     public status: number,
@@ -153,14 +201,12 @@ class ApiError extends Error {
 }
 function provesStaleCommandDidNotCommit(error: ApiError, journal: Journal) {
   const outcome = error.commandOutcome as Record<string, unknown> | null;
-  return (
+  const identityMatches =
     error.status === 409 &&
     !!outcome &&
     typeof outcome === "object" &&
     !Array.isArray(outcome) &&
-    Object.keys(outcome).length === 8 &&
     outcome.status === "not_committed" &&
-    outcome.reason === "stale_version" &&
     outcome.tenant === journal.tenant &&
     outcome.actor === journal.actor &&
     outcome.warehouse_id === journal.warehouse &&
@@ -168,7 +214,37 @@ function provesStaleCommandDidNotCommit(error: ApiError, journal: Journal) {
     outcome.expected_version === journal.request.expected_version &&
     Number.isSafeInteger(outcome.expected_version) &&
     Number.isSafeInteger(outcome.current_version) &&
-    (outcome.current_version as number) > journal.request.expected_version
+    (outcome.current_version as number) >= journal.request.expected_version;
+  if (!identityMatches || !outcome) return false;
+  if (!journal.request.resource_versions)
+    return (
+      Object.keys(outcome).length === 8 &&
+      outcome.reason === "stale_version" &&
+      (outcome.current_version as number) > journal.request.expected_version
+    );
+  if (
+    Object.keys(outcome).length !== 10 ||
+    outcome.reason !== "changed_resources" ||
+    !sameVersions(
+      outcome.expected_resource_versions,
+      journal.request.resource_versions,
+    )
+  )
+    return false;
+  const current = outcome.current_resource_versions as Record<string, unknown>;
+  const expected = journal.request.resource_versions;
+  if (
+    !current ||
+    typeof current !== "object" ||
+    Array.isArray(current) ||
+    Object.keys(current).length !== Object.keys(expected).length
+  )
+    return false;
+  return (
+    Object.entries(expected).every(
+      ([k, v]) =>
+        Number.isSafeInteger(current[k]) && (current[k] as number) >= v,
+    ) && Object.entries(expected).some(([k, v]) => (current[k] as number) > v)
   );
 }
 const opts = (items: string[]) =>
@@ -188,9 +264,15 @@ function Status({ value }: { value: string }) {
       tone={
         ["shipped", "received", "resolved", "delivered"].includes(value)
           ? "green"
-          : ["pending", "expected", "partial", "allocated", "picking"].includes(
-                value,
-              )
+          : [
+                "pending",
+                "expected",
+                "partial",
+                "allocated",
+                "picking",
+                "partially_shipped",
+                "partially_shipped",
+              ].includes(value)
             ? "amber"
             : ["open", "dead_letter"].includes(value)
               ? "red"
@@ -248,19 +330,25 @@ function Section({
 }
 
 function ModalFrame({
+  suspended = false,
   title,
   close,
   children,
 }: {
   title: string;
   close: () => void;
+  suspended?: boolean;
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    if (suspended) return;
     const previous = document.activeElement as HTMLElement | null;
     const el = ref.current;
-    el?.querySelector<HTMLElement>("input,select,textarea,button")?.focus();
+    (
+      el?.querySelector<HTMLElement>("[data-autofocus]") ??
+      el?.querySelector<HTMLElement>("input,select,textarea,button")
+    )?.focus();
     const listener = (e: KeyboardEvent) => {
       if (e.key === "Escape") close();
       if (e.key !== "Tab" || !el) return;
@@ -285,9 +373,13 @@ function ModalFrame({
       document.removeEventListener("keydown", listener);
       previous?.focus();
     };
-  }, [close]);
+  }, [close, suspended]);
   return (
-    <div className="modal-backdrop">
+    <div
+      className="modal-backdrop"
+      style={suspended ? { display: "none" } : undefined}
+      aria-hidden={suspended || undefined}
+    >
       <div
         ref={ref}
         role="dialog"
@@ -320,9 +412,27 @@ function CommandForm({
   spec: FormSpec;
   state: WarehouseState;
   busy: boolean;
-  submit: (c: Command) => Promise<unknown>;
+  submit: (c: Command, inputs?: UnitInput[]) => Promise<unknown>;
 }) {
-  const [lines, setLines] = useState([
+  const [rootInputs, setRootInputs] = useState<
+    Record<string, UnitInput | undefined>
+  >({});
+  const [quantities, setQuantities] = useState<Record<string, string>>({});
+  const skuField = spec.fields.find((f) => f.name === "sku");
+  const [selectedSku, setSelectedSku] = useState(
+    String(
+      spec.unitSku ?? skuField?.value ?? skuField?.options?.[0]?.value ?? "",
+    ),
+  );
+  const [lines, setLines] = useState<
+    {
+      id: string;
+      sku: string;
+      quantity: number;
+      lot: string;
+      input?: UnitInput;
+    }[]
+  >([
     {
       id: crypto.randomUUID(),
       sku: state.products[0]?.sku ?? "",
@@ -341,51 +451,87 @@ function CommandForm({
         if (spec.lines)
           c.lines = lines.map((l) =>
             spec.lines === "receipt"
-              ? l
+              ? { id: l.id, sku: l.sku, quantity: l.quantity, lot: l.lot }
               : { id: l.id, sku: l.sku, quantity: l.quantity },
           );
-        void submit(c);
+        void submit(
+          c,
+          spec.lines
+            ? lines.flatMap((l) => (l.input ? [l.input] : []))
+            : Object.values(rootInputs).filter((i): i is UnitInput => !!i),
+        );
       }}
     >
       {spec.subtitle && <p className="form-subtitle">{spec.subtitle}</p>}
       <div className="form-grid">
-        {spec.fields.map((f) => (
-          <label key={f.name} className={f.type === "textarea" ? "full" : ""}>
-            {f.label}
-            {f.type === "select" ? (
-              <select
-                name={f.name}
-                defaultValue={f.value ?? f.options?.[0]?.value}
-                required={!f.optional}
-              >
-                {f.options?.map((o) => (
-                  <option value={o.value} key={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            ) : f.type === "textarea" ? (
-              <textarea
-                name={f.name}
-                defaultValue={f.value}
-                maxLength={240}
-                required={!f.optional}
-              />
-            ) : (
-              <input
-                name={f.name}
-                type={f.type ?? "text"}
-                defaultValue={f.value}
-                min={f.min ?? 1}
-                max={f.max ?? 1000000}
-                step={f.type === "number" ? 1 : undefined}
-                maxLength={240}
-                placeholder={f.placeholder}
-                required={!f.optional}
-              />
-            )}
-          </label>
-        ))}
+        {spec.fields.map((f) =>
+          selectedSku &&
+          f.type === "number" &&
+          ["quantity", "counted"].includes(f.name) ? (
+            <UnitQuantityInput
+              key={`${f.name}:${selectedSku}`}
+              packs={state.unit_packs}
+              sku={selectedSku}
+              target={[]}
+              value={quantities[f.name] ?? String(f.value ?? "")}
+              onChange={(each, input) => {
+                setQuantities((q) => ({ ...q, [f.name]: each }));
+                setRootInputs((q) => ({ ...q, [f.name]: input }));
+              }}
+              label={f.label}
+              name={f.name}
+              min={f.min ?? 1}
+              max={f.max ?? 1000000}
+              disabled={busy}
+            />
+          ) : (
+            <label key={f.name} className={f.type === "textarea" ? "full" : ""}>
+              {f.label}
+              {f.type === "select" ? (
+                <select
+                  aria-label={f.label}
+                  name={f.name}
+                  onChange={
+                    f.name === "sku"
+                      ? (e) => {
+                          setSelectedSku(e.target.value);
+                          setRootInputs({});
+                          setQuantities({ quantity: "" });
+                        }
+                      : undefined
+                  }
+                  defaultValue={f.value ?? f.options?.[0]?.value}
+                  required={!f.optional}
+                >
+                  {f.options?.map((o) => (
+                    <option value={o.value} key={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              ) : f.type === "textarea" ? (
+                <textarea
+                  name={f.name}
+                  defaultValue={f.value}
+                  maxLength={240}
+                  required={!f.optional}
+                />
+              ) : (
+                <input
+                  name={f.name}
+                  type={f.type ?? "text"}
+                  defaultValue={f.value}
+                  min={f.min ?? 1}
+                  max={f.max ?? 1000000}
+                  step={f.type === "number" ? 1 : undefined}
+                  maxLength={240}
+                  placeholder={f.placeholder}
+                  required={!f.optional}
+                />
+              )}
+            </label>
+          ),
+        )}
       </div>
       {spec.lines && (
         <div className="line-editor">
@@ -400,7 +546,14 @@ function CommandForm({
                 onChange={(e) =>
                   setLines(
                     lines.map((x) =>
-                      x.id === l.id ? { ...x, sku: e.target.value } : x,
+                      x.id === l.id
+                        ? {
+                            ...x,
+                            sku: e.target.value,
+                            quantity: 0,
+                            input: undefined,
+                          }
+                        : x,
                     ),
                   )
                 }
@@ -427,23 +580,23 @@ function CommandForm({
                   required
                 />
               )}
-              <input
-                aria-label={`Quantity line ${i + 1}`}
-                type="number"
-                min="1"
-                max="1000000"
-                step="1"
-                value={l.quantity}
-                onChange={(e) =>
-                  setLines(
-                    lines.map((x) =>
+              <UnitQuantityInput
+                key={`${l.id}:${l.sku}`}
+                packs={state.unit_packs}
+                sku={l.sku}
+                target={[l.id]}
+                value={l.quantity ? String(l.quantity) : ""}
+                label={`Quantity line ${i + 1}`}
+                disabled={busy}
+                onChange={(each, input) =>
+                  setLines((rows) =>
+                    rows.map((x) =>
                       x.id === l.id
-                        ? { ...x, quantity: Number(e.target.value) }
+                        ? { ...x, quantity: Number(each), input }
                         : x,
                     ),
                   )
                 }
-                required
               />
               <button
                 type="button"
@@ -495,6 +648,7 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
   );
   const [session, setSession] = useState<Session | null>(null);
   const [state, setState] = useState<WarehouseState | null>(null);
+  const availabilityTime = useAvailabilityTime(state);
   const [tab, setTab] = useState<Tab>(
     () =>
       (nav.some((n) => n.id === location.hash.slice(1))
@@ -515,7 +669,30 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
   const [toast, setToast] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [switchingWarehouse, setSwitchingWarehouse] = useState(false);
   const [journal, setJournal] = useState<Journal | null>(null);
+  const [serialPreparing, setSerialPreparing] = useState(false);
+  const [serialReview, setSerialReview] = useState<{
+    id: string;
+    targets: SerialTarget[];
+    operation: string;
+    originalRequest: Journal["request"];
+  } | null>(null);
+  const serialDecision = useRef<
+    ((inputs: SerialInput[] | null) => void) | null
+  >(null);
+  const completeSerialReview = useCallback((inputs: SerialInput[] | null) => {
+    const decide = serialDecision.current;
+    serialDecision.current = null;
+    setSerialReview(null);
+    decide?.(inputs);
+  }, []);
+  useEffect(
+    () => () => {
+      serialDecision.current?.(null);
+    },
+    [],
+  );
   const commandInFlight = useRef(false);
   const pendingCommand = useRef<Journal | null>(null);
   pendingCommand.current = journal;
@@ -607,17 +784,125 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
       const current = epoch.current;
       const sequence = ++refreshSequence.current;
       const [s, o] = await Promise.all([
-        request(`/v1/warehouses/${warehouse}`),
-        request(`/v1/warehouses/${warehouse}/outbox`),
+        request(`/v1/warehouses/${encodeURIComponent(warehouse)}`),
+        request(`/v1/warehouses/${encodeURIComponent(warehouse)}/outbox`),
       ]);
+      if (s.warehouse?.id !== warehouse)
+        throw new Error(
+          "Warehouse response did not match the selected facility.",
+        );
       if (current === epoch.current && sequence === refreshSequence.current) {
         setState(s);
         setOutbox(o.items);
         setReconciliation(s.reconciliation);
+        return s as WarehouseState;
       }
     },
     [request],
   );
+  const enterWarehouse = async (warehouse: string): Promise<boolean> => {
+    if (!session) return false;
+    try {
+      const owner = `${session.identity.tenant}:${session.identity.actor}`;
+      // Completed callbacks may cross facilities too. Use durable journals and
+      // the immediate command ref, not rendered flags that can lag a clear.
+      if (
+        pendingCommand.current ||
+        sessionStorage.getItem(`wms-pending:${owner}`) ||
+        sessionStorage.getItem(`wms-native:${owner}`)
+      ) {
+        setError(
+          "Resolve the remaining original warehouse or integration request before changing facilities.",
+        );
+        return false;
+      }
+    } catch {
+      setError(
+        "Browser recovery storage is unavailable. Restore access before changing warehouses.",
+      );
+      return false;
+    }
+    const current = ++epoch.current;
+    ++refreshSequence.current;
+    ++reconciliationSequence.current;
+    for (const controller of controllers.current) controller.abort();
+    commandInFlight.current = false;
+    closeModal();
+    setDetail(null);
+    setDetailLoading(false);
+    setHistory({});
+    setFullReconciliation(null);
+    setFullReconciliationBusy(false);
+    setFullReconciliationError("");
+    setSearch("");
+    setFilter("all");
+    setTab("overview");
+    location.hash = "overview";
+    setError("");
+    setBusy(false);
+    setLoading(true);
+    setSwitchingWarehouse(true);
+    try {
+      const opened = await refresh(warehouse);
+      if (current !== epoch.current || !opened) return false;
+      try {
+        sessionStorage.setItem(
+          `wms-warehouse:${session.identity.tenant}:${session.identity.actor}`,
+          warehouse,
+        );
+      } catch {
+        setError(
+          "Warehouse opened, but this browser could not remember the selection for reload.",
+        );
+      }
+      setToast(`Opened ${opened.warehouse.name}.`);
+      return true;
+    } catch (failure) {
+      if (current === epoch.current)
+        setError(`Could not open warehouse: ${(failure as Error).message}`);
+      return false;
+    } finally {
+      if (current === epoch.current) {
+        setSwitchingWarehouse(false);
+        setLoading(false);
+        setBusy(false);
+      }
+    }
+  };
+  const refreshCompleted = async (warehouse: string) => {
+    if (state?.warehouse.id === warehouse) await refresh(warehouse);
+    else await enterWarehouse(warehouse);
+  };
+  const switchWarehouse = async (warehouse: string): Promise<boolean> => {
+    if (
+      !session ||
+      busy ||
+      loading ||
+      journal ||
+      recoveryBlocked ||
+      nativeBlocked ||
+      commandInFlight.current ||
+      pendingCommand.current
+    )
+      return false;
+    try {
+      // Check the durable native journal synchronously as well as its rendered
+      // busy state: a second click must not race a just-started native intent.
+      if (
+        sessionStorage.getItem(
+          `wms-native:${session.identity.tenant}:${session.identity.actor}`,
+        )
+      )
+        return false;
+    } catch {
+      setError(
+        "Browser recovery storage is unavailable. Restore access before changing warehouses.",
+      );
+      return false;
+    }
+    if (warehouse === state?.warehouse.id) return true;
+    return enterWarehouse(warehouse);
+  };
   const runFullReconciliation = useCallback(
     async (warehouse: string) => {
       const current = epoch.current;
@@ -701,6 +986,22 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
         if (current !== epoch.current) return;
         setSession(s);
         if (!auth) sessionStorage.setItem("wms-token", token);
+        const selectionKey = `wms-warehouse:${s.identity.tenant}:${s.identity.actor}`;
+        const remembered = sessionStorage.getItem(selectionKey);
+        let preferred = remembered;
+        const nativeSaved = sessionStorage.getItem(
+          `wms-native:${s.identity.tenant}:${s.identity.actor}`,
+        );
+        setNativeBlocked(!!nativeSaved);
+        if (nativeSaved) {
+          try {
+            const native = JSON.parse(nativeSaved);
+            if (typeof native.warehouse === "string")
+              preferred = native.warehouse;
+          } catch {
+            /* The native panel preserves and explains the unreadable journal. */
+          }
+        }
         const saved = sessionStorage.getItem(
           `wms-pending:${s.identity.tenant}:${s.identity.actor}`,
         );
@@ -713,10 +1014,13 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
               typeof parsed.warehouse !== "string" ||
               typeof parsed.request?.request_id !== "string" ||
               !Number.isSafeInteger(parsed.request?.expected_version) ||
-              typeof parsed.request?.command?.type !== "string"
+              typeof parsed.request?.command?.type !== "string" ||
+              !validUnitInputs(parsed.request?.unit_inputs) ||
+              !validSerialInputs(parsed.request?.serial_inputs)
             )
               throw new Error("Invalid saved request");
             setJournal(parsed);
+            preferred = parsed.warehouse;
           } catch {
             setRecoveryBlocked(true);
             setError(
@@ -724,7 +1028,37 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
             );
           }
         }
-        if (list.warehouses[0]) await refresh(list.warehouses[0].warehouse.id);
+        // Directory order is not the login default. The server's bootstrap
+        // facility may be outside the first page; retained work takes priority.
+        const listedDefault = list.warehouses.find(
+          (row: { warehouse: { id: string } }) =>
+            row.warehouse.id === "wh-main" || row.warehouse.id === "wh-pdx",
+        )?.warehouse.id;
+        const candidates = [
+          ...new Set([
+            preferred,
+            remembered,
+            s.default_warehouse_id,
+            listedDefault,
+            list.warehouses[0]?.warehouse.id,
+          ]),
+        ].filter((id): id is string => typeof id === "string" && !!id);
+        let selected: string | undefined;
+        for (const warehouse of candidates) {
+          try {
+            await refresh(warehouse);
+            selected = warehouse;
+            break;
+          } catch (failure) {
+            // A retained creation can be lost before its header arrives. Keep
+            // its journal while falling back to an existing selected facility.
+            if ((failure as ApiError).status !== 404) throw failure;
+          }
+        }
+        if (!selected)
+          throw new Error("No accessible warehouse could be opened.");
+        if (current === epoch.current)
+          sessionStorage.setItem(selectionKey, selected);
       } catch (e) {
         if (current === epoch.current) setError((e as Error).message);
       } finally {
@@ -765,6 +1099,8 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
     ++epoch.current;
     commandInFlight.current = false;
     pendingCommand.current = null;
+    completeSerialReview(null);
+    setSerialPreparing(false);
     for (const c of controllers.current) c.abort();
     sessionStorage.removeItem("wms-token");
     setToken("");
@@ -782,6 +1118,7 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
     setError("");
     setBusy(false);
     setLoading(false);
+    setSwitchingWarehouse(false);
     auth?.signOut();
   };
   const journalKey = session
@@ -807,10 +1144,12 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
       setToast(
         result.replayed
           ? "Original save confirmed. No action was repeated."
-          : "Warehouse updated. Audit record saved.",
+          : j.request.command.type === "create_warehouse"
+            ? "Warehouse created. Audit record saved."
+            : "Warehouse updated. Audit record saved.",
       );
       try {
-        await refresh(j.warehouse);
+        await refreshCompleted(j.warehouse);
       } catch {
         setError(
           "Save confirmed, but the refreshed view is unavailable. Use Refresh; do not repeat the action.",
@@ -868,12 +1207,15 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
   const submit = async (
     command: Command,
     expectedVersion?: number,
+    capturedVersions?: Record<string, number>,
+    unitInputs?: UnitInput[],
   ): Promise<boolean> => {
     if (
       !state ||
       !session ||
       journal ||
       busy ||
+      loading ||
       recoveryBlocked ||
       nativeBlocked ||
       commandInFlight.current ||
@@ -882,17 +1224,108 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
       return false;
     commandInFlight.current = true;
     const current = epoch.current;
+    const creating = command.type === "create_warehouse";
     const j: Journal = {
       tenant: session.identity.tenant,
       actor: session.identity.actor,
-      warehouse: state.warehouse.id,
+      warehouse: creating ? `wh-${crypto.randomUUID()}` : state.warehouse.id,
       request: {
         request_id: crypto.randomUUID(),
-        expected_version:
-          expectedVersion ?? modalVersion.current ?? state.version,
+        expected_version: creating
+          ? 0
+          : (expectedVersion ?? modalVersion.current ?? state.version),
+        ...(!creating &&
+        (expectedVersion ?? modalVersion.current ?? state.version) ===
+          state.version
+          ? {
+              resource_versions:
+                capturedVersions ?? reviewedVersions(state, command),
+            }
+          : !creating && capturedVersions
+            ? { resource_versions: capturedVersions }
+            : {}),
         command,
+        ...(unitInputs?.length
+          ? { unit_inputs: structuredClone(unitInputs) }
+          : {}),
       },
     };
+    try {
+      if (
+        serialCommands.has(command.type) &&
+        state.products.some((p) => p.serial_controlled === true)
+      ) {
+        setSerialPreparing(true);
+        const plan = await request(
+          `/v1/warehouses/${encodeURIComponent(j.warehouse)}/serial-observation-plan`,
+          { plan_id: j.request.request_id, command: j.request.command },
+        );
+        if (current !== epoch.current) return false;
+        if (
+          plan.schema_version !== 1 ||
+          plan.plan_id !== j.request.request_id ||
+          plan.warehouse_id !== j.warehouse ||
+          plan.command_type !== command.type ||
+          !validSerialTargets(plan.targets) ||
+          !Number.isSafeInteger(plan.required_labels) ||
+          plan.required_labels !==
+            plan.targets.reduce(
+              (n: number, t: SerialTarget) => n + t.each_quantity,
+              0,
+            )
+        ) {
+          throw new Error(
+            "Serial observation scope did not match the original action. Nothing was saved.",
+          );
+        }
+        if (plan.targets.length) {
+          const decision = new Promise<SerialInput[] | null>((resolve) => {
+            serialDecision.current = resolve;
+          });
+          setSerialReview({
+            id: j.request.request_id,
+            targets: plan.targets,
+            operation: command.type,
+            originalRequest: structuredClone(j.request),
+          });
+          setSerialPreparing(false);
+          const inputs = await decision;
+          if (current !== epoch.current || !inputs) {
+            if (current === epoch.current) commandInFlight.current = false;
+            return false;
+          }
+          if (
+            !validSerialInputs(inputs) ||
+            inputs.length !== plan.targets.length ||
+            inputs.some(
+              (i, n) =>
+                JSON.stringify(i.target) !==
+                  JSON.stringify(plan.targets[n].target) ||
+                i.sku !== plan.targets[n].sku ||
+                i.serials.length !== plan.targets[n].each_quantity,
+            )
+          )
+            throw new Error(
+              "The complete original serial observation is required.",
+            );
+          j.request.serial_inputs = structuredClone(inputs);
+        }
+      }
+      if (
+        new TextEncoder().encode(JSON.stringify(j.request)).length >
+        256 * 1024
+      )
+        throw new Error(
+          "The complete request exceeds one save. No identities were removed or saved. Large complete counts require reviewed count sessions.",
+        );
+    } catch (failure) {
+      if (current === epoch.current) setError((failure as Error).message);
+      if (current === epoch.current) commandInFlight.current = false;
+      return false;
+    } finally {
+      if (current === epoch.current) setSerialPreparing(false);
+    }
+    if (current !== epoch.current) return false;
     try {
       sessionStorage.setItem(journalKey, JSON.stringify(j));
     } catch {
@@ -926,7 +1359,7 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
         clearJournal();
         setModal(null);
         setToast("Original save confirmed.");
-        await refresh(w);
+        await refreshCompleted(w);
       } else {
         await finish(journal, true);
       }
@@ -1041,7 +1474,24 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
 
   const admin = session.identity.role === "admin";
   const canWork = ["admin", "operator"].includes(session.identity.role);
-  const disabled = busy || !!journal || recoveryBlocked || nativeBlocked;
+  const disabled =
+    busy ||
+    loading ||
+    !!journal ||
+    recoveryBlocked ||
+    nativeBlocked ||
+    serialPreparing ||
+    !!serialReview;
+  if (switchingWarehouse)
+    return (
+      <main className="warehouse-loading" role="status">
+        <Loader2 className="spin" />
+        <p>Loading warehouse…</p>
+        <button className="btn" onClick={logout}>
+          Sign out
+        </button>
+      </main>
+    );
   const s = {
     ...state,
     orders: mergeRecords(state.orders, history.orders?.items),
@@ -1065,7 +1515,46 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
     fullProof.version === s.version &&
     !fullReconciliationBusy &&
     !fullReconciliationError;
-  const fullProofOk = fullProofReady && fullProof.ok;
+  const qualityProof = fullProof?.lot_controls;
+  const qualityProofRequired =
+    !!s.lot_controls?.length || s.products.some((p) => p.expiry_required);
+  const qualityProofValid =
+    !!qualityProof &&
+    typeof qualityProof.ok === "boolean" &&
+    [
+      qualityProof.baseline_version,
+      qualityProof.policy_changes,
+      qualityProof.eligibility_decisions,
+    ].every((v) => Number.isSafeInteger(v) && v >= 0) &&
+    qualityProof.baseline_version <= (fullProof?.version ?? -1);
+  const unitProof = fullProof?.units;
+  const unitProofRequired = !!s.unit_packs?.length;
+  const unitProofValid =
+    !!unitProof &&
+    typeof unitProof.ok === "boolean" &&
+    [unitProof.definition_changes, unitProof.quantity_observations].every(
+      (n) => Number.isSafeInteger(n) && n >= 0,
+    ) &&
+    typeof unitProof.method === "string";
+  const fullProofOk =
+    fullProofReady &&
+    fullProof.ok &&
+    ((unitProof === undefined && !unitProofRequired) ||
+      (unitProofValid && unitProof?.ok)) &&
+    ((qualityProof === undefined && !qualityProofRequired) ||
+      (qualityProofValid && qualityProof?.ok));
+  const shipmentDifferences =
+    fullProofReady && Array.isArray(fullProof.shipments)
+      ? fullProof.shipments.filter((proof) => proof?.ok !== true)
+      : [];
+  const transferDifferences =
+    fullProofReady && Array.isArray(fullProof.transfers)
+      ? fullProof.transfers.filter((p) => p?.ok !== true)
+      : [];
+  const packageDifferences =
+    fullProofReady && Array.isArray(fullProof.packages)
+      ? fullProof.packages.filter((p) => p?.ok !== true)
+      : [];
   const loadHistory = async <K extends HistoryKind>(kind: K) => {
     const previous = history[kind];
     if (previous?.loading || (previous && previous.nextCursor === null)) return;
@@ -1081,7 +1570,9 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
     try {
       const before = previous?.nextCursor;
       const page: HistoryPage<HistoryData[K]> = await request(
-        `/v1/warehouses/${encodeURIComponent(s.warehouse.id)}/history/${kind}?limit=50${before == null ? "" : `&before=${before}`}`,
+        `/v1/warehouses/${encodeURIComponent(
+          s.warehouse.id,
+        )}/history/${kind}?limit=50${before == null ? "" : `&before=${before}`}`,
       );
       if (currentEpoch !== epoch.current) return;
       setHistory((value) => ({
@@ -1125,21 +1616,23 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
   const totals = {
     onHand: s.stocks.reduce((n, x) => n + x.on_hand, 0),
     reserved: s.stocks.reduce((n, x) => n + x.reserved, 0),
-    receiving: s.receipts.filter((r) => r.status !== "received").length,
-    active: s.orders.filter((o) => !["shipped", "cancelled"].includes(o.status))
-      .length,
+    receiving: s.receipts.filter((r) =>
+      ["expected", "partial"].includes(r.status),
+    ).length,
+    active: s.orders.filter(
+      (o) => !["shipped", "cancelled", "closed_partial"].includes(o.status),
+    ).length,
   };
   const openExceptions = s.exceptions.filter((e) => e.status === "open");
+  const availableStorage = s.stocks.filter(
+    (b) =>
+      s.locations.some((l) => l.code === b.location && l.kind === "storage") &&
+      availability(s, b.sku, b.lot, availabilityTime) === "available",
+  );
   const lowStock = s.products.filter(
     (p) =>
-      s.stocks
-        .filter(
-          (b) =>
-            b.sku === p.sku &&
-            s.locations.some(
-              (l) => l.code === b.location && l.kind === "storage",
-            ),
-        )
+      availableStorage
+        .filter((b) => b.sku === p.sku)
         .reduce((n, b) => n + b.on_hand - b.reserved, 0) < p.reorder_point,
   );
   const matches = (...values: (string | undefined | null)[]) =>
@@ -1248,6 +1741,7 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
   const countStock = (stock: Stock) =>
     setModal({
       title: "Record physical count",
+      unitSku: stock.sku,
       subtitle: `Review current bin stock before confirming. ${stock.reserved} units are reserved and cannot be written off.`,
       fields: [
         {
@@ -1297,7 +1791,7 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
       }),
     });
   const csv = (filename: string, rows: Record<string, unknown>[]) => {
-    const keys = Object.keys(rows[0] ?? {});
+    const keys = [...new Set(rows.flatMap((row) => Object.keys(row)))];
     const cell = (v: unknown) => {
       const text = String(v ?? "");
       return (
@@ -1406,6 +1900,13 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
     s.exceptions.some(
       (issue) => issue.order_id === selectedOrder.id && issue.status === "open",
     );
+  const legacyLotHeld =
+    !!selectedOrder &&
+    selectedOrder.allocations.some(
+      (a) =>
+        a.quantity > a.shipped + a.released &&
+        availability(s, a.sku, a.lot, availabilityTime) !== "available",
+    );
 
   return (
     <div className="app-shell">
@@ -1497,6 +1998,33 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
             <span>{nav.find((n) => n.id === tab)?.title}</span>
           </div>
           <div className="topbar-actions">
+            <WarehousePicker
+              key={`${session.identity.tenant}:${session.identity.actor}:${s.warehouse.id}`}
+              current={s.warehouse}
+              disabled={disabled}
+              admin={admin}
+              request={request}
+              onSelect={switchWarehouse}
+              onCreate={() =>
+                setModal({
+                  title: "Create warehouse",
+                  subtitle:
+                    "Create an empty facility with receiving and staging bins. Inventory is recorded through receipts or physical counts.",
+                  submit: "Create warehouse",
+                  fields: [
+                    { name: "code", label: "Warehouse code" },
+                    { name: "name", label: "Warehouse name" },
+                    { name: "city", label: "City" },
+                    {
+                      name: "timezone",
+                      label: "IANA timezone",
+                      value: s.warehouse.timezone,
+                    },
+                  ],
+                  build: (data) => ({ type: "create_warehouse", ...data }),
+                })
+              }
+            />
             <span className="environment">
               <span className="live-dot" />
               {session.demo ? "Demo environment" : "Live workspace"}
@@ -1582,10 +2110,87 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                     : "A save needs confirmation"}
                 </strong>
                 <p>
-                  Request {journal.request.request_id.slice(0, 8)} ·{" "}
+                  Warehouse {journal.warehouse} · Request{" "}
+                  {journal.request.request_id.slice(0, 8)} ·{" "}
                   {label(journal.request.command.type)}. Further writes are
                   paused.
                 </p>
+                {journal.request.serial_inputs?.map((input, i) => (
+                  <details
+                    key={`serial-${i}`}
+                    className="serial-observation-summary"
+                  >
+                    <summary>
+                      Original serial observation · {input.sku} ·{" "}
+                      {input.serials.length} labels ·{" "}
+                      {input.target.length
+                        ? input.target.join(" / ")
+                        : "physical quantity"}
+                    </summary>
+                    <textarea
+                      aria-label={`Original serials for ${input.sku} group ${i + 1}`}
+                      readOnly
+                      value={input.serials.join("\n")}
+                    />
+                    <p>
+                      {input.serials.length === 0
+                        ? "Original witnessed empty count."
+                        : "Literal labels retained with the original request. Do not rescan or replace them during recovery."}
+                    </p>
+                  </details>
+                ))}
+                {journal.request.unit_inputs?.map((input, i) => (
+                  <p key={i} style={{ overflowWrap: "anywhere" }}>
+                    Original pack observation · {input.sku} ·{" "}
+                    {input.pack_quantity} {input.pack_code} ×{" "}
+                    {input.each_per_pack} ={" "}
+                    {input.pack_quantity * input.each_per_pack} each ·
+                    definition {input.definition_id} · target{" "}
+                    {input.target.length
+                      ? input.target.join(" / ")
+                      : "physical quantity"}
+                  </p>
+                ))}
+                {[
+                  "record_lot_expiry",
+                  "correct_lot_expiry",
+                  "quarantine_lot",
+                  "release_lot_hold",
+                  "set_product_expiry_policy",
+                ].includes(journal.request.command.type) && (
+                  <p>
+                    {journal.request.command.sku
+                      ? `SKU ${String(journal.request.command.sku)} · `
+                      : ""}
+                    {journal.request.command.lot
+                      ? `Lot ${String(journal.request.command.lot)} · `
+                      : ""}
+                    {journal.request.command.hold_id
+                      ? `Hold ${String(journal.request.command.hold_id)} · `
+                      : ""}
+                    {String(journal.request.command.reason)}
+                  </p>
+                )}
+                {["record_transfer_loss", "reverse_transfer_loss"].includes(
+                  journal.request.command.type,
+                ) && (
+                  <p style={{ overflowWrap: "anywhere" }}>
+                    {journal.request.command.transfer_id
+                      ? `Transfer ${String(journal.request.command.transfer_id)} · `
+                      : ""}
+                    {journal.request.command.line_id
+                      ? `Line ${String(journal.request.command.line_id)} · `
+                      : ""}
+                    {journal.request.command.loss_id
+                      ? `Original loss ${String(journal.request.command.loss_id)} · `
+                      : ""}
+                    {String(journal.request.command.quantity)} each ·{" "}
+                    {journal.request.command.incident_reference
+                      ? `Incident ${String(journal.request.command.incident_reference)} · `
+                      : ""}
+                    {String(journal.request.command.reason)}
+                  </p>
+                )}
               </div>
               <button
                 className="btn"
@@ -1628,6 +2233,8 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                       "Keep warehouse execution connected to the rest of StateSet.",
                     scanner:
                       "Verify the location, SKU, and lot before confirming physical work.",
+                    transfers:
+                      "Track physical dispatch, goods in transit and destination arrivals.",
                     operations:
                       "Review delivery health, uncertain requests, and warehouse exceptions.",
                   }[tab]
@@ -1733,22 +2340,23 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                 <Metric
                   label="Available in storage"
                   value={fmt(
-                    s.stocks
-                      .filter((b) =>
-                        s.locations.some(
-                          (l) => l.code === b.location && l.kind === "storage",
-                        ),
-                      )
-                      .reduce((n, b) => n + b.on_hand - b.reserved, 0),
+                    availableStorage.reduce(
+                      (n, b) => n + b.on_hand - b.reserved,
+                      0,
+                    ),
                   )}
                   icon={Package}
-                  note={`${fmt(totals.reserved)} units reserved across the floor`}
+                  note={`${fmt(
+                    totals.reserved,
+                  )} units reserved across the floor`}
                 />
                 <Metric
                   label="Orders in progress"
                   value={fmt(totals.active)}
                   icon={PackageCheck}
-                  note={`${s.orders.filter((o) => o.status === "packed").length} packed and ready for handoff`}
+                  note={`${
+                    s.orders.filter((o) => o.status === "packed").length
+                  } packed and ready for handoff`}
                 />
                 <Metric
                   label="Needs attention"
@@ -1879,7 +2487,10 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                   {orderTable(
                     s.orders
                       .filter(
-                        (o) => !["shipped", "cancelled"].includes(o.status),
+                        (o) =>
+                          !["shipped", "cancelled", "closed_partial"].includes(
+                            o.status,
+                          ),
                       )
                       .slice(0, 5),
                   )}
@@ -1973,13 +2584,15 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
 
           {tab !== "overview" && (
             <>
-              {tab !== "operations" && (
+              {tab !== "operations" && tab !== "transfers" && (
                 <div className="list-toolbar">
                   <div className="search-field">
                     <Search size={17} />
                     <input
                       aria-label="Search current view"
-                      placeholder={`Search ${tab === "activity" ? "movements" : tab}…`}
+                      placeholder={`Search ${
+                        tab === "activity" ? "movements" : tab
+                      }…`}
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                     />
@@ -2013,13 +2626,15 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                                 "pending",
                                 "allocated",
                                 "picking",
+                                "partially_shipped",
+                                "closed_partial",
                                 "picked",
                                 "packed",
                                 "shipped",
                                 "cancelled",
                               ]
                             : tab === "receiving"
-                              ? ["expected", "partial", "received"]
+                              ? ["expected", "partial", "received", "cancelled"]
                               : tab === "exceptions"
                                 ? ["open", "resolved"]
                                 : [
@@ -2089,6 +2704,8 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                       onClick={() =>
                         setModal({
                           title: "Add product",
+                          subtitle:
+                            "Choose serial tracking when this SKU is first introduced. The choice is shared by all facilities and cannot relabel existing inventory.",
                           fields: [
                             {
                               name: "sku",
@@ -2096,6 +2713,22 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                               placeholder: "SS-NEW-001",
                             },
                             { name: "name", label: "Product name" },
+                            {
+                              name: "serial_controlled",
+                              label: "Track individual serials",
+                              type: "select",
+                              value: "false",
+                              options: [
+                                {
+                                  value: "false",
+                                  label: "Whole each quantities",
+                                },
+                                {
+                                  value: "true",
+                                  label: "Require each unit's literal serial",
+                                },
+                              ],
+                            },
                             {
                               name: "category",
                               label: "Category",
@@ -2113,6 +2746,8 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                           build: (d) => ({
                             type: "create_product",
                             ...d,
+                            serial_controlled:
+                              d.serial_controlled === "true" ? true : undefined,
                             reorder_point: Number(d.reorder_point),
                           }),
                         })
@@ -2140,6 +2775,42 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
               )}
               {tab === "inventory" && (
                 <>
+                  {canWork && (
+                    <ReplenishmentPanel
+                      key={s.warehouse.id}
+                      state={s}
+                      disabled={disabled}
+                      request={request}
+                      onSubmit={submit}
+                    />
+                  )}
+                  <SerialTracePanel
+                    key={`serial-${s.warehouse.id}`}
+                    state={s}
+                    request={request}
+                  />
+                  <UnitPacksPanel
+                    key={s.warehouse.id}
+                    state={s}
+                    role={session.identity.role}
+                    disabled={disabled}
+                    request={request}
+                    onSubmit={submit}
+                  />
+                  <LotControlsPanel
+                    key={s.warehouse.id}
+                    state={s}
+                    role={session.identity.role}
+                    disabled={disabled}
+                    request={request}
+                    onSubmit={submit}
+                  />
+                  <LotTracePanel
+                    key={`${session.identity.tenant}:${session.identity.actor}`}
+                    state={s}
+                    disabled={disabled}
+                    request={request}
+                  />
                   <div className="inventory-summary">
                     <span>
                       <i className="legend-dot" />
@@ -2151,7 +2822,7 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                   </div>
                   <Section
                     title="Stock by location"
-                    detail="Physical on-hand includes receiving and staged goods; only storage stock is allocatable."
+                    detail="Physical on-hand includes receiving and staged goods. Allocation requires unreserved storage stock with an available lot."
                   >
                     <div className="table-scroll">
                       <table>
@@ -2162,6 +2833,7 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                             <th>On hand</th>
                             <th>Reserved</th>
                             <th>Unreserved</th>
+                            <th>Lot availability</th>
                             <th>Actions</th>
                           </tr>
                         </thead>
@@ -2211,6 +2883,18 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                                 <td className="mono">{fmt(b.reserved)}</td>
                                 <td className="mono">
                                   {fmt(b.on_hand - b.reserved)}
+                                </td>
+                                <td>
+                                  {
+                                    availabilityLabel[
+                                      availability(
+                                        s,
+                                        b.sku,
+                                        b.lot,
+                                        availabilityTime,
+                                      )
+                                    ]
+                                  }
                                 </td>
                                 <td>
                                   <div className="row-actions">
@@ -2371,7 +3055,17 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                                   <div className="progress-track">
                                     <span
                                       style={{
-                                        width: `${(100 * r.lines.reduce((n, l) => n + l.received, 0)) / r.lines.reduce((n, l) => n + l.quantity, 0)}%`,
+                                        width: `${
+                                          (100 *
+                                            r.lines.reduce(
+                                              (n, l) => n + l.received,
+                                              0,
+                                            )) /
+                                          r.lines.reduce(
+                                            (n, l) => n + l.quantity,
+                                            0,
+                                          )
+                                        }%`,
                                       }}
                                     />
                                   </div>
@@ -2387,7 +3081,9 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                                     className="mini-btn"
                                     onClick={() => setModal({ receipt: r.id })}
                                   >
-                                    {r.status === "received"
+                                    {["received", "cancelled"].includes(
+                                      r.status,
+                                    )
                                       ? "View receipt"
                                       : "Receive goods"}
                                     <ChevronRight size={14} />
@@ -2561,7 +3257,9 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
               {tab === "activity" && (
                 <>
                   <div
-                    className={`reconciliation-banner ${fullProofOk ? "" : "failed"}`}
+                    className={`reconciliation-banner ${
+                      fullProofOk ? "" : "failed"
+                    }`}
                   >
                     <ShieldCheck size={22} />
                     <div>
@@ -2585,6 +3283,53 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                       </p>
                       {fullReconciliationError && (
                         <p role="alert">{fullReconciliationError}</p>
+                      )}
+                      {fullProofReady &&
+                        (qualityProofRequired || qualityProof !== undefined) &&
+                        (qualityProofValid && qualityProof.ok ? (
+                          <p>
+                            Lot control history reconciles. Current quarantine
+                            and expiry retain the original handoff facts.
+                          </p>
+                        ) : (
+                          <p role="alert">
+                            Lot policy or original eligibility evidence needs
+                            review. Export the proof and reconcile the affected
+                            work before further fulfillment.
+                          </p>
+                        ))}
+                      {fullProofReady &&
+                        (unitProofRequired || unitProof !== undefined) &&
+                        (!unitProofValid || unitProof?.ok !== true) && (
+                          <p className="alert warning">
+                            Original pack definitions or quantity observations
+                            disagree. Hold work and review the source records
+                            before recording further inventory changes.
+                          </p>
+                        )}
+                      {packageDifferences.length > 0 && (
+                        <p role="alert">
+                          Shipment package evidence needs review for{" "}
+                          {packageDifferences.length} order(s). Export the proof
+                          and reconcile original packing and handoff records.
+                        </p>
+                      )}
+                      {transferDifferences.length > 0 && (
+                        <p role="alert">
+                          Transfer evidence needs review for{" "}
+                          {transferDifferences.length} handoff(s). Reconcile
+                          original dispatch and arrival records in the exported
+                          proof before receiving.
+                        </p>
+                      )}
+                      {shipmentDifferences.length > 0 && (
+                        <p role="alert">
+                          Shipment evidence needs review for{" "}
+                          {shipmentDifferences.length} order
+                          {shipmentDifferences.length === 1 ? "" : "s"}. Export
+                          the proof and reconcile the original handoff before
+                          authorizing returns.
+                        </p>
                       )}
                     </div>
                     <button
@@ -2752,6 +3497,17 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                   </Section>
                 </>
               )}
+              {tab === "transfers" && (
+                <TransfersPanel
+                  key={s.warehouse.id}
+                  state={s}
+                  disabled={disabled || loading}
+                  canWork={canWork}
+                  admin={admin}
+                  request={request}
+                  onSubmit={submit}
+                />
+              )}
               {tab === "operations" && (
                 <OperationsPanel
                   key={session.identity.tenant + ":" + session.identity.actor}
@@ -2762,6 +3518,8 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
               )}
               {tab === "scanner" && (
                 <ScannerPanel
+                  at={availabilityTime}
+                  key={s.warehouse.id}
                   state={state}
                   canWork={canWork}
                   disabled={disabled || loading}
@@ -2771,13 +3529,13 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                 />
               )}
               <NativePanel
-                key={`${session.identity.tenant}:${session.identity.actor}`}
+                key={`${session.identity.tenant}:${session.identity.actor}:${s.warehouse.id}`}
                 session={session}
                 state={s}
                 active={tab === "integrations"}
-                blocked={busy || !!journal || recoveryBlocked}
+                blocked={busy || loading || !!journal || recoveryBlocked}
                 request={request}
-                refresh={refresh}
+                refresh={refreshCompleted}
                 onPending={setNativeBlocked}
               />
               {tab === "integrations" && (
@@ -2941,14 +3699,40 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
           {toast}
         </div>
       )}
+      {serialPreparing && !serialReview && (
+        <div className="alert info" role="status">
+          Resolving the original serial quantities… Nothing has been saved.
+        </div>
+      )}
+      {serialReview && (
+        <ModalFrame
+          title="Observe serial labels"
+          close={() => completeSerialReview(null)}
+        >
+          <SerialObservationForm
+            key={serialReview.id}
+            targets={serialReview.targets}
+            operation={serialReview.operation}
+            originalRequest={serialReview.originalRequest}
+            onConfirm={completeSerialReview}
+            onCancel={() => completeSerialReview(null)}
+          />
+        </ModalFrame>
+      )}
       {modal && "title" in modal && (
-        <ModalFrame title={modal.title} close={closeModal}>
+        <ModalFrame
+          suspended={serialPreparing || !!serialReview}
+          title={modal.title}
+          close={closeModal}
+        >
           <CommandForm
             key={modal.title + JSON.stringify(modal.fields)}
             spec={modal}
             state={s}
             busy={disabled}
-            submit={submit}
+            submit={(command, inputs) =>
+              submit(command, undefined, undefined, inputs)
+            }
           />
           {error && (
             <div className="modal-error" role="alert">
@@ -2958,7 +3742,11 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
         </ModalFrame>
       )}
       {detailKey && !selectedOrder && !selectedReceipt && (
-        <ModalFrame title="Warehouse record" close={closeModal}>
+        <ModalFrame
+          suspended={serialPreparing || !!serialReview}
+          title="Warehouse record"
+          close={closeModal}
+        >
           <div className="detail-body">
             {detailLoading ? (
               <p role="status">
@@ -2972,6 +3760,7 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
       )}
       {selectedOrder && (
         <ModalFrame
+          suspended={serialPreparing || !!serialReview}
           title={`${selectedOrder.reference} · ${selectedOrder.customer}`}
           close={closeModal}
         >
@@ -3020,27 +3809,42 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                         {a.location} · {a.lot} · line {a.line_id.slice(0, 8)}
                       </small>
                       <span>
+                        {a.quantity > a.shipped + a.released
+                          ? availabilityLabel[
+                              availability(s, a.sku, a.lot, availabilityTime)
+                            ]
+                          : "No active reserved units"}
+                      </span>
+                      <span>
                         {a.picked} picked / {a.quantity} reserved
                         {a.released > 0 && ` · ${a.released} released`}
                       </span>
                     </div>
                     {canWork &&
-                      ["allocated", "picking"].includes(selectedOrder.status) &&
-                      a.quantity > a.picked && (
+                      ["allocated", "picking", "partially_shipped"].includes(
+                        selectedOrder.status,
+                      ) &&
+                      a.quantity > a.picked + a.released && (
                         <button
                           className="btn"
-                          disabled={disabled || orderBlocked}
+                          disabled={
+                            disabled ||
+                            orderBlocked ||
+                            availability(s, a.sku, a.lot, availabilityTime) !==
+                              "available"
+                          }
                           onClick={() =>
                             setModal({
                               title: "Confirm physical pick",
                               subtitle: `Verify ${a.sku} at ${a.location}, lot ${a.lot}. The units move into STAGE-01 and remain reserved.`,
+                              unitSku: a.sku,
                               fields: [
                                 {
                                   name: "quantity",
                                   label: "Picked quantity (each)",
                                   type: "number",
-                                  value: a.quantity - a.picked,
-                                  max: a.quantity - a.picked,
+                                  value: a.quantity - a.picked - a.released,
+                                  max: a.quantity - a.picked - a.released,
                                 },
                               ],
                               submit: "Confirm pick",
@@ -3059,9 +3863,12 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                         </button>
                       )}
                     {canWork &&
-                      ["picking", "picked", "packed"].includes(
-                        selectedOrder.status,
-                      ) &&
+                      [
+                        "picking",
+                        "picked",
+                        "packed",
+                        "partially_shipped",
+                      ].includes(selectedOrder.status) &&
                       a.picked > a.shipped && (
                         <button
                           className="btn"
@@ -3070,6 +3877,7 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                             setModal({
                               title: "Return staged stock",
                               subtitle: `Physically return ${a.sku}, lot ${a.lot}, from STAGE-01 to ${a.location}. Only line ${a.line_id} is affected. Packing must be confirmed again after recovery.`,
+                              unitSku: a.sku,
                               fields: [
                                 {
                                   name: "quantity",
@@ -3124,7 +3932,9 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                 <div>
                   <strong>Physical handoff recorded</strong>
                   <p>
-                    {selectedOrder.carrier} · {selectedOrder.handoff_reference}
+                    {selectedOrder.carrier
+                      ? `${selectedOrder.carrier} · ${selectedOrder.handoff_reference}`
+                      : "Multiple handoffs — review each shipment package below"}
                   </p>
                   <small>
                     {selectedOrder.shipped_at && when(selectedOrder.shipped_at)}
@@ -3132,22 +3942,64 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                 </div>
               </div>
             )}
+            {["shipped", "partially_shipped", "closed_partial"].includes(
+              selectedOrder.status,
+            ) &&
+              canWork && (
+                <ReturnForm
+                  packs={s.unit_packs}
+                  warehouse={s.warehouse.id}
+                  orderId={selectedOrder.id}
+                  disabled={disabled}
+                  request={request}
+                  onSubmit={submit}
+                />
+              )}
+            {(selectedOrder.shipment_mode === "packages" ||
+              !["shipped", "cancelled", "closed_partial"].includes(
+                selectedOrder.status,
+              )) && (
+              <ShipmentsPanel
+                warehouse={s.warehouse.id}
+                orderId={selectedOrder.id}
+                disabled={disabled}
+                forwardBlocked={orderBlocked}
+                state={s}
+                at={availabilityTime}
+                canWork={canWork}
+                request={request}
+                refreshWarehouse={refresh}
+                onSubmit={submit}
+              />
+            )}
+            {legacyLotHeld && (
+              <p role="status" className="alert warning">
+                One or more reserved lots are unavailable. Review Inventory →
+                Lot expiry and quarantine. Physical unpick, unpack and
+                reservation release remain available.
+              </p>
+            )}
             <div className="detail-actions">
               {canWork && (
                 <>
-                  {selectedOrder.status === "pending" && (
-                    <button
-                      className="btn primary"
-                      disabled={disabled || orderBlocked}
-                      onClick={() =>
-                        action({ type: "allocate", order_id: selectedOrder.id })
-                      }
-                    >
-                      <ClipboardCheck size={16} />
-                      Allocate stock
-                    </button>
-                  )}
-                  {selectedOrder.status === "allocated" &&
+                  {!selectedOrder.shipment_mode &&
+                    selectedOrder.status === "pending" && (
+                      <button
+                        className="btn primary"
+                        disabled={disabled || orderBlocked}
+                        onClick={() =>
+                          action({
+                            type: "allocate",
+                            order_id: selectedOrder.id,
+                          })
+                        }
+                      >
+                        <ClipboardCheck size={16} />
+                        Allocate stock
+                      </button>
+                    )}
+                  {!selectedOrder.shipment_mode &&
+                    selectedOrder.status === "allocated" &&
                     selectedOrder.allocations.every(
                       (allocation) => allocation.picked === 0,
                     ) && (
@@ -3178,48 +4030,52 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                         Release allocation
                       </button>
                     )}
-                  {selectedOrder.status === "picked" && (
-                    <button
-                      className="btn primary"
-                      disabled={disabled || orderBlocked}
-                      onClick={() =>
-                        action({ type: "pack", order_id: selectedOrder.id })
-                      }
-                    >
-                      <PackageCheck size={16} />
-                      Confirm packed
-                    </button>
-                  )}
-                  {selectedOrder.status === "packed" && (
-                    <button
-                      className="btn primary"
-                      disabled={disabled || orderBlocked}
-                      onClick={() =>
-                        setModal({
-                          title: "Confirm carrier handoff",
-                          subtitle:
-                            "Record the actual physical departure. This removes staged units from warehouse stock. TMS owns transportation after this handoff.",
-                          fields: [
-                            { name: "carrier", label: "Carrier" },
-                            {
-                              name: "handoff_reference",
-                              label: "Carrier pickup / tracking reference",
-                            },
-                          ],
-                          submit: "Confirm physical handoff",
-                          build: (d) => ({
-                            type: "ship",
-                            order_id: selectedOrder.id,
-                            ...d,
-                          }),
-                        })
-                      }
-                    >
-                      <Truck size={16} />
-                      Record handoff
-                    </button>
-                  )}
-                  {!["shipped", "cancelled"].includes(selectedOrder.status) && (
+                  {!selectedOrder.shipment_mode &&
+                    selectedOrder.status === "picked" && (
+                      <button
+                        className="btn primary"
+                        disabled={disabled || orderBlocked || legacyLotHeld}
+                        onClick={() =>
+                          action({ type: "pack", order_id: selectedOrder.id })
+                        }
+                      >
+                        <PackageCheck size={16} />
+                        Confirm packed
+                      </button>
+                    )}
+                  {!selectedOrder.shipment_mode &&
+                    selectedOrder.status === "packed" && (
+                      <button
+                        className="btn primary"
+                        disabled={disabled || orderBlocked || legacyLotHeld}
+                        onClick={() =>
+                          setModal({
+                            title: "Confirm carrier handoff",
+                            subtitle:
+                              "Record the actual physical departure. This removes staged units from warehouse stock. TMS owns transportation after this handoff.",
+                            fields: [
+                              { name: "carrier", label: "Carrier" },
+                              {
+                                name: "handoff_reference",
+                                label: "Carrier pickup / tracking reference",
+                              },
+                            ],
+                            submit: "Confirm physical handoff",
+                            build: (d) => ({
+                              type: "ship",
+                              order_id: selectedOrder.id,
+                              ...d,
+                            }),
+                          })
+                        }
+                      >
+                        <Truck size={16} />
+                        Record handoff
+                      </button>
+                    )}
+                  {!["shipped", "cancelled", "closed_partial"].includes(
+                    selectedOrder.status,
+                  ) && (
                     <button
                       className="btn"
                       disabled={disabled}
@@ -3269,6 +4125,7 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
       )}
       {selectedReceipt && (
         <ModalFrame
+          suspended={serialPreparing || !!serialReview}
           title={`${selectedReceipt.reference} · ${selectedReceipt.supplier}`}
           close={closeModal}
         >
@@ -3277,7 +4134,24 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
               <Status value={selectedReceipt.status} />
               <span>Created {when(selectedReceipt.created_at)}</span>
             </div>
+            {selectedReceipt.cancellation && (
+              <p className="shipment-proof">
+                Unreceived remainder cancelled ·{" "}
+                {selectedReceipt.cancellation.reason}
+                <br />
+                {selectedReceipt.cancellation.actor} ·{" "}
+                {when(selectedReceipt.cancellation.cancelled_at)}
+              </p>
+            )}
             <h3>Expected receipt lines</h3>
+            {selectedReceipt.return_source && (
+              <p className="shipment-proof">
+                Customer return · original order{" "}
+                {selectedReceipt.return_source.order_id}
+                <br />
+                {selectedReceipt.return_source.reason}
+              </p>
+            )}
             {selectedReceipt.lines.map((l) => (
               <div className="receipt-line" key={l.id}>
                 <div>
@@ -3290,46 +4164,90 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                   <span>
                     {l.received} received / {l.quantity} expected
                   </span>
+                  {selectedReceipt.cancellation && (
+                    <span>
+                      {selectedReceipt.cancellation.lines[l.id]?.cancelled ?? 0}{" "}
+                      cancelled
+                    </span>
+                  )}
                 </div>
-                {canWork && l.received < l.quantity && (
-                  <button
-                    className="btn primary"
-                    disabled={disabled}
-                    onClick={() =>
-                      setModal({
-                        title: "Receive physical goods",
-                        subtitle: `Verify ${l.sku}, lot ${l.lot}. Receive into a receiving bin, then put away to make stock allocatable.`,
-                        fields: [
-                          {
-                            name: "quantity",
-                            label: "Received quantity (each)",
-                            type: "number",
-                            value: l.quantity - l.received,
-                            max: l.quantity - l.received,
-                          },
-                          {
-                            name: "location",
-                            label: "Receiving location",
-                            type: "select",
-                            options: fieldOptions("receiving"),
-                          },
-                        ],
-                        submit: "Confirm receipt",
-                        build: (d) => ({
-                          type: "receive",
-                          receipt_id: selectedReceipt.id,
-                          line_id: l.id,
-                          quantity: Number(d.quantity),
-                          location: d.location,
-                        }),
-                      })
-                    }
-                  >
-                    Receive goods
-                  </button>
-                )}
+                {canWork &&
+                  !selectedReceipt.cancellation &&
+                  selectedReceipt.status !== "cancelled" &&
+                  l.received < l.quantity && (
+                    <button
+                      className="btn primary"
+                      disabled={disabled}
+                      onClick={() =>
+                        setModal({
+                          title: "Receive physical goods",
+                          subtitle: `Verify ${l.sku}, lot ${l.lot}. Receive into a receiving bin, then move to storage. Allocation also requires an available lot.`,
+                          unitSku: l.sku,
+                          fields: [
+                            {
+                              name: "quantity",
+                              label: "Received quantity (each)",
+                              type: "number",
+                              value: l.quantity - l.received,
+                              max: l.quantity - l.received,
+                            },
+                            {
+                              name: "location",
+                              label: "Receiving location",
+                              type: "select",
+                              options: fieldOptions("receiving"),
+                            },
+                          ],
+                          submit: "Confirm receipt",
+                          build: (d) => ({
+                            type: "receive",
+                            receipt_id: selectedReceipt.id,
+                            line_id: l.id,
+                            quantity: Number(d.quantity),
+                            location: d.location,
+                          }),
+                        })
+                      }
+                    >
+                      Receive goods
+                    </button>
+                  )}
               </div>
             ))}
+            {canWork &&
+              !selectedReceipt.cancellation &&
+              ["expected", "partial"].includes(selectedReceipt.status) &&
+              selectedReceipt.lines.some(
+                (line) => line.received < line.quantity,
+              ) && (
+                <button
+                  className="btn danger"
+                  disabled={disabled}
+                  onClick={() =>
+                    setModal({
+                      title: "Cancel unreceived remainder",
+                      subtitle: `${selectedReceipt.reference}: close only goods that have not arrived. Received stock and its history stay intact. Cancelled return quantities become available for a new authorization.`,
+                      fields: [
+                        {
+                          name: "reason",
+                          label: "Cancellation reason",
+                          value: "",
+                          placeholder:
+                            "Why the remaining goods will not arrive",
+                        },
+                      ],
+                      submit: "Confirm remainder cancellation",
+                      build: (d) => ({
+                        type: "cancel_receipt",
+                        receipt_id: selectedReceipt.id,
+                        reason: d.reason,
+                      }),
+                    })
+                  }
+                >
+                  Cancel unreceived remainder
+                </button>
+              )}
             <div className="detail-note">
               <ArrowRight size={16} />
               <p>
@@ -3341,7 +4259,11 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
         </ModalFrame>
       )}
       {modal && "help" in modal && (
-        <ModalFrame title="Your warehouse workspace" close={closeModal}>
+        <ModalFrame
+          suspended={serialPreparing || !!serialReview}
+          title="Your warehouse workspace"
+          close={closeModal}
+        >
           <div className="detail-body guide">
             <h3>From dock to departure</h3>
             <ol>

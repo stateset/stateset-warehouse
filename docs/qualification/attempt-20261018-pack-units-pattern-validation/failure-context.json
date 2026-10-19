@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "production_qualified": false,
+  "recorded_at": "2026-10-19T02:43:31.493893+00:00",
+  "original_gate_result": "failed",
+  "software_checks_exit_code": 130,
+  "classification": "intentional interruption of owned local qualification",
+  "reason": "Independent Chrome check reproduced an invalid HTML pattern for pack code input. Browser checkValidity accepted lowercase because the pattern itself was invalid; canonical server admission continued to reject invalid codes. Stopped the owned gate before editing source, escaped the literal hyphen, added a browser regression and froze revision2.",
+  "inventory_failure_observed": false,
+  "release_build_container_resilience_ran": false,
+  "original_frozen_source_sha256": "264b08db9a4a8fba6882a8967176184ee41968fb9e295cdfb8dbd37bebb81843",
+  "corrected_source_sha256": "2ecc3469f6b6890d3dc14a223d7c9a9e2a98f8641a9cdf01a9400e3257cd7255",
+  "original_source_archive_private": ".local/qualification/pack-units-development-20261018/revision-1/source.tar.gz",
+  "original_source_archive_sha256": "7b72d0daad9d53aeae8d0b37b303551ed6d91b8301eced5df521b91ad642a21e",
+  "limits": [
+    "This failed/partial gate does not qualify its source or supersede any accepted release.",
+    "Earlier launcher exit126 occurred before the gate began; invoking the repository script through bash fixed that launcher. It is separate from this intentional gate interruption.",
+    "Private original failure traces and focused source limitations remain retained."
+  ]
+}

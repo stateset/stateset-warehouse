@@ -1,0 +1,147 @@
+"""Independent literal serial custody proof for synthetic HTTP traffic."""
+
+import collections
+
+
+def require(condition, message):
+    if not condition:
+        raise AssertionError(message)
+
+
+def serial_proof(tables, accepted, products, lots, units, moves, bins):
+    """Rebuild exact literal custody independently of stored guard booleans."""
+    events = {e["id"]: e for e in tables["wms_events"]}
+    by_request = {e["payload"]["request_id"]: e for e in events.values()}
+    require(
+        len(by_request) == len(events) == len(accepted),
+        "Event/request population differs",
+    )
+    by_unit = collections.defaultdict(list)
+    for step in tables["wms_serial_steps"]:
+        by_unit[(step["sku"], step["serial"])].append(step)
+    actual = {(u["sku"], u["serial"]): u for u in tables["wms_serial_units"]}
+    require(
+        len(actual) == len(tables["wms_serial_units"]) == products * lots * units,
+        "Literal identity population changed",
+    )
+    expected_steps = products * lots * units + sum(moves)
+    require(
+        len(tables["wms_serial_steps"]) == expected_steps,
+        "Serial step population changed",
+    )
+    expected_keys = set()
+    for i in range(products):
+        sku = f"LOAD-{i:05}"
+        for lot in range(lots):
+            for n in range(units):
+                key = (sku, f"Load-{i:05}-Lot-{lot:03}-Unit-{n:05}")
+                expected_keys.add(key)
+                count = moves[i] if lot == 0 and n == 0 and i < len(moves) else 0
+                place = {
+                    "status": "on_hand",
+                    "warehouse_id": "wh-main",
+                    "location": f"BIN-{(i + count % 2) % bins:05}",
+                }
+                row = actual.get(key, {})
+                require(
+                    row.get("lot") == f"LOT-{lot:03}"
+                    and row.get("place") == place
+                    and row.get("revision") == count + 1,
+                    "Literal identity, immutable lot, revision or custody changed",
+                )
+                chain = sorted(by_unit[key], key=lambda s: s["revision"])
+                require(
+                    [s["revision"] for s in chain] == list(range(1, count + 2)),
+                    "Serial revisions have a missing or extra predecessor",
+                )
+                previous = None
+                for revision, step in enumerate(chain, 1):
+                    event = events[step["event_id"]]
+                    payload = event["payload"]
+                    require(
+                        step["before_place"] == previous
+                        and step["lot"] == f"LOT-{lot:03}"
+                        and step["previous_revision"]
+                        == (revision - 1 if revision > 1 else None)
+                        and step["warehouse_id"] == "wh-main"
+                        and step["warehouse_version"] == event["version"]
+                        and step["actor"] == payload["actor"],
+                        "Serial predecessor, facility, lot or original actor changed",
+                    )
+                    normalized = {k: v for k, v in step.items() if k != "tenant"}
+                    require(
+                        payload["serial_steps"][step["ordinal"] - 1] == normalized,
+                        "Normalized serial history differs from its original event",
+                    )
+                    previous = step["after_place"]
+                require(
+                    previous == place and row["last_event_id"] == chain[-1]["event_id"],
+                    "Latest unit does not match its exact original step",
+                )
+    require(
+        set(actual) == set(by_unit) == expected_keys,
+        "Unexpected or missing literal identity",
+    )
+    observations = collections.defaultdict(list)
+    for o in tables["wms_serial_observations"]:
+        observations[o["event_id"]].append(o)
+    for request_id, saved in accepted.items():
+        event = by_request[request_id]
+        payload = event["payload"]
+        inputs = saved["request"].get("serial_inputs", [])
+        require(
+            payload.get("serial_inputs", []) == inputs,
+            "Original serial observations changed",
+        )
+        observed = sorted(observations[event["id"]], key=lambda o: o["ordinal"])
+        require(
+            len(observed) == len(inputs), "Missing or extra original observation group"
+        )
+        for ordinal, (o, expected) in enumerate(zip(observed, inputs), 1):
+            require(
+                {"target": o["target"], "sku": o["sku"], "serials": o["serials"]}
+                == expected
+                and o["ordinal"] == ordinal
+                and o["warehouse_id"] == "wh-main"
+                and o["sku_version"] == payload["serial_heads"][o["sku"]],
+                "Original complete label group or global SKU review changed",
+            )
+    require(
+        sum(map(len, observations.values())) == products * lots + sum(moves),
+        "Serial observation population differs from original counts and moves",
+    )
+    heads = {h["sku"]: h for h in tables["wms_serial_heads"]}
+    require(
+        set(heads) == {f"LOAD-{i:05}" for i in range(products)},
+        "Global serial head population changed",
+    )
+    batches = collections.defaultdict(list)
+    for b in tables["wms_serial_batches"]:
+        batches[b["sku"]].append(b)
+    for i in range(products):
+        sku = f"LOAD-{i:05}"
+        version = lots + (moves[i] if i < len(moves) else 0)
+        chain = sorted(batches[sku], key=lambda b: b["version"])
+        require(
+            [b["version"] for b in chain] == list(range(1, version + 1))
+            and heads[sku]["version"] == version
+            and heads[sku]["last_event_id"] == chain[-1]["event_id"],
+            "Global serial batch/head sequence changed",
+        )
+        for b in chain:
+            event = events[b["event_id"]]
+            require(
+                b["warehouse_id"] == event["warehouse_id"] == "wh-main"
+                and b["warehouse_version"] == event["version"]
+                and event["payload"]["serial_heads"][sku] == b["version"],
+                "Original serial batch event binding changed",
+            )
+    return {
+        "ok": True,
+        "literal_units": len(actual),
+        "steps": expected_steps,
+        "observations": sum(map(len, observations.values())),
+        "batches": len(tables["wms_serial_batches"]),
+        "global_heads": len(heads),
+        "all_literal_custody_revisions_original_steps_observations_and_heads_match": True,
+    }

@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-19T08:18:04.847291+00:00",
+  "synthetic": true,
+  "production_qualified": false,
+  "artifact": {
+    "path": "serial-shared-source-diagnostic-20261019.json",
+    "sha256": "586e201b100a811338c5df1a5e859e574b237db82289262408e7e3ae9a44077a"
+  },
+  "source_before": {
+    "revision": 19,
+    "inputs": 196,
+    "sha256": "29e71dcfc2b2ae0a234143971f1fa6dcf9d400f8a5c567e1d34d7bd1255c77ce",
+    "archive_sha256": "3c8d6c3dfb45a307671f234f4fd3a6647173f43b5dc9a732e520e60e8fcb80e8"
+  },
+  "source_after": {
+    "revision": 21,
+    "inputs": 198,
+    "sha256": "d115bfb6681e2f4e7cff819d0af82e21b0ed2e630c941b9b6d99ab50b5a3c05a",
+    "archive_sha256": "4a06cc57f115adeba2babf3b3da85db921a020b10e12c09b5cbbf590877e3191"
+  },
+  "all23migrations_and_standalone_guards_unchanged": true,
+  "schema_tables": 49,
+  "runners": {
+    "application_profile_and_pg12_checks_restore": {
+      "session": 16245,
+      "terminal_exit": 0
+    },
+    "paired_queries": {
+      "session": 88437,
+      "terminal_exit": 0,
+      "samples": 24,
+      "retained_rounds": 3,
+      "warmup_rounds": 1,
+      "transaction": "queries alternate over same retained source23 data and compare full proof JSON, thenROLLBACK"
+    },
+    "initial_paired_harness_error": {
+      "session": 9587,
+      "terminal_exit": 3,
+      "reason": "ambiguous proof variable/column in final comparison assertion; raw SQL/log retained; corrected qualifier only, no product change"
+    }
+  },
+  "limits": [
+    "Three read samples per fixture/stage and three paired query samples per size are diagnostics. Shared host and concurrent regression/browser/archive checks were uncontrolled; independent API profiles occur at different times.",
+    "The paired test compares complete JSON proof equality, not only a true summary flag. Every retained query returned the same original facts for its tenant.",
+    "Only16/64/128/256identities and10single-unit moves per fixture are measured. Initial full-count write/commit cost and larger history/closure/bucket scopes still need work.",
+    "Current and lineage pages remain selected-source reviews under global SKU fences; full reconciliation is separate. Standalone SQL/write guards remain unchanged.",
+    "No new image/deployment, serialized sustained profile, full ten-stage gate, physical/device or native/deployedMCP-client acceptance."
+  ]
+}

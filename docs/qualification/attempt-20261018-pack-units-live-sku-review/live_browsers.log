@@ -1,0 +1,56 @@
+
+Running 13 tests using 1 worker
+
+(node:1467680) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [live-postgres] › tests/cancellation-live.spec.ts:7:1 › partial RMA cancellation preserves physical stock and reauthorizes only its unreceived line (5.2s)
+  ✓   2 [live-postgres] › tests/facilities-live.spec.ts:8:1 › multiple facilities keep physical stock, selected context and original creation receipts isolated (5.5s)
+  ✓   3 [live-postgres] › tests/live.spec.ts:3:1 › real browser and Postgres recover a same-SKU short pick through physical handoff (11.8s)
+  ✓   4 [live-postgres] › tests/lot-controls-live.spec.ts:7:1 › lot controls preserve real custody and original recovery through expiry, quarantine, package unpack and scanner return (6.3s)
+  ✓   5 [live-postgres] › tests/lot-trace-live.spec.ts:8:1 › lot trace reviews actual cross-facility restrictions, prior handoff, staged package and remaining transit without changing custody (2.8s)
+  ✓   6 [live-postgres] › tests/operations-live.spec.ts:10:1 › real operational snapshot, metrics, and CSP-protected export agree with committed exception recovery (819ms)
+  ✓   7 [live-postgres] › tests/scanner-live.spec.ts:10:1 › scanner receiving and exact-line picking survive a concurrent operator count through physical handoff (4.6s)
+  ✓   8 [live-postgres] › tests/scanner-live.spec.ts:394:1 › replenishment moves and customer returns retain exact physical and source evidence (2.5s)
+  ✓   9 [live-postgres] › tests/split-live.spec.ts:8:1 › partial shipments allocate real backorders and preserve each handoff, early return and original request (6.8s)
+  ✓  10 [live-postgres] › tests/split-live.spec.ts:275:1 › partly shipped remainder closure requires physical recovery and retains original demand, handoff, return allowance and replay (8.4s)
+  ✓  11 [live-postgres] › tests/transfer-loss-live.spec.ts:7:1 › confirmed transfer loss and exact reversal retain custody until actual recovered arrival (7.8s)
+  ✓  12 [live-postgres] › tests/transfers-live.spec.ts:8:1 › facility handoff remains in transit until exact partial destination arrivals and original replays (8.3s)
+  ✘  13 [live-postgres] › tests/units-live.spec.ts:7:1 › reviewed pack definitions retain original form scanner count and recovery quantities (13.2s)
+
+
+  1) [live-postgres] › tests/units-live.spec.ts:7:1 › reviewed pack definitions retain original form scanner count and recovery quantities 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('region', { name: 'Pack units', exact: true }).getByText(/Original: 12 each/)
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('region', { name: 'Pack units', exact: true }).getByText(/Original: 12 each/)
+
+
+      205 |     .getByRole("button", { name: "Review pack change", exact: true })
+      206 |     .click();
+    > 207 |   await expect(panel.getByText(/Original: 12 each/)).toBeVisible();
+          |                                                      ^
+      208 |   await panel
+      209 |     .getByRole("button", { name: "Confirm pack definition", exact: true })
+      210 |     .click();
+        at /home/dom/stateset-warehouse/dashboard/tests/units-live.spec.ts:207:54
+
+    Error Context: ../../../../tmp/wms-unit-release.ZSbc1Vaa/live-browser-results/units-live-reviewed-pack-d-90013-unt-and-recovery-quantities-live-postgres/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../tmp/wms-unit-release.ZSbc1Vaa/live-browser-results/units-live-reviewed-pack-d-90013-unt-and-recovery-quantities-live-postgres/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../tmp/wms-unit-release.ZSbc1Vaa/live-browser-results/units-live-reviewed-pack-d-90013-unt-and-recovery-quantities-live-postgres/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [live-postgres] › tests/units-live.spec.ts:7:1 › reviewed pack definitions retain original form scanner count and recovery quantities 
+  12 passed (1.4m)

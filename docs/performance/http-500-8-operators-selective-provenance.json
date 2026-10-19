@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "production_qualified": false,
+  "report": "http-500-8-operators-selective.json",
+  "sha256": "574c3f622031bd7faddc8fde572224ee3ef86b707dea6177d662a3e608006097",
+  "image_id": "sha256:fe24dece52ab8a48a5784e29da6729e6ee7b480cbbca91db3a157fab381ff275",
+  "image_source_inputs_sha256": "9dcff2a56157b2902ccb93a78d218c6528e52d1ee1253a11bbbfc124d0c132db",
+  "software_source_inputs_sha256": "37298c902b42ad2bc8fdd1f31b5eeacf3ebae5c621a7fdf2d360ded23267808f",
+  "release_provenance": "../qualification/release-20261018-shared-snapshot/provenance.json",
+  "comparison_report": "http-500-8-operators.json",
+  "command": "WMS_RESILIENCE_IMAGE=<qualified immutable image ID> WMS_RESILIENCE_PRODUCTS=500 WMS_RESILIENCE_BINS=100 WMS_RESILIENCE_LOTS=2 WMS_RESILIENCE_OPEN_ORDERS=500 WMS_RESILIENCE_CLIENTS=8 WMS_RESILIENCE_SECONDS=300 WMS_RESILIENCE_REVIEW_MODE=resources bash scripts/resilience-rehearsal.sh",
+  "limits": [
+    "Same immutable image as current complete release gate",
+    "Same 500-product/500-order/8-operator/300-second protocol as retained resource-review baseline",
+    "One full operational snapshot shared per round; not eight independent dashboard refresh streams",
+    "Local synthetic fixture on a shared development host; separate measurement windows and database populations",
+    "No predeclared facility throughput or latency target supplied",
+    "Physical hardware, deployed identity/integrations and managed failover remain unqualified"
+  ]
+}

@@ -1,0 +1,18 @@
+
+Running 11 tests using 1 worker
+
+(node:1038003) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [live-postgres] › tests/cancellation-live.spec.ts:7:1 › partial RMA cancellation preserves physical stock and reauthorizes only its unreceived line (5.5s)
+  ✓   2 [live-postgres] › tests/facilities-live.spec.ts:8:1 › multiple facilities keep physical stock, selected context and original creation receipts isolated (4.5s)
+  ✓   3 [live-postgres] › tests/live.spec.ts:3:1 › real browser and Postgres recover a same-SKU short pick through physical handoff (21.1s)
+  ✓   4 [live-postgres] › tests/lot-controls-live.spec.ts:7:1 › lot controls preserve real custody and original recovery through expiry, quarantine, package unpack and scanner return (16.8s)
+  ✓   5 [live-postgres] › tests/lot-trace-live.spec.ts:8:1 › lot trace reviews actual cross-facility restrictions, prior handoff, staged package and remaining transit without changing custody (8.7s)
+  ✓   6 [live-postgres] › tests/operations-live.spec.ts:10:1 › real operational snapshot, metrics, and CSP-protected export agree with committed exception recovery (2.5s)
+  ✓   7 [live-postgres] › tests/scanner-live.spec.ts:10:1 › scanner receiving and exact-line picking survive a concurrent operator count through physical handoff (19.1s)
+  ✓   8 [live-postgres] › tests/scanner-live.spec.ts:394:1 › replenishment moves and customer returns retain exact physical and source evidence (8.7s)
+  ✓   9 [live-postgres] › tests/split-live.spec.ts:8:1 › partial shipments allocate real backorders and preserve each handoff, early return and original request (16.8s)
+  ✓  10 [live-postgres] › tests/split-live.spec.ts:275:1 › partly shipped remainder closure requires physical recovery and retains original demand, handoff, return allowance and replay (14.9s)
+  ✓  11 [live-postgres] › tests/transfers-live.spec.ts:8:1 › facility handoff remains in transit until exact partial destination arrivals and original replays (12.7s)
+
+  11 passed (2.3m)

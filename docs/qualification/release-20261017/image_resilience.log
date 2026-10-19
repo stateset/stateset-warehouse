@@ -1,0 +1,87 @@
+Seeding 500 products, 1000 opening bin-lots and 500 open orders through authenticated HTTP.
+Seeded 100 stocked products in 4.4s.
+Seeded 200 stocked products in 9.4s.
+Seeded 300 stocked products in 15.8s.
+Seeded 400 stocked products in 23.8s.
+Seeded 500 stocked products in 33.5s.
+Seeded 100 active orders in 39.3s.
+Seeded 200 active orders in 47.1s.
+Seeded 300 active orders in 57.0s.
+Seeded 400 active orders in 67.5s.
+Seeded 500 active orders in 77.4s.
+Qualifying a deliberately lost HTTP success through the other API replica.
+Killing one API only after PostgreSQL proves its original HTTP write is waiting.
+Crashing PostgreSQL with a blocked HTTP write; both replicas must fail readiness before recovery.
+Starting 60s sustained HTTP qualification with 4 distinct operators and two replicas.
+10.3s: 68 committed moves, 102 definite stale conflicts, same number of exact replays.
+20.7s: 140 committed moves, 210 definite stale conflicts, same number of exact replays.
+30.9s: 208 committed moves, 312 definite stale conflicts, same number of exact replays.
+41.1s: 264 committed moves, 396 definite stale conflicts, same number of exact replays.
+51.1s: 320 committed moves, 480 definite stale conflicts, same number of exact replays.
+Rebuilding physical custody, reservations, exact receipt lines and atomic audit evidence independently from PostgreSQL.
+{
+  "ok": true,
+  "image_id": "sha256:7d2cd51ceb3ac7398fef26f33aec16913f0ea71e179abaed8bf26570eba791fa",
+  "sustained_http": {
+    "requested_seconds": 60,
+    "elapsed_seconds": 60.509,
+    "replicas": 2,
+    "distinct_operator_identities": 4,
+    "rounds": 95,
+    "committed_moves": 380,
+    "exact_cross_replica_replays": 380,
+    "definite_stale_conflicts": 570,
+    "unexpected_errors": 0,
+    "committed_moves_per_second": 6.28,
+    "action_latency": {
+      "samples": 380,
+      "p50_ms": 404.186,
+      "p95_ms": 737.82,
+      "p99_ms": 1291.432,
+      "max_ms": 1677.323
+    },
+    "action_latency_scope": "shared round snapshot through committed physical write, including stale conflicts and full snapshot refreshes; subsequent exact replay excluded",
+    "http_write_attempt_latency": {
+      "samples": 950,
+      "p50_ms": 58.552,
+      "p95_ms": 94.866,
+      "p99_ms": 263.633,
+      "max_ms": 916.333
+    },
+    "operational_snapshot_latency": {
+      "samples": 665,
+      "p50_ms": 91.918,
+      "p95_ms": 155.093,
+      "p99_ms": 188.748,
+      "max_ms": 227.449
+    },
+    "operators": [
+      {
+        "actor": "operator:resilience-0",
+        "commits": 95,
+        "stale_conflicts": 118,
+        "exact_replays": 95
+      },
+      {
+        "actor": "operator:resilience-1",
+        "commits": 95,
+        "stale_conflicts": 135,
+        "exact_replays": 95
+      },
+      {
+        "actor": "operator:resilience-2",
+        "commits": 95,
+        "stale_conflicts": 164,
+        "exact_replays": 95
+      },
+      {
+        "actor": "operator:resilience-3",
+        "commits": 95,
+        "stale_conflicts": 153,
+        "exact_replays": 95
+      }
+    ]
+  },
+  "report": "/tmp/stateset-wms-release.91RWVFFJ/resilience/resilience.json"
+}
+Resilience qualification evidence: /tmp/stateset-wms-release.91RWVFFJ/resilience

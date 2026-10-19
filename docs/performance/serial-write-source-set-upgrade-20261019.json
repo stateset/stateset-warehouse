@@ -1,0 +1,72 @@
+{
+  "recorded_at": "2026-10-19T14:15:03.747138+00:00",
+  "ok": true,
+  "source_revision": 38,
+  "source_inputs_sha256": "2e147a22984fe0ccd5555acc40c8619a998c725fa5930ea45026bb9e7a13f904",
+  "synthetic": true,
+  "migrations_before": 28,
+  "migrations_after": 29,
+  "all48business_table_fingerprints_unchanged": true,
+  "all28original_ledger_rows_unchanged": true,
+  "changed_original_functions": [
+    "wms_serial_scope_commit()",
+    "wms_serial_scope_current_valid(text,text)"
+  ],
+  "added_source_set_functions": [
+    "wms_serial_modes_original_for_scope(text,text)"
+  ],
+  "all_other_original_function_bodies_unchanged": true,
+  "original_events": 3029,
+  "original_literal_units": 16000,
+  "original_canonical_request_digests_verified": 2365,
+  "exact_cross_replica_replays": 2365,
+  "unreconstructable_historical_scoped_envelopes_not_submitted": 664,
+  "replays_and_proofs_changed_no_tables": true,
+  "binary_sha256": "14035c7398dd5f72429a7a3d21fa6aadb544d2bbdfacbbc44aa060b77da2e30d",
+  "production_qualified": false,
+  "limits": [
+    "Actual application28-to29 upgrade on a freshly restored qualified16k corpus in a separate owned PG16 database; original qualification database remains stopped.",
+    "Only2365 historically reconstructable envelopes replayed, after immutable typed digest verification.664 timed requests include resource concurrency fields not preserved in original events; no mismatched replay attempted.",
+    "Native debug APIs; complete image qualification remains separate. No new production/deployment/device/facility or pending serial-write crash qualification."
+  ],
+  "complete_api_proofs": [
+    {
+      "milliseconds": 7481.105246988591,
+      "ok": true,
+      "serials": {
+        "batches": 1664,
+        "controlled_skus": 500,
+        "identity_scope": "tenant",
+        "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+        "observations": 1664,
+        "ok": true,
+        "physical_ok": true,
+        "registered_units": 16000,
+        "sku_reviews": 500,
+        "source_ok": true,
+        "unit_steps": 16664,
+        "warehouse_id": "wh-main"
+      }
+    },
+    {
+      "milliseconds": 6881.525301025249,
+      "ok": true,
+      "serials": {
+        "batches": 1664,
+        "controlled_skus": 500,
+        "identity_scope": "tenant",
+        "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+        "observations": 1664,
+        "ok": true,
+        "physical_ok": true,
+        "registered_units": 16000,
+        "sku_reviews": 500,
+        "source_ok": true,
+        "unit_steps": 16664,
+        "warehouse_id": "wh-main"
+      }
+    }
+  ],
+  "raw_upgrade_report_sha256": "2538de44589bf36304da242229c94df68f2c311d2414768940f2fb316687d2d1",
+  "source39_only_dockerfile_differs_from_source38": true
+}

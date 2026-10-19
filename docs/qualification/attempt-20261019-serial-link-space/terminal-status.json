@@ -1,0 +1,9 @@
+{
+  "recorded_at": "2026-10-19T14:21:22.659294+00:00",
+  "failed_stage": "software_checks",
+  "failed_stage_exit_code": 101,
+  "qualifier_terminal_exit_code": 1,
+  "native_wrapper_terminal_exit_code": 1,
+  "explanation": "Original failure-context actual_exit_code101 denotes the compiler/software stage. Qualifier aggregates failure to exit1; distinction retained explicitly.",
+  "original_failure_context_sha256": "bc37a6c7d96ed974f47508efb4c721668af0c0278c1dab6233f7df17bbbd71e5"
+}

@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "classification": "intentionally interrupted for independently reproduced one-nanosecond negative recovery duration acceptance",
+  "result": "failed",
+  "production_qualified": false,
+  "synthetic": true,
+  "terminal_exit_code": 130,
+  "passed_stages": [
+    "prerequisites",
+    "software_checks",
+    "observability_rules",
+    "release_builds",
+    "standard_workload",
+    "archive_restore",
+    "live_browsers",
+    "production_container"
+  ],
+  "software_source_inputs_sha256": "6887fd02015f0c2efde9989c1c7e546b98c7df6656ab1ca1b4ae3593547aa6f0",
+  "source_archive": "revision-3/source.tar.gz",
+  "source_archive_complete": true,
+  "before_fix_proof": {
+    "synthetic": true,
+    "physical_acceptance_performed": false,
+    "invalid_negative_rto_accepted": true,
+    "result": {
+      "actual_rto_seconds": "-1E-9",
+      "actual_rpo_seconds": "0",
+      "tables": 43
+    }
+  },
+  "observations": "All257Rust50Python137offline and13actualbrowser checks, archive restore and production container stages passed. Forced API/PostgreSQL recovery had passed; the sustained300second interval was deliberately interrupted and is not a completed capacity result. Independent verifier review accepted a synthetic negative1nsRTO because datetime ordering truncated submicrosecond fractions although duration arithmetic retained nanoseconds. Stopped owned session terminal130 before mutation. All current-profile chronological comparisons now use exact Decimal UTC instants, with negativeRTO/RPO and before-run journal/trace/peak regressions. No physical acceptance inferred.",
+  "recorded_at": "2026-10-19T04:09:22.410052+00:00"
+}

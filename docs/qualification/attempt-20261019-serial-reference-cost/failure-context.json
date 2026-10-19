@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-19T10:51:48.431578+00:00",
+  "result": "intentionally_interrupted_not_qualified",
+  "software_release_result": "failed",
+  "reason": "Static review confirmed repeated whole-warehouse per-unit metadata-reference calls for identical argument tuples. Capture the current corpus, validate a statement-local grouped-predicate prototype, then rerun the unchanged full 500-product scope after a justified source fix. This is not a natural HTTP/SQL failure, an observation timeout, a passing release or a reduced-scope qualification.",
+  "source_revision": 32,
+  "source_inputs": 210,
+  "source_inputs_sha256": "40b033ef0bf3231a8543e015f471ea755997f9e4efdac387c2df039f8e3cb23c",
+  "source_archive_sha256": "b14573d3cf7af4f41f66eff000d75b66544f87511480093b101fe1981c70a75d",
+  "immutable_image_id": "sha256:13d687086d48f9c9d6f1123e9646cfde959ad52b9d2fa05832a3864adef28bd0",
+  "qualified_image_pointer_changed": false,
+  "accepted_release_pointer_changed": false,
+  "completed_stages": 8,
+  "failed_stage": "image_resilience",
+  "failed_stage_exit_code": 143,
+  "terminal_runner_exit_code": 1,
+  "serial_setup_counts_before_signal": {
+    "products": 375,
+    "literal_units": 11952,
+    "original_commands": 1223,
+    "distinct_literal_reference_arguments": 747
+  },
+  "untracked_sustained": {
+    "requested_seconds": 300,
+    "review_mode": "resources",
+    "traffic_model": "independent-operators",
+    "client_schedule": "independent continuous client loops without think time or an operator barrier",
+    "serial_units_per_bin_lot": 0,
+    "serial_current_source_reads": 0,
+    "serial_current_source_latency": {
+      "samples": 0
+    },
+    "measurement_limit": "Authenticated loopback HTTP and JSON processing; Python clients open HTTP connections per request; browser rendering, human timing and physical scanner input are excluded",
+    "elapsed_seconds": 300.115,
+    "replicas": 2,
+    "distinct_operator_identities": 8,
+    "rounds": null,
+    "committed_moves": 10296,
+    "exact_cross_replica_replays": 10296,
+    "definite_stale_conflicts": 0,
+    "unexpected_errors": 0,
+    "committed_moves_per_second": 34.307,
+    "action_latency": {
+      "samples": 10296,
+      "p50_ms": 194.593,
+      "p95_ms": 271.24,
+      "p99_ms": 319.816,
+      "max_ms": 661.398
+    },
+    "action_latency_scope": "command submission from the client's cached review through committed write and its own validated post-commit full warehouse refresh and, when enabled, exact literal serial source/custody review; initial review and subsequent exact replay excluded",
+    "throughput_scope": "all completed client cycles, including initial reviews, physical commands, post-commit refreshes when enabled, conflicts and exact cross-replica replays; replay is not another physical move",
+    "http_write_attempt_latency": {
+      "samples": 10296,
+      "p50_ms": 52.307,
+      "p95_ms": 109.068,
+      "p99_ms": 146.335,
+      "max_ms": 324.696
+    },
+    "frozen_replay_latency": {
+      "samples": 10296,
+      "p50_ms": 27.191,
+      "p95_ms": 78.737,
+      "p99_ms": 108.737,
+      "max_ms": 214.944
+    },
+    "operational_snapshot_latency": {
+      "samples": 10304,
+      "p50_ms": 136.898,
+      "p95_ms": 196.304,
+      "p99_ms": 237.837,
+      "max_ms": 443.718
+    },
+    "shared_round_snapshot_reads": 0,
+    "independent_post_commit_stock_visibility_verified": true,
+    "snapshot_coverage": "exact configured catalog SKU set and every seeded order ID/state, with completed history permitted",
+    "operators": [
+      {
+        "actor": "operator:resilience-0",
+        "commits": 1294,
+        "stale_conflicts": 0,
+        "exact_replays": 1294,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 1294,
+        "snapshot_reads": 1295
+      },
+      {
+        "actor": "operator:resilience-1",
+        "commits": 1293,
+        "stale_conflicts": 0,
+        "exact_replays": 1293,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 1293,
+        "snapshot_reads": 1294
+      },
+      {
+        "actor": "operator:resilience-2",
+        "commits": 1281,
+        "stale_conflicts": 0,
+        "exact_replays": 1281,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 1281,
+        "snapshot_reads": 1282
+      },
+      {
+        "actor": "operator:resilience-3",
+        "commits": 1286,
+        "stale_conflicts": 0,
+        "exact_replays": 1286,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 1286,
+        "snapshot_reads": 1287
+      },
+      {
+        "actor": "operator:resilience-4",
+        "commits": 1293,
+        "stale_conflicts": 0,
+        "exact_replays": 1293,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 1293,
+        "snapshot_reads": 1294
+      },
+      {
+        "actor": "operator:resilience-5",
+        "commits": 1286,
+        "stale_conflicts": 0,
+        "exact_replays": 1286,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 1286,
+        "snapshot_reads": 1287
+      },
+      {
+        "actor": "operator:resilience-6",
+        "commits": 1283,
+        "stale_conflicts": 0,
+        "exact_replays": 1283,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 1283,
+        "snapshot_reads": 1284
+      },
+      {
+        "actor": "operator:resilience-7",
+        "commits": 1280,
+        "stale_conflicts": 0,
+        "exact_replays": 1280,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 1280,
+        "snapshot_reads": 1281
+      }
+    ]
+  },
+  "rust_passed": 316,
+  "python_passed": 61,
+  "offline_browser_passed": 149,
+  "actual_browser_passed": 23,
+  "actual_archive_tables": 49,
+  "populated_archive_tables": 49,
+  "archive_warehouse_proofs": 10,
+  "migrations": 26,
+  "mcp_admin_tools": 68,
+  "production_qualified": false,
+  "limits": [
+    "The serial profile did not finish seeding or enter its timed interval. No serial traffic, serial final proof or complete release qualification is claimed.",
+    "Interruption was intentional after static code review and retained fixture growth, not a natural API/SQL failure or an observation timeout.",
+    "The blocked crash/lost-response commands use the untracked recovery SKU, including in serial mode; pending serial-write crash recovery remains open.",
+    "Image timing reports retain aggregate distributions; native source31 retains separate raw cycles.",
+    "Source32 freeze wording called retention explicitly requested; retention was an implementation choice within the authorized qualification work."
+  ],
+  "original_private_root": "/tmp/wms-serial-release.aWJfVmFy",
+  "stopped_native_test_cluster": "/tmp/stateset-wms-test.ZinsSRsZ"
+}

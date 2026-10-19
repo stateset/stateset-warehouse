@@ -1,0 +1,14 @@
+[
+  {
+    "path": "independent-audit.json",
+    "sha256": "5fbd41c2e4c809fa7665f9d91ea15d4e5d494137de18e7dc85e0b5dd2a82b496"
+  },
+  {
+    "path": "live-browser-coverage.json",
+    "sha256": "c203fc3368f342546ceeb13e27213c2025d84cf064ae3911d91cc9ca9e911139"
+  },
+  {
+    "path": "qualification-limits.json",
+    "sha256": "a2d9b9ed5cc4ae943bf34bf4fa9ecf7a849e46280092e88112c9f1f20ae169fc"
+  }
+]

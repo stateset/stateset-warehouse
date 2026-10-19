@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "scope": "software_release_gate",
+  "recorded_at": "2026-10-19T02:39:16.393481+00:00",
+  "result": "failed",
+  "production_qualified": false,
+  "synthetic": true,
+  "release_revision": "pack-units-264b08db9a4a8fba6882a8967176184ee41968fb9e295cdfb8dbd37bebb81843",
+  "elapsed_seconds": 49,
+  "stages": [
+    {
+      "name": "prerequisites",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 0.544
+    },
+    {
+      "name": "software_checks",
+      "status": "failed",
+      "exit_code": 130,
+      "elapsed_seconds": 48.019
+    },
+    {
+      "name": "observability_rules",
+      "status": "not_run"
+    },
+    {
+      "name": "release_builds",
+      "status": "not_run"
+    },
+    {
+      "name": "standard_workload",
+      "status": "not_run"
+    },
+    {
+      "name": "archive_restore",
+      "status": "not_run"
+    },
+    {
+      "name": "live_browsers",
+      "status": "not_run"
+    },
+    {
+      "name": "production_container",
+      "status": "not_run"
+    },
+    {
+      "name": "image_resilience",
+      "status": "not_run"
+    },
+    {
+      "name": "stable_source_inputs",
+      "status": "not_run"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "source-inputs-before.json",
+      "sha256": "dfd34bcf2b714302a67888055c7182c3861c3502cbb097a6971cb41d0afc2a44"
+    },
+    {
+      "path": "tool-versions.json",
+      "sha256": "fb353776fcb627064e6ae049b0f4af0fa62007cc594ca9b5063098dd9946e8b5"
+    },
+    {
+      "path": "prerequisites.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "software_checks.log",
+      "sha256": "2badf587e21d481febc46acc3ef83cb8155b03a0bae5fba258144b56fee9ed4a"
+    }
+  ],
+  "not_performed": [
+    "Deployed WorkOS sign-in and membership lifecycle",
+    "Deployed OMS/Freight qualification",
+    "Physical warehouse and scanner acceptance",
+    "Organization-hosted GitHub execution"
+  ],
+  "limits": [
+    "All inventory and native-service fixtures are synthetic",
+    "Performance results apply to the recorded profiles and host",
+    "Process/database restart is not managed database failover",
+    "Published logs are sanitized; private raw artifacts stay in the fresh evidence directory"
+  ]
+}

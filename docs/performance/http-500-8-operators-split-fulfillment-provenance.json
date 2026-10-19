@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "production_qualified": false,
+  "report": "http-500-8-operators-split-fulfillment.json",
+  "sha256": "555426c6bf221e26c047b2cc923367d707bcf52ddcf82fd68159693f44714038",
+  "image_id": "sha256:cbf62efc5eaa53ec24fd51758707eb5d900e995a76d63cd9df5ce75e69dbfc55",
+  "image_source_inputs_sha256": "269eacd320e068e8295b60a186017f0e6ef44c0d70fcc2e20d66c31a9a07aa47",
+  "software_source_inputs_sha256": "360819eda499580ca67647edbaf9c24efe186ce44b3eac85120a10654c2a6020",
+  "release_provenance": "../qualification/release-20261018-split-fulfillment/provenance.json",
+  "traffic_model": "independent-operators",
+  "qualifier_sha256": {
+    "scripts/resilience-rehearsal.sh": "5fa42466238d4be5b260021da30541441d2c7d779b74b0594c8ac59099408227",
+    "scripts/resilience_probe.py": "67c2ceab339b0d21a5daa25af0b518f3cb476b4d856cedd914ed316cf27526ac"
+  },
+  "limits": [
+    "Container runtime and HTTP resilience use one immutable image; the other stages execute builds from the same frozen software inputs",
+    "Partial fulfillment, backorders, early returns and exact package ownership are exercised by actual HTTP/SQL race, forgery, authorization and rollback tests, real browser work and original replay, single-package native recovery and nonempty archive restoration",
+    "Sustained actions are bin moves and original-request replays; this does not measure repeated partial fulfillment or inter-facility dispatch/receiving throughput",
+    "Client, two API replicas and PostgreSQL share a development host; no deployed capacity, causal speedup or facility SLO is inferred",
+    "All earlier performance windows and dated qualification bundles remain retained"
+  ],
+  "host_observation": {
+    "scope": "single_point_shared_host_observation_during_timed_window",
+    "recorded_at": "2026-10-18T21:25:22.040356+00:00",
+    "load_average_1_5_15_minutes": [
+      6.79,
+      11.35,
+      15.43
+    ],
+    "compiler_process_sample_sha256": "e63d219602cac7c0b6b53839009a2c1ff9f0b2015008f74ba8ee153fb17aec42",
+    "rust_compilers_in_sample": 0,
+    "cargo_processes_in_sample": 0,
+    "conditions_controlled": false,
+    "limit": "One host-load sample does not identify the cause of latency or establish facility capacity. Process counts cover only the tool execution PID namespace and cannot establish host-wide compiler absence.",
+    "process_namespace_visibility": "tool_execution_pid_namespace_only",
+    "host_compiler_absence_established": false
+  },
+  "runtime_observer": {
+    "scope": "attempted_passive_database_blocker_observer_and_captured_shared_host_pressure",
+    "nominal_interval_seconds": 0.75,
+    "application_or_stock_mutations": false,
+    "postgres_samples": 0,
+    "sample_records": 923,
+    "source_sha256": "10d87b1cbddb640323fb4346915fb16fde8737e0a6d68afec1d159dce3242b0e",
+    "private_raw_samples_sha256": "9d9ed3d73e64d4e5c8a6957db469195089d8ebcaf71c296fb293a91ef8e2eb68",
+    "private_artifact_directory": ".local/qualification/release-20261018-split-fulfillment",
+    "limits": [
+      "Docker daemon access was denied from the observer tool namespace; zero PostgreSQL blocker samples were captured in this final gate",
+      "Host pressure sampling succeeded; the earlier standalone diagnostic replay separately captured PostgreSQL activity",
+      "Includes setup, intentional crash controls and timed traffic; raw samples and denied-access errors stay private",
+      "Neither host samples nor passing replays establish the original timeout cause or controlled capacity"
+    ],
+    "postgres_access_error_samples": 548,
+    "status": "host_pressure_captured_postgres_observer_access_denied",
+    "postgres_queries_executed": false
+  },
+  "preceding_failed_attempt": "../qualification/attempt-20261018-split-fulfillment-timeout/failure-context.json",
+  "standalone_diagnostic_replay": "http-500-8-operators-split-diagnostic.json",
+  "preceding_timeout_root_cause": "unconfirmed"
+}

@@ -8,6 +8,7 @@ import argparse
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 import hashlib
+import importlib.util
 from http.client import HTTPException
 import json
 import os
@@ -16,6 +17,7 @@ import re
 import secrets
 import subprocess
 import tempfile
+from types import SimpleNamespace
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
@@ -54,7 +56,7 @@ def decode(raw):
     try:
         return json.loads(raw, object_pairs_hook=unique_object, parse_float=Decimal,
                           parse_constant=lambda _: (_ for _ in ()).throw(Unqualified("Non-finite JSON number")))
-    except (ValueError, UnicodeError):
+    except (ValueError, UnicodeError, RecursionError):
         raise Unqualified("Invalid JSON") from None
 
 
@@ -90,8 +92,8 @@ def recent(value, hours=24):
 
 
 def text(value, label):
-    require(isinstance(value, str) and 1 <= len(value) <= 240 and value.strip() == value
-            and not any(ord(c) < 32 or ord(c) == 127 for c in value), f"Invalid {label}")
+    require(isinstance(value, str) and 1 <= len(value.encode("utf-8")) <= 240 and value.strip() == value
+            and not any(ord(c) < 32 or 127 <= ord(c) <= 159 for c in value), f"Invalid {label}")
     return value
 
 
@@ -169,7 +171,7 @@ def credential(config, name):
     return token
 
 
-def signed_file(path, signature, key):
+def signed_file(path, signature, key, versions=(1,)):
     require(path and signature and key, "A detached signature and independently trusted public key are required")
     try:
         with Path(path).open("rb") as stream:
@@ -196,7 +198,7 @@ def signed_file(path, signature, key):
         raise Unqualified("Signature verifier unavailable") from None
     require(result.returncode == 0 and public.returncode == 0, "Evidence signature is invalid for the independently trusted key")
     data = decode(raw)
-    require(isinstance(data, dict) and data.get("schema_version") == 1, "Unsupported evidence schema")
+    require(isinstance(data, dict) and type(data.get("schema_version")) is int and data["schema_version"] in versions, "Unsupported evidence schema")
     return data, hashlib.sha256(public.stdout).hexdigest(), hashlib.sha256(raw).hexdigest()
 
 
@@ -271,7 +273,7 @@ class Report:
             detail = callback()
             self.data["checks"].append({"name": name, "passed": True, "detail": detail})
             return True
-        except (Unqualified, KeyError, TypeError, ValueError, AttributeError, OverflowError, OSError) as error:
+        except (Unqualified, KeyError, TypeError, ValueError, AttributeError, OverflowError, OSError, RecursionError) as error:
             # Only our explicit messages are safe; arbitrary exception text may contain input/secrets.
             detail = str(error) if isinstance(error, Unqualified) else "Evidence shape/field is invalid"
             self.data["checks"].append({"name": name, "passed": False, "detail": detail})
@@ -439,8 +441,11 @@ def preflight(args):
     return report.finish()
 
 
-def facility(args):
+def facility_legacy(args):
     report = Report("signed_facility_acceptance_evidence")
+    report.data["profile"] = "legacy-v1"
+    report.data["qualified_scenarios"] = sorted(SCENARIOS)
+    report.data["current_workflows_qualified"] = False
     report.data["not_performed"] = ["The validator does not observe physical work or establish witness identity independently"]
 
     def verify():
@@ -540,6 +545,16 @@ def facility(args):
     return report.finish()
 
 
+
+def facility(args):
+    if getattr(args, "profile", "current-v2") == "legacy-v1":
+        return facility_legacy(args)
+    spec = importlib.util.spec_from_file_location("stateset_facility_evidence", Path(__file__).with_name("facility_evidence.py"))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    context = SimpleNamespace(**{name: globals()[name] for name in ("Report", "require", "text", "identifier", "integer", "number", "stamp", "recent", "signed_file", "decode")})
+    return module.run(args, context)
+
 def write_report(path, report):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -571,7 +586,17 @@ def main():
     physical.add_argument("--expected-facility", required=True)
     physical.add_argument("--expected-tenant", required=True)
     physical.add_argument("--expected-warehouse", required=True)
-    physical.add_argument("--expected-release-sha", required=True)
+    physical.add_argument("--profile", choices=("current-v2", "legacy-v1"), default="current-v2")
+    physical.add_argument("--expected-release-sha", help="Exact git SHA for the explicitly limited legacy-v1 profile")
+    physical.add_argument("--qualified-release", help="Reviewed local software qualification bundle directory")
+    physical.add_argument("--expected-release-summary-sha256")
+    physical.add_argument("--expected-source-inputs-sha256")
+    physical.add_argument("--expected-image-digest")
+    physical.add_argument("--plan")
+    physical.add_argument("--plan-signature")
+    physical.add_argument("--plan-trust-key")
+    physical.add_argument("--controller-signature")
+    physical.add_argument("--controller-trust-key")
     physical.add_argument("--output", required=True)
     args = parser.parse_args()
     result = preflight(args) if args.command == "preflight" else facility(args)

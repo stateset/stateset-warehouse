@@ -1,0 +1,3 @@
+Building production image; evidence: /tmp/wms-remainder-release.GlUUHUGF/container
+PASS: production image healthy under UID 10001, read-only filesystem, zero effective capabilities, no new privileges, real authentication and independent PostgreSQL reconciliation.
+Container qualification evidence: /tmp/wms-remainder-release.GlUUHUGF/container

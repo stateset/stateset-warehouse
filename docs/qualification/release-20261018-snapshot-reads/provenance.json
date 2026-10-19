@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "ok": true,
+  "stable_software_inputs_sha256": "f68af5137a29aac0f63ce1b40a8e7cdbfd5c5f500c3ad7f8fb3380db432bd031",
+  "image_id": "sha256:f6d5db89e96c1d7d66bd52912714641040ab5f25ad7d4a646d52612c4b4d9f53",
+  "image_source_inputs_sha256": "01facb61f069f6220e36a9178be4889a8004c8d1b482a4a3a30fd3a99cf5689e",
+  "restore_container_resilience_migrations_identical": true,
+  "migrations": {
+    "004_native_source_ownership": "366979c9630c4c62cb7d71beb5c89cd917764558b4e05267c4eb4aac486a6cb9",
+    "003_native_operations": "f9a5cfa4a1e4f7830613febe6b37f11a8485beef46d6b96791c78435fe784108",
+    "007_operations_indexes": "b0b9b422f570ed77ca1252df42c96b29544849621ed748cadd1f068b708576b5",
+    "010_customer_returns": "dfafb0547d0af2ba11f86dfa31f7facebe89adf582d6b215d02b734e1413fb71",
+    "001_initial": "8e5c3fa5f0065b63076c33b8bd3c337b8490d4b7a88f3e774ec17e2290e1f4d4",
+    "006_oms_rejections": "567e061943a1602ff25b5d5c988be810808b8c6e1638885ee6ef9b71a9ba4ed4",
+    "008_delivery_recipient": "050f40c80b9e73a3edc8a19545ab08cfe41051616b84d9445dfdea9a30de9d19",
+    "011_immutable_command_receipts": "0a7c69928f38527f542a55e795de9b62c65f4907d7d05cba2d47f7eeebdf8a73",
+    "002_relational_execution": "660cd0fdbc7205644c7c3d7ac3da43cbaf1c6d9f80c4d0f2ea4d0c0986e6ff90",
+    "009_resource_versions": "b702a003a1d74210fdfc06cef1fbfb6e737146a25314642094a2f8383dc2e209",
+    "005_conditional_oms_fulfillment": "b8892cbaa4a1b26c6e1732616ec30503d3698f44e363240386078398e29e9a41"
+  },
+  "limit": "The source fingerprint binds this working tree; it does not assert a clean Git checkout or deployed acceptance"
+}

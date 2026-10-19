@@ -1,0 +1,28 @@
+
+Running 21 tests using 1 worker
+
+(node:3557487) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [live-postgres] › tests/cancellation-live.spec.ts:7:1 › partial RMA cancellation preserves physical stock and reauthorizes only its unreceived line (2.1s)
+  ✓   2 [live-postgres] › tests/facilities-live.spec.ts:8:1 › multiple facilities keep physical stock, selected context and original creation receipts isolated (1.7s)
+  ✓   3 [live-postgres] › tests/live.spec.ts:3:1 › real browser and Postgres recover a same-SKU short pick through physical handoff (6.6s)
+  ✓   4 [live-postgres] › tests/lot-controls-live.spec.ts:7:1 › lot controls preserve real custody and original recovery through expiry, quarantine, package unpack and scanner return (5.6s)
+  ✓   5 [live-postgres] › tests/lot-trace-live.spec.ts:8:1 › lot trace reviews actual cross-facility restrictions, prior handoff, staged package and remaining transit without changing custody (2.5s)
+  ✓   6 [live-postgres] › tests/operations-live.spec.ts:10:1 › real operational snapshot, metrics, and CSP-protected export agree with committed exception recovery (727ms)
+  ✓   7 [live-postgres] › tests/scanner-live.spec.ts:10:1 › scanner receiving and exact-line picking survive a concurrent operator count through physical handoff (4.1s)
+  ✓   8 [live-postgres] › tests/scanner-live.spec.ts:394:1 › replenishment moves and customer returns retain exact physical and source evidence (2.2s)
+  ✓   9 [live-postgres] › tests/serial-transfers-live.spec.ts:10:3 › serial transfer groups, original loss and recovered arrival retain cross-facility custody (desktop) (7.5s)
+  ✓  10 [live-postgres] › tests/serial-transfers-live.spec.ts:10:3 › serial transfer groups, original loss and recovered arrival retain cross-facility custody (mobile) (8.0s)
+  ✓  11 [live-postgres] › tests/serial-workflows-live.spec.ts:11:3 › serial picking, multi-line packages and partial RMA preserve exact owners (desktop) (10.5s)
+  ✓  12 [live-postgres] › tests/serial-workflows-live.spec.ts:11:3 › serial picking, multi-line packages and partial RMA preserve exact owners (mobile) (9.9s)
+  ✓  13 [live-postgres] › tests/serial-workflows-live.spec.ts:304:3 › serial scans cannot survive an equal-quantity identity replacement without review (desktop) (3.0s)
+  ✓  14 [live-postgres] › tests/serial-workflows-live.spec.ts:304:3 › serial scans cannot survive an equal-quantity identity replacement without review (mobile) (2.8s)
+  ✓  15 [live-postgres] › tests/serials-live.spec.ts:9:3 › serialized receiving and move retain exact labels through lost responses (desktop) (4.1s)
+  ✓  16 [live-postgres] › tests/serials-live.spec.ts:9:3 › serialized receiving and move retain exact labels through lost responses (mobile) (4.0s)
+  ✓  17 [live-postgres] › tests/split-live.spec.ts:8:1 › partial shipments allocate real backorders and preserve each handoff, early return and original request (5.0s)
+  ✓  18 [live-postgres] › tests/split-live.spec.ts:275:1 › partly shipped remainder closure requires physical recovery and retains original demand, handoff, return allowance and replay (3.9s)
+  ✓  19 [live-postgres] › tests/transfer-loss-live.spec.ts:7:1 › confirmed transfer loss and exact reversal retain custody until actual recovered arrival (3.6s)
+  ✓  20 [live-postgres] › tests/transfers-live.spec.ts:8:1 › facility handoff remains in transit until exact partial destination arrivals and original replays (2.8s)
+  ✓  21 [live-postgres] › tests/units-live.spec.ts:7:1 › reviewed pack definitions retain original form scanner count and recovery quantities (5.5s)
+
+  21 passed (1.6m)

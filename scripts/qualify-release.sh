@@ -6,6 +6,8 @@ umask 077
 exec 3>&1 4>&2
 cd "$(dirname "$0")/.."
 wms_release_repository="$PWD"
+source scripts/qualification_resources.sh
+wms_qualification_resource_mode
 
 if ! command -v python3 >/dev/null 2>&1; then
   echo 'Release qualification requires Python 3.' >&2
@@ -99,7 +101,8 @@ passed = os.environ["WMS_RELEASE_RESULT"] == "0" and all(stage["status"] == "pas
 artifacts = []
 reports = {"standard_workload": root / "workload.json", "archive_restore": root / "restore/release-qualification.json",
            "observability_rules": root / "observability.json", "production_container": root / "container/container-qualification.json",
-           "image_resilience": root / "resilience/resilience.json"}
+           "image_resilience": root / "resilience/resilience.json",
+           "image_serial_resilience": root / "serial-resilience/resilience.json"}
 for name, path in reports.items():
     if path.is_file():
         # Only the known sanitized report crosses into publish; inspect files,
@@ -182,7 +185,7 @@ wms_release_fingerprint() {
   python3 - "$1" <<'PY'
 import hashlib, json, pathlib, sys
 root = pathlib.Path.cwd()
-files = [root / path for path in ("Cargo.toml", "Cargo.lock", "Dockerfile", ".dockerignore", "docker-compose.yml")]
+files = [root / path for path in ("Cargo.toml", "Cargo.lock", "Dockerfile", ".dockerignore", "docker-compose.yml", ".nvmrc")]
 excluded = {"node_modules", "dist", "test-results", "playwright-report", "__pycache__"}
 for name in ("src", "migrations", "dashboard", "examples", "tests", "scripts", "integrations", "deploy", ".github"):
     files += [path for path in (root / name).rglob("*") if path.is_file() and not excluded.intersection(path.parts)
@@ -224,6 +227,11 @@ for name in ("WMS_RELEASE_DEMO_PORT", "WMS_RELEASE_SCANNER_PORT"):
         raise SystemExit("Qualification API ports must be unprivileged numeric loopback ports")
 if os.environ["WMS_RELEASE_DEMO_PORT"] == os.environ["WMS_RELEASE_SCANNER_PORT"]:
     raise SystemExit("Qualification APIs require distinct loopback ports")
+serial_units = os.environ.get("WMS_RELEASE_SERIAL_UNITS", "16")
+if not serial_units.isdigit() or not 2 <= int(serial_units) <= 256:
+    raise SystemExit("WMS_RELEASE_SERIAL_UNITS must be between 2 and 256")
+if os.environ.get("WMS_RESILIENCE_TRAFFIC_MODEL", "independent-operators") != "independent-operators":
+    raise SystemExit("The complete release gate requires independent operators; use the standalone rehearsal for shared-snapshot comparisons")
 PY
   # Verify the actual connection and CREATEDB permission without printing URLs.
   for wms_connection_name in WMS_TEST_DATABASE_URL WMS_RESTORE_ADMIN_URL; do
@@ -353,7 +361,11 @@ wms_release_container() {
 
 wms_release_resilience() {
   WMS_RESILIENCE_IMAGE="$(cat "$wms_release_root/container/image.id")" \
+    WMS_RESILIENCE_SERIAL_UNITS=0 \
     WMS_RESILIENCE_ARTIFACT_DIR="$wms_release_root/resilience" bash scripts/resilience-rehearsal.sh
+  WMS_RESILIENCE_IMAGE="$(cat "$wms_release_root/container/image.id")" \
+    WMS_RESILIENCE_SERIAL_UNITS="${WMS_RELEASE_SERIAL_UNITS:-16}" \
+    WMS_RESILIENCE_ARTIFACT_DIR="$wms_release_root/serial-resilience" bash scripts/resilience-rehearsal.sh
 }
 
 wms_release_stable_inputs() {
@@ -368,19 +380,25 @@ import hashlib, json, pathlib, sys
 root = pathlib.Path(sys.argv[1])
 container = json.loads((root / "container/container-qualification.json").read_text())
 resilience = json.loads((root / "resilience/resilience.json").read_text())
+serial = json.loads((root / "serial-resilience/resilience.json").read_text())
 restore = json.loads((root / "restore/release-qualification.json").read_text())
 workload = json.loads((root / "workload.json").read_text())
 assert container["ok"] is True and resilience["ok"] is True and restore["ok"] is True
+assert serial["ok"] is True and serial["independent_proof"]["serial_identity_proof"]["ok"] is True
+assert serial["phases"]["sustained_http"]["serial_units_per_bin_lot"] >= 2
+assert serial["phases"]["sustained_http"]["serial_current_source_reads"] == serial["phases"]["sustained_http"]["committed_moves"]
 assert workload["configured_thresholds_passed"] is True and workload["proof"]["independent_reconciliation"] is True
 assert container["image_id"] == resilience["image_id"] == (root / "container/image.id").read_text().strip()
 assert container["source_inputs_sha256"] == resilience["image_source_inputs_sha256"], "Image source identities differ across proofs"
+assert serial["image_id"] == container["image_id"] and serial["image_source_inputs_sha256"] == container["source_inputs_sha256"]
 expected = {path.stem: hashlib.sha256(path.read_bytes()).hexdigest() for path in pathlib.Path("migrations").glob("[0-9][0-9][0-9]_*.sql")}
-for evidence in (container["migrations"], resilience["migrations"], restore["verification"]["migrations"]):
+for evidence in (container["migrations"], resilience["migrations"], serial["migrations"], restore["verification"]["migrations"]):
     assert {row["name"]: row["sha256"] for row in evidence} == expected, "Proof did not use the exact tracked migration chain"
 inputs = json.loads((root / "source-inputs-before.json").read_text())
 report = {"schema_version": 1, "ok": True, "stable_software_inputs_sha256": inputs["sha256"],
           "image_id": container["image_id"], "image_source_inputs_sha256": container["source_inputs_sha256"],
           "restore_container_resilience_migrations_identical": True, "migrations": expected,
+          "untracked_and_serial_image_resilience_passed": True,
           "limit": "The source fingerprint binds this working tree; it does not assert a clean Git checkout or deployed acceptance"}
 (root / "provenance.json").write_text(json.dumps(report, indent=2) + "\n")
 PY

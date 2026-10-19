@@ -1,0 +1,15 @@
+
+Running 8 tests using 1 worker
+
+(node:4090608) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [live-postgres] › tests/cancellation-live.spec.ts:7:1 › partial RMA cancellation preserves physical stock and reauthorizes only its unreceived line (4.1s)
+  ✓  2 [live-postgres] › tests/facilities-live.spec.ts:8:1 › multiple facilities keep physical stock, selected context and original creation receipts isolated (3.6s)
+  ✓  3 [live-postgres] › tests/live.spec.ts:3:1 › real browser and Postgres recover a same-SKU short pick through physical handoff (16.2s)
+  ✓  4 [live-postgres] › tests/operations-live.spec.ts:10:1 › real operational snapshot, metrics, and CSP-protected export agree with committed exception recovery (1.4s)
+  ✓  5 [live-postgres] › tests/scanner-live.spec.ts:10:1 › scanner receiving and exact-line picking survive a concurrent operator count through physical handoff (9.8s)
+  ✓  6 [live-postgres] › tests/scanner-live.spec.ts:394:1 › replenishment moves and customer returns retain exact physical and source evidence (3.7s)
+  ✓  7 [live-postgres] › tests/split-live.spec.ts:8:1 › partial shipments allocate real backorders and preserve each handoff, early return and original request (13.3s)
+  ✓  8 [live-postgres] › tests/transfers-live.spec.ts:8:1 › facility handoff remains in transit until exact partial destination arrivals and original replays (5.9s)
+
+  8 passed (1.0m)

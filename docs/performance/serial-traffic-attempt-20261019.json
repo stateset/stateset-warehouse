@@ -1,0 +1,235 @@
+{
+  "schema_version": 1,
+  "ok": false,
+  "synthetic": true,
+  "production_qualified": false,
+  "qualification": "development native serial HTTP traffic attempt",
+  "failure_stage": "final_complete_serial_api_reconciliation",
+  "failure_reason": "Final complete serial reconciliation failed",
+  "traffic_completed": true,
+  "phases": {
+    "seed": {
+      "method": "authenticated actual HTTP commands only; opening counts are disclosed synthetic fixtures",
+      "seconds": 1.675,
+      "operational_products": 8,
+      "additional_recovery_product": 1,
+      "storage_bins": 8,
+      "lots_per_product": 1,
+      "opening_bin_lot_balances": 8,
+      "opening_each_per_balance": 16,
+      "serial_units_per_bin_lot": 16,
+      "open_orders": 8,
+      "allocated_orders": 4,
+      "commands_before_recovery_lifecycle": 38,
+      "expected_setup_commands": 38,
+      "observed_setup_commands": 38,
+      "independent_setup_command_count_matches": true,
+      "excluded_from_sustained_timing": true
+    },
+    "sustained_http": {
+      "requested_seconds": 300,
+      "review_mode": "resources",
+      "traffic_model": "independent-operators",
+      "client_schedule": "independent continuous client loops without think time or an operator barrier",
+      "serial_units_per_bin_lot": 16,
+      "serial_current_source_reads": 4665,
+      "serial_current_source_latency": {
+        "samples": 4665,
+        "p50_ms": 14.741,
+        "p95_ms": 22.342,
+        "p99_ms": 25.753,
+        "max_ms": 39.769
+      },
+      "measurement_limit": "Authenticated loopback HTTP and JSON processing; Python clients open HTTP connections per request; browser rendering, human timing and physical scanner input are excluded",
+      "elapsed_seconds": 300.22,
+      "replicas": 2,
+      "distinct_operator_identities": 4,
+      "rounds": null,
+      "committed_moves": 4665,
+      "exact_cross_replica_replays": 4665,
+      "definite_stale_conflicts": 0,
+      "unexpected_errors": 0,
+      "committed_moves_per_second": 15.539,
+      "action_latency": {
+        "samples": 4665,
+        "p50_ms": 261.29,
+        "p95_ms": 337.969,
+        "p99_ms": 369.096,
+        "max_ms": 696.533
+      },
+      "action_latency_scope": "command submission from the client's cached review through committed write and its own validated post-commit full warehouse refresh and, when enabled, exact literal serial source/custody review; initial review and subsequent exact replay excluded",
+      "throughput_scope": "all completed client cycles, including initial reviews, physical commands, post-commit refreshes when enabled, conflicts and exact cross-replica replays; replay is not another physical move",
+      "http_write_attempt_latency": {
+        "samples": 4665,
+        "p50_ms": 225.085,
+        "p95_ms": 297.885,
+        "p99_ms": 329.878,
+        "max_ms": 652.148
+      },
+      "frozen_replay_latency": {
+        "samples": 4665,
+        "p50_ms": 2.419,
+        "p95_ms": 3.051,
+        "p99_ms": 3.663,
+        "max_ms": 14.422
+      },
+      "operational_snapshot_latency": {
+        "samples": 4669,
+        "p50_ms": 20.134,
+        "p95_ms": 26.157,
+        "p99_ms": 28.664,
+        "max_ms": 70.739
+      },
+      "shared_round_snapshot_reads": 0,
+      "independent_post_commit_stock_visibility_verified": true,
+      "snapshot_coverage": "exact configured catalog SKU set and every seeded order ID/state, with completed history permitted",
+      "operators": [
+        {
+          "actor": "operator:serial-0",
+          "commits": 1166,
+          "stale_conflicts": 0,
+          "exact_replays": 1166,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 1166,
+          "snapshot_reads": 1167
+        },
+        {
+          "actor": "operator:serial-1",
+          "commits": 1165,
+          "stale_conflicts": 0,
+          "exact_replays": 1165,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 1165,
+          "snapshot_reads": 1166
+        },
+        {
+          "actor": "operator:serial-2",
+          "commits": 1168,
+          "stale_conflicts": 0,
+          "exact_replays": 1168,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 1168,
+          "snapshot_reads": 1169
+        },
+        {
+          "actor": "operator:serial-3",
+          "commits": 1166,
+          "stale_conflicts": 0,
+          "exact_replays": 1166,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 1166,
+          "snapshot_reads": 1167
+        }
+      ]
+    }
+  },
+  "separate_independent_literal_history": {
+    "ok": true,
+    "literal_units": 128,
+    "steps": 4793,
+    "observations": 4673,
+    "batches": 4673,
+    "global_heads": 8,
+    "all_literal_custody_revisions_original_steps_observations_and_heads_match": true
+  },
+  "read_only_explain_diagnostic": {
+    "execution_ms": 12756.068,
+    "diagnostic_statement_timeout": "60s",
+    "product_statement_timeout_unchanged": "10s",
+    "function_stats": [
+      {
+        "calls": 4703,
+        "self_ms": 6723.261,
+        "function": "wms_serial_event_valid",
+        "total_ms": 12309.822
+      },
+      {
+        "calls": 4703,
+        "self_ms": 170.469,
+        "function": "wms_serial_event_inputs_bound",
+        "total_ms": 3045.147
+      },
+      {
+        "calls": 4703,
+        "self_ms": 2874.677,
+        "function": "wms_serial_inputs_match_command",
+        "total_ms": 2874.677
+      },
+      {
+        "calls": 4793,
+        "self_ms": 1669.529,
+        "function": "wms_serial_step_source_for_event",
+        "total_ms": 2288.222
+      },
+      {
+        "calls": 18828,
+        "self_ms": 856.99,
+        "function": "wms_serial_batch_original",
+        "total_ms": 856.99
+      },
+      {
+        "calls": 4793,
+        "self_ms": 98.999,
+        "function": "wms_serial_step_effect_valid",
+        "total_ms": 350.234
+      },
+      {
+        "calls": 9511,
+        "self_ms": 129.892,
+        "function": "wms_serial_on_hand",
+        "total_ms": 129.892
+      },
+      {
+        "calls": 9714,
+        "self_ms": 124.656,
+        "function": "wms_serial_place_valid",
+        "total_ms": 124.656
+      },
+      {
+        "calls": 128,
+        "self_ms": 39.043,
+        "function": "wms_serial_at_version",
+        "total_ms": 39.043
+      },
+      {
+        "calls": 2,
+        "self_ms": 4.728,
+        "function": "wms_serial_scope_current_valid",
+        "total_ms": 15.366
+      },
+      {
+        "calls": 16,
+        "self_ms": 9.622,
+        "function": "wms_serial_head_bound",
+        "total_ms": 12.259
+      },
+      {
+        "calls": 256,
+        "self_ms": 7.545,
+        "function": "wms_serial_place_references_valid",
+        "total_ms": 10.638
+      },
+      {
+        "calls": 2,
+        "self_ms": 3.181,
+        "function": "wms_serial_scope_transit_valid",
+        "total_ms": 3.181
+      },
+      {
+        "calls": 18,
+        "self_ms": 1.572,
+        "function": "wms_serial_mode_original",
+        "total_ms": 1.572
+      }
+    ]
+  },
+  "limits": [
+    "FAILED qualification: sustained traffic completed but final full-history API reconciliation exceeded the unchanged10second product statement limit. No successful overall serial traffic report exists.",
+    "Debug native executable, uncontrolled shared host, two loopback API processes and one PostgreSQL12primary; not production image/crash/failover/deployed/device/native-receiver/facility qualification.",
+    "Eight controlledSKUs, one lot and16literal each perSKU, eight bins and eight open orders. Four distinct operators continuously move one fixed original label each;124labels stay in place. No think time, rate cap or operator-round barrier. This does not qualify large reviewed counts or broad random-label contention.",
+    "Traffic latency includes committed write, client full operational refresh and exact serial source/custody review. Initial review and subsequent exact replay are excluded. Throughput includes all client cycles and timing-journal writes.",
+    "The separate read-only diagnostic permits60seconds solely to collect EXPLAIN ANALYZE and function counters on the exact retained history. Product timeout remains10seconds. EXPLAIN execution is not successful API qualification, and inclusive function times overlap.",
+    "Independent literal-row rebuild verifies every identity/immutablelot/custody, revision predecessor, normalized original step, complete original observations and globalhead/batch binding. This separate proof does not replace the failed full API reconciliation.",
+    "Rust/SQL/dashboard/application inputs are unchanged from revision23. Earlier314Rust/46PG16/10live/dual49table restore checks retain original provenance, not reruns for these tools. First smoke raced migration/readiness; source25 corrects it. Source26 adds raw timing and exact OMS event-intent checks before this failed sustained attempt."
+  ]
+}

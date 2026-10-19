@@ -20,6 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if demo && !address.ip().is_loopback() {
         return Err("Demo API must bind to a loopback address".into());
     }
+    let mcp_config = stateset_warehouse::mcp::Config::from_env()?;
     let workos_config = stateset_warehouse::auth::WorkOsConfig::from_env()?;
     if demo && workos_config.is_some() {
         return Err("Demo mode cannot enable WorkOS".into());
@@ -146,22 +147,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         demo,
         connections,
     };
-    axum::serve(listener, api::router_with_auth(app, workos))
-        .with_graceful_shutdown(async move {
-            #[cfg(unix)]
-            {
-                let mut terminate =
-                    tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
-                        .expect("install SIGTERM handler");
-                tokio::select! {_=tokio::signal::ctrl_c()=>{},_=terminate.recv()=>{}}
-            }
-            #[cfg(not(unix))]
-            {
-                tokio::signal::ctrl_c().await.ok();
-            }
-            let _ = shutdown_tx.send(true);
-        })
-        .await?;
+    axum::serve(
+        listener,
+        api::router_with_auth_and_mcp(app, workos, mcp_config),
+    )
+    .with_graceful_shutdown(async move {
+        #[cfg(unix)]
+        {
+            let mut terminate =
+                tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+                    .expect("install SIGTERM handler");
+            tokio::select! {_=tokio::signal::ctrl_c()=>{},_=terminate.recv()=>{}}
+        }
+        #[cfg(not(unix))]
+        {
+            tokio::signal::ctrl_c().await.ok();
+        }
+        let _ = shutdown_tx.send(true);
+    })
+    .await?;
     let _ = tokio::time::timeout(Duration::from_secs(15), worker).await;
     Ok(())
 }

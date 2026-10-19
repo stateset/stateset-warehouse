@@ -1,0 +1,44 @@
+Seeding 500 products, 1000 opening bin-lots and 500 open orders through authenticated HTTP.
+Seeded 100 stocked products in 6.2s.
+Seeded 200 stocked products in 15.6s.
+Seeded 300 stocked products in 30.1s.
+Seeded 400 stocked products in 44.5s.
+Seeded 500 stocked products in 63.1s.
+Seeded 100 active orders in 74.6s.
+Seeded 200 active orders in 91.0s.
+Seeded 300 active orders in 110.5s.
+Seeded 400 active orders in 131.0s.
+Seeded 500 active orders in 155.2s.
+Qualifying a deliberately lost HTTP success through the other API replica.
+Killing one API only after PostgreSQL proves its original HTTP write is waiting.
+Crashing PostgreSQL with a blocked HTTP write; both replicas must fail readiness before recovery.
+Starting 300s sustained HTTP qualification with 8 distinct operators, two replicas and independent-operators traffic.
+10.0s: 374 committed moves, 0 definite stale conflicts, same number of exact replays.
+20.0s: 756 committed moves, 0 definite stale conflicts, same number of exact replays.
+30.0s: 1106 committed moves, 0 definite stale conflicts, same number of exact replays.
+40.0s: 1447 committed moves, 0 definite stale conflicts, same number of exact replays.
+50.1s: 1769 committed moves, 0 definite stale conflicts, same number of exact replays.
+60.1s: 2086 committed moves, 0 definite stale conflicts, same number of exact replays.
+70.1s: 2412 committed moves, 0 definite stale conflicts, same number of exact replays.
+80.1s: 2735 committed moves, 0 definite stale conflicts, same number of exact replays.
+90.1s: 3054 committed moves, 0 definite stale conflicts, same number of exact replays.
+100.1s: 3374 committed moves, 0 definite stale conflicts, same number of exact replays.
+110.1s: 3680 committed moves, 0 definite stale conflicts, same number of exact replays.
+120.1s: 3991 committed moves, 0 definite stale conflicts, same number of exact replays.
+Traceback (most recent call last):
+  File "scripts/resilience_probe.py", line 1504, in <module>
+    main()
+  File "scripts/resilience_probe.py", line 1500, in main
+    Probe(args).run()
+  File "scripts/resilience_probe.py", line 1457, in run
+    self.sustained()
+  File "scripts/resilience_probe.py", line 1025, in sustained
+    done, pending = concurrent.futures.wait(
+  File "/usr/lib/python3.8/concurrent/futures/_base.py", line 305, in wait
+    waiter.event.wait(timeout)
+  File "/usr/lib/python3.8/threading.py", line 558, in wait
+    signaled = self._cond.wait(timeout)
+  File "/usr/lib/python3.8/threading.py", line 306, in wait
+    gotit = waiter.acquire(True, timeout)
+KeyboardInterrupt
+Resilience qualification evidence: /tmp/wms-facility-release.gltUTXBR/resilience

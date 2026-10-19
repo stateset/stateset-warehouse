@@ -1,0 +1,85 @@
+{
+  "ok": true,
+  "synthetic": true,
+  "image_id": "sha256:f6d5db89e96c1d7d66bd52912714641040ab5f25ad7d4a646d52612c4b4d9f53",
+  "source_inputs_sha256": "01facb61f069f6220e36a9178be4889a8004c8d1b482a4a3a30fd3a99cf5689e",
+  "release_revision": "unrecorded-working-tree",
+  "os": "linux",
+  "architecture": "amd64",
+  "docker_server_version": "27.4.0",
+  "postgres_server_version": "16.15",
+  "postgres_image_id": "sha256:81bd698b4594e751a3269e4dcd3e03a4a0ec0daf7b72e7aa1abd43cce9887542",
+  "postgres_repo_digests": [
+    "postgres@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea"
+  ],
+  "qualifier_script_sha256": "5953e166762a6bea9616b8180eed4e6b13ecd30ddffcf1a9710f289df74f5be7",
+  "elapsed_build_and_runtime_seconds": 158,
+  "runtime": {
+    "uid": 10001,
+    "read_only_rootfs": true,
+    "effective_capabilities": 0,
+    "no_new_privileges": true,
+    "health": "healthy",
+    "random_loopback_host_port": true,
+    "unauthenticated_api_status": 401,
+    "real_mode_authenticated_session": true,
+    "immutable_image_id_bound_to_running_container": true,
+    "graceful_sigterm_exit_code": 0,
+    "compiled_dashboard_served": true,
+    "independent_reconciliation": {
+      "method": "full_append_only_ledger_and_order_line_allocations",
+      "ok": true,
+      "receipts": [],
+      "returns": [],
+      "rows": [],
+      "version": 0
+    }
+  },
+  "migrations": [
+    {
+      "name": "001_initial",
+      "sha256": "8e5c3fa5f0065b63076c33b8bd3c337b8490d4b7a88f3e774ec17e2290e1f4d4"
+    },
+    {
+      "name": "002_relational_execution",
+      "sha256": "660cd0fdbc7205644c7c3d7ac3da43cbaf1c6d9f80c4d0f2ea4d0c0986e6ff90"
+    },
+    {
+      "name": "003_native_operations",
+      "sha256": "f9a5cfa4a1e4f7830613febe6b37f11a8485beef46d6b96791c78435fe784108"
+    },
+    {
+      "name": "004_native_source_ownership",
+      "sha256": "366979c9630c4c62cb7d71beb5c89cd917764558b4e05267c4eb4aac486a6cb9"
+    },
+    {
+      "name": "005_conditional_oms_fulfillment",
+      "sha256": "b8892cbaa4a1b26c6e1732616ec30503d3698f44e363240386078398e29e9a41"
+    },
+    {
+      "name": "006_oms_rejections",
+      "sha256": "567e061943a1602ff25b5d5c988be810808b8c6e1638885ee6ef9b71a9ba4ed4"
+    },
+    {
+      "name": "007_operations_indexes",
+      "sha256": "b0b9b422f570ed77ca1252df42c96b29544849621ed748cadd1f068b708576b5"
+    },
+    {
+      "name": "008_delivery_recipient",
+      "sha256": "050f40c80b9e73a3edc8a19545ab08cfe41051616b84d9445dfdea9a30de9d19"
+    },
+    {
+      "name": "009_resource_versions",
+      "sha256": "b702a003a1d74210fdfc06cef1fbfb6e737146a25314642094a2f8383dc2e209"
+    },
+    {
+      "name": "010_customer_returns",
+      "sha256": "dfafb0547d0af2ba11f86dfa31f7facebe89adf582d6b215d02b734e1413fb71"
+    },
+    {
+      "name": "011_immutable_command_receipts",
+      "sha256": "0a7c69928f38527f542a55e795de9b62c65f4907d7d05cba2d47f7eeebdf8a73"
+    }
+  ],
+  "qualification_limit": "Production image build and isolated synthetic PostgreSQL runtime; no facility or deployed integration acceptance claimed"
+}

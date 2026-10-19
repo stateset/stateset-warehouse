@@ -1,0 +1,803 @@
+{
+  "ok": true,
+  "synthetic": true,
+  "qualified_at_utc": "2026-10-19T13:08:42Z",
+  "qualification": "two-replica sustained HTTP and crash recovery",
+  "image_id": "sha256:d4daf2909aeff0d0846477f1ff0641637a6bef6eb5f0ad6ec668d5e87b45b5f6",
+  "image_source_inputs_sha256": "587e3e161c66266734a6343287cdf52dfc18849914a23e16f2be366ab47beef4",
+  "image_release_revision": "serial-tracking-development-source35",
+  "qualifier_sha256": {
+    "scripts/resilience-rehearsal.sh": "cbc96d23272be83b27004dab829310dbead97523d45adcd42f7dd02b0ae80b31",
+    "scripts/qualification_resources.sh": "a32aac9153e80585fd2163c191b3524c8a998d8f677d08e64cfa9b55274fb0b8",
+    "scripts/resilience_probe.py": "c2c8d9762bbd48901d8cadd3abe83a730047111b24bd52f2d631845aa1551326",
+    "scripts/serial_traffic_proof.py": "6413d70e5ab9abdd3300148730f1636536a559baad227ae28feef1a2d1b34d3f"
+  },
+  "postgres_image_id": "sha256:81bd698b4594e751a3269e4dcd3e03a4a0ec0daf7b72e7aa1abd43cce9887542",
+  "postgres_version": "16.15",
+  "runtime": {
+    "api_replicas": 2,
+    "uid": 10001,
+    "read_only_rootfs": true,
+    "capabilities_dropped": "ALL",
+    "no_new_privileges": true,
+    "postgres_named_volume_survived_crash": true,
+    "random_loopback_api_ports": true,
+    "native_and_webhook_connections": 0
+  },
+  "elapsed_total_seconds": 983.842,
+  "phases": {
+    "seed": {
+      "method": "authenticated actual HTTP commands only; opening counts are disclosed synthetic fixtures",
+      "seconds": 641.191,
+      "operational_products": 500,
+      "additional_recovery_product": 1,
+      "storage_bins": 100,
+      "lots_per_product": 2,
+      "opening_bin_lot_balances": 1000,
+      "opening_each_per_balance": 16,
+      "serial_units_per_bin_lot": 16,
+      "open_orders": 500,
+      "allocated_orders": 250,
+      "commands_before_recovery_lifecycle": 2352,
+      "expected_setup_commands": 2352,
+      "observed_setup_commands": 2352,
+      "independent_setup_command_count_matches": true,
+      "excluded_from_sustained_timing": true
+    },
+    "lost_http_success": {
+      "downstream_response_lost": true,
+      "upstream_commit_observed_before_drop": true,
+      "retry_other_replica": true,
+      "original_result_unchanged": true,
+      "exact_receipt_lines": {
+        "same-sku-first": 7,
+        "same-sku-second": 0
+      }
+    },
+    "api_sigkill": {
+      "database_blocking_pid_barrier": true,
+      "exit_code": 137,
+      "surviving_replica_ready": true,
+      "uncommitted_original_absent": true,
+      "same_original_request_recovered_other_replica": true,
+      "restarted_replica_exact_replay": true,
+      "local_restart_to_readiness_seconds": 0.298,
+      "interrupted_response": {
+        "transport_error": "RemoteDisconnected"
+      }
+    },
+    "postgres_sigkill": {
+      "database_blocking_pid_barrier": true,
+      "exit_code": 137,
+      "named_volume_preserved": true,
+      "readiness_during_outage": [
+        503,
+        503
+      ],
+      "liveness_during_outage": [
+        200,
+        200
+      ],
+      "local_database_restart_to_both_api_readiness_seconds": 0.575,
+      "both_replicas_recovered_without_api_restart": true,
+      "all_table_fingerprints_unchanged": {
+        "wms_activity": {
+          "rows": 2364,
+          "sha256": "283121331c2a9b41c9be439087d00db8ef26d0230f7c27201655b20e9c25a6cf"
+        },
+        "wms_admin_audit": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_allocations": {
+          "rows": 253,
+          "sha256": "14988c18a4b8797cc3dddf7f6581e4649d266e36aedf79b03f558e136574816b"
+        },
+        "wms_commands": {
+          "rows": 2364,
+          "sha256": "5cd637b453536a89ce573f4424b77b6ecc8c8b731d2f248c253bef22630f184b"
+        },
+        "wms_delivery_attempts": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_events": {
+          "rows": 2364,
+          "sha256": "2a1d1dbdb0d92b5d70aae6444c9684a57290d06c3c7184238dac5d471f2b14b9"
+        },
+        "wms_exceptions": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_locations": {
+          "rows": 104,
+          "sha256": "552a6c243e5d598af02d0dc98f3b477adf61df9cc65ef2cbe57c0604a1ce205e"
+        },
+        "wms_lot_changes": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_lot_decisions": {
+          "rows": 256,
+          "sha256": "acfc89eef5852105568d7f8a0f3d3a50fa49d729be62c76b1d5c96f723a51644"
+        },
+        "wms_lot_enforcement": {
+          "rows": 2,
+          "sha256": "93913cea8505cc1e249446971f145ffb2faa290f250977b7c09f997daae0ce73"
+        },
+        "wms_movements": {
+          "rows": 1008,
+          "sha256": "63e13a4289c642581f0b627a863bd15f0300915cb5687ed5b6d423958e88fe81"
+        },
+        "wms_native_attempts": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_native_requests": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_order_cancellations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_order_cancelled_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_order_lines": {
+          "rows": 503,
+          "sha256": "b499854e7e908e92d3905d2c3830d35bc6463beaff5caf08f651f96ef1664250"
+        },
+        "wms_orders": {
+          "rows": 502,
+          "sha256": "28eafaebda90f7450d7d6074da8a893e43f3e27e517189245ba8de39cdbc846c"
+        },
+        "wms_outbox": {
+          "rows": 2366,
+          "sha256": "c5c5648da0f62a2a8ddef3961d61760b3e3360e12a314b723d35fbd0956e48da"
+        },
+        "wms_package_closures": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_package_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_packages": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_products": {
+          "rows": 501,
+          "sha256": "e7b6065c569c90ce78b7b3afc3e9891bd3fc36ab733c4464da399783f0838415"
+        },
+        "wms_receipt_cancellations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_receipt_cancelled_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_receipt_evidence": {
+          "rows": 2,
+          "sha256": "b744b55ad2d7200e2eac2c06a84e74f225de577bcc3cb73604719d2b540da25f"
+        },
+        "wms_receipt_lines": {
+          "rows": 2,
+          "sha256": "b5faa77ffe02da3d46f405f247e111452941c2495e131a2a51e848d00c0d4f45"
+        },
+        "wms_receipts": {
+          "rows": 1,
+          "sha256": "ae37f5d471abad1f6c3751df73c64879da328dba4c6d5fcc60b54a7d20c3ece2"
+        },
+        "wms_resource_versions": {
+          "rows": 2613,
+          "sha256": "65e5c5951274c355996e2de6dc54dc95c67bf4b05435c87b9d8b88bf63e11f84"
+        },
+        "wms_return_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_schema_migrations": {
+          "rows": 28,
+          "sha256": "ff9114c13ae88ef2a978d1d231771e1c93c8e302cf4661f30652c4a8c9667392"
+        },
+        "wms_serial_batches": {
+          "rows": 1000,
+          "sha256": "53b9a8365a68f4f4a0c5a4b9c93319d7f88ca8751385edf3b7e9d5cd81a2d37c"
+        },
+        "wms_serial_heads": {
+          "rows": 500,
+          "sha256": "b21cf6a8eaf474b3db69f1f2d5c404a2bc3912d09f30d5bc2baf187be93debdc"
+        },
+        "wms_serial_modes": {
+          "rows": 501,
+          "sha256": "a8aa1ab1937ec9996d093ed5e4621519aa662f1851035f7776dee290d891077a"
+        },
+        "wms_serial_observations": {
+          "rows": 1000,
+          "sha256": "5a964f41f643df1f9027e9dced7dcd41718a50cd945629b8f37f4edef5c61863"
+        },
+        "wms_serial_steps": {
+          "rows": 16000,
+          "sha256": "5982de434530882072188e61a2b74f482bf08ac682fbd46c661128771c386e5f"
+        },
+        "wms_serial_units": {
+          "rows": 16000,
+          "sha256": "050af588d20ade19465257254818508650b3597e4ff451dea176c730834c0ef2"
+        },
+        "wms_shipment_evidence": {
+          "rows": 1,
+          "sha256": "695507354fd9dcd2f235fe275b2f56fb6c8dd729dc7fa3a681535dbce5128f93"
+        },
+        "wms_split_orders": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_stock": {
+          "rows": 1004,
+          "sha256": "a0ffb03bd6b741230de88fc4131bca8eca117f5db408167aa3374482a0fc37d5"
+        },
+        "wms_stock_ledger": {
+          "rows": 1004,
+          "sha256": "de3e2b9a128a95050aeaf47c1f4ce8479ce9ba099f0ccf330fa80150e668290f"
+        },
+        "wms_stock_reserved": {
+          "rows": 502,
+          "sha256": "56585020520e40cf9e772081d0c3ec226342698781108d04bdbcd868ad663634"
+        },
+        "wms_transfer_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_transfer_loss_records": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_transfers": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_unit_observations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_unit_pack_changes": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_warehouses": {
+          "rows": 2,
+          "sha256": "04a3776cfb39f41a8de2d7243da0c1e05e6539c0614d416fad69d57bbaedb0ae"
+        },
+        "wms_workspaces": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      },
+      "unclean_shutdown_recovery_observed": true,
+      "uncommitted_original_absent": true,
+      "same_original_request_committed_once_then_replayed": true,
+      "interrupted_response": {
+        "http_status": 503
+      }
+    },
+    "snapshot_fixture": {
+      "sha256": "2d5d9f56481f71d21964f15da0497b4665e3c6151709683a6f1a1d78e8eb5f89",
+      "bytes": 913280,
+      "version": 2365,
+      "outside_sustained_interval": true
+    },
+    "sustained_http": {
+      "requested_seconds": 300,
+      "review_mode": "resources",
+      "traffic_model": "independent-operators",
+      "client_schedule": "independent continuous client loops without think time or an operator barrier",
+      "serial_units_per_bin_lot": 16,
+      "serial_current_source_reads": 664,
+      "serial_current_source_latency": {
+        "samples": 664,
+        "p50_ms": 13.439,
+        "p95_ms": 17.999,
+        "p99_ms": 21.457,
+        "max_ms": 27.827
+      },
+      "measurement_limit": "Authenticated loopback HTTP and JSON processing; Python clients open HTTP connections per request; browser rendering, human timing and physical scanner input are excluded",
+      "elapsed_seconds": 303.642,
+      "replicas": 2,
+      "distinct_operator_identities": 8,
+      "rounds": null,
+      "committed_moves": 664,
+      "exact_cross_replica_replays": 664,
+      "definite_stale_conflicts": 0,
+      "unexpected_errors": 0,
+      "committed_moves_per_second": 2.187,
+      "action_latency": {
+        "samples": 664,
+        "p50_ms": 3610.828,
+        "p95_ms": 3954.229,
+        "p99_ms": 4193.867,
+        "max_ms": 5323.588
+      },
+      "action_latency_scope": "command submission from the client's cached review through committed write and its own validated post-commit full warehouse refresh and, when enabled, exact literal serial source/custody review; initial review and subsequent exact replay excluded",
+      "throughput_scope": "all completed client cycles, including initial reviews, physical commands, post-commit refreshes when enabled, conflicts and exact cross-replica replays; replay is not another physical move",
+      "http_write_attempt_latency": {
+        "samples": 664,
+        "p50_ms": 3526.918,
+        "p95_ms": 3860.684,
+        "p99_ms": 4116.112,
+        "max_ms": 5224.576
+      },
+      "frozen_replay_latency": {
+        "samples": 664,
+        "p50_ms": 1.311,
+        "p95_ms": 1.728,
+        "p99_ms": 1.999,
+        "max_ms": 5.86
+      },
+      "operational_snapshot_latency": {
+        "samples": 672,
+        "p50_ms": 70.772,
+        "p95_ms": 88.515,
+        "p99_ms": 122.222,
+        "max_ms": 188.926
+      },
+      "shared_round_snapshot_reads": 0,
+      "independent_post_commit_stock_visibility_verified": true,
+      "snapshot_coverage": "exact configured catalog SKU set and every seeded order ID/state, with completed history permitted",
+      "operators": [
+        {
+          "actor": "operator:resilience-0",
+          "commits": 83,
+          "stale_conflicts": 0,
+          "exact_replays": 83,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 83,
+          "snapshot_reads": 84
+        },
+        {
+          "actor": "operator:resilience-1",
+          "commits": 83,
+          "stale_conflicts": 0,
+          "exact_replays": 83,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 83,
+          "snapshot_reads": 84
+        },
+        {
+          "actor": "operator:resilience-2",
+          "commits": 84,
+          "stale_conflicts": 0,
+          "exact_replays": 84,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 84,
+          "snapshot_reads": 85
+        },
+        {
+          "actor": "operator:resilience-3",
+          "commits": 83,
+          "stale_conflicts": 0,
+          "exact_replays": 83,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 83,
+          "snapshot_reads": 84
+        },
+        {
+          "actor": "operator:resilience-4",
+          "commits": 83,
+          "stale_conflicts": 0,
+          "exact_replays": 83,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 83,
+          "snapshot_reads": 84
+        },
+        {
+          "actor": "operator:resilience-5",
+          "commits": 83,
+          "stale_conflicts": 0,
+          "exact_replays": 83,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 83,
+          "snapshot_reads": 84
+        },
+        {
+          "actor": "operator:resilience-6",
+          "commits": 83,
+          "stale_conflicts": 0,
+          "exact_replays": 83,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 83,
+          "snapshot_reads": 84
+        },
+        {
+          "actor": "operator:resilience-7",
+          "commits": 82,
+          "stale_conflicts": 0,
+          "exact_replays": 82,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 82,
+          "snapshot_reads": 83
+        }
+      ]
+    }
+  },
+  "independent_proof": {
+    "serial_identity_proof": {
+      "ok": true,
+      "literal_units": 16000,
+      "steps": 16664,
+      "observations": 1664,
+      "batches": 1664,
+      "global_heads": 500,
+      "all_literal_custody_revisions_original_steps_observations_and_heads_match": true
+    },
+    "physical_recomputed_from_append_only_movements": true,
+    "reserved_recomputed_from_allocation_lines": true,
+    "receipt_quantities_recomputed_per_exact_line": true,
+    "expected_probe_on_hand": 13,
+    "expected_total_on_hand": 16013,
+    "expected_reserved": 253,
+    "all_seeded_open_order_states_retained": true,
+    "per_operator_bin_totals_match_committed_move_parity": true,
+    "commands": 3029,
+    "events": 3029,
+    "activity": 3029,
+    "movements": 1673,
+    "outbox": 3031,
+    "independent_execution_counts": {
+      "expected": {
+        "setup_commands": 2352,
+        "recovery_commands": 13,
+        "sustained_physical_commands": 664,
+        "commands": 3029,
+        "events": 3029,
+        "activity": 3029,
+        "movements": 1673,
+        "outbox": 3031
+      },
+      "observed": {
+        "setup_commands": 2352,
+        "recovery_commands": 13,
+        "sustained_physical_commands": 664,
+        "commands": 3029,
+        "events": 3029,
+        "activity": 3029,
+        "movements": 1673,
+        "outbox": 3031
+      },
+      "all_match": true
+    },
+    "contiguous_versions_and_atomic_actor_result_evidence": true,
+    "cross_tenant_isolation": true,
+    "cross_actor_replay_rejected": true,
+    "unconfigured_external_delivery_attempts": 0,
+    "replica_reconciliations": [
+      {
+        "ok": true,
+        "version": 3029,
+        "method": "full_append_only_ledger_and_order_line_allocations"
+      },
+      {
+        "ok": true,
+        "version": 3029,
+        "method": "full_append_only_ledger_and_order_line_allocations"
+      }
+    ],
+    "final_table_fingerprints": {
+      "wms_activity": {
+        "rows": 3029,
+        "sha256": "50c760786909e5cebd68a90708f185f43ce1764995bf5520f3b18a8cc9270912"
+      },
+      "wms_admin_audit": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_allocations": {
+        "rows": 253,
+        "sha256": "14988c18a4b8797cc3dddf7f6581e4649d266e36aedf79b03f558e136574816b"
+      },
+      "wms_commands": {
+        "rows": 3029,
+        "sha256": "f47bff5981406077f25d1ed811d103e0f6e3d4b14589461dc0e435495612e5e3"
+      },
+      "wms_delivery_attempts": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_events": {
+        "rows": 3029,
+        "sha256": "4b57f321cd531b1b3d7deedd0d85d1ce6e9c1dbf7853a5bf1e36d7d35d77229e"
+      },
+      "wms_exceptions": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_locations": {
+        "rows": 104,
+        "sha256": "552a6c243e5d598af02d0dc98f3b477adf61df9cc65ef2cbe57c0604a1ce205e"
+      },
+      "wms_lot_changes": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_lot_decisions": {
+        "rows": 256,
+        "sha256": "acfc89eef5852105568d7f8a0f3d3a50fa49d729be62c76b1d5c96f723a51644"
+      },
+      "wms_lot_enforcement": {
+        "rows": 2,
+        "sha256": "93913cea8505cc1e249446971f145ffb2faa290f250977b7c09f997daae0ce73"
+      },
+      "wms_movements": {
+        "rows": 1673,
+        "sha256": "20fc1dffa69bc2b07da86105a8105bf53f7d68c29c8f22cc2416dcf6e74bb280"
+      },
+      "wms_native_attempts": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_native_requests": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_order_cancellations": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_order_cancelled_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_order_lines": {
+        "rows": 503,
+        "sha256": "b499854e7e908e92d3905d2c3830d35bc6463beaff5caf08f651f96ef1664250"
+      },
+      "wms_orders": {
+        "rows": 502,
+        "sha256": "28eafaebda90f7450d7d6074da8a893e43f3e27e517189245ba8de39cdbc846c"
+      },
+      "wms_outbox": {
+        "rows": 3031,
+        "sha256": "3ec15c017d3dad5af7a0dbdd745ce915a962b103a210bd2fa677847242279edb"
+      },
+      "wms_package_closures": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_package_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_packages": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_products": {
+        "rows": 501,
+        "sha256": "e7b6065c569c90ce78b7b3afc3e9891bd3fc36ab733c4464da399783f0838415"
+      },
+      "wms_receipt_cancellations": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_receipt_cancelled_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_receipt_evidence": {
+        "rows": 2,
+        "sha256": "b744b55ad2d7200e2eac2c06a84e74f225de577bcc3cb73604719d2b540da25f"
+      },
+      "wms_receipt_lines": {
+        "rows": 2,
+        "sha256": "b5faa77ffe02da3d46f405f247e111452941c2495e131a2a51e848d00c0d4f45"
+      },
+      "wms_receipts": {
+        "rows": 1,
+        "sha256": "ae37f5d471abad1f6c3751df73c64879da328dba4c6d5fcc60b54a7d20c3ece2"
+      },
+      "wms_resource_versions": {
+        "rows": 2621,
+        "sha256": "d0c68432356ca06d6cca6a8873a338a5f3208887e451fdd5ff26e7faaa17f7e9"
+      },
+      "wms_return_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_schema_migrations": {
+        "rows": 28,
+        "sha256": "ff9114c13ae88ef2a978d1d231771e1c93c8e302cf4661f30652c4a8c9667392"
+      },
+      "wms_serial_batches": {
+        "rows": 1664,
+        "sha256": "433d1ea228781ef0499a60fecd008314dd922a597b4d0b9779dba4f46fa810c2"
+      },
+      "wms_serial_heads": {
+        "rows": 500,
+        "sha256": "b3c7edca6a1958e61f40c2aacabae9134ef1c0443e6b77486a4ef754892ea270"
+      },
+      "wms_serial_modes": {
+        "rows": 501,
+        "sha256": "a8aa1ab1937ec9996d093ed5e4621519aa662f1851035f7776dee290d891077a"
+      },
+      "wms_serial_observations": {
+        "rows": 1664,
+        "sha256": "0ee9ade4881e954f0a9444f89ac1d10eff1c42ebae326b85794ac6133438fdc2"
+      },
+      "wms_serial_steps": {
+        "rows": 16664,
+        "sha256": "df3f7e9b9c451fdf8bb2bd1acaae03e52ca08cd63eb375fa36b0d5b1ca25e7a7"
+      },
+      "wms_serial_units": {
+        "rows": 16000,
+        "sha256": "a99b69078728555d34d3e934b0a431c707764faac2c37dd00c9ca6062fe40a14"
+      },
+      "wms_shipment_evidence": {
+        "rows": 1,
+        "sha256": "695507354fd9dcd2f235fe275b2f56fb6c8dd729dc7fa3a681535dbce5128f93"
+      },
+      "wms_split_orders": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_stock": {
+        "rows": 1012,
+        "sha256": "547717a5cbd866b0e220e11d4d985945ced35ac42cbfde1d094cc8eba0b78fb9"
+      },
+      "wms_stock_ledger": {
+        "rows": 1012,
+        "sha256": "54f5e1c03d2618ec0721042f342fa1f6dd707ac6e7ad85644fdb87ce3bf19917"
+      },
+      "wms_stock_reserved": {
+        "rows": 502,
+        "sha256": "56585020520e40cf9e772081d0c3ec226342698781108d04bdbcd868ad663634"
+      },
+      "wms_transfer_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_transfer_loss_records": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_transfers": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_unit_observations": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_unit_pack_changes": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_warehouses": {
+        "rows": 2,
+        "sha256": "c9a902fb0f46ff4f32c1ba8810456f23912d52f46f9d92f0c1d30b3830c5d9a8"
+      },
+      "wms_workspaces": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      }
+    }
+  },
+  "migrations": [
+    {
+      "name": "001_initial",
+      "sha256": "8e5c3fa5f0065b63076c33b8bd3c337b8490d4b7a88f3e774ec17e2290e1f4d4"
+    },
+    {
+      "name": "002_relational_execution",
+      "sha256": "660cd0fdbc7205644c7c3d7ac3da43cbaf1c6d9f80c4d0f2ea4d0c0986e6ff90"
+    },
+    {
+      "name": "003_native_operations",
+      "sha256": "f9a5cfa4a1e4f7830613febe6b37f11a8485beef46d6b96791c78435fe784108"
+    },
+    {
+      "name": "004_native_source_ownership",
+      "sha256": "366979c9630c4c62cb7d71beb5c89cd917764558b4e05267c4eb4aac486a6cb9"
+    },
+    {
+      "name": "005_conditional_oms_fulfillment",
+      "sha256": "b8892cbaa4a1b26c6e1732616ec30503d3698f44e363240386078398e29e9a41"
+    },
+    {
+      "name": "006_oms_rejections",
+      "sha256": "567e061943a1602ff25b5d5c988be810808b8c6e1638885ee6ef9b71a9ba4ed4"
+    },
+    {
+      "name": "007_operations_indexes",
+      "sha256": "b0b9b422f570ed77ca1252df42c96b29544849621ed748cadd1f068b708576b5"
+    },
+    {
+      "name": "008_delivery_recipient",
+      "sha256": "050f40c80b9e73a3edc8a19545ab08cfe41051616b84d9445dfdea9a30de9d19"
+    },
+    {
+      "name": "009_resource_versions",
+      "sha256": "b702a003a1d74210fdfc06cef1fbfb6e737146a25314642094a2f8383dc2e209"
+    },
+    {
+      "name": "010_customer_returns",
+      "sha256": "dfafb0547d0af2ba11f86dfa31f7facebe89adf582d6b215d02b734e1413fb71"
+    },
+    {
+      "name": "011_immutable_command_receipts",
+      "sha256": "0a7c69928f38527f542a55e795de9b62c65f4907d7d05cba2d47f7eeebdf8a73"
+    },
+    {
+      "name": "012_receipt_cancellation",
+      "sha256": "5a36bc5c39f49fe9fdf9e6cd292d71ed50c85daffea2777fda890d9b2d68a676"
+    },
+    {
+      "name": "013_shipment_evidence",
+      "sha256": "e867e6b35c3cbcb10ea5f4a952c916f10e7b5d16b53c80aad656a9fba286334e"
+    },
+    {
+      "name": "014_facility_transfers",
+      "sha256": "b98005fca14a6aa180c09e77d998105662b3f11147a3284d6a145147de3182b1"
+    },
+    {
+      "name": "015_split_fulfillment",
+      "sha256": "dd2e0b0625cec5d9cd1a6209e094f924fc4cb503a0b82ed3fcc2253109fe393a"
+    },
+    {
+      "name": "016_order_remainder_cancellation",
+      "sha256": "c79180323838e6353c3c32f77564aa3ae37eae6b523bf405e12311496f0f3f43"
+    },
+    {
+      "name": "017_lot_controls",
+      "sha256": "cbca465647b18f84e9d74deeabbe011a7572957b90c4046de9f2f0e9738360bf"
+    },
+    {
+      "name": "018_lot_trace",
+      "sha256": "c4d000be8cc2bae0097c629f98556177b97225cc6ba753cb29731e5464a85d4c"
+    },
+    {
+      "name": "019_transfer_loss",
+      "sha256": "30822c5f49905f192d4eff2de3b90e885ed800d26d1bc97e6b383b1fef47eae1"
+    },
+    {
+      "name": "020_pack_units",
+      "sha256": "7ba3eefed9e4386fc2f11002540bd703d0e6c584780ca3a378e308831c4bccf1"
+    },
+    {
+      "name": "021_serial_tracking",
+      "sha256": "856cbcf67490934123676ac6de66a972a39256616cd74d8048368feacdb1acce"
+    },
+    {
+      "name": "022_serial_restore_search_path",
+      "sha256": "ae5e84f4a08cbb75a46ea9a0602e35b03815861661fe7b60f9eff11514b677cc"
+    },
+    {
+      "name": "023_serial_target_resolution",
+      "sha256": "8778a75182885af6ac976f44ee2bcbd3813837e6c5f8170842e53c31fcc9687d"
+    },
+    {
+      "name": "024_serial_event_payload_reuse",
+      "sha256": "5c7dc4b76a21c487a0440297b42001fb39a65af1537813e880908e5a8b9fb491"
+    },
+    {
+      "name": "025_serial_resolved_read_sources",
+      "sha256": "d255984a2eb4e7a1e7e9212c1406b30e40dcd24944f6bb0e35fa7c58027fdf32"
+    },
+    {
+      "name": "026_serial_event_batch_index",
+      "sha256": "98c2796069821a4ef064e5968759686109833067f510ef066eeb0d9e7185ea03"
+    },
+    {
+      "name": "027_serial_reference_classes",
+      "sha256": "e8515cdbebc8ceece05e45d6882d20b1031455347473676d588a4437a5ba144f"
+    },
+    {
+      "name": "028_serial_read_source",
+      "sha256": "04aac8ae5697cf913bc3d2bbf774327e3bf15c146d3e64f2d700c2c1362ec928"
+    }
+  ],
+  "qualification_limit": "Local synthetic single-host and single-PostgreSQL-primary rehearsal. API replica survival and PostgreSQL crash recovery were tested; database failover, host loss, deployed latency, native receivers and physical facility acceptance were not."
+}

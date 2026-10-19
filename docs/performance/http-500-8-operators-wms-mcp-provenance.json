@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "production_qualified": false,
+  "report": "http-500-8-operators-wms-mcp.json",
+  "sha256": "20a0657f53b25d4b35e4d7c3497495f9ee78a4d71772a3a11d84e328247765ae",
+  "image_id": "sha256:fe63334b115d644f8e069b0674ec0db35d33ccad4b40f81e4120ed0ecdc7cf74",
+  "image_source_inputs_sha256": "d2fde13399a0f9c8715b67bd35e0bc5902e936d1078cf6d661ec0d6c406921f5",
+  "software_source_inputs_sha256": "c7f26402831fe3d3e99a293d8110e84a684728d575a2614688f7343fd7e511de",
+  "release_provenance": "../qualification/release-20261018-wms-mcp/provenance.json",
+  "catalog": {
+    "tools": 51,
+    "before_array_bytes": 286997,
+    "after_array_bytes": 55533,
+    "accepted_http_response_bytes": 55577,
+    "unused_definition_reduction_percent": 80.65,
+    "preceding_gate_intentionally_stopped_before_resilience": true,
+    "preceding_gate_private_artifacts_sha256": {
+      "frozen-software-inputs.json": "372efe6e91606f46055b4eb7d53652a3fcf0ab484c5d99f1cc10acfe8e801f61",
+      "owner-interruption-context.json": "54d6f044940c9c56f7ce9a717a9a363ce9bc97fa826869489ceddd155a386b1a",
+      "frozen-software-inputs.tar.gz": "73b3100d79afd38b5879f41d690c82d8966e38d096b018ff11705b0cf39814cd",
+      "wms-mcp-catalog-red.log": "fc0333da452bfc0f33e2f1b28535e747df61721902cc7caca2ede4b59f0e4f26",
+      "wms-mcp-catalog-measure.log": "2d99c4a6feead2fd2cae5dee6800c74ea7ab67008645101d2fabbd40dd429afb",
+      "publish/production_container.log": "11cc8b0f9a9f72d3fab985a33f7197e50834b1de5844dad93f6bfa732a911448",
+      "publish/standard_workload.json": "77d3472f3872fce7a03790387d20fcf4e0d840f606337b914d5400ef908ff7d6",
+      "publish/demo-api.log": "e6c1965f6db559471cf99d1656931ce1e36a6907f4bb3a94dbca38d6ffc04111",
+      "publish/tool-versions.json": "fb353776fcb627064e6ae049b0f4af0fa62007cc594ca9b5063098dd9946e8b5",
+      "publish/observability_rules.json": "a6ba77fa504df5fb03a77ea9d1a1d445babd4aa8734b6ec9924e78ec92af0633",
+      "publish/archive_restore.json": "e6ca0fe8de5e34ecc9827a4d477bc4354175ed8303f415bcc405f91006d1973e",
+      "publish/archive_restore.log": "88597277e41a2bdbdbb11263395b0c58e2df860e044867f64da3b31db1ff8628",
+      "publish/software_checks.log": "b71ae727bfda9794d75a73fc69ab027bb0f164ec2f74ba68ad11e6da701359b9",
+      "publish/release_builds.log": "692ba7b21cdc848f797ea226f8776d28b608ff1ac8bde5117a7f96be2897ed19",
+      "publish/summary.json": "301f8b9492483d09e7e44c6c5a78731dff0385fa5cbdacbd98360e55e9b673ca",
+      "publish/prerequisites.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "publish/scanner-api.log": "18a99a8f5d86c53eb08313c25f4dab718b77183ab250828311d077378fff5659",
+      "publish/live_browsers.log": "8adda6140cab7419cb081f32f48b4f5dad3daf3aa8ed0f152465863afdfd43c7",
+      "publish/source-inputs-before.json": "09687d731d9bddf2bea5d6ae63307bcfe7525792139c4bc3cc1a9ee44d610163",
+      "publish/observability_rules.log": "6ea89889bde1dea45385eded927b4b88c7b45fc33c61084d5897a674a470d9ee",
+      "publish/standard_workload.log": "0da97d8744e71a0d5d1d5a43530a4d6499399022d9cab00f52ebb35bf6f4959a"
+    }
+  },
+  "traffic_model": "independent-operators",
+  "qualifier_sha256": {
+    "scripts/resilience-rehearsal.sh": "5fa42466238d4be5b260021da30541441d2c7d779b74b0594c8ac59099408227",
+    "scripts/resilience_probe.py": "67c2ceab339b0d21a5daa25af0b518f3cb476b4d856cedd914ed316cf27526ac"
+  },
+  "limits": [
+    "Container and resilience stages use the same immutable image; other stages execute builds from the same frozen software inputs",
+    "MCP protocol generations, SDK clients, API-key/WorkOS identity, role/origin/argument defenses and original PostgreSQL journal recovery are covered by separate protocol and database tests; the production image independently exposes the authenticated catalog",
+    "Sustained actions use canonical REST bin moves, post-save snapshots and original-request replays; this is not a sustained MCP, package-handling or transfer-specific capacity measurement",
+    "Clients, APIs and PostgreSQL share a development host; host conditions and observer overhead are not controlled. No causal speedup, deployed capacity or facility SLO is inferred",
+    "The earlier split-fulfillment timeout attempt and its separate passing diagnostic replay remain retained; this MCP adapter does not establish or resolve that unconfirmed lock-holder/root cause",
+    "No deployed MCP-client connection, physical acceptance, managed failover or native multiple-shipment receiver qualification is claimed"
+  ],
+  "host_observation": {
+    "scope": "single_point_global_load_average_during_synthetic_timed_interval",
+    "recorded_at": "2026-10-18T22:06:48.532616+00:00",
+    "load_average_1_5_15_minutes": [
+      5.9,
+      5.08,
+      5.69
+    ],
+    "conditions_controlled": false,
+    "host_processes_observed": false,
+    "host_compiler_absence_established": false,
+    "postgres_blocker_sampler_added": false,
+    "limits": [
+      "Global load average is a single observation, not controlled host conditions or causal latency evidence",
+      "No host-wide process observation or PostgreSQL activity/blocker sample was taken in this MCP gate",
+      "The earlier split-release timeout root cause remains unconfirmed"
+    ]
+  }
+}

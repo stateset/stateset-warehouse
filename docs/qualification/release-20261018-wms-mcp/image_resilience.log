@@ -1,0 +1,174 @@
+Seeding 500 products, 1000 opening bin-lots and 500 open orders through authenticated HTTP.
+Seeded 100 stocked products in 4.3s.
+Seeded 200 stocked products in 10.2s.
+Seeded 300 stocked products in 19.8s.
+Seeded 400 stocked products in 31.2s.
+Seeded 500 stocked products in 40.8s.
+Seeded 100 active orders in 46.4s.
+Seeded 200 active orders in 52.2s.
+Seeded 300 active orders in 58.9s.
+Seeded 400 active orders in 66.0s.
+Seeded 500 active orders in 74.0s.
+Qualifying a deliberately lost HTTP success through the other API replica.
+Killing one API only after PostgreSQL proves its original HTTP write is waiting.
+Crashing PostgreSQL with a blocked HTTP write; both replicas must fail readiness before recovery.
+Starting 300s sustained HTTP qualification with 8 distinct operators, two replicas and independent-operators traffic.
+10.0s: 359 committed moves, 0 definite stale conflicts, same number of exact replays.
+20.0s: 705 committed moves, 0 definite stale conflicts, same number of exact replays.
+30.0s: 1049 committed moves, 0 definite stale conflicts, same number of exact replays.
+40.0s: 1413 committed moves, 0 definite stale conflicts, same number of exact replays.
+50.1s: 1752 committed moves, 0 definite stale conflicts, same number of exact replays.
+60.1s: 2094 committed moves, 0 definite stale conflicts, same number of exact replays.
+70.1s: 2438 committed moves, 0 definite stale conflicts, same number of exact replays.
+80.1s: 2770 committed moves, 0 definite stale conflicts, same number of exact replays.
+90.1s: 3155 committed moves, 0 definite stale conflicts, same number of exact replays.
+100.1s: 3546 committed moves, 0 definite stale conflicts, same number of exact replays.
+110.2s: 3927 committed moves, 0 definite stale conflicts, same number of exact replays.
+120.2s: 4300 committed moves, 0 definite stale conflicts, same number of exact replays.
+130.2s: 4698 committed moves, 0 definite stale conflicts, same number of exact replays.
+140.2s: 5108 committed moves, 0 definite stale conflicts, same number of exact replays.
+150.2s: 5518 committed moves, 0 definite stale conflicts, same number of exact replays.
+160.2s: 5934 committed moves, 0 definite stale conflicts, same number of exact replays.
+170.2s: 6338 committed moves, 0 definite stale conflicts, same number of exact replays.
+180.2s: 6732 committed moves, 0 definite stale conflicts, same number of exact replays.
+190.2s: 7121 committed moves, 0 definite stale conflicts, same number of exact replays.
+200.3s: 7490 committed moves, 0 definite stale conflicts, same number of exact replays.
+210.3s: 7866 committed moves, 0 definite stale conflicts, same number of exact replays.
+220.3s: 8225 committed moves, 0 definite stale conflicts, same number of exact replays.
+230.3s: 8594 committed moves, 0 definite stale conflicts, same number of exact replays.
+240.3s: 8949 committed moves, 0 definite stale conflicts, same number of exact replays.
+250.3s: 9309 committed moves, 0 definite stale conflicts, same number of exact replays.
+260.4s: 9692 committed moves, 0 definite stale conflicts, same number of exact replays.
+270.4s: 9993 committed moves, 0 definite stale conflicts, same number of exact replays.
+280.4s: 10279 committed moves, 0 definite stale conflicts, same number of exact replays.
+290.4s: 10606 committed moves, 0 definite stale conflicts, same number of exact replays.
+Rebuilding physical custody, reservations, exact receipt lines and atomic audit evidence independently from PostgreSQL.
+{
+  "ok": true,
+  "image_id": "sha256:fe63334b115d644f8e069b0674ec0db35d33ccad4b40f81e4120ed0ecdc7cf74",
+  "sustained_http": {
+    "requested_seconds": 300,
+    "review_mode": "resources",
+    "traffic_model": "independent-operators",
+    "client_schedule": "independent continuous client loops without think time or an operator barrier",
+    "measurement_limit": "Authenticated loopback HTTP and JSON processing; Python clients open HTTP connections per request; browser rendering, human timing and physical scanner input are excluded",
+    "elapsed_seconds": 300.153,
+    "replicas": 2,
+    "distinct_operator_identities": 8,
+    "rounds": null,
+    "committed_moves": 10934,
+    "exact_cross_replica_replays": 10934,
+    "definite_stale_conflicts": 0,
+    "unexpected_errors": 0,
+    "committed_moves_per_second": 36.428,
+    "action_latency": {
+      "samples": 10934,
+      "p50_ms": 175.364,
+      "p95_ms": 254.305,
+      "p99_ms": 295.984,
+      "max_ms": 462.419
+    },
+    "action_latency_scope": "command submission from the client's cached review through committed write and its own validated post-commit full warehouse refresh; initial review and subsequent exact replay excluded",
+    "throughput_scope": "all completed client cycles, including initial reviews, physical commands, post-commit refreshes when enabled, conflicts and exact cross-replica replays; replay is not another physical move",
+    "http_write_attempt_latency": {
+      "samples": 10934,
+      "p50_ms": 40.852,
+      "p95_ms": 92.762,
+      "p99_ms": 120.312,
+      "max_ms": 239.364
+    },
+    "frozen_replay_latency": {
+      "samples": 10934,
+      "p50_ms": 33.76,
+      "p95_ms": 90.597,
+      "p99_ms": 118.939,
+      "max_ms": 197.298
+    },
+    "operational_snapshot_latency": {
+      "samples": 10942,
+      "p50_ms": 127.835,
+      "p95_ms": 199.191,
+      "p99_ms": 237.972,
+      "max_ms": 386.886
+    },
+    "shared_round_snapshot_reads": 0,
+    "independent_post_commit_stock_visibility_verified": true,
+    "snapshot_coverage": "exact configured catalog SKU set and every seeded order ID/state, with completed history permitted",
+    "operators": [
+      {
+        "actor": "operator:resilience-0",
+        "commits": 1365,
+        "stale_conflicts": 0,
+        "exact_replays": 1365,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 1365,
+        "snapshot_reads": 1366
+      },
+      {
+        "actor": "operator:resilience-1",
+        "commits": 1365,
+        "stale_conflicts": 0,
+        "exact_replays": 1365,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 1365,
+        "snapshot_reads": 1366
+      },
+      {
+        "actor": "operator:resilience-2",
+        "commits": 1376,
+        "stale_conflicts": 0,
+        "exact_replays": 1376,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 1376,
+        "snapshot_reads": 1377
+      },
+      {
+        "actor": "operator:resilience-3",
+        "commits": 1372,
+        "stale_conflicts": 0,
+        "exact_replays": 1372,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 1372,
+        "snapshot_reads": 1373
+      },
+      {
+        "actor": "operator:resilience-4",
+        "commits": 1363,
+        "stale_conflicts": 0,
+        "exact_replays": 1363,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 1363,
+        "snapshot_reads": 1364
+      },
+      {
+        "actor": "operator:resilience-5",
+        "commits": 1377,
+        "stale_conflicts": 0,
+        "exact_replays": 1377,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 1377,
+        "snapshot_reads": 1378
+      },
+      {
+        "actor": "operator:resilience-6",
+        "commits": 1354,
+        "stale_conflicts": 0,
+        "exact_replays": 1354,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 1354,
+        "snapshot_reads": 1355
+      },
+      {
+        "actor": "operator:resilience-7",
+        "commits": 1362,
+        "stale_conflicts": 0,
+        "exact_replays": 1362,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 1362,
+        "snapshot_reads": 1363
+      }
+    ]
+  },
+  "report": "/tmp/wms-mcp-release-final.N07rDwMl/resilience/resilience.json"
+}
+Resilience qualification evidence: /tmp/wms-mcp-release-final.N07rDwMl/resilience

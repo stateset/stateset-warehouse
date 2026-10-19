@@ -93,7 +93,8 @@ async fn response_policy(
         .headers_mut()
         .insert("x-request-id", request_id.clone());
     let path = request.uri().path();
-    let no_store = path == "/v1"
+    let no_store = path == "/mcp"
+        || path == "/v1"
         || path.starts_with("/v1/")
         || ["/", "/login", "/ready", "/health", "/auth/config"].contains(&path);
     let mut response = next.run(request).await;
@@ -143,25 +144,37 @@ async fn session(State(app): State<App>, Extension(i): Extension<Identity>) -> J
         .map(|c| c.summary(&i.tenant))
         .unwrap_or_else(|_| json!({"error":"Native integration configuration requires repair"}));
     Json(
-        json!({"identity":i,"demo":app.demo,"integrations":app.connections.status(&i.tenant),"native_integrations":native}),
+        json!({"identity":i,"demo":app.demo,"default_warehouse_id":if app.demo {"wh-pdx"} else {"wh-main"},"integrations":app.connections.status(&i.tenant),"native_integrations":native}),
     )
 }
 async fn warehouses(
     State(app): State<App>,
     Extension(i): Extension<Identity>,
+    query: Result<Query<WarehousesQuery>, axum::extract::rejection::QueryRejection>,
 ) -> Result<Json<Value>, Error> {
-    Ok(Json(json!({"warehouses":app.store.list(&i.tenant).await?})))
+    let Query(query) = query.map_err(|_| Error::new(422, "Invalid warehouse page query"))?;
+    Ok(Json(
+        app.store
+            .warehouse_page(
+                &i.tenant,
+                query.after.as_deref().unwrap_or(""),
+                query.limit.unwrap_or(100),
+            )
+            .await?,
+    ))
+}
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct WarehousesQuery {
+    after: Option<String>,
+    limit: Option<i64>,
 }
 async fn state(
     State(app): State<App>,
     Extension(i): Extension<Identity>,
     Path(w): Path<String>,
-) -> Result<Json<Value>, Error> {
-    let s = app.store.state(&i.tenant, &w).await?;
-    let mut value = json!(s);
-    value["reconciliation"] =
-        json!({"version":s.version,"ok":s.validate().is_ok(),"rows":s.reconciliation()});
-    Ok(Json(value))
+) -> Result<Json<crate::domain::OperationalSnapshot>, Error> {
+    Ok(Json(app.store.snapshot(&i.tenant, &w).await?))
 }
 async fn reconcile(
     State(app): State<App>,
@@ -201,6 +214,15 @@ async fn receipt_detail(
 ) -> Result<Json<Value>, Error> {
     Ok(Json(
         app.store.detail(&i.tenant, &w, "receipts", &id).await?,
+    ))
+}
+async fn return_eligibility(
+    State(app): State<App>,
+    Extension(i): Extension<Identity>,
+    Path((w, id)): Path<(String, String)>,
+) -> Result<Json<Value>, Error> {
+    Ok(Json(
+        crate::returns::eligible(&app.store, &i, &w, &id).await?,
     ))
 }
 async fn command(
@@ -250,35 +272,20 @@ pub fn router(app: App) -> Router {
     router_with_auth(app, None)
 }
 pub fn router_with_auth(app: App, workos: Option<crate::auth::WorkOs>) -> Router {
+    router_with_auth_and_mcp(app, workos, crate::mcp::Config::default())
+}
+pub fn router_with_auth_and_mcp(
+    app: App,
+    workos: Option<crate::auth::WorkOs>,
+    mcp_config: crate::mcp::Config,
+) -> Router {
     let public_auth = workos
         .as_ref()
         .map(|w| w.config.public())
         .unwrap_or(json!({"provider":"api_key"}));
     let auth_origin = workos.as_ref().map(|w| w.config.api_origin.clone());
-    let protected = Router::new()
-        .route("/v1/session", get(session))
-        .route("/v1/warehouses", get(warehouses))
-        .route("/v1/warehouses/{warehouse}", get(state))
-        .route("/v1/warehouses/{warehouse}/reconciliation", get(reconcile))
-        .route("/v1/warehouses/{warehouse}/history/{kind}", get(history))
-        .route("/v1/warehouses/{warehouse}/orders/{id}", get(order_detail))
-        .route(
-            "/v1/warehouses/{warehouse}/receipts/{id}",
-            get(receipt_detail),
-        )
-        .route("/v1/warehouses/{warehouse}/commands", post(command))
-        .route(
-            "/v1/warehouses/{warehouse}/commands/{request}",
-            get(receipt),
-        )
-        .route("/v1/warehouses/{warehouse}/outbox", get(outbox))
-        .route("/v1/outbox/{id}/retry", post(retry))
-        .route("/v1/events/{id}", get(event))
-        .merge(crate::native_api::router())
-        .merge(crate::operations::router())
-        .route("/v1", any(unknown_api))
-        .route("/v1/", any(unknown_api))
-        .route("/v1/{*path}", any(unknown_api))
+    let protected = business_routes()
+        .merge(crate::mcp::router(app.clone(), mcp_config))
         .route_layer(middleware::from_fn_with_state(
             (app.clone(), workos),
             authenticate,
@@ -316,4 +323,75 @@ pub fn router_with_auth(app: App, workos: Option<crate::auth::WorkOs>) -> Router
         )
         .layer(middleware::from_fn_with_state(auth_origin, response_policy))
         .with_state(app)
+}
+
+/// Private trusted dispatch after the outer transport authenticates Identity.
+pub(crate) fn business_routes() -> Router<App> {
+    Router::new()
+        .route("/v1/session", get(session))
+        .route("/v1/warehouses", get(warehouses))
+        .route("/v1/lot-trace", get(crate::lot_trace::page))
+        .route("/v1/serials", get(crate::serial_reads::current))
+        .route(
+            "/v1/warehouses/{warehouse}/serial-observation-plan",
+            post(crate::serial_plan::plan),
+        )
+        .route("/v1/serial-history", get(crate::serial_reads::history))
+        .route(
+            "/v1/serial-observations",
+            get(crate::serial_reads::observations),
+        )
+        .route(
+            "/v1/warehouses/{warehouse}/unit-packs",
+            get(crate::units::page),
+        )
+        .route(
+            "/v1/warehouses/{warehouse}/unit-observations",
+            get(crate::units::observations),
+        )
+        .route(
+            "/v1/warehouses/{warehouse}/transfers/{id}/losses",
+            get(crate::transfers::losses),
+        )
+        .route("/v1/warehouses/{warehouse}", get(state))
+        .route("/v1/warehouses/{warehouse}/reconciliation", get(reconcile))
+        .route("/v1/warehouses/{warehouse}/history/{kind}", get(history))
+        .route("/v1/warehouses/{warehouse}/orders/{id}", get(order_detail))
+        .route(
+            "/v1/warehouses/{warehouse}/orders/{id}/shipments",
+            get(crate::split_fulfillment::endpoint),
+        )
+        .route(
+            "/v1/warehouses/{warehouse}/orders/{id}/return-eligibility",
+            get(return_eligibility),
+        )
+        .route(
+            "/v1/warehouses/{warehouse}/receipts/{id}",
+            get(receipt_detail),
+        )
+        .route(
+            "/v1/warehouses/{warehouse}/transfers",
+            get(crate::transfers::page),
+        )
+        .route(
+            "/v1/warehouses/{warehouse}/lots",
+            get(crate::lot_store::page),
+        )
+        .route("/v1/warehouses/{warehouse}/commands", post(command))
+        .route(
+            "/v1/warehouses/{warehouse}/replenishment/plan",
+            post(crate::replenishment::endpoint),
+        )
+        .route(
+            "/v1/warehouses/{warehouse}/commands/{request}",
+            get(receipt),
+        )
+        .route("/v1/warehouses/{warehouse}/outbox", get(outbox))
+        .route("/v1/outbox/{id}/retry", post(retry))
+        .route("/v1/events/{id}", get(event))
+        .merge(crate::native_api::router())
+        .merge(crate::operations::router())
+        .route("/v1", any(unknown_api))
+        .route("/v1/", any(unknown_api))
+        .route("/v1/{*path}", any(unknown_api))
 }

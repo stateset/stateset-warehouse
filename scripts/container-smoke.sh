@@ -4,6 +4,8 @@
 set -euo pipefail
 umask 077
 cd "$(dirname "$0")/.."
+source scripts/qualification_resources.sh
+wms_qualification_resource_mode
 wms_container_root="${WMS_CONTAINER_ARTIFACT_DIR:-$(mktemp -d /tmp/stateset-wms-container.XXXXXXXX)}"
 mkdir -p "$wms_container_root"
 if [[ -n "$(ls -A "$wms_container_root")" ]]; then
@@ -15,21 +17,15 @@ wms_run="$(python3 -c 'import secrets,time; print(str(int(time.time()))+"-"+secr
 wms_network="wms-qualification-$wms_run"
 wms_postgres="wms-qualification-pg-$wms_run"
 wms_api="wms-qualification-api-$wms_run"
+wms_volume=''
 wms_image="${WMS_QUALIFICATION_IMAGE:-stateset-warehouse:qualification}"
 wms_pg_image="${WMS_QUALIFICATION_POSTGRES_IMAGE:-postgres:16-alpine}"
 wms_label=org.stateset.wms.qualification
 cleanup() {
   local result=$?
   trap - EXIT INT TERM
-  for wms_container in "$wms_api" "$wms_postgres"; do
-    if [[ "$(docker inspect --format "{{ index .Config.Labels \"$wms_label\" }}" "$wms_container" 2>/dev/null || true)" == "$wms_run" ]]; then
-      docker logs "$wms_container" > "$wms_container_root/$wms_container.log" 2>&1 || true
-      docker rm --force --volumes "$wms_container" >> "$wms_container_root/cleanup.log" 2>&1 || result=1
-    fi
-  done
-  if [[ "$(docker network inspect --format "{{ index .Labels \"$wms_label\" }}" "$wms_network" 2>/dev/null || true)" == "$wms_run" ]]; then
-    docker network rm "$wms_network" >> "$wms_container_root/cleanup.log" 2>&1 || result=1
-  fi
+  wms_qualification_finish_resources "$wms_container_root" "$wms_label" "$wms_run" \
+    "$wms_network" "$wms_volume" "$wms_api" "$wms_postgres" || result=1
   printf 'Container qualification evidence: %s\n' "$wms_container_root"
   if [[ "$result" != 0 ]]; then
     echo 'Container qualification failed; inspect the retained build/runtime evidence.' >&2
@@ -75,8 +71,14 @@ wms_image_id="$(cat "$wms_container_root/image.id")"
 docker image inspect "$wms_image_id" > "$wms_container_root/image-inspect.json"
 docker version --format '{{json .}}' > "$wms_container_root/docker-version.json"
 docker network create --label "$wms_label=$wms_run" "$wms_network" > "$wms_container_root/network.id"
+wms_pg_storage=(--tmpfs /var/lib/postgresql/data:rw,nosuid,nodev,size=512m)
+if [[ "${WMS_KEEP_QUALIFICATION_RESOURCES:-0}" == 1 ]]; then
+  wms_volume="wms-qualification-data-$wms_run"
+  docker volume create --label "$wms_label=$wms_run" "$wms_volume" > "$wms_container_root/volume.id"
+  wms_pg_storage=(--mount "type=volume,source=$wms_volume,target=/var/lib/postgresql/data")
+fi
 docker run --detach --name "$wms_postgres" --network "$wms_network" \
-  --label "$wms_label=$wms_run" --tmpfs /var/lib/postgresql/data:rw,nosuid,nodev,size=512m \
+  --label "$wms_label=$wms_run" "${wms_pg_storage[@]}" \
   --env POSTGRES_USER=warehouse --env POSTGRES_PASSWORD=warehouse-qualification-only \
   --env POSTGRES_DB=warehouse_container_test \
   --health-cmd 'pg_isready -U warehouse -d warehouse_container_test' \
@@ -111,6 +113,19 @@ if [[ ! "$wms_binding" =~ ^127\.0\.0\.1:[0-9]+$ ]]; then
 fi
 wms_base="http://$wms_binding"
 test "$(curl --silent --output /dev/null --write-out '%{http_code}' "$wms_base/v1/warehouses")" = 401
+test "$(curl --silent --output /dev/null --write-out '%{http_code}' --header 'Content-Type: application/json' \
+  --data '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' "$wms_base/mcp")" = 401
+for wms_mcp_method in session catalog; do
+  if [[ "$wms_mcp_method" == session ]]; then
+    wms_mcp_body='{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"wms_session","arguments":{}}}'
+  else
+    wms_mcp_body='{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+  fi
+  curl --fail --silent --show-error --header 'Authorization: Bearer release-smoke-key-at-least-32-characters' \
+    --header 'Content-Type: application/json' --header 'Accept: application/json, text/event-stream' \
+    --header 'MCP-Protocol-Version: 2025-11-25' --data "$wms_mcp_body" \
+    "$wms_base/mcp" > "$wms_container_root/mcp-$wms_mcp_method.json"
+done
 curl --fail --silent --show-error "$wms_base/ready" > "$wms_container_root/readiness.json"
 curl --fail --silent --show-error "$wms_base/" > "$wms_container_root/dashboard.html"
 curl --fail --silent --show-error --header 'Authorization: Bearer release-smoke-key-at-least-32-characters' \
@@ -133,6 +148,9 @@ container = json.loads((root / "container-inspect.json").read_text())[0]
 postgres = json.loads((root / "postgres-image-inspect.json").read_text())[0]
 inputs = json.loads((root / "source-inputs.json").read_text())
 session = json.loads((root / "session.json").read_text())
+mcp_session = json.loads((root / "mcp-session.json").read_text())["result"]["structuredContent"]
+mcp_catalog = json.loads((root / "mcp-catalog.json").read_text())["result"]["tools"]
+mcp_catalog_bytes = (root / "mcp-catalog.json").stat().st_size
 proof = json.loads((root / "reconciliation.json").read_text())
 process = dict(line.split(":", 1) for line in (root / "process-status.txt").read_text().splitlines() if ":" in line)
 assert container["Config"]["User"] == "10001"
@@ -143,6 +161,9 @@ assert container["State"]["Health"]["Status"] == "healthy"
 assert process["NoNewPrivs"].strip() == "1" and int(process["CapEff"].strip(), 16) == 0
 assert all(int(uid) == 10001 for uid in process["Uid"].split())
 assert session["demo"] is False and session["identity"] == {"tenant":"release-smoke","actor":"release:admin","role":"admin"}
+assert mcp_session["http_status"] == 200 and mcp_session["body"]["identity"] == session["identity"]
+assert len(mcp_catalog) > 45 and any(t["name"] == "wms_pack_shipment" for t in mcp_catalog)
+assert mcp_catalog_bytes < 256 * 1024, "Catalog must exclude unused command definitions"
 assert proof["ok"] is True and proof["method"] == "full_append_only_ledger_and_order_line_allocations"
 assert '<div id="root"></div>' in (root / "dashboard.html").read_text()
 assert image["Id"] == (root / "image.id").read_text().strip()
@@ -164,10 +185,14 @@ report = {
     "postgres_server_version": (root / "postgres-version.txt").read_text().strip(),
     "postgres_image_id": postgres["Id"], "postgres_repo_digests": postgres.get("RepoDigests", []),
     "qualifier_script_sha256": hashlib.sha256(pathlib.Path("scripts/container-smoke.sh").read_bytes()).hexdigest(),
+    "resource_helper_sha256": hashlib.sha256(pathlib.Path("scripts/qualification_resources.sh").read_bytes()).hexdigest(),
     "elapsed_build_and_runtime_seconds": int(os.environ["WMS_CONTAINER_SECONDS"]),
     "runtime": {"uid": 10001, "read_only_rootfs": True, "effective_capabilities": 0,
                 "no_new_privileges": True, "health": "healthy", "random_loopback_host_port": True,
                 "unauthenticated_api_status": 401, "real_mode_authenticated_session": True,
+                "mcp": {"unauthenticated_status": 401, "authenticated_session_matches_rest": True,
+                        "catalog_tools": len(mcp_catalog), "catalog_bytes": mcp_catalog_bytes,
+                        "partial_fulfillment_tools_present": True},
                 "immutable_image_id_bound_to_running_container": True, "graceful_sigterm_exit_code": 0,
                 "compiled_dashboard_served": True, "independent_reconciliation": proof},
     "migrations": migrations,

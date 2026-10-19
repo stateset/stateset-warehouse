@@ -37,6 +37,7 @@ impl Fixture {
         let fixture = Self { store, identity };
         fixture
             .command(Command::CreateProduct {
+                serial_controlled: false,
                 sku: "SKU".into(),
                 name: "Guard test product".into(),
                 category: "General".into(),
@@ -55,8 +56,11 @@ impl Fixture {
 
     async fn command(&self, command: Command) -> String {
         let request = Request {
+            serial_inputs: Vec::new(),
+            unit_inputs: Vec::new(),
             request_id: id(),
             expected_version: self.state().await.version,
+            resource_versions: None,
             command,
         };
         self.store
@@ -283,8 +287,11 @@ async fn completed_business_references_return_conflict_without_retaining_a_comma
         receipt("RCV-COMPLETED"),
     ] {
         let request = Request {
+            serial_inputs: Vec::new(),
+            unit_inputs: Vec::new(),
             request_id: id(),
             expected_version: before.version,
+            resource_versions: None,
             command,
         };
         for _ in 0..2 {
@@ -495,4 +502,87 @@ async fn full_reconciliation_rebuilds_history_independently_of_operational_balan
         "immutable receipt remains the physical evidence"
     );
     assert_eq!(row["difference"], 1);
+}
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL"]
+async fn cancellation_migration_blocks_existing_return_quantity_drift_and_freezes_valid_expectations(
+) {
+    let f = Fixture::new().await;
+    let schema = format!("cancel_upgrade_{}", id().replace('-', "_"));
+    let mut tx = f.store.pool.begin().await.expect("upgrade transaction");
+    sqlx::raw_sql(&format!(
+        "CREATE SCHEMA {schema}; SET LOCAL search_path TO {schema},public"
+    ))
+    .execute(&mut *tx)
+    .await
+    .expect("isolated upgrade schema");
+    for migration in [
+        include_str!("../migrations/001_initial.sql"),
+        include_str!("../migrations/002_relational_execution.sql"),
+        include_str!("../migrations/003_native_operations.sql"),
+        include_str!("../migrations/004_native_source_ownership.sql"),
+        include_str!("../migrations/005_conditional_oms_fulfillment.sql"),
+        include_str!("../migrations/006_oms_rejections.sql"),
+        include_str!("../migrations/007_operations_indexes.sql"),
+        include_str!("../migrations/008_delivery_recipient.sql"),
+        include_str!("../migrations/009_resource_versions.sql"),
+        include_str!("../migrations/010_customer_returns.sql"),
+        include_str!("../migrations/011_immutable_command_receipts.sql"),
+    ] {
+        sqlx::raw_sql(migration)
+            .execute(&mut *tx)
+            .await
+            .expect("actual preceding migration");
+    }
+    // Explicit SQL fixture for upgrade admission; physical workflows are separately
+    // exercised through actual HTTP/Store commands in persistence_acceptance.
+    sqlx::raw_sql(r#"
+        INSERT INTO wms_warehouses VALUES('upgrade','wh',0,'{"id":"wh","code":"TEST","name":"Test","city":"Test","timezone":"UTC"}');
+        INSERT INTO wms_products VALUES('upgrade','wh','SKU','{"sku":"SKU","name":"Test","category":"Test","reorder_point":0}');
+        INSERT INTO wms_locations VALUES('upgrade','wh','A','storage','{"code":"A","kind":"storage","zone":"A"}');
+        INSERT INTO wms_orders(tenant,warehouse_id,id,reference,status,data) VALUES('upgrade','wh','source','SOURCE','shipped','{"id":"source","reference":"SOURCE","status":"shipped","source_order_id":null,"carrier":"Carrier","handoff_reference":"HANDOFF","shipped_at":"2026-10-18T00:00:00Z"}');
+        INSERT INTO wms_order_lines VALUES('upgrade','wh','source','source-line','SKU',3);
+        INSERT INTO wms_allocations VALUES('upgrade','wh','source','source-line','SKU','LOT','A',3,3,3,0);
+        INSERT INTO wms_receipts(tenant,warehouse_id,id,reference,status,data) VALUES('upgrade','wh','rma','RMA','expected','{"id":"rma","reference":"RMA","status":"expected"}');
+        INSERT INTO wms_receipt_lines VALUES('upgrade','wh','rma','return-line','SKU','LOT',3,0);
+        INSERT INTO wms_return_lines VALUES('upgrade','wh','rma','return-line','source','source-line','SKU','LOT',3,'Physical return');
+        SET CONSTRAINTS ALL IMMEDIATE;
+        UPDATE wms_receipt_lines SET quantity=4 WHERE tenant='upgrade';
+        SAVEPOINT before_cancellation_upgrade;
+    "#).execute(&mut *tx).await.expect("preceding schema permits normalized quantity drift");
+    assert_constraint(
+        sqlx::raw_sql(include_str!("../migrations/012_receipt_cancellation.sql"))
+            .execute(&mut *tx)
+            .await
+            .expect_err(
+                "must not invent cancelled allowance from inconsistent original authorization",
+            ),
+    );
+    sqlx::raw_sql("ROLLBACK TO SAVEPOINT before_cancellation_upgrade; UPDATE wms_receipt_lines SET quantity=3 WHERE tenant='upgrade'").execute(&mut *tx).await.expect("restore reviewed original authorization");
+    sqlx::raw_sql(include_str!("../migrations/012_receipt_cancellation.sql"))
+        .execute(&mut *tx)
+        .await
+        .expect("upgrade valid prior schema");
+    sqlx::query("SAVEPOINT immutable_expectation")
+        .execute(&mut *tx)
+        .await
+        .expect("savepoint");
+    assert_constraint(
+        sqlx::query("UPDATE wms_receipt_lines SET quantity=4 WHERE tenant='upgrade'")
+            .execute(&mut *tx)
+            .await
+            .expect_err("upgraded expectation must stay frozen"),
+    );
+    sqlx::query("ROLLBACK TO SAVEPOINT immutable_expectation")
+        .execute(&mut *tx)
+        .await
+        .expect("restore transaction");
+    let quantity: i64 =
+        sqlx::query_scalar("SELECT quantity FROM wms_receipt_lines WHERE tenant='upgrade'")
+            .fetch_one(&mut *tx)
+            .await
+            .expect("preserved expectation");
+    assert_eq!(quantity, 3);
+    tx.rollback().await.expect("remove own upgrade fixture");
 }

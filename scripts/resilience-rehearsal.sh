@@ -3,7 +3,13 @@
 set -euo pipefail
 umask 077
 cd "$(dirname "$0")/.."
+source scripts/qualification_resources.sh
+wms_qualification_resource_mode
 wms_image="${WMS_RESILIENCE_IMAGE:-}"
+case "${WMS_RESILIENCE_TRAFFIC_MODEL:-independent-operators}" in
+  shared-snapshot|independent-operators) ;;
+  *) echo 'WMS_RESILIENCE_TRAFFIC_MODEL must be shared-snapshot or independent-operators.' >&2; exit 1 ;;
+esac
 if [[ ! "$wms_image" =~ ^sha256:[0-9a-f]{64}$ ]]; then
   echo 'Set WMS_RESILIENCE_IMAGE to the immutable sha256 ID of a built production image.' >&2
   exit 1
@@ -25,18 +31,8 @@ wms_api_b="wms-resilience-api-b-$wms_run"
 cleanup() {
   local result=$?
   trap - EXIT INT TERM
-  for wms_container in "$wms_api_a" "$wms_api_b" "$wms_pg"; do
-    if [[ "$(docker inspect --format "{{ index .Config.Labels \"$wms_label\" }}" "$wms_container" 2>/dev/null || true)" == "$wms_run" ]]; then
-      docker logs "$wms_container" > "$wms_root/$wms_container.log" 2>&1 || true
-      docker rm --force "$wms_container" >> "$wms_root/cleanup.log" 2>&1 || result=1
-    fi
-  done
-  if [[ "$(docker volume inspect --format "{{ index .Labels \"$wms_label\" }}" "$wms_volume" 2>/dev/null || true)" == "$wms_run" ]]; then
-    docker volume rm "$wms_volume" >> "$wms_root/cleanup.log" 2>&1 || result=1
-  fi
-  if [[ "$(docker network inspect --format "{{ index .Labels \"$wms_label\" }}" "$wms_network" 2>/dev/null || true)" == "$wms_run" ]]; then
-    docker network rm "$wms_network" >> "$wms_root/cleanup.log" 2>&1 || result=1
-  fi
+  wms_qualification_finish_resources "$wms_root" "$wms_label" "$wms_run" \
+    "$wms_network" "$wms_volume" "$wms_api_a" "$wms_api_b" "$wms_pg" || result=1
   printf 'Resilience qualification evidence: %s\n' "$wms_root"
   exit "$result"
 }
@@ -46,7 +42,7 @@ trap 'exit 143' TERM
 docker image inspect "$wms_image" > "$wms_root/image-inspect.json"
 docker network create --label "$wms_label=$wms_run" "$wms_network" > "$wms_root/network.id"
 # A named volume deliberately survives the PostgreSQL container's SIGKILL/start.
-# It is uniquely owned by this run and removed only after qualification ends.
+# It is uniquely owned by this run; retention mode keeps it after qualification.
 docker volume create --label "$wms_label=$wms_run" "$wms_volume" > "$wms_root/volume.id"
 python3 - "$wms_root/credentials.json" <<'PY'
 import json, os, pathlib, secrets, sys
@@ -83,6 +79,9 @@ done
 python3 scripts/resilience_probe.py --artifacts "$wms_root" --run "$wms_run" \
   --postgres "$wms_pg" --api "$wms_api_a" --api "$wms_api_b" \
   --seconds "${WMS_RESILIENCE_SECONDS:-60}" \
+  --review-mode "${WMS_RESILIENCE_REVIEW_MODE:-resources}" \
+  --traffic-model "${WMS_RESILIENCE_TRAFFIC_MODEL:-independent-operators}" \
   --products "${WMS_RESILIENCE_PRODUCTS:-100}" \
   --open-orders "${WMS_RESILIENCE_OPEN_ORDERS:-100}" \
-  --lots "${WMS_RESILIENCE_LOTS:-2}" --bins "${WMS_RESILIENCE_BINS:-20}"
+  --lots "${WMS_RESILIENCE_LOTS:-2}" --bins "${WMS_RESILIENCE_BINS:-20}" \
+  --serial-units "${WMS_RESILIENCE_SERIAL_UNITS:-0}"

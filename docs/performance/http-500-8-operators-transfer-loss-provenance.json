@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "production_qualified": false,
+  "report": "http-500-8-operators-transfer-loss.json",
+  "sha256": "df15f726e4c654d5a23bad65c217f4d22f350ef36ea32d171e6637941994bb4d",
+  "image_id": "sha256:cba329b82b07f4f29dbc439b7ad702b0019cd133866c05e288e38e99d598a571",
+  "image_source_inputs_sha256": "94ba97a421d57204143c23e14f4cbf25aea6c49a7036a43448a29a6ba26248cc",
+  "software_source_inputs_sha256": "a546b081d54e07551c8f27e98d913cd62604632d20cc3a80bf37cc0be06eb234",
+  "release_provenance": "../qualification/release-20261018-transfer-loss/provenance.json",
+  "traffic_model": "independent-operators",
+  "qualifier_sha256": {
+    "scripts/resilience-rehearsal.sh": "5fa42466238d4be5b260021da30541441d2c7d779b74b0594c8ac59099408227",
+    "scripts/resilience_probe.py": "67c2ceab339b0d21a5daa25af0b518f3cb476b4d856cedd914ed316cf27526ac"
+  },
+  "mcp": {
+    "unauthenticated_status": 401,
+    "authenticated_session_matches_rest": true,
+    "catalog_tools": 62,
+    "catalog_bytes": 70028,
+    "partial_fulfillment_tools_present": true
+  },
+  "limits": [
+    "The container and resilience stages use the same immutable image; other stages execute builds from the same frozen software inputs",
+    "Transfer loss and reversal are separately covered by exact destination-admin authority, HTTP/PostgreSQL line caps and concurrent arrival, independently attributed raw SQL commit rejection, immutable source forgery checks, rollback/replay, actual18 upgrade, paginated destination-head fencing, MCP, six browser contracts, actual desktop/mobile custody workflow and nonempty41-table cross-timezone archive restoration",
+    "Cross-facility exact lot trace is separately covered by actual HTTP/PostgreSQL, a controlled concurrent snapshot/quarantine race, version-fenced pagination/phantoms, event/authorization forgery checks, actual migrated legacy source, MCP long-cursor recovery, browser contracts, actual desktop/mobile workflow and nonempty nine-section cross-timezone archive restore",
+    "Sustained actions remain REST bin moves, full post-save snapshots and original-request replays; this does not measure repeated lot-trace reads, lot controls, expiry-heavy fulfillment, loss settlement, shipment-package, transfer-specific or MCP throughput",
+    "Clients, APIs and PostgreSQL share an uncontrolled development host. No causal speedup, deployed capacity, managed failover or facility SLO is inferred",
+    "The earlier split-release timeout and passing diagnostic replay remain retained. The original lock-holder/root cause is unconfirmed and this feature does not establish a fix",
+    "No deployment, actual physical counts/scanners, deployed WorkOS/MCP/native-client acceptance, tenant-wide recall, automated quality disposition, upstream refund or multiple-shipment receiver qualification is claimed"
+  ],
+  "transfer_loss_restore": {
+    "original_workflow_requests": 10,
+    "original_loss_records": 2,
+    "net_lost_each": 1,
+    "in_transit_each": 3,
+    "reversal_does_not_credit_stock": true,
+    "actual_recovered_arrival_separate": true
+  },
+  "focused_development_artifacts": {
+    "private_path": ".local/qualification/transfer-loss-development-20261018",
+    "manifest_sha256": "5d2b3ea3ce56d45e95c1fd446c1d2778381951070390f79b31e477623454ae90",
+    "intermediate_source_capsules_complete": false,
+    "final_frozen_source_matches_release": true
+  },
+  "private_restore_artifact_manifest_sha256": "0ab405a5d9cef3a3754dae86ae10c99361655193b20352af4bd23697bc729203",
+  "transfer_loss_browser_screenshots": {
+    "transfer-loss-desktop.png": {
+      "path": "../screenshots/transfer-loss-desktop.png",
+      "sha256": "90dcb0d5eb863c1706eaa39f984b4395a93c33e2e251526c57acddda770deb59",
+      "source_inputs_sha256": "a546b081d54e07551c8f27e98d913cd62604632d20cc3a80bf37cc0be06eb234",
+      "scope": "actual desktop/mobile browser against rebuilt canonical HTTP/PostgreSQL service; not a deployed device or physical acceptance observation"
+    },
+    "transfer-loss-mobile.png": {
+      "path": "../screenshots/transfer-loss-mobile.png",
+      "sha256": "ae4ba62ad9f933be010c2fdead18c8c6d299079a286da9caa4ad7892008da347",
+      "source_inputs_sha256": "a546b081d54e07551c8f27e98d913cd62604632d20cc3a80bf37cc0be06eb234",
+      "scope": "actual desktop/mobile browser against rebuilt canonical HTTP/PostgreSQL service; not a deployed device or physical acceptance observation"
+    }
+  },
+  "preceding_failed_lot_gate": {
+    "public_context": "../qualification/attempt-20261018-lot-controls-live-review/failure-context.json",
+    "original_result": "failed",
+    "container_and_resilience_ran": false,
+    "private_retention": ".local/qualification/lot-controls-integrity-development-20261018/first-release-attempt",
+    "private_artifact_manifest_sha256": "7ba4afbc4419467ddda73a2c7dc7735b81db87fe0d486da681823d0edd6e2978"
+  },
+  "host_observation": {
+    "scope": "single_point_global_load_average_during_synthetic_timed_interval",
+    "recorded_at": "2026-10-19T01:58:54.999996+00:00",
+    "load_average_1_5_15_minutes": [
+      9.46,
+      5.22,
+      4.82
+    ],
+    "conditions_controlled": false,
+    "host_processes_observed": false,
+    "host_compiler_absence_established": false,
+    "postgres_blocker_sampler_added": false,
+    "limits": [
+      "Global load average is a single observation, not controlled host conditions or causal latency evidence",
+      "No host-wide process observation or PostgreSQL activity/blocker sample was taken in this transfer-loss gate",
+      "The earlier split-release timeout root cause remains unconfirmed"
+    ]
+  }
+}

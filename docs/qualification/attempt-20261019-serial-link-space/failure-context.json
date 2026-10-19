@@ -1,0 +1,11 @@
+{
+  "recorded_at": "2026-10-19T14:20:49.529983+00:00",
+  "source_revision": 39,
+  "scope": "Retained actual full-gate compile failure. No source mutation or early interruption.",
+  "source_inputs_sha256": "73248e448b868b50ebb8d9ae727392940609328678f3f81831dd59bd3135d275",
+  "actual_exit_code": 101,
+  "failure": "Rust linking/temporary metadata creation failed with explicit No space left on device and mold failed to write output. Software stage fails before tests in this attempt. Earlier source38 passed319Rust/62Python separately; do not count those as a passing source39 gate.",
+  "production_qualified": false,
+  "accepted_source35_image_unchanged": true,
+  "correction": "Retain every source/database/image/evidence artifact. Losslessly archive fourteen obsolete WMS test binaries selected from historical qualification logs, independently verify exact decompressed hashes, then remove only their inactive build-directory copies. Retry exact frozen source39 and unchanged workload."
+}

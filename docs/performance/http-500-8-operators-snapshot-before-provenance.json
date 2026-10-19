@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "production_qualified": false,
+  "report": "http-500-8-operators-snapshot-before.json",
+  "sha256": "a20569145fa58991cd984aa575ac5cdee49d933dc90540f34e8e9c55e8d96e5c",
+  "image_id": "sha256:07ba6293b0f01a00b72d4cd864a056bbbb00d54a59c1425c848b86f175a0c1b1",
+  "image_source_inputs_sha256": "6bba4c658de267ceabc6bbb7383844fb99601854e421c83ef8326b5c775f3461",
+  "software_source_inputs_sha256": "bb767c9f25a2c377a6b78f9bf05d9f7fed939e9e340a42c38a2c97c1a21ec387",
+  "release_provenance": "../qualification/release-20261018-multi-facility/provenance.json",
+  "traffic_model": "independent-operators",
+  "qualifier_sha256": {
+    "scripts/resilience-rehearsal.sh": "5fa42466238d4be5b260021da30541441d2c7d779b74b0594c8ac59099408227",
+    "scripts/resilience_probe.py": "67c2ceab339b0d21a5daa25af0b518f3cb476b4d856cedd914ed316cf27526ac"
+  },
+  "limits": [
+    "Before measurement uses the previously qualified multi-facility immutable image; its application source is bound by the dated release archive",
+    "Qualifier scripts are separately fingerprinted and used unchanged for the optimized comparison",
+    "An additional full synthetic fixture is captured outside the timed interval and its read accounting",
+    "Sequential local synthetic windows share a development host; no deployed capacity or facility SLO is inferred"
+  ]
+}

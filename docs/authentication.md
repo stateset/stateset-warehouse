@@ -7,6 +7,13 @@ The existing API-key mode and loopback synthetic demo remain available when
 `WMS_WORKOS_JSON` is absent. Configured WorkOS replaces browser credential login;
 independent service API keys continue to work on the API.
 
+The [MCP endpoint](mcp.md) uses this same authentication on every HTTP request.
+Verified WorkOS organization, subject and role mappings determine its WMS
+principal; initialization, session IDs, tool arguments and MCP metadata cannot
+choose that identity. MCP clients need an explicit bearer header and must renew
+their own expired credentials. The endpoint does not provide an OAuth discovery
+or registration flow for clients that require one.
+
 ## Configure a project
 
 Use the WorkOS AuthKit application intended for WMS. Configure its production

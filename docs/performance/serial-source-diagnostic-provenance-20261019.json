@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-19T07:59:56.624593+00:00",
+  "synthetic": true,
+  "production_qualified": false,
+  "artifact": {
+    "path": "serial-source-diagnostic-20261019.json",
+    "sha256": "d4d3a8bfc2cecb70552c7c28ec06b4d8dd7a930af165db2d96cd0cda25773206"
+  },
+  "source_before": {
+    "revision": 14,
+    "inputs": 194,
+    "sha256": "b8c0c754c73dcbc64b82e0cd731ff612bc9e2c00907de167dfe186620bd9917a",
+    "archive_sha256": "5ea2d42e8954a13f6d49be6ebd6d0690f2b218b9570fd952b248d80e88431241",
+    "migrations": 22
+  },
+  "source_after": {
+    "revision": 19,
+    "inputs": 196,
+    "sha256": "29e71dcfc2b2ae0a234143971f1fa6dcf9d400f8a5c567e1d34d7bd1255c77ce",
+    "archive_sha256": "3c8d6c3dfb45a307671f234f4fd3a6647173f43b5dc9a732e520e60e8fcb80e8",
+    "migrations": 23
+  },
+  "tables_unchanged": 49,
+  "postgres": "12.22 (Ubuntu 12.22-0ubuntu0.20.04.4)",
+  "profile": "debug, same current diagnostic example source; actual Store and authenticated in-process router",
+  "baseline_runner": {
+    "session": 87957,
+    "terminal_exit": 0
+  },
+  "same_fixture_experiment_runner": {
+    "session": 46511,
+    "terminal_exit": 0,
+    "transaction": "same original owned data; original/candidate SQL definitions alternate with a warmup round and3retained rounds, thenROLLBACK; shared host uncontrolled"
+  },
+  "after_runner": {
+    "session": 37015,
+    "terminal_exit": 0,
+    "diagnostic_stage": "passed",
+    "independent_after_sizes": [
+      16,
+      64,
+      128,
+      256
+    ]
+  },
+  "limits": [
+    "Three read samples per independent fixture stage and three paired SQL samples per query/size are diagnostics, not sustained concurrency, capacity, facility SLO or stable latency qualification.",
+    "Independent before/after profiles run at different times. Concurrent local browser/archive/database checks and other shared-host work were not controlled or attributed.",
+    "After profile extends only to256identities and10single-unit moves per fixture. Large historical bucket/closure, observation traversal and remaining per-unit full source-validation cost still need qualification.",
+    "The 100-original-line transfer is a real command/guard regression that retains the unchanged10second statement timeout; its earlier timeouts and source snapshots remain privately retained.",
+    "No new accepted release image, deployment, physical/device/native/MCP-client acceptance or ten-stage gate is represented."
+  ]
+}

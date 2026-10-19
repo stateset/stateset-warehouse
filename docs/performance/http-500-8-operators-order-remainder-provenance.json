@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "production_qualified": false,
+  "report": "http-500-8-operators-order-remainder.json",
+  "sha256": "9587773aa2b55b099e12d32faad3a191cbcb4c9c1d53d328956745a23bb472f0",
+  "image_id": "sha256:b316ba7e357d5522559eb281e59cb3b871c7a27ee78baba3ec979f16a1e91419",
+  "image_source_inputs_sha256": "627dbe5d35d9e453dc1b8d8f3e776f569204ed85cee33ddc4a083d8b0b79b2bc",
+  "software_source_inputs_sha256": "6b112c27dbe1bd460dc8473a176b7760ad7029a61b0eab727e100cc97262adb2",
+  "release_provenance": "../qualification/release-20261018-order-remainder/provenance.json",
+  "traffic_model": "independent-operators",
+  "qualifier_sha256": {
+    "scripts/resilience-rehearsal.sh": "5fa42466238d4be5b260021da30541441d2c7d779b74b0594c8ac59099408227",
+    "scripts/resilience_probe.py": "67c2ceab339b0d21a5daa25af0b518f3cb476b4d856cedd914ed316cf27526ac"
+  },
+  "mcp": {
+    "unauthenticated_status": 401,
+    "authenticated_session_matches_rest": true,
+    "catalog_tools": 52,
+    "catalog_bytes": 56993,
+    "partial_fulfillment_tools_present": true
+  },
+  "limits": [
+    "The container and resilience stages use the same immutable image; other stages execute builds from the same frozen software inputs",
+    "Closing unshipped demand is separately covered by actual domain, HTTP/PostgreSQL, race, stale resource review, rollback, forensic source proof, upgrade, MCP, browser/reload and nonempty restore checks",
+    "Sustained actions remain REST bin moves, full post-save snapshots and original-request replays; this does not measure repeated cancellation, shipment-package, transfer-specific or MCP throughput",
+    "Clients, APIs and PostgreSQL share an uncontrolled development host. No causal speedup, deployed capacity, managed failover or facility SLO is inferred",
+    "The earlier split-release timeout and passing diagnostic replay remain retained. The original lock-holder/root cause is unconfirmed and this feature does not establish a fix",
+    "No deployment, actual physical counts/scanners, deployed WorkOS/MCP/native-client acceptance, upstream cancellation/refund or multiple-shipment receiver qualification is claimed"
+  ],
+  "host_observation": {
+    "scope": "single_point_global_load_average_during_synthetic_timed_interval",
+    "recorded_at": "2026-10-18T22:40:55.617420+00:00",
+    "load_average_1_5_15_minutes": [
+      5.34,
+      5.46,
+      4.89
+    ],
+    "conditions_controlled": false,
+    "host_processes_observed": false,
+    "host_compiler_absence_established": false,
+    "postgres_blocker_sampler_added": false,
+    "limits": [
+      "Global load average is a single observation, not controlled host conditions or causal latency evidence",
+      "No host-wide process observation or PostgreSQL activity/blocker sample was taken in this order-remainder gate",
+      "The earlier split-release timeout root cause remains unconfirmed"
+    ]
+  }
+}

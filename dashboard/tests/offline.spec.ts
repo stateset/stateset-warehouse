@@ -4,6 +4,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { readFileSync, readdirSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 const root = resolve(process.cwd(), "..");
 const driver = resolve(root, "target/debug/examples/domain_driver");
 function domain(value?: unknown) {
@@ -26,11 +27,15 @@ async function setup(
   fullHistoryMatches = true,
   recovery?: {
     dropBeforeArrival: boolean;
+    scoped?: "related" | "unrelated";
     outcome?: (value: Record<string, unknown>) => unknown;
     responseStatus?: number;
   },
+  initialise?: (state: any) => any,
 ) {
   let state = domain();
+  if (initialise) state = initialise(state);
+  if (recovery?.scoped) state.resource_versions = {};
   const archivedOrders = Array.from({ length: historyDepth }, (_, index) => ({
     ...state.orders.find((order: any) => order.status === "shipped"),
     id: `archived-order-${index}`,
@@ -113,6 +118,40 @@ async function setup(
         method: "full_append_only_ledger_and_order_line_allocations",
       });
     }
+    const shipmentPath = url.pathname.match(/\/orders\/([^/]+)\/shipments$/);
+    if (shipmentPath) {
+      const order = state.orders.find(
+        (o: any) => o.id === decodeURIComponent(shipmentPath[1]),
+      );
+      return order
+        ? send({
+            warehouse_id: state.warehouse.id,
+            order_id: order.id,
+            version: state.version,
+            ok: true,
+            order,
+            packages: [],
+            progress: order.lines.map((l: any) => {
+              const a = order.allocations.filter(
+                (a: any) => a.line_id === l.id,
+              );
+              const allocated = a.reduce(
+                (n: number, a: any) => n + a.quantity - a.released,
+                0,
+              );
+              return {
+                line_id: l.id,
+                sku: l.sku,
+                ordered: l.quantity,
+                allocated,
+                picked: a.reduce((n: number, a: any) => n + a.picked, 0),
+                shipped: a.reduce((n: number, a: any) => n + a.shipped, 0),
+                unallocated: l.quantity - allocated,
+              };
+            }),
+          })
+        : send({ error: "Unknown order" }, 404);
+    }
     if (url.pathname.endsWith("/outbox")) return send({ items: [] });
     const detail = url.pathname.match(
       /\/warehouses\/wh-pdx\/(orders|receipts)\/([^/]+)$/,
@@ -166,6 +205,11 @@ async function setup(
       return send(result ? { found: true, result } : { found: false });
     }
     if (url.pathname.endsWith("/commands")) {
+      if (
+        Buffer.byteLength(route.request().postData() ?? "", "utf8") >
+        256 * 1024
+      )
+        return send({ error: "Command body exceeds 256 KiB" }, 413);
       const req = route.request().postDataJSON();
       if (recovery?.dropBeforeArrival && !dropped) {
         // Another operator commits after the original request is lost before
@@ -179,19 +223,45 @@ async function setup(
             detail: "Concurrent operator observed a warehouse issue",
           },
         }).state;
+        if (recovery.scoped) {
+          state.resource_versions = {};
+          if (recovery.scoped === "related")
+            state.resource_versions[
+              JSON.stringify(["receipt", req.command.receipt_id])
+            ] = 1;
+        }
         dropped = true;
         return route.abort("failed");
       }
-      if (req.expected_version !== state.version) {
+      const currentResources = req.resource_versions
+        ? Object.fromEntries(
+            Object.keys(req.resource_versions).map((key) => [
+              key,
+              state.resource_versions?.[key] ?? 0,
+            ]),
+          )
+        : null;
+      const resourcesMatch =
+        currentResources &&
+        Object.entries(req.resource_versions).every(
+          ([key, value]) => currentResources[key] === value,
+        );
+      if (req.expected_version !== state.version && !resourcesMatch) {
         const outcome = {
           status: "not_committed",
-          reason: "stale_version",
+          reason: req.resource_versions ? "changed_resources" : "stale_version",
           tenant: "demo",
           actor: "operator:demo",
           warehouse_id: state.warehouse.id,
           request_id: req.request_id,
           expected_version: req.expected_version,
           current_version: state.version,
+          ...(req.resource_versions
+            ? {
+                expected_resource_versions: req.resource_versions,
+                current_resource_versions: currentResources,
+              }
+            : {}),
         };
         return send(
           {
@@ -332,7 +402,9 @@ test("fulfillment allocation, pick, packing and physical handoff", async ({
   await page.getByRole("button", { name: "Confirm pick" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.getByRole("button", { name: "SO-1041", exact: true }).click();
-  await page.getByRole("button", { name: "Confirm packed" }).click();
+  await page
+    .getByRole("button", { name: "Confirm packed", exact: true })
+    .click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.getByRole("button", { name: "SO-1041", exact: true }).click();
   await page.getByRole("button", { name: "Record handoff" }).click();
@@ -811,3 +883,1280 @@ test("ledger uses the independent history proof even when operational balances a
   ).toBeVisible();
   expect(fullChecks).toHaveLength(2);
 });
+
+test("unrelated work permits exact scoped recovery under the original request", async ({
+  page,
+}) => {
+  const state = await setup(page, false, 0, true, {
+    dropBeforeArrival: true,
+    scoped: "unrelated",
+  });
+  const received = () =>
+    state().receipts.find((r: any) => r.reference === "RCV-207").lines[0]
+      .received;
+  const before = received();
+  await loseReceiptBeforeArrival(page);
+  const original = await page.evaluate(() =>
+    JSON.parse(sessionStorage.getItem("wms-pending:demo:operator:demo")!),
+  );
+  expect(Object.keys(original.request.resource_versions)).toHaveLength(4);
+  expect(received()).toBe(before);
+  await page.reload();
+  await page
+    .getByRole("button", { name: "Check original save", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Check original save", exact: true }),
+  ).toHaveCount(0);
+  expect(received()).toBe(before + 1);
+  expect(
+    await page.evaluate(() =>
+      sessionStorage.getItem("wms-pending:demo:operator:demo"),
+    ),
+  ).toBeNull();
+  expect(domain({ state: state() }).ok).toBe(true);
+});
+
+test("changed resources retire only the matching permanently fenced original", async ({
+  page,
+}) => {
+  const state = await setup(page, false, 0, true, {
+    dropBeforeArrival: true,
+    scoped: "related",
+  });
+  const received = () =>
+    state().receipts.find((r: any) => r.reference === "RCV-207").lines[0]
+      .received;
+  const before = received();
+  await loseReceiptBeforeArrival(page);
+  await page.reload();
+  await page
+    .getByRole("button", { name: "Check original save", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Check original save", exact: true }),
+  ).toHaveCount(0);
+  expect(received()).toBe(before);
+  await expect(page.getByRole("alert")).toContainText(
+    "Review current work and physical stock",
+  );
+});
+
+for (const scenario of [
+  {
+    label: "different expected resources",
+    change: (proof: any) => ({ ...proof, expected_resource_versions: {} }),
+  },
+  {
+    label: "missing current resources",
+    change: (proof: any) => ({ ...proof, current_resource_versions: {} }),
+  },
+  {
+    label: "unchanged resources",
+    change: (proof: any) => ({
+      ...proof,
+      current_resource_versions: proof.expected_resource_versions,
+    }),
+  },
+  {
+    label: "negative resource revision",
+    change: (proof: any) => ({
+      ...proof,
+      current_resource_versions: Object.fromEntries(
+        Object.keys(proof.current_resource_versions).map((k) => [k, -1]),
+      ),
+    }),
+  },
+  {
+    label: "unsafe resource revision",
+    change: (proof: any) => ({
+      ...proof,
+      current_resource_versions: Object.fromEntries(
+        Object.keys(proof.current_resource_versions).map((k) => [
+          k,
+          Number.MAX_SAFE_INTEGER + 1,
+        ]),
+      ),
+    }),
+  },
+  {
+    label: "legacy proof for a scoped command",
+    change: (proof: any) => {
+      const {
+        expected_resource_versions,
+        current_resource_versions,
+        ...legacy
+      } = proof;
+      return { ...legacy, reason: "stale_version" };
+    },
+  },
+]) {
+  test(`scoped recovery retains original: ${scenario.label}`, async ({
+    page,
+  }) => {
+    await setup(page, false, 0, true, {
+      dropBeforeArrival: true,
+      scoped: "related",
+      outcome: scenario.change,
+    });
+    await loseReceiptBeforeArrival(page);
+    const original = await page.evaluate(() =>
+      sessionStorage.getItem("wms-pending:demo:operator:demo"),
+    );
+    await page.reload();
+    await page
+      .getByRole("button", { name: "Check original save", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Check original save", exact: true }),
+    ).toBeEnabled();
+    expect(
+      await page.evaluate(() =>
+        sessionStorage.getItem("wms-pending:demo:operator:demo"),
+      ),
+    ).toBe(original);
+    await expect(
+      page.getByRole("button", { name: "New receipt", exact: true }),
+    ).toBeDisabled();
+  });
+}
+
+test("long-label multi-lot shipments retain the strict fence within the command body limit", async ({
+  page,
+}) => {
+  test.setTimeout(60000);
+  const current = await setup(page);
+  const s = current();
+  const sku = `LONG-SKU-${"S".repeat(231)}`;
+  const location = `LONG-BIN-${"B".repeat(231)}`;
+  s.products.push({
+    sku,
+    name: "Long label product",
+    category: "Test",
+    reorder_point: 0,
+  });
+  s.locations.push({
+    code: location,
+    zone: "Long label storage",
+    kind: "storage",
+  });
+  const allocations = [];
+  for (let i = 0; i < 220; i++) {
+    const lot = `LOT-${String(i).padStart(3, "0")}-${"L".repeat(232)}`;
+    s.stocks.push(
+      { sku, lot, location, on_hand: 0, reserved: 0 },
+      { sku, lot, location: "STAGE-01", on_hand: 1, reserved: 1 },
+    );
+    allocations.push({
+      line_id: "long-line",
+      sku,
+      lot,
+      location,
+      quantity: 1,
+      picked: 1,
+      shipped: 0,
+      released: 0,
+    });
+    s.movements.push(
+      {
+        id: randomUUID(),
+        kind: "count",
+        sku,
+        lot,
+        from: null,
+        to: location,
+        quantity: 1,
+        reference: "LONG-COUNT",
+        reason: "Synthetic count",
+        actor: "fixture:synthetic",
+        at: new Date().toISOString(),
+      },
+      {
+        id: randomUUID(),
+        kind: "pick",
+        sku,
+        lot,
+        from: location,
+        to: "STAGE-01",
+        quantity: 1,
+        reference: "LONG-LABEL-SHIPMENT",
+        reason: "Synthetic pick",
+        actor: "fixture:synthetic",
+        at: new Date().toISOString(),
+      },
+    );
+  }
+  const order = {
+    ...s.orders[0],
+    id: randomUUID(),
+    reference: "LONG-LABEL-SHIPMENT",
+    source_order_id: null,
+    status: "packed",
+    lines: [{ id: "long-line", sku, quantity: 220 }],
+    allocations,
+    carrier: "",
+    handoff_reference: "",
+    shipped_at: null,
+  };
+  s.orders.unshift(order);
+  s.resource_versions = {};
+  expect(domain({ state: s }).ok).toBe(true);
+  await page
+    .getByRole("button", { name: "Refresh warehouse", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Fulfillment", exact: true }).click();
+  await page
+    .getByRole("button", { name: order.reference, exact: true })
+    .click();
+  await page.getByRole("button", { name: "Record handoff" }).click();
+  await page.getByLabel("Carrier", { exact: true }).fill("UPS");
+  await page
+    .getByLabel("Carrier pickup / tracking reference")
+    .fill("LONG-TEST-PICKUP");
+  const posted = page.waitForRequest(
+    (r) => r.url().endsWith("/commands") && r.method() === "POST",
+  );
+  await page.getByRole("button", { name: "Confirm physical handoff" }).click();
+  const request = await posted;
+  expect(request.postDataJSON().resource_versions).toBeUndefined();
+  expect(Buffer.byteLength(request.postData()!, "utf8")).toBeLessThan(
+    256 * 1024,
+  );
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(current().orders.find((o: any) => o.id === order.id).status).toBe(
+    "shipped",
+  );
+  expect(
+    current()
+      .stocks.filter((b: any) => b.sku === sku)
+      .every((b: any) => b.on_hand === 0 && b.reserved === 0),
+  ).toBe(true);
+  expect(domain({ state: current() }).ok).toBe(true);
+});
+
+function partialCancellationFixture(state: any) {
+  const receipt = state.receipts.find((r: any) => r.reference === "RCV-207");
+  return domain({
+    state,
+    command: {
+      type: "receive",
+      receipt_id: receipt.id,
+      line_id: receipt.lines[0].id,
+      quantity: 12,
+      location: "RECV-01",
+    },
+  }).state;
+}
+async function cancelRemainder(page: Page) {
+  await page.getByRole("button", { name: "Receiving", exact: true }).click();
+  await page
+    .getByRole("row")
+    .filter({ hasText: "RCV-207" })
+    .getByRole("button", { name: "Receive goods", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Cancel unreceived remainder", exact: true })
+    .click();
+  await page
+    .getByLabel("Cancellation reason", { exact: true })
+    .fill("Supplier cancelled the remaining delivery");
+  await page
+    .getByRole("button", {
+      name: "Confirm remainder cancellation",
+      exact: true,
+    })
+    .click();
+}
+test("partial receipt cancellation retains stock and closes all receiving controls including scanner", async ({
+  page,
+}) => {
+  const state = await setup(
+    page,
+    false,
+    0,
+    true,
+    undefined,
+    partialCancellationFixture,
+  );
+  const before = structuredClone(state());
+  await cancelRemainder(page);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const cancelled = state().receipts.find(
+    (r: any) => r.reference === "RCV-207",
+  );
+  expect(cancelled.status).toBe("cancelled");
+  expect(cancelled.lines[0].received).toBe(12);
+  expect(cancelled.cancellation.lines[cancelled.lines[0].id].cancelled).toBe(
+    cancelled.lines[0].quantity - 12,
+  );
+  expect(state().stocks).toEqual(before.stocks);
+  expect(state().movements).toEqual(before.movements);
+  await page
+    .getByRole("row")
+    .filter({ hasText: "RCV-207" })
+    .getByRole("button", { name: "View receipt", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toContainText(
+    "Supplier cancelled the remaining delivery",
+  );
+  await expect(
+    page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Receive goods", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", {
+      name: "Cancel unreceived remainder",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Close dialog", exact: true }).click();
+  await page.getByRole("button", { name: "Scanner", exact: true }).click();
+  await page.getByLabel("Receipt reference", { exact: true }).fill("RCV-207");
+  await page.getByRole("button", { name: "Load work", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText(
+    "receipt remainder was cancelled",
+  );
+  expect(domain({ state: state() }).ok).toBe(true);
+});
+for (const loss of ["after", "before"] as const) {
+  test(`receipt cancellation lost ${loss} arrival preserves the original journal and stock`, async ({
+    page,
+  }) => {
+    const state = await setup(
+      page,
+      loss === "after",
+      0,
+      true,
+      loss === "before" ? { dropBeforeArrival: true } : undefined,
+      partialCancellationFixture,
+    );
+    const stocks = structuredClone(state().stocks);
+    await cancelRemainder(page);
+    await expect(
+      page.getByRole("button", { name: "Check original save", exact: true }),
+    ).toBeVisible();
+    const saved = await page.evaluate(() =>
+      JSON.parse(sessionStorage.getItem("wms-pending:demo:operator:demo")!),
+    );
+    expect(saved.request.command.type).toBe("cancel_receipt");
+    const version = state().version;
+    await page.reload();
+    await page
+      .getByRole("button", { name: "Check original save", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Check original save", exact: true }),
+    ).toHaveCount(0);
+    const receipt = state().receipts.find(
+      (r: any) => r.reference === "RCV-207",
+    );
+    expect(receipt.status).toBe(loss === "after" ? "cancelled" : "partial");
+    expect(state().stocks).toEqual(stocks);
+    expect(state().version).toBe(version);
+    expect(
+      await page.evaluate(() =>
+        sessionStorage.getItem("wms-pending:demo:operator:demo"),
+      ),
+    ).toBeNull();
+    if (loss === "before") {
+      await expect(page.getByRole("alert")).toContainText(
+        "Review current work",
+      );
+      await cancelRemainder(page);
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      expect(
+        state().receipts.find((r: any) => r.reference === "RCV-207").status,
+      ).toBe("cancelled");
+    }
+  });
+}
+
+for (const kind of [
+  "synthetic_fixture",
+  "legacy_snapshot",
+  "unknown_source",
+] as const) {
+  test(`return allowance identifies ${kind} provenance without presenting it as a physical event`, async ({
+    page,
+  }) => {
+    const state = await setup(page);
+    const order = state().orders.find((o: any) => o.status === "shipped");
+    await page.route(
+      `**/orders/${order.id}/return-eligibility`,
+      async (route) =>
+        route.fulfill({
+          contentType: "application/json",
+          body: JSON.stringify({
+            order_id: order.id,
+            version: state().version,
+            shipment_source: { kind, event_id: null, version: state().version },
+            lines: order.allocations.map((a: any) => ({
+              order_line_id: a.line_id,
+              sku: a.sku,
+              lot: a.lot,
+              remaining: a.shipped,
+            })),
+          }),
+        }),
+    );
+    await page
+      .getByRole("button", { name: "Fulfillment", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: order.reference, exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Review return allowance", exact: true })
+      .click();
+    if (kind === "unknown_source") {
+      await expect(page.getByRole("alert")).toContainText(
+        "Return allowance source could not be verified",
+      );
+      await expect(
+        page.getByLabel("RMA reference", { exact: true }),
+      ).toHaveCount(0);
+    } else {
+      await expect(
+        page.getByText(
+          kind === "synthetic_fixture"
+            ? "Synthetic shipment fixture — use for testing only."
+            : "Allowance comes from a retained legacy snapshot. Verify the original handoff before receiving returned goods.",
+          { exact: true },
+        ),
+      ).toBeVisible();
+      await expect(
+        page.getByLabel("RMA reference", { exact: true }),
+      ).toBeVisible();
+    }
+    await expect(
+      page.getByText(
+        "Allowance checked against the original recorded handoff.",
+        { exact: true },
+      ),
+    ).toHaveCount(0);
+  });
+}
+
+test("ledger identifies original shipment disagreement even when every stock balance matches", async ({
+  page,
+}) => {
+  const state = await setup(page);
+  const order = state().orders.find((o: any) => o.status === "shipped");
+  const shipment = {
+    order_id: order.id,
+    source_kind: "event",
+    event_id: "original-shipment-evidence",
+    source_version: state().version,
+    ok: false,
+  };
+  await page.route("**/v1/warehouses/wh-pdx/reconciliation", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        ...domain({ state: state() }),
+        version: state().version,
+        ok: false,
+        shipments: [shipment],
+      }),
+    }),
+  );
+  await page
+    .getByRole("button", { name: "Movement ledger", exact: true })
+    .click();
+  await expect(
+    page.getByText("Full reconciliation needs review", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("alert")).toContainText(
+    "Shipment evidence needs review for 1 order",
+  );
+  const exported = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export proof", exact: true }).click();
+  const file = await (await exported).path();
+  const proof = JSON.parse(readFileSync(file!, "utf8"));
+  expect(proof.shipments).toEqual([shipment]);
+  expect(proof.rows.every((r: any) => r.ok)).toBe(true);
+});
+
+for (const loss of ["before", "after"] as const) {
+  test(`facility dispatch lost ${loss} arrival retains its exact original journal and source custody`, async ({
+    page,
+  }) => {
+    const state = await setup(
+      page,
+      loss === "after",
+      0,
+      true,
+      loss === "before" ? { dropBeforeArrival: true } : undefined,
+    );
+    const target = structuredClone(state());
+    target.warehouse = {
+      ...target.warehouse,
+      id: "wh-east",
+      code: "EAST",
+      name: "Synthetic destination",
+    };
+    await page.route(
+      (url) => url.pathname === "/v1/warehouses",
+      (route) =>
+        route.fulfill({
+          json: {
+            warehouses: [
+              { warehouse: state().warehouse },
+              { warehouse: target.warehouse },
+            ],
+            next_after: null,
+          },
+        }),
+    );
+    await page.route("**/v1/warehouses/wh-east", (route) =>
+      route.fulfill({ json: target }),
+    );
+    await page.route(
+      (url) => url.pathname.endsWith("/transfers"),
+      (route) =>
+        route.fulfill({
+          json: {
+            warehouse_id: state().warehouse.id,
+            version: state().version,
+            items: [],
+            next_cursor: null,
+          },
+        }),
+    );
+    const stock = state().stocks.find(
+      (b: any) =>
+        b.on_hand - b.reserved >= 2 &&
+        state().locations.some(
+          (l: any) => l.code === b.location && l.kind === "storage",
+        ),
+    );
+    const before = state().stocks.reduce(
+      (n: number, b: any) => n + b.on_hand,
+      0,
+    );
+    await page
+      .getByRole("button", { name: "Facility transfers", exact: true })
+      .click();
+    await page.getByText("New facility transfer", { exact: true }).click();
+    await expect(
+      page.getByLabel("Destination facility", { exact: true }),
+    ).toBeEnabled();
+    await page
+      .getByLabel("Destination facility", { exact: true })
+      .selectOption("wh-east");
+    await page
+      .getByLabel("Transfer reference", { exact: true })
+      .fill("ORIGINAL-TRANSFER");
+    await page
+      .getByLabel("Transfer carrier", { exact: true })
+      .fill("Synthetic carrier");
+    await page
+      .getByLabel("Carrier handoff reference", { exact: true })
+      .fill("ORIGINAL-HANDOFF");
+    await page
+      .getByLabel("Source stock 1", { exact: true })
+      .selectOption(JSON.stringify([stock.sku, stock.lot, stock.location]));
+    await page.getByLabel("Dispatch each units 1", { exact: true }).fill("2");
+    await page
+      .getByRole("button", { name: "Review transfer dispatch", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", {
+        name: "Confirm physical dispatch",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Record carrier handoff", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Check original save", exact: true }),
+    ).toBeVisible();
+    const journal = await page.evaluate(() =>
+      JSON.parse(sessionStorage.getItem("wms-pending:demo:operator:demo")!),
+    );
+    expect(journal.warehouse).toBe("wh-pdx");
+    expect(journal.request.command.destination_warehouse_id).toBe("wh-east");
+    expect(journal.request.command.lines).toEqual([
+      {
+        id: expect.any(String),
+        sku: stock.sku,
+        lot: stock.lot,
+        location: stock.location,
+        quantity: 2,
+      },
+    ]);
+    await page.reload();
+    await page
+      .getByRole("button", { name: "Check original save", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Check original save", exact: true }),
+    ).toHaveCount(0);
+    expect(
+      await page.evaluate(() =>
+        sessionStorage.getItem("wms-pending:demo:operator:demo"),
+      ),
+    ).toBeNull();
+    expect(state().stocks.reduce((n: number, b: any) => n + b.on_hand, 0)).toBe(
+      before - (loss === "after" ? 2 : 0),
+    );
+    expect(
+      state().movements.filter((m: any) => m.kind === "transfer_dispatch"),
+    ).toHaveLength(loss === "after" ? 1 : 0);
+  });
+}
+
+test("transfer receiving holds inconsistent original evidence and rejects mixed-version pages", async ({
+  page,
+}) => {
+  const state = await setup(page);
+  const transfer = {
+    id: "original-transfer",
+    reference: "ORIGINAL-TRANSFER",
+    source_warehouse_id: "wh-east",
+    destination_warehouse_id: "wh-pdx",
+    carrier: "Carrier",
+    handoff_reference: "ORIGINAL-HANDOFF",
+    ok: false,
+    lines: [
+      {
+        id: "a",
+        sku: "SS-CAP-004",
+        lot: "LOT-2610",
+        location: "A-01",
+        quantity: 3,
+        received: 1,
+        lost: 0,
+        loss_record_count: 0,
+      },
+    ],
+  };
+  await page.route(
+    (url) => url.pathname.endsWith("/transfers"),
+    (route) =>
+      route.fulfill({
+        json: {
+          warehouse_id: "wh-pdx",
+          version:
+            state().version +
+            (route.request().url().includes("after=") ? 1 : 0),
+          items: [
+            {
+              cursor: route.request().url().includes("after=") ? 2 : 1,
+              data: transfer,
+            },
+          ],
+          next_cursor: route.request().url().includes("after=") ? null : 1,
+        },
+      }),
+  );
+  await page
+    .getByRole("button", { name: "Facility transfers", exact: true })
+    .click();
+  await expect(page.getByRole("alert")).toContainText(
+    "Original transfer evidence needs reconciliation",
+  );
+  await expect(
+    page.getByRole("button", {
+      name: "Receive transfer ORIGINAL-TRANSFER line a",
+      exact: true,
+    }),
+  ).toBeDisabled();
+  await page
+    .getByRole("button", { name: "Load older transfers", exact: true })
+    .click();
+  await expect(page.getByRole("alert")).toContainText(
+    "Warehouse changed while paging transfers",
+  );
+  await expect(
+    page.getByRole("button", {
+      name: "Receive transfer ORIGINAL-TRANSFER line a",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+});
+
+test("mixed movement CSV retains later transfer ownership columns and neutralizes spreadsheet formulas", async ({
+  page,
+}) => {
+  const state = await setup(
+    page,
+    false,
+    0,
+    true,
+    undefined,
+    (original: any) => {
+      const bucket = original.stocks.find(
+        (b: any) =>
+          b.on_hand - b.reserved >= 2 &&
+          original.locations.some(
+            (l: any) => l.code === b.location && l.kind === "storage",
+          ),
+      );
+      const next = domain({
+        state: original,
+        command: {
+          type: "dispatch_transfer",
+          reference: "CSV-TRANSFER",
+          destination_warehouse_id: "wh-east",
+          carrier: "Synthetic carrier",
+          handoff_reference: "=CARRIER-HOOK",
+          lines: [
+            {
+              id: "=original-line",
+              sku: bucket.sku,
+              lot: bucket.lot,
+              location: bucket.location,
+              quantity: 2,
+            },
+          ],
+        },
+      }).state;
+      next.movements.at(-1).transfer_event_id = "original-dispatch-event";
+      return next;
+    },
+  );
+  expect(state().movements[0].transfer_id).toBeUndefined();
+  const transfer = state().movements.at(-1);
+  await page
+    .getByRole("button", { name: "Movement ledger", exact: true })
+    .click();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export CSV", exact: true }).click();
+  const file = await (await download).path();
+  const csv = readFileSync(file!, "utf8");
+  const header = csv.split("\r\n")[0];
+  for (const field of ["transfer_id", "transfer_line_id", "transfer_event_id"])
+    expect(header).toContain(`"${field}"`);
+  expect(csv).toContain(`"${transfer.transfer_id}"`);
+  expect(csv).toContain('"\'=original-line"');
+  expect(csv).toContain('"original-dispatch-event"');
+  expect(csv).toContain('"\'=CARRIER-HOOK"');
+});
+
+for (const loss of ["after", "before"] as const) {
+  test(`packed shipment lost ${loss} arrival recovers only its original journal`, async ({
+    page,
+  }) => {
+    const state = await setup(
+      page,
+      loss === "after",
+      0,
+      true,
+      loss === "before" ? { dropBeforeArrival: true } : undefined,
+    );
+    const order = state().orders.find((o: any) => o.status === "picked");
+    const stock = structuredClone(state().stocks);
+    const pack = async () => {
+      await page
+        .getByRole("button", { name: "Fulfillment", exact: true })
+        .click();
+      await page
+        .getByRole("button", { name: order.reference, exact: true })
+        .click();
+      await page
+        .getByLabel("Package reference", { exact: true })
+        .fill("REVIEWED-PACKAGE");
+      const a = order.allocations[0];
+      await page
+        .getByLabel(`Package each units ${a.line_id} ${a.location} ${a.lot}`, {
+          exact: true,
+        })
+        .fill("2");
+      await page
+        .getByRole("button", { name: "Confirm packed shipment", exact: true })
+        .click();
+    };
+    await pack();
+    await expect(
+      page.getByRole("button", { name: "Check original save", exact: true }),
+    ).toBeVisible();
+    const original = await page.evaluate(() =>
+      JSON.parse(sessionStorage.getItem("wms-pending:demo:operator:demo")!),
+    );
+    expect(original.request.command).toMatchObject({
+      type: "pack_shipment",
+      reference: "REVIEWED-PACKAGE",
+      lines: [{ quantity: 2 }],
+    });
+    const version = state().version;
+    await page.reload();
+    await page
+      .getByRole("button", { name: "Check original save", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Check original save", exact: true }),
+    ).toHaveCount(0);
+    expect(state().version).toBe(version);
+    expect(state().stocks).toEqual(stock);
+    expect(
+      state().orders.find((o: any) => o.id === order.id).shipment_mode,
+    ).toBe(loss === "after" ? "packages" : undefined);
+    expect(
+      await page.evaluate(() =>
+        sessionStorage.getItem("wms-pending:demo:operator:demo"),
+      ),
+    ).toBeNull();
+    if (loss === "before") {
+      await expect(page.getByRole("alert")).toContainText(
+        "Review current work",
+      );
+      await pack();
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      expect(
+        state().orders.find((o: any) => o.id === order.id).shipment_mode,
+      ).toBe("packages");
+    }
+  });
+}
+
+for (const corruption of [
+  "warehouse",
+  "line ownership",
+  "duplicate package",
+  "overlapping claims",
+] as const) {
+  test(`shipment review holds ${corruption} disagreement before any command`, async ({
+    page,
+  }) => {
+    const state = await setup(page);
+    const order = state().orders.find((o: any) => o.status === "picked");
+    const a = order.allocations[0];
+    const packed = {
+      id: "original-package",
+      order_id: order.id,
+      reference: "PACK-REVIEW",
+      closure: null,
+      lines: [
+        {
+          line_id: a.line_id,
+          sku: a.sku,
+          location: a.location,
+          lot: a.lot,
+          quantity: 2,
+        },
+      ],
+    };
+    await page.route(`**/orders/${order.id}/shipments`, async (route) => {
+      const packages = structuredClone([packed]);
+      if (corruption === "line ownership")
+        packages[0].lines[0].line_id = "another-same-sku-line";
+      if (corruption === "duplicate package")
+        packages.push(structuredClone(packed));
+      if (corruption === "overlapping claims")
+        packages[0].lines[0].quantity = a.picked + 1;
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          warehouse_id:
+            corruption === "warehouse"
+              ? "another-warehouse"
+              : state().warehouse.id,
+          order_id: order.id,
+          order,
+          version: state().version,
+          ok: true,
+          packages,
+          progress: order.lines.map((l: any) => ({
+            line_id: l.id,
+            sku: l.sku,
+            ordered: l.quantity,
+            allocated: a.quantity,
+            picked: a.picked,
+            shipped: 0,
+            unallocated: 0,
+          })),
+        }),
+      });
+    });
+    const commands: unknown[] = [];
+    page.on("request", (r) => {
+      if (r.method() === "POST" && r.url().endsWith("/commands"))
+        commands.push(r.postDataJSON());
+    });
+    await page
+      .getByRole("button", { name: "Fulfillment", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: order.reference, exact: true })
+      .click();
+    await expect(page.getByRole("alert")).toContainText(
+      "Shipment ownership review could not be verified",
+    );
+    await expect(
+      page.getByRole("button", {
+        name: "Confirm packed shipment",
+        exact: true,
+      }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Hand off PACK-REVIEW", exact: true }),
+    ).toHaveCount(0);
+    expect(commands).toEqual([]);
+  });
+}
+
+for (const event_ids of [
+  ["original-first", "original-second"],
+  [],
+  ["duplicate", "duplicate"],
+  undefined,
+]) {
+  test(`partial return review verifies handoff events ${JSON.stringify(event_ids)}`, async ({
+    page,
+  }) => {
+    const state = await setup(page);
+    const order = state().orders.find((o: any) => o.status === "shipped");
+    await page.route(`**/orders/${order.id}/return-eligibility`, (route) =>
+      route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          order_id: order.id,
+          version: state().version,
+          shipment_source: {
+            kind: "handoff_events",
+            event_id: null,
+            event_ids,
+            version: state().version,
+          },
+          lines: order.allocations.map((a: any) => ({
+            order_line_id: a.line_id,
+            sku: a.sku,
+            lot: a.lot,
+            remaining: a.shipped,
+          })),
+        }),
+      }),
+    );
+    await page
+      .getByRole("button", { name: "Fulfillment", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: order.reference, exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Review return allowance", exact: true })
+      .click();
+    if (event_ids?.length === 2 && event_ids[0] !== event_ids[1]) {
+      await expect(
+        page.getByText(
+          "Allowance checked against the recorded shipment handoffs. Unshipped units are excluded.",
+          { exact: true },
+        ),
+      ).toBeVisible();
+      await expect(
+        page.getByLabel("RMA reference", { exact: true }),
+      ).toBeVisible();
+    } else {
+      await expect(page.getByRole("alert")).toContainText(
+        "Return allowance source could not be verified",
+      );
+      await expect(
+        page.getByLabel("RMA reference", { exact: true }),
+      ).toHaveCount(0);
+    }
+  });
+}
+
+// Explicit HTTP contract fixtures for cancellation controls and browser journals.
+// Business cancellation/packing source proofs are tested against real PostgreSQL.
+function partialOrderClosureFixture(state: any) {
+  const order = state.orders.find((o: any) => o.status === "shipped");
+  order.status = "partially_shipped";
+  order.shipment_mode = "packages";
+  order.lines[0].quantity += 1; // One original unallocated unit remains.
+  return state;
+}
+function closureReview(state: any, order: any) {
+  return {
+    warehouse_id: state.warehouse.id,
+    order_id: order.id,
+    version: state.version,
+    ok: true,
+    order,
+    packages: [
+      {
+        id: "original-ui-handoff-package",
+        order_id: order.id,
+        reference: "ORIGINAL-HANDOFF",
+        lines: order.allocations.map((a: any) => ({
+          line_id: a.line_id,
+          sku: a.sku,
+          location: a.location,
+          lot: a.lot,
+          quantity: a.shipped,
+        })),
+        closure: {
+          kind: "handed_off",
+          carrier: order.carrier,
+          handoff_reference: order.handoff_reference,
+          reason: "",
+          closed_at: order.shipped_at,
+          actor: "operator:demo",
+        },
+      },
+    ],
+    progress: order.lines.map((l: any) => {
+      const a = order.allocations.filter((a: any) => a.line_id === l.id);
+      const allocated = a.reduce(
+        (n: number, a: any) => n + a.quantity - a.released,
+        0,
+      );
+      const cancelled =
+        order.remainder_cancellation?.lines[l.id].cancelled ?? 0;
+      return {
+        line_id: l.id,
+        sku: l.sku,
+        ordered: l.quantity,
+        allocated,
+        picked: a.reduce((n: number, a: any) => n + a.picked, 0),
+        shipped: a.reduce((n: number, a: any) => n + a.shipped, 0),
+        cancelled,
+        unallocated: l.quantity - allocated - cancelled,
+      };
+    }),
+  };
+}
+function closedOrderContract(state: any, order: any, reason: string) {
+  const result = structuredClone(state),
+    closed = result.orders.find((o: any) => o.id === order.id);
+  closed.status = "closed_partial";
+  closed.remainder_cancellation = {
+    reason,
+    actor: "operator:demo",
+    cancelled_at: new Date().toISOString(),
+    lines: Object.fromEntries(
+      closed.lines.map((l: any) => {
+        const shipped = closed.allocations
+          .filter((a: any) => a.line_id === l.id)
+          .reduce((n: number, a: any) => n + a.shipped, 0);
+        return [
+          l.id,
+          {
+            sku: l.sku,
+            ordered: l.quantity,
+            shipped,
+            cancelled: l.quantity - shipped,
+          },
+        ];
+      }),
+    ),
+  };
+  result.version += 1;
+  return result;
+}
+async function openPartialClosure(page: Page, reference: string) {
+  await page.getByRole("button", { name: "Fulfillment", exact: true }).click();
+  await page.getByRole("button", { name: reference, exact: true }).click();
+  await expect(
+    page.getByRole("heading", {
+      name: "Cancel the unshipped remainder",
+      exact: true,
+    }),
+  ).toBeVisible();
+}
+for (const loss of ["before", "after"] as const) {
+  test(`commercial remainder cancellation lost ${loss} arrival retains the exact reviewed request through reload`, async ({
+    page,
+  }) => {
+    const state = await setup(
+      page,
+      false,
+      0,
+      true,
+      undefined,
+      partialOrderClosureFixture,
+    );
+    const order = state().orders.find(
+      (o: any) => o.status === "partially_shipped",
+    );
+    const stock = structuredClone(state().stocks),
+      originalLines = structuredClone(order.lines),
+      version = state().version;
+    const requests: any[] = [];
+    let dropped = false,
+      receiptsAvailable = false,
+      accepted: any;
+    await page.route(`**/orders/${order.id}/shipments`, (route) =>
+      route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify(
+          closureReview(
+            state(),
+            state().orders.find((o: any) => o.id === order.id),
+          ),
+        ),
+      }),
+    );
+    await page.route("**/commands/*", (route) =>
+      receiptsAvailable
+        ? route.fulfill({
+            contentType: "application/json",
+            body: JSON.stringify(
+              accepted
+                ? { found: true, result: accepted.result }
+                : { found: false },
+            ),
+          })
+        : route.abort("failed"),
+    );
+    await page.route("**/commands", async (route) => {
+      const request = route.request().postDataJSON();
+      if (request.command.type !== "cancel_remainder") return route.fallback();
+      requests.push(request);
+      if (!dropped && loss === "before") {
+        dropped = true;
+        return route.abort("failed");
+      }
+      if (!accepted) {
+        Object.assign(
+          state(),
+          closedOrderContract(state(), order, request.command.reason),
+        );
+        accepted = {
+          replayed: false,
+          result: {
+            entity_id: order.id,
+            version: state().version,
+            type: "fulfillment.remainder_cancelled",
+          },
+        };
+      }
+      if (!dropped) {
+        dropped = true;
+        return route.abort("failed");
+      }
+      return route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify(accepted),
+      });
+    });
+    await openPartialClosure(page, order.reference);
+    const button = page.getByRole("button", {
+      name: "Cancel unshipped remainder",
+      exact: true,
+    });
+    await expect(button).toBeDisabled();
+    await page
+      .getByLabel("Remainder cancellation reason", { exact: true })
+      .fill("Customer withdrew the remaining original unit");
+    await expect(button).toBeDisabled();
+    await page
+      .getByLabel(
+        "I confirmed cancellation of all remaining original demand.",
+        { exact: true },
+      )
+      .check();
+    await button.click();
+    await expect(
+      page.getByRole("button", { name: "Check original save", exact: true }),
+    ).toBeVisible();
+    const original = await page.evaluate(() =>
+      JSON.parse(sessionStorage.getItem("wms-pending:demo:operator:demo")!),
+    );
+    expect(original.warehouse).toBe(state().warehouse.id);
+    expect(original.request.expected_version).toBe(version);
+    expect(original.request.command).toEqual({
+      type: "cancel_remainder",
+      order_id: order.id,
+      reason: "Customer withdrew the remaining original unit",
+    });
+    receiptsAvailable = true;
+    await page.reload();
+    await page
+      .getByRole("button", { name: "Check original save", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Check original save", exact: true }),
+    ).toHaveCount(0);
+    expect(state().stocks).toEqual(stock);
+    expect(state().version).toBe(version + 1);
+    expect(requests).toHaveLength(loss === "before" ? 2 : 1);
+    for (const request of requests) expect(request).toEqual(original.request);
+    const closed = state().orders.find((o: any) => o.id === order.id);
+    expect(closed.status).toBe("closed_partial");
+    expect(closed.lines).toEqual(originalLines);
+    await page
+      .getByRole("button", { name: "Fulfillment", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: order.reference, exact: true })
+      .click();
+    await expect(
+      page.getByText("Unshipped remainder cancelled", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", {
+        name: "Cancel unshipped remainder",
+        exact: true,
+      }),
+    ).toHaveCount(0);
+    expect(
+      await page.evaluate(() =>
+        sessionStorage.getItem("wms-pending:demo:operator:demo"),
+      ),
+    ).toBeNull();
+  });
+}
+for (const corruption of [
+  "cancelled quantity",
+  "missing closure",
+  "altered shipped counters",
+] as const) {
+  test(`closed partial review holds ${corruption} instead of presenting cancelled units as open demand`, async ({
+    page,
+  }) => {
+    const state = await setup(
+      page,
+      false,
+      0,
+      true,
+      undefined,
+      partialOrderClosureFixture,
+    );
+    const order = state().orders.find(
+      (o: any) => o.status === "partially_shipped",
+    );
+    const closed = closedOrderContract(
+      state(),
+      order,
+      "Customer cancellation",
+    ).orders.find((o: any) => o.id === order.id);
+    const review = closureReview(state(), closed);
+    if (corruption === "cancelled quantity") review.progress[0].cancelled += 1;
+    if (corruption === "missing closure")
+      delete review.order.remainder_cancellation;
+    if (corruption === "altered shipped counters") {
+      review.order.allocations[0].shipped -= 1;
+      review.order.allocations[0].picked -= 1;
+    }
+    await page.route(`**/orders/${order.id}/shipments`, (route) =>
+      route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify(review),
+      }),
+    );
+    await page
+      .getByRole("button", { name: "Fulfillment", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: order.reference, exact: true })
+      .click();
+    await expect(
+      page
+        .getByRole("alert")
+        .filter({
+          hasText:
+            /review could not be verified|cancellation could not be verified/,
+        }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", {
+        name: "Cancel unshipped remainder",
+        exact: true,
+      }),
+    ).toHaveCount(0);
+  });
+}

@@ -1,0 +1,16 @@
+{
+  "scope": "diagnostic shared-host context, outside the release gate assertions",
+  "harness_last_logged_elapsed_seconds": 230.2,
+  "command": "ps -C rustc,cc1,cc1plus,cargo,ld,node -o pid=,pcpu=,comm=",
+  "observed_compiler_processes": [
+    {
+      "command": "rustc",
+      "reported_cpu_percent": 168.0
+    },
+    {
+      "command": "rustc",
+      "reported_cpu_percent": 98.0
+    }
+  ],
+  "interpretation": "Compiler processes were visible during sustained HTTP traffic after this gate completed its builds. This sample does not isolate a causal effect or establish a capacity limit. No other processes were changed."
+}

@@ -1,0 +1,461 @@
+    Checking cfg-if v1.0.5
+    Checking libc v0.2.190
+    Checking serde_core v1.0.229
+    Checking pin-project-lite v0.2.17
+    Checking futures-core v0.3.34
+    Checking itoa v1.0.18
+    Checking bytes v1.12.1
+    Checking once_cell v1.21.4
+    Checking zerofrom v0.1.8
+    Checking stable_deref_trait v1.2.1
+    Checking serde v1.0.229
+    Checking scopeguard v1.2.0
+    Checking yoke v0.8.3
+    Checking memchr v2.8.3
+    Checking lock_api v0.4.14
+    Checking smallvec v1.16.2
+    Checking zerovec v0.11.8
+    Checking parking_lot_core v0.9.12
+    Checking errno v0.3.14
+    Checking futures-sink v0.3.34
+    Checking parking_lot v0.12.5
+    Checking mio v1.2.4
+    Checking signal-hook-registry v1.4.8
+    Checking socket2 v0.6.5
+    Checking futures-channel v0.3.34
+    Checking tracing-core v0.1.36
+    Checking futures-task v0.3.34
+    Checking tokio v1.53.2
+    Checking futures-io v0.3.34
+    Checking log v0.4.34
+    Checking slab v0.4.12
+    Checking tinystr v0.8.4
+    Checking writeable v0.6.4
+    Checking futures-util v0.3.34
+    Checking litemap v0.8.3
+    Checking tracing v0.1.44
+    Checking icu_locale_core v2.3.0
+    Checking zeroize v1.9.1
+    Checking potential_utf v0.1.6
+    Checking zerotrie v0.2.5
+    Checking utf8_iter v1.0.4
+    Checking percent-encoding v2.3.2
+    Checking icu_collections v2.3.0
+    Checking icu_provider v2.3.1
+    Checking getrandom v0.2.17
+    Checking http v1.5.0
+    Checking subtle v2.6.1
+    Checking icu_properties_data v2.3.0
+    Checking icu_normalizer_data v2.3.0
+    Checking typenum v1.20.1
+    Checking icu_normalizer v2.3.0
+    Checking http-body v1.1.0
+    Checking icu_properties v2.3.0
+    Checking zmij v1.0.23
+    Checking form_urlencoded v1.2.2
+    Checking generic-array v0.14.7
+    Checking rustls-pki-types v1.15.1
+    Checking bitflags v2.13.2
+    Checking serde_json v1.0.151
+    Checking untrusted v0.9.0
+    Checking tower-service v0.3.3
+    Checking idna_adapter v1.2.2
+    Checking ring v0.17.14
+    Checking block-buffer v0.10.4
+    Checking idna v1.1.0
+    Checking crypto-common v0.1.7
+    Checking num-traits v0.2.19
+    Checking httpdate v1.0.3
+    Checking try-lock v0.2.5
+    Checking rand_core v0.10.1
+    Checking rustls-webpki v0.103.15
+    Checking want v0.3.2
+    Checking digest v0.10.7
+    Checking url v2.5.8
+    Checking zerocopy v0.8.61
+    Checking httparse v1.10.1
+    Checking http-body-util v0.1.5
+    Checking sync_wrapper v1.0.2
+    Checking atomic-waker v1.1.2
+    Checking tower-layer v0.3.3
+    Checking equivalent v1.0.2
+    Checking mime v0.3.17
+    Checking hyper v1.12.0
+    Checking rustls v0.23.46
+    Checking getrandom v0.4.3
+    Checking webpki-roots v1.0.9
+    Checking ipnet v2.12.2
+    Checking base64 v0.23.1
+    Checking tower v0.5.3
+    Checking hyper-util v0.1.21
+    Checking unicase v2.10.0
+    Checking foldhash v0.1.5
+    Checking allocator-api2 v0.2.21
+    Checking ppv-lite86 v0.2.21
+    Checking hashbrown v0.17.1
+    Checking base64 v0.22.1
+    Checking hashbrown v0.15.5
+    Checking mime_guess v2.0.5
+    Checking indexmap v2.14.2
+    Checking thiserror v2.0.21
+    Checking crossbeam-utils v0.8.23
+    Checking rand_core v0.6.4
+    Checking tokio-stream v0.1.19
+    Checking tokio-util v0.7.19
+    Checking crc-catalog v2.5.0
+    Checking http-range-header v0.4.2
+    Checking iana-time-zone v0.1.65
+    Checking parking v2.2.1
+    Checking tinyvec v1.13.3
+    Checking cpufeatures v0.2.17
+    Checking regex-syntax v0.8.11
+    Checking chrono v0.4.45
+    Checking sha2 v0.10.9
+    Checking unicode-normalization v0.1.25
+    Checking event-listener v5.4.2
+    Checking tower-http v0.6.11
+    Checking crc v3.4.0
+    Checking crossbeam-queue v0.3.13
+    Checking rand_chacha v0.3.1
+    Checking hashlink v0.10.0
+    Checking getrandom v0.3.4
+    Checking webpki-roots v0.26.11
+    Checking hmac v0.12.1
+    Checking futures-intrusive v0.5.0
+    Checking either v1.19.0
+    Checking siphasher v1.0.4
+    Checking unicode-bidi v0.3.18
+    Checking ryu v1.0.23
+    Checking cpufeatures v0.3.1
+    Checking unicode-properties v0.1.4
+    Checking serde_urlencoded v0.7.1
+    Checking chacha20 v0.10.2
+    Checking phf_shared v0.12.1
+    Checking sqlx-core v0.8.6
+    Checking hkdf v0.12.4
+    Checking stringprep v0.1.5
+    Checking ref-cast v1.0.27
+    Checking rand_core v0.9.5
+    Checking rand v0.8.8
+    Checking regex-automata v0.4.18
+    Checking aws-lc-sys v0.46.0
+    Checking tokio-rustls v0.26.6
+    Checking md-5 v0.10.6
+    Checking atoi v2.0.0
+    Checking futures-executor v0.3.34
+    Checking home v0.5.12
+    Checking untrusted v0.7.1
+    Checking lazy_static v1.5.1
+    Checking linux-raw-sys v0.12.1
+    Checking dyn-clone v1.0.20
+    Checking byteorder v1.5.0
+    Checking whoami v1.6.1
+    Checking hex v0.4.3
+    Checking dotenvy v0.15.7
+    Checking schemars v1.2.2
+    Checking rustix v1.1.5
+    Checking aws-lc-rs v1.18.2
+    Checking sqlx-postgres v0.8.6
+    Checking sharded-slab v0.1.7
+    Checking futures v0.3.34
+    Checking matchers v0.2.0
+    Checking hyper-rustls v0.27.10
+    Checking rand v0.10.3
+    Checking phf v0.12.1
+    Checking reqwest v0.13.5
+    Checking uuid v1.27.0
+    Checking axum-core v0.5.6
+    Checking sse-stream v0.2.6
+    Checking tracing-log v0.2.0
+    Checking serde_path_to_error v0.1.20
+    Checking thread_local v1.1.10
+    Checking matchit v0.8.4
+    Checking fastrand v2.5.0
+    Checking nu-ansi-term v0.50.3
+    Checking signature v2.2.0
+    Checking axum v0.8.9
+    Checking tempfile v3.27.0
+    Checking tracing-subscriber v0.3.23
+    Checking jsonwebtoken v10.4.0
+    Checking rmcp v3.5.1
+    Checking reqwest v0.12.28
+    Checking chrono-tz v0.10.4
+    Checking sqlx v0.8.6
+    Checking wait-timeout v0.2.1
+    Checking fnv v1.0.7
+    Checking bit-vec v0.8.0
+    Checking quick-error v1.2.3
+    Checking rusty-fork v0.3.1
+    Checking bit-set v0.8.0
+    Checking rand_xorshift v0.4.0
+    Checking rand v0.9.5
+    Checking rand_chacha v0.9.0
+    Checking unarray v0.1.4
+    Checking proptest v1.11.0
+    Checking stateset-warehouse v0.1.0 (/home/dom/stateset-warehouse)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 13.00s
+   Compiling stateset-warehouse v0.1.0 (/home/dom/stateset-warehouse)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 13.49s
+     Running unittests src/lib.rs (target/debug/deps/stateset_warehouse-3581da6a9a127080)
+
+running 26 tests
+test auth::tests::configuration_rejects_ambiguous_or_unsafe_authority ... ok
+test auth::tests::configured_audience_requires_presence_and_exact_match ... ok
+test auth::tests::malformed_oversized_redirected_and_ambiguous_keysets_are_rejected ... ok
+test auth::tests::http_auth_enforces_roles_hides_mappings_and_preserves_service_keys ... ok
+test auth::tests::signed_identity_owns_persisted_commands_across_refresh_and_tenant_changes ... ignored, requires isolated PostgreSQL; scripts/local-postgres.sh
+test auth::tests::signed_membership_maps_only_server_approved_identity ... ok
+test auth::tests::rotated_keys_replace_old_keys_and_expired_cache_never_bypasses_outage ... ok
+test command_state::tests::selective_snapshot_keeps_foreign_holds_without_loading_unrelated_catalog_or_orders ... ignored, requires isolated PostgreSQL; scripts/local-postgres.sh
+test serials::tests::serial_classic_handoff_return_authorization_and_partial_rma_cancel_preserve_each_identity ... ok
+test serials::tests::serial_count_move_and_same_sku_picks_keep_exact_original_line_owners ... ok
+test serials::tests::serial_counts_mark_missing_and_found_without_teleporting_transit_or_shipped_units ... ok
+test serials::tests::serial_derived_unpack_rejects_partial_lookup_even_when_physical_stock_stays_balanced ... ok
+test serials::tests::serial_destination_loss_reversal_and_separate_arrival_never_credit_stock_early ... ok
+test serials::tests::serial_dispatch_and_partial_arrival_cannot_exchange_equal_sku_original_lines ... ok
+test auth::tests::mcp_uses_current_verified_workos_membership_for_every_request ... ok
+test serials::tests::serial_equations_reject_missing_baselines_and_stock_balanced_owner_forgery ... ok
+test serials::tests::serial_observations_reject_duplicates_wrong_targets_unknown_units_and_control_text ... ok
+test serials::tests::serial_receiving_rejects_reused_cross_facility_and_wrong_lot_identity ... ok
+test serials::tests::serial_partial_packages_hold_exact_tuples_then_unpack_unpick_and_cancel_remainder ... ok
+test auth::tests::invalid_claims_and_signatures_fail_closed ... ok
+test auth::tests::expired_keys_cannot_bypass_an_in_flight_rotation ... ok
+test auth::tests::concurrent_jwks_requests_are_coalesced_and_unknown_kids_are_rate_limited ... ok
+test auth::tests::failed_and_cancelled_refreshes_preserve_cooldown_without_poisoning_cache ... ok
+test auth::tests::cached_operator_requests_do_not_wait_for_unknown_key_refresh ... ok
+test serials::tests::serial_repeated_moves_preserve_every_identity_and_exact_bin_quantities ... ok
+test auth::tests::unresponsive_signing_provider_has_a_bounded_http_failure ... ok
+
+test result: ok. 24 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 3.08s
+
+     Running tests/domain.rs (target/debug/deps/domain-314a5cd12f5e5826)
+
+running 38 tests
+test empty_pack_observations_preserve_legacy_request_bytes_and_default_on_read ... ok
+test allocation_status_and_unique_ownership_are_validated_independently ... ok
+test cancelled_demand_read_model_keeps_fully_cancelled_package_orders_closed_without_inventing_handoffs ... ok
+test insufficient_second_line_rolls_back_all_reservations ... ok
+test counts_and_transfers_cannot_consume_reserved_stock ... ok
+test exceptions_block_execution_and_resolution_does_not_invent_stock ... ok
+test cancellation_releases_only_its_own_order ... ok
+test independent_reconciliation_detects_balance_and_reservation_corruption ... ok
+test lot_allocation_uses_earliest_expiry_before_bin_order_and_leaves_unlabelled_nonperishables_last ... ok
+test lot_expiry_excludes_unlabelled_required_stock_and_enforces_the_exact_offset_boundary ... ok
+test legacy_receipt_identity_is_backfilled_only_when_unambiguous ... ok
+test lot_quarantine_holds_are_independent_and_release_never_overrides_expiry ... ok
+test lot_quarantine_blocks_reserved_picks_but_preserves_reservations_and_physical_recovery ... ok
+test opening_physical_balances_reconcile_new_movement_deltas_but_not_reservations ... ok
+test partial_cancellation_is_terminal_but_never_relabels_unshipped_demand_as_a_completed_handoff ... ok
+test partial_cancellation_releases_storage_reservations_preserves_handoff_and_retains_returns ... ok
+test partial_cancellation_requires_unpacking_and_actual_unpick_before_commercial_close ... ok
+test physical_lifecycle_preserves_stock_until_carrier_handoff ... ok
+test receipt_evidence_rejects_wrong_reference_ownership_and_missing_identity ... ok
+test receiving_is_partial_bounded_and_not_allocatable_until_putaway ... ok
+test receipt_counters_and_duplicate_sku_lines_require_exact_movement_evidence ... ok
+test receipt_cancellation_closes_only_unreceived_units_and_freezes_evidence ... ok
+test rejects_fractional_quantities_unknown_fields_and_role_escalation ... ok
+test recovery_rejects_completed_work_and_unauthorized_roles ... ok
+test recovery_preserves_exact_line_and_order_ownership_and_invalidates_packing ... ok
+test replenishment_skips_full_destination_lots_without_hiding_unfilled_target ... ok
+test replenishment_protects_reservations_pick_faces_and_shared_source_capacity ... ok
+test same_sku_lines_cannot_steal_each_others_reservations ... ok
+test returns_preserve_exact_shipment_lines_and_enter_receiving_before_resale ... ok
+test short_pick_can_be_returned_recounted_replenished_and_reallocated ... ok
+test partial_return_cancellation_releases_only_its_exact_unreceived_line_lot ... ok
+test synthetic_fixture_is_a_real_reconciled_workflow ... ok
+test typed_snapshot_preserves_wire_contract_and_trusted_owner_holds ... ok
+test typed_snapshot_keeps_invalid_state_diagnostics ... ok
+test partial_picks_never_change_physical_warehouse_total ... ok
+test optimized_proof_matches_prior_independent_maps ... ok
+test arbitrary_moves_and_counts_preserve_ledger ... ok
+test arbitrary_pick_returns_preserve_stock_and_line_reservations ... ok
+
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.45s
+
+     Running tests/http_auth.rs (target/debug/deps/http_auth-a8ce90003e1ddc6c)
+
+running 8 tests
+test replenishment_planning_denies_viewers_before_database_access ... ok
+test viewer_command_is_rejected_before_database_access ... ok
+test fake_tenant_headers_never_replace_identity ... ok
+test health_is_public_but_warehouse_data_is_not ... ok
+test api_errors_and_successes_have_private_caching_and_unforgeable_correlation ... ok
+test warehouse_directory_rejects_bad_or_scope_override_queries_without_database_access ... ok
+test facility_admission_rejects_nonadministrators_without_database_access ... ok
+test database_unavailability_fails_readiness_within_a_bounded_deadline ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.01s
+
+     Running tests/mcp.rs (target/debug/deps/mcp-b5e963f76d8d3386)
+
+running 13 tests
+test mcp_oms_closes_only_source_linked_partial_remainders_through_the_original_journal ... ignored, requires isolated PostgreSQL; scripts/local-postgres.sh
+test mcp_preserves_exact_resource_fences_and_rest_body_limits ... ignored, requires isolated PostgreSQL; scripts/local-postgres.sh
+test real_http_mcp_partial_fulfillment_and_exact_retry_share_the_canonical_journal ... ignored, requires isolated PostgreSQL; scripts/local-postgres.sh
+test real_mcp_lot_controls_share_actor_bound_recovery_roles_and_current_custody_view ... ignored, requires isolated PostgreSQL; scripts/local-postgres.sh
+test real_mcp_lot_trace_preserves_long_original_cursors_scope_and_read_only_source_reviews ... ignored, requires isolated PostgreSQL; scripts/local-postgres.sh
+test real_mcp_pack_observations_keep_original_definition_replay_and_authority ... ignored, requires isolated PostgreSQL
+test real_mcp_transfer_loss_journal_reversal_and_replay_share_destination_authority_without_stock_credit ... ignored, requires isolated PostgreSQL; scripts/local-postgres.sh
+test configuration_rejects_wildcards_ambiguous_targets_and_insecure_browser_origins ... ok
+test modern_stateless_requests_check_protocol_metadata_and_routing_headers ... ok
+test official_sdk_negotiates_legacy_http_and_modern_discovery ... ok
+test tool_input_never_selects_a_principal_remote_url_or_different_command ... ok
+test transport_rejects_dns_rebinding_untrusted_origins_and_unbounded_bodies ... ok
+test discovery_and_every_call_use_current_http_identity ... ok
+
+test result: ok. 6 passed; 0 failed; 7 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running tests/native_api.rs (target/debug/deps/native_api-87e42472742c4a4f)
+
+running 12 tests
+test authenticated_native_http_and_postgres_workflow_recovers_remote_acceptance_without_second_load ... ignored, requires isolated Postgres; WMS_TEST_DATABASE_URL
+test competing_warehouses_cannot_import_the_same_complete_native_oms_order ... ignored, requires isolated Postgres; WMS_TEST_DATABASE_URL
+test durable_transport_intents_enforce_one_order_and_one_sender_then_recover_uncertainty ... ignored, requires isolated Postgres; WMS_TEST_DATABASE_URL
+test expired_native_delivery_lease_retains_uncertain_attempt_before_reclaim ... ignored, requires isolated Postgres; WMS_TEST_DATABASE_URL
+test first_transport_send_rechecks_packed_state_and_exception_then_allows_unrelated_inventory ... ignored, requires isolated Postgres; WMS_TEST_DATABASE_URL
+test import_api_recovers_after_command_commit_using_frozen_source_and_actor_bound_receipt ... ignored, requires isolated Postgres; WMS_TEST_DATABASE_URL
+test native_intents_and_finished_attempts_reject_database_evidence_tampering ... ignored, requires isolated Postgres; WMS_TEST_DATABASE_URL
+test blank_native_environment_supports_unconfigured_compose_defaults ... ok
+test native_request_hash_binds_operation_order_path_and_complete_input ... ok
+test native_http_is_disabled_for_synthetic_demo_even_with_admin_role ... ok
+test viewers_cannot_trigger_native_http_or_read_sensitive_native_receipts ... ok
+test malformed_native_input_is_rejected_before_any_database_or_upstream_connection ... ok
+
+test result: ok. 5 passed; 0 failed; 7 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/native_contracts.rs (target/debug/deps/native_contracts-8b1aa91d1b98fc0c)
+
+running 18 tests
+test integration_configuration_binds_each_tenant_without_secrets_in_summary_or_errors ... ok
+test import_preserves_two_line_owners_for_the_same_sku_and_scopes_source_identity ... ok
+test full_order_import_rejects_partial_or_unknown_fulfillment_in_canonical_and_source_snapshots ... ok
+test native_import_rejects_missing_sku_duplicate_line_ids_fractions_and_terminal_orders ... ok
+test freight_plans_require_explicit_native_fields_and_reject_invented_status_commands ... ok
+test quantity_decimal_validation_rejects_fractional_each_without_float_rounding ... ok
+test raw_source_cancellation_cannot_create_new_full_order_work ... ok
+test native_http_rejects_redirects_bad_envelopes_and_oversized_responses ... ok
+test source_line_ids_remain_stable_when_upstream_with_line_ids_changes_ordering ... ok
+test preparation_freezes_exact_native_transport_body_and_scoped_idempotency_key ... ok
+test readiness_rejects_unpacked_and_foreign_oms_source_orders ... ok
+test wire_oms_requests_use_tenant_paths_api_key_and_actual_response_envelopes ... ok
+test tms_retained_source_mismatch_is_reported_as_uncertain_instead_of_accepted ... ok
+test oms_handoff_remains_held_because_native_mutation_has_no_atomic_source_guard ... ok
+test wire_tms_uses_source_verified_import_and_reuses_frozen_key_on_retry ... ok
+test retained_transport_pins_recipient_authority_and_allows_only_same_tenant_secret_rotation ... ok
+test new_transport_preflight_checks_canonical_oms_lines_and_rejects_cancelled_source ... ok
+test tms_ineligible_retained_source_after_preflight_stays_uncertain_on_exact_retry ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+     Running tests/oms_client.rs (target/debug/deps/oms_client-af48bc9afaa42449)
+
+running 10 tests
+test retained_handoff_rejects_invalid_provider_fields_even_with_a_recomputed_fingerprint ... ok
+test retained_recipient_cannot_be_rebound_and_same_tenant_secret_rotation_is_allowed ... ok
+test conditional_fulfillment_is_explicit_opt_in_and_legacy_writeback_stays_held ... ok
+test exact_frozen_retry_does_not_refresh_source_revision_after_later_source_changes ... ok
+test missing_contract_guarantees_or_foreign_tenant_never_receive_a_post ... ok
+test fractional_or_changed_canonical_source_and_terminal_source_cannot_start_an_intent ... ok
+test prepare_preserves_same_sku_line_owners_and_exact_physical_handoff ... ok
+test durable_rejection_replays_unchanged_and_fresh_review_gets_a_separate_request_identity ... ok
+test wrong_acknowledgement_scope_fingerprint_status_or_revision_is_uncertain ... ok
+test unscoped_or_malformed_rejection_never_authorizes_a_replacement ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/oms_fulfillment_api.rs (target/debug/deps/oms_fulfillment_api-4c80781d1ef0c5c3)
+
+running 9 tests
+test authenticated_conditional_oms_handoff_recovers_remote_commit_after_response_loss_without_second_fulfillment ... ignored, requires isolated Postgres and loopback HTTP; WMS_TEST_DATABASE_URL
+test conditional_journal_recovers_expired_lease_without_replacing_frozen_handoff_or_accepting_old_worker ... ignored, requires isolated Postgres; WMS_TEST_DATABASE_URL
+test conditional_journal_requires_actual_committed_event_and_rechecks_normalized_shipment_before_first_send ... ignored, requires isolated Postgres; WMS_TEST_DATABASE_URL
+test journal_completion_revalidates_exact_acknowledgements_and_retains_uncertain_shipment_ownership ... ignored, requires isolated Postgres; WMS_TEST_DATABASE_URL
+test only_durable_oms_rejection_releases_intent_for_a_separately_reviewed_request ... ignored, requires isolated Postgres; WMS_TEST_DATABASE_URL
+test single_package_conditional_oms_recovers_original_handoff_after_remote_response_loss ... ignored, requires isolated PostgreSQL
+test conditional_fulfillment_is_disabled_in_demo_even_for_an_administrator ... ok
+test conditional_fulfillment_denies_viewer_and_oms_roles_before_any_database_or_http ... ok
+test conditional_fulfillment_rejects_spoofed_input_and_invalid_identity_before_connecting ... ok
+
+test result: ok. 3 passed; 0 failed; 6 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/operations.rs (target/debug/deps/operations-f3232a461efb64d4)
+
+running 7 tests
+test blocked_operational_read_fails_with_bounded_unavailability_instead_of_zero_counts ... ignored, requires isolated WMS_TEST_DATABASE_URL
+test empty_operational_snapshot_is_zero_complete_and_prometheus_has_fixed_cardinality ... ignored, requires isolated WMS_TEST_DATABASE_URL
+test operational_counts_ages_pagination_and_metrics_are_exact_and_tenant_scoped ... ignored, requires isolated WMS_TEST_DATABASE_URL
+test operational_snapshot_keeps_one_database_view_across_concurrent_commits ... ignored, requires isolated WMS_TEST_DATABASE_URL
+test operational_routes_require_authentication_before_database_access ... ok
+test operations_roles_reject_viewers_integrations_and_operator_metrics_without_database ... ok
+test operations_reject_invalid_or_scope_override_queries_without_database ... ok
+
+test result: ok. 3 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/serial_admission.rs (target/debug/deps/serial_admission-56039c506e9a0842)
+
+running 33 tests
+test equal_quantity_serial_replacement_fences_scoped_reviews_and_preserves_full_observed_sets ... ignored, requires isolated PostgreSQL
+test extended::balanced_projection_corruption_fails_reconciliation_and_is_not_healed_by_a_move ... ignored, requires isolated PostgreSQL
+test extended::http_and_mcp_share_serial_roles_actor_bound_recovery_and_exact_replay ... ignored, requires isolated PostgreSQL
+test extended::long_canonical_count_result_descriptions_do_not_restrict_valid_literal_custody_keys ... ignored, requires isolated PostgreSQL
+test extended::modes_and_literal_identity_are_global_per_tenant_and_keep_original_catalog_source ... ignored, requires isolated PostgreSQL
+test extended::simultaneous_facility_births_wait_for_one_global_head_and_cannot_duplicate_a_uid ... ignored, requires isolated PostgreSQL
+test extended::two_transfer_lines_preserve_exact_serial_loss_reversal_and_arrival_ownership ... ignored, requires isolated PostgreSQL
+test payload_reuse::decoded_payloads_preserve_every_original_source_predicate_with_malformed_and_changed_facts ... ignored, requires isolated PostgreSQL
+test payload_reuse::full_512unit_birth_move_and_unchanged_count_keep_standalone_guards_and_original_replays ... ignored, requires isolated PostgreSQL
+test plan::observation_plans_resolve_original_targets_without_saving_and_enforce_role_scope_and_bounds ... ignored, requires isolated PostgreSQL
+test reads::current_and_lineage_reads_bind_literal_cursors_tenant_roles_and_mcp ... ignored, requires isolated PostgreSQL
+test reads::current_source_damage_stays_visible_and_taints_lineage_without_rewriting_facts ... ignored, requires isolated PostgreSQL
+test reads::destination_changes_expire_global_pages_without_advancing_source_warehouse ... ignored, requires isolated PostgreSQL
+test reads::encoded_utf8_budget_continues_before_a_complete_record_without_losing_identities ... ignored, requires isolated PostgreSQL
+test reads::forged_observation_remains_visible_but_fails_selected_original_event_checks ... ignored, requires isolated PostgreSQL
+test reads::observations_page_inside_original_groups_and_retain_noop_and_empty_counts ... ignored, requires isolated PostgreSQL
+test reads::retained_observation_blocks_rebirth_when_current_and_steps_are_missing ... ignored, requires isolated PostgreSQL
+test reads::retained_observation_holds_exact_read_when_current_and_steps_are_missing ... ignored, requires isolated PostgreSQL
+test resolved_sources::count_read_sources_keep_complete_historical_sets_and_original_damaged_event_verdicts ... ignored, requires isolated PostgreSQL
+test resolved_sources::resolved_sources_preserve_empty_untracked_and_zero_identity_head_outcomes ... ignored, requires isolated PostgreSQL
+test resolved_sources::shared_command_classes_keep_each_original_event_group_and_facility_binding_after_damage ... ignored, requires isolated PostgreSQL
+test restore::populated_21_upgrade_to_current_preserves_every_data_table_and_original_serial_replay ... ignored, requires isolated PostgreSQL role permitted to create owned test databases
+test restore::restore_place_checks_resolve_helpers_with_an_empty_session_search_path ... ignored, requires isolated PostgreSQL
+test scoped_references::exact_reference_classes_keep_original_empty_duplicate_and_damaged_source_outcomes ... ignored, requires isolated PostgreSQL
+test scoped_references::scoped_mode_sources_preserve_original_selection_and_actual_commit_rejections ... ignored, requires isolated PostgreSQL
+test serial_final_outbox_failure_rolls_back_every_identity_fact_and_allows_exact_original_retry ... ignored, requires isolated PostgreSQL
+test serial_supplier_pick_package_handoff_and_return_commit_original_case_sensitive_identity ... ignored, requires isolated PostgreSQL
+test shared_sources::shared_full_proof_matches_original_for_projection_orphan_and_original_source_damage ... ignored, requires isolated PostgreSQL
+test shared_sources::shared_selected_sources_keep_scope_false_flags_and_refresh_after_original_repair ... ignored, requires isolated PostgreSQL
+test target_resolution::event_observation_set_matches_original_on_zero_missing_changed_and_extra_rows ... ignored, requires isolated PostgreSQL
+test target_resolution::hundred_original_line_targets_match_original_predicate_and_actual_dispatch ... ignored, requires isolated PostgreSQL
+test target_resolution::resolved_target_set_matches_original_root_group_shape_and_exact_count_rules ... ignored, requires isolated PostgreSQL
+test default_serial_fields_preserve_legacy_canonical_request_and_catalog_bytes ... ok
+
+test result: ok. 1 passed; 0 failed; 32 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/startup.rs (target/debug/deps/startup-79e338722ea70d10)
+
+running 6 tests
+test invalid_receiver_configuration_cannot_provision_a_tenant ... ignored, requires isolated PostgreSQL; scripts/local-postgres.sh
+test workos_only_and_mixed_startup_provision_exact_tenants_and_preserve_work_on_restart ... ignored, requires isolated PostgreSQL; scripts/local-postgres.sh
+test occupied_listener_is_rejected_before_database_access ... ok
+test invalid_mcp_authorities_fail_before_database_access ... ok
+test startup_identity_guards_cannot_fall_back_to_another_provider ... ok
+test malformed_receivers_are_rejected_before_database_access ... ok
+
+test result: ok. 4 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.26s
+
+......E......................................................
+======================================================================
+ERROR: test_approved_current_release_retains_distinct_software_and_image_build_hashes (test_facility_evidence.FacilityEvidenceTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/dom/stateset-warehouse/scripts/test_facility_evidence.py", line 270, in test_approved_current_release_retains_distinct_software_and_image_build_hashes
+    result = V.release(CONTEXT, args)
+  File "/home/dom/stateset-warehouse/scripts/facility_evidence.py", line 177, in release
+    q.require(len(set(source_names)) == len(source_names) and source_names == sorted(source_names), "Software source manifest repeats or reorders inputs")
+  File "/home/dom/stateset-warehouse/scripts/qualify-native.py", line 43, in require
+    raise Unqualified(message)
+qualify_native_facility_tests.Unqualified: Software source manifest repeats or reorders inputs
+
+----------------------------------------------------------------------
+Ran 61 tests in 15.399s
+
+FAILED (errors=1)

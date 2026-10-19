@@ -73,6 +73,7 @@ async fn fake_tenant_headers_never_replace_identity() {
     let json: serde_json::Value = serde_json::from_slice(&bytes).expect("JSON");
     assert_eq!(json["identity"]["tenant"], "tenant-a");
     assert_eq!(json["identity"]["role"], "viewer");
+    assert_eq!(json["default_warehouse_id"], "wh-main");
 }
 #[tokio::test]
 async fn viewer_command_is_rejected_before_database_access() {
@@ -152,4 +153,86 @@ async fn database_unavailability_fails_readiness_within_a_bounded_deadline() {
         .await
         .expect("liveness response");
     assert_eq!(response.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn replenishment_planning_denies_viewers_before_database_access() {
+    let response = app()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/warehouses/wh-main/replenishment/plan")
+                .header("Authorization", "Bearer viewer-test-key")
+                .header("Content-Type", "application/json")
+                .body(Body::from(r#"{"rules":[]}"#))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn facility_admission_rejects_nonadministrators_without_database_access() {
+    for role in ["viewer", "operator", "oms", "tms", "unknown"] {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://unused@127.0.0.1:1/unused")
+            .expect("lazy pool");
+        let router = router(App {
+            store: Store { pool },
+            credentials: Arc::new(vec![(
+                "facility-role-key".into(),
+                Identity {
+                    tenant: "facility-role-tenant".into(),
+                    actor: "facility-role-actor".into(),
+                    role: role.into(),
+                },
+            )]),
+            demo: false,
+            connections: Connections::default(),
+        });
+        let body = serde_json::json!({"request_id":"facility-role-request","expected_version":0,"command":{"type":"create_warehouse","code":"TEST","name":"Test facility","city":"Test","timezone":"UTC"}});
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/v1/warehouses/wh-new/commands")
+                    .header("Authorization", "Bearer facility-role-key")
+                    .header("Content-Type", "application/json")
+                    .body(Body::from(body.to_string()))
+                    .expect("request"),
+            )
+            .await
+            .expect("response");
+        assert_eq!(response.status(), StatusCode::FORBIDDEN, "{role}");
+    }
+}
+
+#[tokio::test]
+async fn warehouse_directory_rejects_bad_or_scope_override_queries_without_database_access() {
+    for query in [
+        "limit=0",
+        "limit=101",
+        "limit=bad",
+        "limit=1&limit=2",
+        "after=%0A",
+        "tenant=other",
+        "actor=other",
+    ] {
+        let response = app()
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/v1/warehouses?{query}"))
+                    .header("Authorization", "Bearer viewer-test-key")
+                    .body(Body::empty())
+                    .expect("request"),
+            )
+            .await
+            .expect("response");
+        assert_eq!(
+            response.status(),
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{query}"
+        );
+    }
 }

@@ -1,0 +1,351 @@
+{
+  "ok": true,
+  "synthetic": true,
+  "release_revision": "unrecorded-working-tree",
+  "elapsed_archive_restore_verify_seconds": 1,
+  "cargo_lock_sha256": "3e82f7c09b17a573f5ad6d07d8ba5e0dc1ee627c21cef8dd7af18c1fe602474c",
+  "probe_binary_sha256": "4c21113124af21059aaf3c1a03d37cf0132baffadc99988f84e4ebe5332c60af",
+  "archive_sha256": "2f77fa1b631fd923aa86c50a67d61082f863c88bea0cf70096294fa6938e08aa",
+  "verification": {
+    "all_table_hashes_identical_before_retry": true,
+    "all_warehouse_reconciliation": [
+      {
+        "proof": {
+          "method": "full_append_only_ledger_and_order_line_allocations",
+          "ok": true,
+          "receipts": [],
+          "returns": [],
+          "rows": [],
+          "version": 0
+        },
+        "tenant": "restore-other-tenant",
+        "warehouse_id": "wh-main"
+      },
+      {
+        "proof": {
+          "method": "full_append_only_ledger_and_order_line_allocations",
+          "ok": true,
+          "receipts": [
+            {
+              "evidence": 1,
+              "line_id": "return-line",
+              "ok": true,
+              "receipt_id": "1e4bf71a-024d-4766-9eeb-bb9fe2ab8ae2",
+              "received": 1
+            },
+            {
+              "evidence": 12,
+              "line_id": "receipt-line",
+              "ok": true,
+              "receipt_id": "31454d59-b51a-4e6b-a533-80a43ccc89e4",
+              "received": 12
+            }
+          ],
+          "returns": [
+            {
+              "authorized": 1,
+              "lot": "RESTORE-LOT",
+              "ok": true,
+              "order_id": "0a7ff937-8dc9-4ee8-8655-945709e2dddb",
+              "order_line_id": "oms-line-db55067a83f4a20cb2ce42c3d516aa6d2712ec72695555b57f1180d5b973a5fa",
+              "received": 1,
+              "shipped": 1,
+              "sku": "RESTORE-EACH"
+            }
+          ],
+          "rows": [
+            {
+              "allocation_reserved": 2,
+              "difference": 0,
+              "ledger": 6,
+              "location": "A-01",
+              "lot": "RESTORE-LOT",
+              "ok": true,
+              "on_hand": 6,
+              "reserved": 2,
+              "reserved_difference": 0,
+              "sku": "RESTORE-EACH"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 1,
+              "location": "RECV-01",
+              "lot": "RESTORE-LOT",
+              "ok": true,
+              "on_hand": 1,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "RESTORE-EACH"
+            },
+            {
+              "allocation_reserved": 5,
+              "difference": 0,
+              "ledger": 5,
+              "location": "STAGE-01",
+              "lot": "RESTORE-LOT",
+              "ok": true,
+              "on_hand": 5,
+              "reserved": 5,
+              "reserved_difference": 0,
+              "sku": "RESTORE-EACH"
+            }
+          ],
+          "version": 19
+        },
+        "tenant": "restore-rehearsal",
+        "warehouse_id": "wh-main"
+      },
+      {
+        "proof": {
+          "method": "full_append_only_ledger_and_order_line_allocations",
+          "ok": true,
+          "receipts": [],
+          "returns": [],
+          "rows": [],
+          "version": 1
+        },
+        "tenant": "restore-rehearsal",
+        "warehouse_id": "wh-restore-secondary"
+      }
+    ],
+    "archive_round_trip": "pg_dump custom / pg_restore single transaction",
+    "customer_return_receipt_restored": true,
+    "facility_creation_original_request_replayed": true,
+    "migrations": [
+      {
+        "name": "001_initial",
+        "sha256": "8e5c3fa5f0065b63076c33b8bd3c337b8490d4b7a88f3e774ec17e2290e1f4d4"
+      },
+      {
+        "name": "002_relational_execution",
+        "sha256": "660cd0fdbc7205644c7c3d7ac3da43cbaf1c6d9f80c4d0f2ea4d0c0986e6ff90"
+      },
+      {
+        "name": "003_native_operations",
+        "sha256": "f9a5cfa4a1e4f7830613febe6b37f11a8485beef46d6b96791c78435fe784108"
+      },
+      {
+        "name": "004_native_source_ownership",
+        "sha256": "366979c9630c4c62cb7d71beb5c89cd917764558b4e05267c4eb4aac486a6cb9"
+      },
+      {
+        "name": "005_conditional_oms_fulfillment",
+        "sha256": "b8892cbaa4a1b26c6e1732616ec30503d3698f44e363240386078398e29e9a41"
+      },
+      {
+        "name": "006_oms_rejections",
+        "sha256": "567e061943a1602ff25b5d5c988be810808b8c6e1638885ee6ef9b71a9ba4ed4"
+      },
+      {
+        "name": "007_operations_indexes",
+        "sha256": "b0b9b422f570ed77ca1252df42c96b29544849621ed748cadd1f068b708576b5"
+      },
+      {
+        "name": "008_delivery_recipient",
+        "sha256": "050f40c80b9e73a3edc8a19545ab08cfe41051616b84d9445dfdea9a30de9d19"
+      },
+      {
+        "name": "009_resource_versions",
+        "sha256": "b702a003a1d74210fdfc06cef1fbfb6e737146a25314642094a2f8383dc2e209"
+      },
+      {
+        "name": "010_customer_returns",
+        "sha256": "dfafb0547d0af2ba11f86dfa31f7facebe89adf582d6b215d02b734e1413fb71"
+      },
+      {
+        "name": "011_immutable_command_receipts",
+        "sha256": "0a7c69928f38527f542a55e795de9b62c65f4907d7d05cba2d47f7eeebdf8a73"
+      }
+    ],
+    "native_external_http_attempted": false,
+    "native_import_original_request_replayed": true,
+    "new_post_restore_command_reconciled": true,
+    "ok": true,
+    "post_restore_reconciliation": {
+      "method": "full_append_only_ledger_and_order_line_allocations",
+      "ok": true,
+      "receipts": [
+        {
+          "evidence": 1,
+          "line_id": "return-line",
+          "ok": true,
+          "receipt_id": "1e4bf71a-024d-4766-9eeb-bb9fe2ab8ae2",
+          "received": 1
+        },
+        {
+          "evidence": 12,
+          "line_id": "receipt-line",
+          "ok": true,
+          "receipt_id": "31454d59-b51a-4e6b-a533-80a43ccc89e4",
+          "received": 12
+        }
+      ],
+      "returns": [
+        {
+          "authorized": 1,
+          "lot": "RESTORE-LOT",
+          "ok": true,
+          "order_id": "0a7ff937-8dc9-4ee8-8655-945709e2dddb",
+          "order_line_id": "oms-line-db55067a83f4a20cb2ce42c3d516aa6d2712ec72695555b57f1180d5b973a5fa",
+          "received": 1,
+          "shipped": 1,
+          "sku": "RESTORE-EACH"
+        }
+      ],
+      "rows": [
+        {
+          "allocation_reserved": 2,
+          "difference": 0,
+          "ledger": 7,
+          "location": "A-01",
+          "lot": "RESTORE-LOT",
+          "ok": true,
+          "on_hand": 7,
+          "reserved": 2,
+          "reserved_difference": 0,
+          "sku": "RESTORE-EACH"
+        },
+        {
+          "allocation_reserved": 0,
+          "difference": 0,
+          "ledger": 1,
+          "location": "RECV-01",
+          "lot": "RESTORE-LOT",
+          "ok": true,
+          "on_hand": 1,
+          "reserved": 0,
+          "reserved_difference": 0,
+          "sku": "RESTORE-EACH"
+        },
+        {
+          "allocation_reserved": 5,
+          "difference": 0,
+          "ledger": 5,
+          "location": "STAGE-01",
+          "lot": "RESTORE-LOT",
+          "ok": true,
+          "on_hand": 5,
+          "reserved": 5,
+          "reserved_difference": 0,
+          "sku": "RESTORE-EACH"
+        }
+      ],
+      "version": 20
+    },
+    "receive_original_request_replayed": true,
+    "rejected_conditional_oms_receipt_replayed_unchanged": true,
+    "replays_changed_no_evidence": true,
+    "scoped_return_receive_replayed": true,
+    "synthetic": true,
+    "table_evidence": {
+      "wms_activity": {
+        "rows": 20,
+        "sha256": "c2441e1b3642eb46ab1896a10cebb6968a1a785f228afc68883151c806624d06"
+      },
+      "wms_admin_audit": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_allocations": {
+        "rows": 4,
+        "sha256": "464935f578cd5ebb15a9f9911efb5e64b3fbfbcc054238c50b60f893f601eb70"
+      },
+      "wms_commands": {
+        "rows": 20,
+        "sha256": "4dc67609ea6ce773503956a4652d8e83f72813e3d3bd660428203a11542d952b"
+      },
+      "wms_delivery_attempts": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_events": {
+        "rows": 20,
+        "sha256": "808afb172d4401d4a364e0914bd85058c511d5d7d61d9c4e7669cb90c72275a0"
+      },
+      "wms_exceptions": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_locations": {
+        "rows": 7,
+        "sha256": "2a3bf6fc00d2d8d096df3bbda342987d30b7d6ffe20bfd4a43515e624429b9d2"
+      },
+      "wms_movements": {
+        "rows": 7,
+        "sha256": "d0bacd4da3f69fe7f78ca7cbed1e47271663bbe5c4c085b7fe4317519e32787a"
+      },
+      "wms_native_attempts": {
+        "rows": 3,
+        "sha256": "f062f28b7e1d2478ff0780357a9c8bde324def3fc166213f630acbce4fafa89a"
+      },
+      "wms_native_requests": {
+        "rows": 4,
+        "sha256": "99dc5a45d6fa8a0bc3c3ff7a28f9331e1bc0ae0adecb0ca2548b8c1c9e644191"
+      },
+      "wms_order_lines": {
+        "rows": 4,
+        "sha256": "ed585f508e4e5ed96d5d29fbc7ce5f169c1692285a94d115f76a3029702f29b3"
+      },
+      "wms_orders": {
+        "rows": 3,
+        "sha256": "0289c0b4259ef1d6aa66654919df333d146dc6ba777206617458f0e9070fe1ba"
+      },
+      "wms_outbox": {
+        "rows": 23,
+        "sha256": "3985cc28e56163cb1b545fd62df640d7dee3c2d27d02eca7acbd88522a6a16f0"
+      },
+      "wms_products": {
+        "rows": 1,
+        "sha256": "e2630780d081e113b7119ec51504a2d8289374a21b1595348ff29d051957245b"
+      },
+      "wms_receipt_evidence": {
+        "rows": 2,
+        "sha256": "e3a2196e4edfc6a9c141e81c554520a826a846e4d512f360fc7e754191e9ca6f"
+      },
+      "wms_receipt_lines": {
+        "rows": 2,
+        "sha256": "fc7284c0a23e96a83199f48cb6d44e42fa4e512fc6319d2ce863b3c9d7a2c9df"
+      },
+      "wms_receipts": {
+        "rows": 2,
+        "sha256": "9f5dd828c9995807c1091f74732fbd7582f24ce04964ef260ced8ba2d446714c"
+      },
+      "wms_resource_versions": {
+        "rows": 17,
+        "sha256": "404be7b7b1ac8bcad2e6efdcd4e65c6ee03abc2f94b7f8db8269aab488a6b07a"
+      },
+      "wms_return_lines": {
+        "rows": 1,
+        "sha256": "e9536ee77f71efde6c2cc2840062ebb6515582b1ffc4b7cd4f9c6546575dfc2b"
+      },
+      "wms_schema_migrations": {
+        "rows": 11,
+        "sha256": "c3e0d69cddbb96b40a70822e9e4928aac92cc00626a52242d0791ef9bf28ec34"
+      },
+      "wms_stock": {
+        "rows": 3,
+        "sha256": "ca8cf9a7a66ebc2ebf5fac09d87538335026b0907c58d4b75259e0af52407e8e"
+      },
+      "wms_stock_ledger": {
+        "rows": 3,
+        "sha256": "1472385b2bc1666486d72cf69c59cdb34480fe194a536f12cdebe426d9056c62"
+      },
+      "wms_stock_reserved": {
+        "rows": 2,
+        "sha256": "788f2cd5a9c3a8a0ac423f21a8308fc3a848dcd935c7ea05155cc57e55d6894a"
+      },
+      "wms_warehouses": {
+        "rows": 3,
+        "sha256": "4c2d02d881e9c699b3503beca00d3bd7723df2f9af8c3480fdd008ab99dac910"
+      },
+      "wms_workspaces": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      }
+    },
+    "uncertain_conditional_oms_retry_reclaimed": true,
+    "uncertain_native_frozen_retry_reclaimed": true
+  },
+  "qualification_limit": "Synthetic database recovery and application invariants; no facility or external service acceptance claimed"
+}

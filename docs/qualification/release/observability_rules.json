@@ -2,8 +2,8 @@
   "schema_version": 1,
   "ok": true,
   "synthetic": true,
-  "recorded_at": "2026-10-17T19:10:55.391903+00:00",
-  "release_revision": "unrecorded-working-tree",
+  "recorded_at": "2026-10-19T14:26:15.774925+00:00",
+  "release_revision": "source39-serial-scope-source-sets",
   "check": "Official pinned promtool syntax and behavior tests",
   "source_sha256": {
     "deploy/monitoring/check.sh": "0eb1248a7e06210b630d5a9d1122d7fd99f4c625977465fedd6c718fb3da4041",

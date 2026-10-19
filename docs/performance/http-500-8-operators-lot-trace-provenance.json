@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "production_qualified": false,
+  "report": "http-500-8-operators-lot-trace.json",
+  "sha256": "a6ea48e4e6555f85245109e0808f55b83573fabbc21aced749dc54e0cd76d989",
+  "image_id": "sha256:a4927db4e168db7d54fba3778dcd1c34ba9d5fdfe53dc36e726c6a0f15959a00",
+  "image_source_inputs_sha256": "dda90530c215e079981d15d8c4436580328095ba20a123bf13c880c18cbc6b35",
+  "software_source_inputs_sha256": "ac2b4576fbfba3fe7ceee58d66c6eb71e6e915e31a1d49cbff2fed27633d93b6",
+  "release_provenance": "../qualification/release-20261018-lot-trace/provenance.json",
+  "traffic_model": "independent-operators",
+  "qualifier_sha256": {
+    "scripts/resilience-rehearsal.sh": "5fa42466238d4be5b260021da30541441d2c7d779b74b0594c8ac59099408227",
+    "scripts/resilience_probe.py": "67c2ceab339b0d21a5daa25af0b518f3cb476b4d856cedd914ed316cf27526ac"
+  },
+  "mcp": {
+    "unauthenticated_status": 401,
+    "authenticated_session_matches_rest": true,
+    "catalog_tools": 59,
+    "catalog_bytes": 66153,
+    "partial_fulfillment_tools_present": true
+  },
+  "limits": [
+    "The container and resilience stages use the same immutable image; other stages execute builds from the same frozen software inputs",
+    "Cross-facility exact lot trace is separately covered by actual HTTP/PostgreSQL, a controlled concurrent snapshot/quarantine race, version-fenced pagination/phantoms, event/authorization forgery checks, actual migrated legacy source, MCP long-cursor recovery, browser contracts, actual desktop/mobile workflow and nonempty nine-section cross-timezone archive restore",
+    "Sustained actions remain REST bin moves, full post-save snapshots and original-request replays; this does not measure repeated lot-trace reads, lot controls, expiry-heavy fulfillment, shipment-package, transfer-specific or MCP throughput",
+    "Clients, APIs and PostgreSQL share an uncontrolled development host. No causal speedup, deployed capacity, managed failover or facility SLO is inferred",
+    "The earlier split-release timeout and passing diagnostic replay remain retained. The original lock-holder/root cause is unconfirmed and this feature does not establish a fix",
+    "No deployment, actual physical counts/scanners, deployed WorkOS/MCP/native-client acceptance, tenant-wide recall, automated quality disposition, upstream refund or multiple-shipment receiver qualification is claimed"
+  ],
+  "private_restore_artifact_manifest_sha256": "d0dceca70c515ec7cc27d9a82dcb0e6e7c57eea80a06d4c1cb229ef63c8ef7d4",
+  "lot_trace_browser_screenshots": {
+    "lot-trace-desktop.png": {
+      "path": "../screenshots/lot-trace-desktop.png",
+      "sha256": "2664c50d4f5ec13277dcb63976973fe546f1da25642c334dc0e8171da16da38f",
+      "source_inputs_sha256": "ac2b4576fbfba3fe7ceee58d66c6eb71e6e915e31a1d49cbff2fed27633d93b6",
+      "scope": "actual desktop/mobile browser against rebuilt canonical HTTP/PostgreSQL service; not a deployed device or physical acceptance observation"
+    },
+    "lot-trace-mobile.png": {
+      "path": "../screenshots/lot-trace-mobile.png",
+      "sha256": "841477d9e34098f40abc34c18171807a7d617eb5cabdb5c0092e6641380e4e58",
+      "source_inputs_sha256": "ac2b4576fbfba3fe7ceee58d66c6eb71e6e915e31a1d49cbff2fed27633d93b6",
+      "scope": "actual desktop/mobile browser against rebuilt canonical HTTP/PostgreSQL service; not a deployed device or physical acceptance observation"
+    }
+  },
+  "preceding_failed_lot_gate": {
+    "public_context": "../qualification/attempt-20261018-lot-controls-live-review/failure-context.json",
+    "original_result": "failed",
+    "container_and_resilience_ran": false,
+    "private_retention": ".local/qualification/lot-controls-integrity-development-20261018/first-release-attempt",
+    "private_artifact_manifest_sha256": "7ba4afbc4419467ddda73a2c7dc7735b81db87fe0d486da681823d0edd6e2978"
+  },
+  "host_observation": {
+    "scope": "single_point_global_load_average_during_synthetic_timed_interval",
+    "recorded_at": "2026-10-19T01:16:23.345548+00:00",
+    "load_average_1_5_15_minutes": [
+      9.57,
+      16.63,
+      14.54
+    ],
+    "conditions_controlled": false,
+    "host_processes_observed": false,
+    "host_compiler_absence_established": false,
+    "postgres_blocker_sampler_added": false,
+    "limits": [
+      "Global load average is a single observation, not controlled host conditions or causal latency evidence",
+      "No host-wide process observation or PostgreSQL activity/blocker sample was taken in this lot-trace gate",
+      "The earlier split-release timeout root cause remains unconfirmed"
+    ]
+  }
+}

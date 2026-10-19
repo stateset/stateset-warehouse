@@ -7,7 +7,12 @@ import { spawnSync } from "node:child_process";
 const root = resolve(process.cwd(), "..");
 async function setup(
   page: Page,
-  mode: "import" | "transport" | "fulfillment" | "fulfillment-rejected",
+  mode:
+    | "import"
+    | "transport"
+    | "fulfillment"
+    | "fulfillment-rejected"
+    | "fulfillment-multiple",
 ) {
   const fixture = spawnSync(
     resolve(root, "target/debug/examples/domain_driver"),
@@ -20,6 +25,11 @@ async function setup(
   packed.source_order_id = "oms:acme:00000000-0000-4000-8000-000000000999";
   const shipped = state.orders.find((order: any) => order.status === "shipped");
   shipped.source_order_id = "oms:acme:00000000-0000-4000-8000-000000000998";
+  if (mode === "fulfillment-multiple") {
+    shipped.shipment_mode = "packages";
+    shipped.carrier = "";
+    shipped.handoff_reference = "";
+  }
   const source = {
     id: "00000000-0000-4000-8000-000000000999",
     orderNumber: "OMS-501",
@@ -458,4 +468,25 @@ test("denied recovery retry retains an uncertain transport journal across reload
     page.getByRole("button", { name: "New order", exact: true }),
   ).toBeDisabled();
   expect(fixture.submissions).toHaveLength(2);
+});
+
+test("multiple physical handoffs stay held in a single-event OMS connection", async ({
+  page,
+}) => {
+  const fixture = await setup(page, "fulfillment-multiple");
+  await expect(page.getByRole("status")).toContainText(
+    "Orders with multiple handoffs need an OMS connection",
+  );
+  await expect(
+    page
+      .getByRole("combobox", { name: "Shipped OMS order", exact: true })
+      .locator(`option[value="${fixture.shipped.id}"]`),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", {
+      name: "Record verified handoff in OMS",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  expect(fixture.submissions).toEqual([]);
 });

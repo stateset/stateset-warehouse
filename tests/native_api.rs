@@ -241,8 +241,11 @@ async fn execute(store: &Store, i: &Identity, command: Command) -> Value {
             i,
             "wh-main",
             &Request {
+                serial_inputs: Vec::new(),
+                unit_inputs: Vec::new(),
                 request_id: domain::id(),
                 expected_version: state.version,
+                resource_versions: None,
                 command,
             },
         )
@@ -256,6 +259,7 @@ fn plan() -> TransportPlan {
 async fn packed(store: &Store, i: &Identity) -> (domain::State, String, PreparedTransport) {
     for command in [
         Command::CreateProduct {
+            serial_controlled: false,
             sku: "SKU".into(),
             name: "Synthetic SKU".into(),
             category: "General".into(),
@@ -590,6 +594,7 @@ async fn import_api_recovers_after_command_commit_using_frozen_source_and_actor_
         &store,
         &i,
         Command::CreateProduct {
+            serial_controlled: false,
             sku: "SKU".into(),
             name: "Synthetic product".into(),
             category: "General".into(),
@@ -619,8 +624,11 @@ async fn import_api_recovers_after_command_commit_using_frozen_source_and_actor_
     let digest = native_store::digest("oms_import", "wh-main", None, &input)
         .expect("exact input fingerprint");
     let command_request = Request {
+        serial_inputs: Vec::new(),
+        unit_inputs: Vec::new(),
         request_id: native_store::import_command_id(&i.tenant, "wh-main", request),
         expected_version: state.version,
+        resource_versions: None,
         command,
     };
     let frozen = json!({"command_request":command_request,"oms_order":{"id":input["oms_order_id"],"status":"processing"}});
@@ -824,6 +832,7 @@ async fn competing_warehouses_cannot_import_the_same_complete_native_oms_order()
         &store,
         &i,
         Command::CreateProduct {
+            serial_controlled: false,
             sku: "SKU".into(),
             name: "Synthetic product".into(),
             category: "General".into(),
@@ -859,17 +868,23 @@ async fn competing_warehouses_cannot_import_the_same_complete_native_oms_order()
         .expect("primary state")
         .version;
     let a_request = Request {
+        serial_inputs: Vec::new(),
+        unit_inputs: Vec::new(),
         request_id: native_store::import_command_id(&i.tenant, "wh-main", "source-owner-primary"),
         expected_version: version,
+        resource_versions: None,
         command: command.clone(),
     };
     let b_request = Request {
+        serial_inputs: Vec::new(),
+        unit_inputs: Vec::new(),
         request_id: native_store::import_command_id(
             &i.tenant,
             "wh-secondary",
             "source-owner-secondary",
         ),
         expected_version: 0,
+        resource_versions: None,
         command: command.clone(),
     };
     let a_frozen = json!({"command_request":a_request});
@@ -958,8 +973,11 @@ async fn competing_warehouses_cannot_import_the_same_complete_native_oms_order()
             &i,
             loser,
             &Request {
+                serial_inputs: Vec::new(),
+                unit_inputs: Vec::new(),
                 request_id: domain::id(),
                 expected_version: version,
+                resource_versions: None,
                 command
             }
         )
@@ -1097,6 +1115,7 @@ async fn authenticated_native_http_and_postgres_workflow_recovers_remote_accepta
     let (store, i) = postgres().await;
     for command in [
         Command::CreateProduct {
+            serial_controlled: false,
             sku: "SKU".into(),
             name: "Synthetic product".into(),
             category: "General".into(),

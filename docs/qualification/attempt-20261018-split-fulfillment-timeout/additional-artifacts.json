@@ -1,0 +1,8 @@
+{
+  "original_gate_summary_sha256": "e7bbeefb8e60989dd3de8da4399c632b840a846503775deaff58eb6f2e36d202",
+  "original_gate_artifacts_rehashed": true,
+  "additional_artifacts_sha256": {
+    "failure-context.json": "c36bbff865fba1c88a2933f0792c4357a82f7089ddb906e6cba4fd087b48db25",
+    "postgres-runtime.log": "bce22d9316779e5aedc3f8d317b82ebc3c5541b35e8b44ee9d67eb702219e39f"
+  }
+}

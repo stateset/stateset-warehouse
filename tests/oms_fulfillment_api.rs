@@ -129,8 +129,11 @@ async fn execute(store: &Store, i: &Identity, command: Command) -> Value {
             i,
             "wh-main",
             &Request {
+                serial_inputs: Vec::new(),
+                unit_inputs: Vec::new(),
                 request_id: domain::id(),
                 expected_version,
+                resource_versions: None,
                 command,
             },
         )
@@ -139,8 +142,16 @@ async fn execute(store: &Store, i: &Identity, command: Command) -> Value {
         .clone()
 }
 async fn shipped_fixture(store: &Store, i: &Identity) -> PreparedFulfillment {
+    shipped_fixture_mode(store, i, false).await
+}
+async fn shipped_fixture_mode(
+    store: &Store,
+    i: &Identity,
+    package_mode: bool,
+) -> PreparedFulfillment {
     for command in [
         Command::CreateProduct {
+            serial_controlled: false,
             sku: "SKU".into(),
             name: "Synthetic item".into(),
             category: "Test".into(),
@@ -219,24 +230,68 @@ async fn shipped_fixture(store: &Store, i: &Identity) -> PreparedFulfillment {
         )
         .await;
     }
-    execute(
-        store,
-        i,
-        Command::Pack {
-            order_id: order_id.clone(),
-        },
-    )
-    .await;
-    execute(
-        store,
-        i,
-        Command::Ship {
-            order_id: order_id.clone(),
-            carrier: "Synthetic carrier".into(),
-            handoff_reference: "Synthetic physical handoff".into(),
-        },
-    )
-    .await;
+    if package_mode {
+        let state = store
+            .state(&i.tenant, "wh-main")
+            .await
+            .expect("picked state");
+        let order = state
+            .orders
+            .iter()
+            .find(|o| o.id == order_id)
+            .expect("picked order");
+        let packed = execute(
+            store,
+            i,
+            Command::PackShipment {
+                order_id: order_id.clone(),
+                reference: "CONDITIONAL-PACKAGE".into(),
+                lines: order
+                    .allocations
+                    .iter()
+                    .map(|a| stateset_warehouse::split_fulfillment::LineInput {
+                        line_id: a.line_id.clone(),
+                        location: a.location.clone(),
+                        lot: a.lot.clone(),
+                        quantity: a.picked,
+                    })
+                    .collect(),
+            },
+        )
+        .await;
+        execute(
+            store,
+            i,
+            Command::HandoffShipment {
+                shipment_id: packed["entity_id"]
+                    .as_str()
+                    .expect("package identity")
+                    .into(),
+                carrier: "Synthetic carrier".into(),
+                handoff_reference: "Synthetic physical handoff".into(),
+            },
+        )
+        .await;
+    } else {
+        execute(
+            store,
+            i,
+            Command::Pack {
+                order_id: order_id.clone(),
+            },
+        )
+        .await;
+        execute(
+            store,
+            i,
+            Command::Ship {
+                order_id: order_id.clone(),
+                carrier: "Synthetic carrier".into(),
+                handoff_reference: "Synthetic physical handoff".into(),
+            },
+        )
+        .await;
+    }
     let order: domain::Order = serde_json::from_value(
         store
             .detail(&i.tenant, "wh-main", "orders", &order_id)
@@ -244,7 +299,7 @@ async fn shipped_fixture(store: &Store, i: &Identity) -> PreparedFulfillment {
             .expect("shipped order"),
     )
     .expect("canonical order");
-    let event_id:String=sqlx::query_scalar("SELECT id FROM wms_events WHERE tenant=$1 AND payload->>'type'='fulfillment.shipped' AND payload->'order'->>'id'=$2")
+    let event_id:String=sqlx::query_scalar("SELECT id FROM wms_events WHERE tenant=$1 AND payload->>'type' IN ('fulfillment.shipped','shipment.handed_off') AND payload->'order'->>'id'=$2")
         .bind(&i.tenant).bind(&order_id).fetch_one(&store.pool).await.expect("shipment event");
     let payload = FulfillmentPayload {
         request_id: domain::id(),
@@ -467,8 +522,28 @@ async fn conditional_journal_requires_actual_committed_event_and_rechecks_normal
     let digest = freeze(&store, &i, key, &prepared)
         .await
         .expect("real committed event");
-    // This synthetic administrative corruption changes normalized evidence
-    // while leaving the order JSON intact. The first-send fence must catch it.
+    let deletion = sqlx::query("DELETE FROM wms_allocations WHERE tenant=$1 AND order_id=$2")
+        .bind(&i.tenant)
+        .bind(&prepared.order_id)
+        .execute(&store.pool)
+        .await;
+    assert!(
+        deletion.is_err(),
+        "normal SQL cannot delete committed shipment ownership"
+    );
+    // Simulate a forensic repair/guard bypass inside this isolated test database.
+    // The transactional table lock hides the disabled guard from other sessions;
+    // rollback on any failure restores it. The read-side first-send fence must
+    // still reject inconsistent normalized facts without starting remote HTTP.
+    let mut repair = store
+        .pool
+        .begin()
+        .await
+        .expect("isolated corruption transaction");
+    sqlx::query("ALTER TABLE wms_allocations DISABLE TRIGGER wms_shipped_allocation_guard")
+        .execute(&mut *repair)
+        .await
+        .expect("temporary fault injection");
     sqlx::query("DELETE FROM wms_allocations WHERE tenant=$1 AND order_id=$2 AND line_id=$3")
         .bind(&i.tenant)
         .bind(&prepared.order_id)
@@ -476,9 +551,24 @@ async fn conditional_journal_requires_actual_committed_event_and_rechecks_normal
             "oms-line-{:x}",
             Sha256::digest(b"source:source-line-a")
         ))
-        .execute(&store.pool)
+        .execute(&mut *repair)
         .await
-        .expect("injected normalized shipment corruption");
+        .expect("injected forensic inconsistency");
+    // Drain still-enabled deferred proofs before ALTER TABLE restores the
+    // BEFORE guard. This deliberately damaged legacy fixture has no packages;
+    // the independent read-side handoff check must detect its missing line.
+    sqlx::query("SET CONSTRAINTS ALL IMMEDIATE")
+        .execute(&mut *repair)
+        .await
+        .expect("drain deferred proof events before restoring guard");
+    sqlx::query("ALTER TABLE wms_allocations ENABLE TRIGGER wms_shipped_allocation_guard")
+        .execute(&mut *repair)
+        .await
+        .expect("restore guard before commit");
+    repair
+        .commit()
+        .await
+        .expect("commit only own fixture corruption");
     assert_eq!(
         claim_fulfillment(&store, &i, "wh-main", key, &digest)
             .await
@@ -493,6 +583,16 @@ async fn conditional_journal_requires_actual_committed_event_and_rechecks_normal
         .expect("retained intent");
     assert_eq!(record.status, "frozen");
     assert_eq!(record.attempts, 0);
+    let proof = store
+        .reconciliation(&i.tenant, "wh-main")
+        .await
+        .expect("independent source proof");
+    assert_eq!(proof["ok"], false);
+    assert!(proof["shipments"]
+        .as_array()
+        .expect("shipment proof")
+        .iter()
+        .any(|row| row["order_id"] == prepared.order_id && row["ok"] == false));
 }
 
 #[tokio::test]
@@ -845,8 +945,16 @@ async fn authenticated(app: Router, method: &str, path: &str, body: Value) -> (S
 #[ignore = "requires isolated Postgres and loopback HTTP; WMS_TEST_DATABASE_URL"]
 async fn authenticated_conditional_oms_handoff_recovers_remote_commit_after_response_loss_without_second_fulfillment(
 ) {
+    conditional_oms_response_loss(false).await;
+}
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL"]
+async fn single_package_conditional_oms_recovers_original_handoff_after_remote_response_loss() {
+    conditional_oms_response_loss(true).await;
+}
+async fn conditional_oms_response_loss(package_mode: bool) {
     let (store, i) = postgres().await;
-    let prepared = shipped_fixture(&store, &i).await;
+    let prepared = shipped_fixture_mode(&store, &i, package_mode).await;
     let source = json!({"id":prepared.payload.order_id,"orderNumber":"SO-CONDITIONAL","shopifyOrderId":"shopify-fixture","status":"processing","lineItems":[
         {"title":"Synthetic item A","quantity":2,"price":10,"sku":"SKU","variantId":"variant-a","shopifyLineItemId":"source-line-a"},
         {"title":"Synthetic item B","quantity":3,"price":10,"sku":"SKU","variantId":"variant-b","shopifyLineItemId":"source-line-b"}],

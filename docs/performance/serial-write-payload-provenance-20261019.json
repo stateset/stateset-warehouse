@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-19T08:47:36.305740+00:00",
+  "synthetic": true,
+  "production_qualified": false,
+  "artifact": {
+    "path": "serial-write-payload-diagnostic-20261019.json",
+    "sha256": "b98a0bb0026e910663c4c3ebff8551a9f4ebe79f83a7edd70dfda0ff78691fe9"
+  },
+  "source_before": {
+    "revision": 21,
+    "inputs": 198,
+    "sha256": "d115bfb6681e2f4e7cff819d0af82e21b0ed2e630c941b9b6d99ab50b5a3c05a",
+    "archive_sha256": "4a06cc57f115adeba2babf3b3da85db921a020b10e12c09b5cbbf590877e3191"
+  },
+  "initial_implementation": {
+    "revision": 22,
+    "inputs": 200,
+    "sha256": "1d0dcc44aed51855bf98d8025c2c964a19f5c3ce884fd5da3920a7072040d218",
+    "archive_sha256": "4a7d5d360aeb449b9f6fa2355af44935886a2565ff501e79c7b7f51d04b2d5f7"
+  },
+  "source_after": {
+    "revision": 23,
+    "inputs": 200,
+    "sha256": "86658aa786228190e5a6fa6c70707d5c00a143f98b5a18299d7220a20bb2a7c0",
+    "archive_sha256": "92bf8119196aa13928cc775fed6255d56f0e8155c71b2bd66bfb923154e561f9"
+  },
+  "schema_migrations": 24,
+  "schema_tables": 49,
+  "mcp_admin_tools_unchanged": 68,
+  "checks": {
+    "rust_unique": 314,
+    "rust_postgres16_repeated": 46,
+    "live_browser": 10,
+    "actual_archive_roundtrips": 2,
+    "tables_populated_each": 49,
+    "formatting": "passed",
+    "clippy_all_targets": "passed"
+  },
+  "limits": [
+    "Development debug diagnostics on an uncontrolled shared host; not a facility SLO, capacity claim or sustained serialized workload. Independent application runs occurred at different times with different host contention.",
+    "The paired SQL experiment alternates definitions over the same retained source23 rows with three retained samples per predicate/size/variant after warmup, requires every healthy verdict true and rolls back all DDL. The separate dependency-graph oracle compares every row verdict under changed and malformed original facts.",
+    "Function counters cover the entire instrumented profile, including reads and plans. Inclusive function times overlap and must not be summed or treated as commit-only costs. Both before/after batch_original counters are12552calls.",
+    "The uninstrumented application run has ten single-unit moves per size and fourteen exact original replays. Instrumented before/after profiles use zero moves, one read sample per stage and four original replays per size. The first baseline program passed but its stats collector rejected plus-encoded URL spaces; that telemetry failure remains retained.",
+    "Original guard conditions, all23older migrations, physical equations, command/custody rules and the10second statement timeout remain unchanged. Migration24 reuses an uncompressed payload only inside each guard invocation; it does not cache validity or rewrite inventory.",
+    "No new image/deployment or full ten-stage gate. Physical/device/native/deployedMCP-client acceptance and large reviewed-count sessions remain open. Earlier51Python/149offlinebrowser runs retain their original provenance and were not rerun."
+  ]
+}

@@ -15,10 +15,17 @@ pub fn now() -> String {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Product {
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub serial_controlled: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub expiry_required: bool,
     pub sku: String,
     pub name: String,
     pub category: String,
     pub reorder_point: i64,
+}
+fn is_false(value: &bool) -> bool {
+    !value
 }
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Location {
@@ -50,6 +57,10 @@ pub struct Receipt {
     pub status: String,
     pub lines: Vec<ReceiptLine>,
     pub created_at: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub return_source: Option<crate::returns::ReturnSource>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cancellation: Option<crate::receipts::Cancellation>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct OrderLine {
@@ -70,6 +81,10 @@ pub struct Allocation {
 }
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Order {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub remainder_cancellation: Option<crate::order_cancellation::Cancellation>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shipment_mode: Option<String>,
     pub id: String,
     pub reference: String,
     pub source_order_id: Option<String>,
@@ -98,6 +113,20 @@ pub struct Movement {
     pub receipt_id: Option<String>,
     #[serde(default)]
     pub receipt_line_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub transfer_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub transfer_line_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub transfer_event_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub package_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub order_line_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub allocation_location: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shipment_event_id: Option<String>,
     pub reason: String,
     pub actor: String,
     pub at: String,
@@ -134,15 +163,31 @@ pub struct Warehouse {
 }
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct State {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub unit_packs: Vec<crate::units::Pack>,
+    #[serde(skip)]
+    pub(crate) unit_pack_change: Option<crate::units::Change>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub lot_controls: Vec<crate::lot_control::Lot>,
+    #[serde(skip)]
+    pub(crate) lot_changes: Vec<crate::lot_control::Change>,
+    #[serde(skip)]
+    pub(crate) execution_time: Option<chrono::DateTime<Utc>>,
     pub warehouse: Warehouse,
     pub version: i64,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub resource_versions: BTreeMap<String, i64>,
     pub products: Vec<Product>,
     pub locations: Vec<Location>,
     pub stocks: Vec<Stock>,
     /// Physical opening balances when persistence loads only new movement deltas.
-    /// Reserved balances are always rebuilt from current allocation ownership.
+    /// Reserved balances use exact allocations and the other-owner baseline.
     #[serde(default)]
     pub inventory_baseline: Vec<Stock>,
+    /// SQL-derived holds owned by orders omitted from a selective command load.
+    /// Never accepted from or exposed in serialized warehouse snapshots.
+    #[serde(skip)]
+    pub reservation_baseline: Vec<Stock>,
     /// Opening received quantities when only new receipt movements are loaded.
     #[serde(default)]
     pub receipt_baseline: BTreeMap<String, BTreeMap<String, i64>>,
@@ -151,16 +196,55 @@ pub struct State {
     pub movements: Vec<Movement>,
     pub exceptions: Vec<Exception>,
     pub activity: Vec<Activity>,
+    /// Database-owned dispatch and arrivals; never accepted from JSON.
+    #[serde(skip)]
+    pub(crate) transfer_context: Option<crate::transfers::Transfer>,
+    #[serde(skip)]
+    pub(crate) shipment_context: Option<crate::split_fulfillment::Context>,
+    #[serde(skip)]
+    pub(crate) shipment_change: Option<crate::split_fulfillment::Change>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// The public read model is serialized directly, without an intermediate JSON
+/// tree. Proof rows are computed once for both the validity flag and the body.
+#[derive(Debug, Serialize)]
+pub struct OperationalSnapshot {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub availability_checked_at: Option<String>,
+    #[serde(flatten)]
+    state: State,
+    reconciliation: OperationalReconciliation,
+}
+
+#[derive(Debug, Serialize)]
+struct OperationalReconciliation {
+    version: i64,
+    ok: bool,
+    rows: Vec<BalanceProof>,
+}
+
+#[derive(Debug, Serialize)]
+struct BalanceProof {
+    sku: String,
+    lot: String,
+    location: String,
+    on_hand: i64,
+    ledger: i64,
+    reserved: i64,
+    allocation_reserved: i64,
+    difference: i64,
+    reserved_difference: i64,
+    ok: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct LineInput {
     pub id: String,
     pub sku: String,
     pub quantity: i64,
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ReceiptInput {
     pub id: String,
@@ -168,9 +252,102 @@ pub struct ReceiptInput {
     pub lot: String,
     pub quantity: i64,
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Command {
+    SetUnitPack {
+        sku: String,
+        code: String,
+        label: String,
+        each_per_pack: i64,
+        enabled: bool,
+        reason: String,
+    },
+    SetProductExpiryPolicy {
+        sku: String,
+        required: bool,
+        reason: String,
+    },
+    RecordLotExpiry {
+        sku: String,
+        lot: String,
+        #[schemars(with = "chrono::DateTime<Utc>")]
+        expires_at: String,
+        reason: String,
+    },
+    CorrectLotExpiry {
+        sku: String,
+        lot: String,
+        #[schemars(with = "Option<chrono::DateTime<Utc>>")]
+        expires_at: Option<String>,
+        reason: String,
+    },
+    QuarantineLot {
+        sku: String,
+        lot: String,
+        reason: String,
+    },
+    ReleaseLotHold {
+        hold_id: String,
+        reason: String,
+    },
+    CancelRemainder {
+        order_id: String,
+        reason: String,
+    },
+    AllocateAvailable {
+        order_id: String,
+    },
+    ReleaseUnpicked {
+        order_id: String,
+        reason: String,
+    },
+    PackShipment {
+        order_id: String,
+        reference: String,
+        lines: Vec<crate::split_fulfillment::LineInput>,
+    },
+    UnpackShipment {
+        shipment_id: String,
+        reason: String,
+    },
+    HandoffShipment {
+        shipment_id: String,
+        carrier: String,
+        handoff_reference: String,
+    },
+    DispatchTransfer {
+        reference: String,
+        destination_warehouse_id: String,
+        carrier: String,
+        handoff_reference: String,
+        lines: Vec<crate::transfers::LineInput>,
+    },
+    ReceiveTransfer {
+        transfer_id: String,
+        line_id: String,
+        quantity: i64,
+        location: String,
+        arrival_reference: String,
+    },
+    RecordTransferLoss {
+        transfer_id: String,
+        line_id: String,
+        quantity: i64,
+        incident_reference: String,
+        reason: String,
+    },
+    ReverseTransferLoss {
+        loss_id: String,
+        quantity: i64,
+        reason: String,
+    },
+    CreateWarehouse {
+        code: String,
+        name: String,
+        city: String,
+        timezone: String,
+    },
     UpdateWarehouse {
         code: String,
         name: String,
@@ -178,6 +355,8 @@ pub enum Command {
         timezone: String,
     },
     CreateProduct {
+        #[serde(default, skip_serializing_if = "is_false")]
+        serial_controlled: bool,
         sku: String,
         name: String,
         category: String,
@@ -192,6 +371,16 @@ pub enum Command {
         reference: String,
         supplier: String,
         lines: Vec<ReceiptInput>,
+    },
+    CreateReturn {
+        reference: String,
+        order_id: String,
+        reason: String,
+        lines: Vec<crate::returns::ReturnLineInput>,
+    },
+    CancelReceipt {
+        receipt_id: String,
+        reason: String,
     },
     Receive {
         receipt_id: String,
@@ -268,10 +457,29 @@ pub enum Command {
 impl Command {
     pub fn kind(&self) -> &'static str {
         match self {
+            Self::SetUnitPack { .. } => "inventory.unit_pack_changed",
+            Self::SetProductExpiryPolicy { .. } => "inventory.expiry_policy_changed",
+            Self::RecordLotExpiry { .. } => "lot.expiry_recorded",
+            Self::CorrectLotExpiry { .. } => "lot.expiry_corrected",
+            Self::QuarantineLot { .. } => "lot.quarantined",
+            Self::ReleaseLotHold { .. } => "lot.hold_released",
+            Self::CancelRemainder { .. } => "fulfillment.remainder_cancelled",
+            Self::AllocateAvailable { .. } => "fulfillment.available_allocated",
+            Self::ReleaseUnpicked { .. } => "fulfillment.unpicked_released",
+            Self::PackShipment { .. } => "shipment.packed",
+            Self::UnpackShipment { .. } => "shipment.unpacked",
+            Self::HandoffShipment { .. } => "shipment.handed_off",
+            Self::DispatchTransfer { .. } => "transfer.dispatched",
+            Self::ReceiveTransfer { .. } => "transfer.received",
+            Self::RecordTransferLoss { .. } => "transfer.loss_recorded",
+            Self::ReverseTransferLoss { .. } => "transfer.loss_reversed",
+            Self::CreateWarehouse { .. } => "warehouse.created",
             Self::UpdateWarehouse { .. } => "warehouse.updated",
             Self::CreateProduct { .. } => "product.created",
             Self::CreateLocation { .. } => "location.created",
             Self::CreateReceipt { .. } => "receipt.created",
+            Self::CreateReturn { .. } => "return.authorized",
+            Self::CancelReceipt { .. } => "receipt.cancelled",
             Self::Receive { .. } => "receipt.received",
             Self::MoveStock { .. } => "inventory.moved",
             Self::CountStock { .. } => "inventory.counted",
@@ -292,7 +500,14 @@ impl Command {
             "admin" => true,
             "operator" => !matches!(
                 self,
-                Self::UpdateWarehouse { .. }
+                Self::SetProductExpiryPolicy { .. }
+                    | Self::SetUnitPack { .. }
+                    | Self::RecordTransferLoss { .. }
+                    | Self::ReverseTransferLoss { .. }
+                    | Self::CorrectLotExpiry { .. }
+                    | Self::ReleaseLotHold { .. }
+                    | Self::CreateWarehouse { .. }
+                    | Self::UpdateWarehouse { .. }
                     | Self::CreateProduct { .. }
                     | Self::CreateLocation { .. }
                     | Self::CountStock { .. }
@@ -303,6 +518,7 @@ impl Command {
                     source_order_id: Some(_),
                     ..
                 } | Self::CancelOrder { .. }
+                    | Self::CancelRemainder { .. }
             ),
             _ => false,
         }
@@ -325,8 +541,14 @@ fn quantity(q: i64) -> Result<()> {
 impl State {
     pub fn empty(warehouse: Warehouse) -> Self {
         Self {
+            unit_packs: Vec::new(),
+            unit_pack_change: None,
+            lot_controls: vec![],
+            lot_changes: vec![],
+            execution_time: None,
             warehouse,
             version: 0,
+            resource_versions: BTreeMap::new(),
             products: vec![],
             locations: vec![
                 Location {
@@ -342,12 +564,16 @@ impl State {
             ],
             stocks: vec![],
             inventory_baseline: vec![],
+            reservation_baseline: vec![],
             receipt_baseline: BTreeMap::new(),
             receipts: vec![],
             orders: vec![],
             movements: vec![],
             exceptions: vec![],
             activity: vec![],
+            transfer_context: None,
+            shipment_context: None,
+            shipment_change: None,
         }
     }
     /// Upgrade original snapshots only when receipt ownership is unambiguous.
@@ -400,13 +626,13 @@ impl State {
             .find(|l| l.code == code)
             .ok_or_else(|| format!("Unknown location: {code}"))
     }
-    fn order_index(&self, id: &str) -> Result<usize> {
+    pub(crate) fn order_index(&self, id: &str) -> Result<usize> {
         self.orders
             .iter()
             .position(|o| o.id == id)
             .ok_or_else(|| "Fulfillment order not found".into())
     }
-    fn unblocked(&self, order: &str) -> Result<()> {
+    pub(crate) fn unblocked(&self, order: &str) -> Result<()> {
         if self
             .exceptions
             .iter()
@@ -416,7 +642,7 @@ impl State {
         }
         Ok(())
     }
-    fn bucket(&mut self, sku: &str, lot: &str, location: &str) -> &mut Stock {
+    pub(crate) fn bucket(&mut self, sku: &str, lot: &str, location: &str) -> &mut Stock {
         let pos = match self
             .stocks
             .iter()
@@ -438,7 +664,7 @@ impl State {
     }
     // Keep all required movement evidence at one construction point.
     #[allow(clippy::too_many_arguments)]
-    fn movement(
+    pub(crate) fn movement(
         &mut self,
         kind: &str,
         sku: &str,
@@ -461,13 +687,32 @@ impl State {
             reference: reference.into(),
             receipt_id: None,
             receipt_line_id: None,
+            transfer_id: None,
+            transfer_line_id: None,
+            transfer_event_id: None,
+            package_id: None,
+            order_line_id: None,
+            allocation_location: None,
+            shipment_event_id: None,
             reason: reason.into(),
             actor: actor.into(),
             at: now(),
         });
     }
     pub fn execute(&self, command: &Command, actor: &str) -> Result<(Self, Value)> {
+        self.execute_at(command, actor, Utc::now())
+    }
+    pub fn execute_at(
+        &self,
+        command: &Command,
+        actor: &str,
+        at: chrono::DateTime<Utc>,
+    ) -> Result<(Self, Value)> {
         let mut next = self.clone();
+        next.unit_pack_change = None;
+        next.execution_time = Some(at);
+        next.lot_changes.clear();
+        next.shipment_change = None;
         let entity = next.apply(command, actor)?;
         next.version = next
             .version
@@ -478,8 +723,15 @@ impl State {
             kind: command.kind().into(),
             reference: entity.clone(),
             detail: match command {
-                Command::Unpick { reason, .. }
+                Command::SetProductExpiryPolicy { reason, .. }
+                | Command::RecordLotExpiry { reason, .. }
+                | Command::CorrectLotExpiry { reason, .. }
+                | Command::QuarantineLot { reason, .. }
+                | Command::ReleaseLotHold { reason, .. }
+                | Command::Unpick { reason, .. }
                 | Command::ResetAllocation { reason, .. }
+                | Command::CancelReceipt { reason, .. }
+                | Command::CancelRemainder { reason, .. }
                 | Command::CancelOrder { reason, .. } => {
                     format!("{}: {reason}", command.kind().replace('.', " "))
                 }
@@ -493,9 +745,48 @@ impl State {
             json!({ "entity_id": entity, "version": next.version, "type": command.kind() });
         Ok((next, result))
     }
+    pub(crate) fn quality_time(&self) -> chrono::DateTime<Utc> {
+        self.execution_time.unwrap_or_else(Utc::now)
+    }
     fn apply(&mut self, command: &Command, actor: &str) -> Result<String> {
+        if matches!(command, Command::CreateWarehouse { .. })
+            && (self.version != 0
+                || !self.products.is_empty()
+                || !self.orders.is_empty()
+                || !self.receipts.is_empty()
+                || !self.movements.is_empty()
+                || !self.activity.is_empty())
+        {
+            return Err("Warehouse creation requires a new empty facility".into());
+        }
         match command {
-            Command::UpdateWarehouse {
+            Command::SetUnitPack { .. } => crate::units::apply(self, command, actor),
+            Command::SetProductExpiryPolicy { .. }
+            | Command::RecordLotExpiry { .. }
+            | Command::CorrectLotExpiry { .. }
+            | Command::QuarantineLot { .. }
+            | Command::ReleaseLotHold { .. } => crate::lot_control::apply(self, command, actor),
+            Command::CancelRemainder { order_id, reason } => {
+                crate::order_cancellation::cancel(self, order_id, reason, actor)
+            }
+            Command::AllocateAvailable { .. }
+            | Command::ReleaseUnpicked { .. }
+            | Command::PackShipment { .. }
+            | Command::UnpackShipment { .. }
+            | Command::HandoffShipment { .. } => {
+                crate::split_fulfillment::apply(self, command, actor)
+            }
+            Command::DispatchTransfer { .. }
+            | Command::ReceiveTransfer { .. }
+            | Command::RecordTransferLoss { .. }
+            | Command::ReverseTransferLoss { .. } => crate::transfers::apply(self, command, actor),
+            Command::CreateWarehouse {
+                code,
+                name,
+                city,
+                timezone,
+            }
+            | Command::UpdateWarehouse {
                 code,
                 name,
                 city,
@@ -519,6 +810,7 @@ impl State {
                 Ok(self.warehouse.id.clone())
             }
             Command::CreateProduct {
+                serial_controlled,
                 sku,
                 name,
                 category,
@@ -534,6 +826,8 @@ impl State {
                     return Err("SKU already exists".into());
                 }
                 self.products.push(Product {
+                    serial_controlled: *serial_controlled,
+                    expiry_required: false,
                     sku: sku.clone(),
                     name: name.clone(),
                     category: category.clone(),
@@ -600,8 +894,44 @@ impl State {
                         })
                         .collect(),
                     created_at: now(),
+                    return_source: None,
+                    cancellation: None,
                 });
                 Ok(entity)
+            }
+            Command::CreateReturn {
+                reference,
+                order_id,
+                reason,
+                lines,
+            } => {
+                text(reason, "Return reason / inspection evidence")?;
+                let (inputs, source, _original_reference) =
+                    crate::returns::prepare(self, order_id, reason, lines)?;
+                let receipt_id = self.apply(
+                    &Command::CreateReceipt {
+                        reference: reference.clone(),
+                        supplier: "Customer return".into(),
+                        lines: inputs,
+                    },
+                    actor,
+                )?;
+                self.receipts
+                    .iter_mut()
+                    .find(|r| r.id == receipt_id)
+                    .ok_or("Return receipt missing")?
+                    .return_source = Some(source);
+                Ok(receipt_id)
+            }
+            Command::CancelReceipt { receipt_id, reason } => {
+                text(reason, "Cancellation reason")?;
+                let receipt = self
+                    .receipts
+                    .iter_mut()
+                    .find(|r| r.id == *receipt_id)
+                    .ok_or("Receipt not found")?;
+                crate::receipts::cancel(receipt, reason, actor)?;
+                Ok(receipt_id.clone())
             }
             Command::Receive {
                 receipt_id,
@@ -620,6 +950,9 @@ impl State {
                     .iter_mut()
                     .find(|r| r.id == *receipt_id)
                     .ok_or("Receipt not found")?;
+                if receipt.cancellation.is_some() || receipt.status == "cancelled" {
+                    return Err("Cancelled receipt cannot receive additional goods".into());
+                }
                 let line = receipt
                     .lines
                     .iter_mut()
@@ -777,6 +1110,8 @@ impl State {
                 }
                 let entity = id();
                 self.orders.push(Order {
+                    remainder_cancellation: None,
+                    shipment_mode: None,
                     id: entity.clone(),
                     reference: reference.clone(),
                     source_order_id: source_order_id.clone(),
@@ -801,6 +1136,7 @@ impl State {
                 Ok(entity)
             }
             Command::Allocate { order_id } => {
+                crate::split_fulfillment::require_legacy(self, order_id)?;
                 self.unblocked(order_id)?;
                 let i = self.order_index(order_id)?;
                 if self.orders[i].status != "pending" {
@@ -824,10 +1160,17 @@ impl State {
                             s.sku == l.sku
                                 && storage.contains(s.location.as_str())
                                 && s.on_hand > s.reserved
+                                && crate::lot_control::eligible(self, &s.sku, &s.lot)
                         })
                         .map(|(j, s)| (j, s.location.clone(), s.lot.clone()))
                         .collect();
-                    bins.sort_by(|a, b| (&a.1, &a.2).cmp(&(&b.1, &b.2)));
+                    bins.sort_by_key(|a| {
+                        (
+                            crate::lot_control::fefo(self, &l.sku, &a.2),
+                            a.1.clone(),
+                            a.2.clone(),
+                        )
+                    });
                     for (j, _, _) in bins {
                         let stock = &mut self.stocks[j];
                         let q = remaining.min(stock.on_hand - stock.reserved);
@@ -868,12 +1211,26 @@ impl State {
                 lot,
                 quantity: q,
             } => {
+                if self.orders[self.order_index(order_id)?]
+                    .shipment_mode
+                    .is_some()
+                {
+                    return crate::split_fulfillment::pick(self, command, actor);
+                }
                 quantity(*q)?;
                 self.unblocked(order_id)?;
                 let i = self.order_index(order_id)?;
                 if !["allocated", "picking"].contains(&self.orders[i].status.as_str()) {
                     return Err("Order is not ready to pick".into());
                 }
+                let sku = self.orders[i]
+                    .allocations
+                    .iter()
+                    .find(|a| a.line_id == *line_id && a.location == *location && a.lot == *lot)
+                    .ok_or("Original allocation not found")?
+                    .sku
+                    .clone();
+                crate::lot_control::require(self, &sku, lot)?;
                 let order = &mut self.orders[i];
                 let a = order
                     .allocations
@@ -919,6 +1276,12 @@ impl State {
                 quantity: q,
                 reason,
             } => {
+                if self.orders[self.order_index(order_id)?]
+                    .shipment_mode
+                    .is_some()
+                {
+                    return crate::split_fulfillment::pick(self, command, actor);
+                }
                 quantity(*q)?;
                 text(reason, "Unpick reason")?;
                 let i = self.order_index(order_id)?;
@@ -965,6 +1328,7 @@ impl State {
                 Ok(order_id.clone())
             }
             Command::ResetAllocation { order_id, reason } => {
+                crate::split_fulfillment::require_legacy(self, order_id)?;
                 text(reason, "Allocation reset reason")?;
                 let i = self.order_index(order_id)?;
                 if !["allocated", "picking"].contains(&self.orders[i].status.as_str()) {
@@ -982,10 +1346,14 @@ impl State {
                 Ok(order_id.clone())
             }
             Command::Pack { order_id } => {
+                crate::split_fulfillment::require_legacy(self, order_id)?;
                 self.unblocked(order_id)?;
                 let i = self.order_index(order_id)?;
                 if self.orders[i].status != "picked" {
                     return Err("Every line must be picked before packing".into());
+                }
+                for allocation in &self.orders[i].allocations {
+                    crate::lot_control::require(self, &allocation.sku, &allocation.lot)?;
                 }
                 self.orders[i].status = "packed".into();
                 Ok(order_id.clone())
@@ -995,12 +1363,16 @@ impl State {
                 carrier,
                 handoff_reference,
             } => {
+                crate::split_fulfillment::require_legacy(self, order_id)?;
                 text(carrier, "Carrier")?;
                 text(handoff_reference, "Carrier handoff reference")?;
                 self.unblocked(order_id)?;
                 let i = self.order_index(order_id)?;
                 if self.orders[i].status != "packed" {
                     return Err("Order must be packed before carrier handoff".into());
+                }
+                for allocation in &self.orders[i].allocations {
+                    crate::lot_control::require(self, &allocation.sku, &allocation.lot)?;
                 }
                 let allocations = self.orders[i].allocations.clone();
                 let reference = self.orders[i].reference.clone();
@@ -1040,7 +1412,7 @@ impl State {
                 }
                 let allocations = self.orders[i].allocations.clone();
                 for a in allocations {
-                    self.bucket(&a.sku, &a.lot, &a.location).reserved -= a.quantity;
+                    self.bucket(&a.sku, &a.lot, &a.location).reserved -= a.quantity - a.released;
                 }
                 for a in &mut self.orders[i].allocations {
                     a.released = a.quantity;
@@ -1057,7 +1429,9 @@ impl State {
                 text(detail, "Exception detail")?;
                 if let Some(order) = order_id {
                     let i = self.order_index(order)?;
-                    if ["shipped", "cancelled"].contains(&self.orders[i].status.as_str()) {
+                    if ["shipped", "cancelled", "closed_partial"]
+                        .contains(&self.orders[i].status.as_str())
+                    {
                         return Err("Cannot block a completed fulfillment".into());
                     }
                 }
@@ -1100,74 +1474,101 @@ impl State {
 
     /// Rebuild physical and reserved balances from independent recorded evidence.
     pub fn reconciliation(&self) -> Vec<Value> {
-        type Key = (String, String, String);
-        let mut physical: BTreeMap<Key, i64> = BTreeMap::new();
-        let mut reserved: BTreeMap<Key, i64> = BTreeMap::new();
-        for balance in &self.inventory_baseline {
-            *physical
-                .entry((
-                    balance.sku.clone(),
-                    balance.lot.clone(),
-                    balance.location.clone(),
-                ))
-                .or_default() += balance.on_hand;
+        self.balance_proof()
+            .into_iter()
+            .map(|row| json!(row))
+            .collect()
+    }
+
+    pub fn into_snapshot(self) -> OperationalSnapshot {
+        let rows = self.balance_proof();
+        let ok = self.validate_structure().is_ok() && rows.iter().all(|row| row.ok);
+        OperationalSnapshot {
+            availability_checked_at: None,
+            reconciliation: OperationalReconciliation {
+                version: self.version,
+                ok,
+                rows,
+            },
+            state: self,
+        }
+    }
+
+    fn balance_proof(&self) -> Vec<BalanceProof> {
+        // Borrow identities while accumulating all evidence in one ordered map.
+        // The tuple holds actual physical/reserved and evidence physical/reserved.
+        type Key<'a> = (&'a str, &'a str, &'a str);
+        let mut balances: BTreeMap<Key<'_>, (i64, i64, i64, i64)> = BTreeMap::new();
+        for b in &self.reservation_baseline {
+            balances.entry((&b.sku, &b.lot, &b.location)).or_default().3 += b.reserved;
+        }
+        for b in &self.inventory_baseline {
+            balances.entry((&b.sku, &b.lot, &b.location)).or_default().2 += b.on_hand;
         }
         for m in &self.movements {
             if let Some(from) = &m.from {
-                *physical
-                    .entry((m.sku.clone(), m.lot.clone(), from.clone()))
-                    .or_default() -= m.quantity;
+                balances.entry((&m.sku, &m.lot, from)).or_default().2 -= m.quantity;
             }
             if let Some(to) = &m.to {
-                *physical
-                    .entry((m.sku.clone(), m.lot.clone(), to.clone()))
-                    .or_default() += m.quantity;
+                balances.entry((&m.sku, &m.lot, to)).or_default().2 += m.quantity;
             }
         }
         for o in &self.orders {
             for a in &o.allocations {
-                *reserved
-                    .entry((a.sku.clone(), a.lot.clone(), a.location.clone()))
-                    .or_default() += a.quantity - a.picked - a.released;
-                *reserved
-                    .entry((a.sku.clone(), a.lot.clone(), "STAGE-01".into()))
-                    .or_default() += a.picked - a.shipped;
+                balances.entry((&a.sku, &a.lot, &a.location)).or_default().3 +=
+                    a.quantity - a.picked - a.released;
+                balances.entry((&a.sku, &a.lot, "STAGE-01")).or_default().3 += a.picked - a.shipped;
             }
         }
-        let mut actual: BTreeMap<Key, (i64, i64)> = BTreeMap::new();
         for s in &self.stocks {
-            actual.insert(
-                (s.sku.clone(), s.lot.clone(), s.location.clone()),
-                (s.on_hand, s.reserved),
-            );
+            let actual = balances.entry((&s.sku, &s.lot, &s.location)).or_default();
+            actual.0 = s.on_hand;
+            actual.1 = s.reserved;
         }
-        let keys: BTreeSet<_> = physical
-            .keys()
-            .chain(reserved.keys())
-            .chain(actual.keys())
-            .cloned()
-            .collect();
-        keys.into_iter().map(|key| {
-            let (on_hand,held)=actual.get(&key).copied().unwrap_or_default();
-            let ledger=physical.get(&key).copied().unwrap_or_default();
-            let expected=reserved.get(&key).copied().unwrap_or_default();
-            json!({"sku":key.0,"lot":key.1,"location":key.2,"on_hand":on_hand,"ledger":ledger,"reserved":held,"allocation_reserved":expected,"difference":on_hand-ledger,"reserved_difference":held-expected,"ok":on_hand==ledger && held==expected})
-        }).collect()
+        balances
+            .into_iter()
+            .map(
+                |((sku, lot, location), (on_hand, reserved, ledger, allocation_reserved))| {
+                    BalanceProof {
+                        sku: sku.into(),
+                        lot: lot.into(),
+                        location: location.into(),
+                        on_hand,
+                        reserved,
+                        ledger,
+                        allocation_reserved,
+                        difference: on_hand - ledger,
+                        reserved_difference: reserved - allocation_reserved,
+                        ok: on_hand == ledger && reserved == allocation_reserved,
+                    }
+                },
+            )
+            .collect()
     }
     pub fn validate(&self) -> Result<()> {
+        self.validate_structure()?;
+        if self.balance_proof().iter().any(|row| !row.ok) {
+            return Err("Ledger or reservation reconciliation failed".into());
+        }
+        Ok(())
+    }
+
+    fn validate_structure(&self) -> Result<()> {
+        crate::lot_control::validate(self)?;
+        crate::units::validate(self)?;
         if self.version < 0 {
             return Err("Invalid warehouse version".into());
         }
         let mut products = BTreeSet::new();
         for p in &self.products {
             text(&p.sku, "SKU")?;
-            if !products.insert(&p.sku) {
+            if !products.insert(p.sku.as_str()) {
                 return Err("Duplicate product identity".into());
             }
         }
-        let mut locations = BTreeSet::new();
+        let mut locations = BTreeMap::new();
         for l in &self.locations {
-            if !locations.insert(&l.code)
+            if locations.insert(l.code.as_str(), l).is_some()
                 || !["receiving", "storage", "staging"].contains(&l.kind.as_str())
             {
                 return Err("Invalid or duplicate location".into());
@@ -1176,13 +1577,25 @@ impl State {
                 return Err("Unknown staging location".into());
             }
         }
-        if self.location("STAGE-01")?.kind != "staging" {
+        let product = |sku: &str| -> Result<()> {
+            products
+                .contains(sku)
+                .then_some(())
+                .ok_or_else(|| format!("Unknown SKU: {sku}"))
+        };
+        let location = |code: &str| -> Result<&Location> {
+            locations
+                .get(code)
+                .copied()
+                .ok_or_else(|| format!("Unknown location: {code}"))
+        };
+        if location("STAGE-01")?.kind != "staging" {
             return Err("Outbound staging location is missing".into());
         }
         let mut baseline_keys = BTreeSet::new();
         for balance in &self.inventory_baseline {
-            self.product(&balance.sku)?;
-            self.location(&balance.location)?;
+            product(&balance.sku)?;
+            location(&balance.location)?;
             if !baseline_keys.insert((&balance.sku, &balance.lot, &balance.location))
                 || !(0..=1_000_000_000).contains(&balance.on_hand)
             {
@@ -1190,6 +1603,17 @@ impl State {
             }
         }
         let mut receipt_refs = BTreeSet::new();
+        let mut reservation_keys = BTreeSet::new();
+        for balance in &self.reservation_baseline {
+            product(&balance.sku)?;
+            location(&balance.location)?;
+            if !reservation_keys.insert((&balance.sku, &balance.lot, &balance.location))
+                || balance.on_hand != 0
+                || !(0..=1_000_000_000).contains(&balance.reserved)
+            {
+                return Err("Invalid other-owner reservation baseline".into());
+            }
+        }
         let mut receipt_ids = BTreeSet::new();
         let mut received_evidence: BTreeMap<(&str, &str), i64> = BTreeMap::new();
         for (receipt_id, lines) in &self.receipt_baseline {
@@ -1236,7 +1660,7 @@ impl State {
                 || !movement
                     .to
                     .as_deref()
-                    .is_some_and(|to| self.location(to).is_ok_and(|l| l.kind == "receiving"))
+                    .is_some_and(|to| location(to).is_ok_and(|l| l.kind == "receiving"))
             {
                 return Err("Receipt movement disagrees with its exact receipt line".into());
             }
@@ -1253,8 +1677,19 @@ impl State {
                 return Err("Invalid receipt identity".into());
             }
             let mut lines = BTreeSet::new();
+            if let Some(source) = &r.return_source {
+                text(&source.order_id, "Original shipment")?;
+                text(&source.reason, "Return reason")?;
+                if source.line_ids.len() != r.lines.len()
+                    || r.lines.iter().any(|l| !source.line_ids.contains_key(&l.id))
+                {
+                    return Err(
+                        "Every return line requires exact original order-line ownership".into(),
+                    );
+                }
+            }
             for l in &r.lines {
-                self.product(&l.sku)?;
+                product(&l.sku)?;
                 quantity(l.quantity)?;
                 if !lines.insert(&l.id) || l.received < 0 || l.received > l.quantity {
                     return Err("Receipt quantity invariant violated".into());
@@ -1277,13 +1712,14 @@ impl State {
             } else {
                 "partial"
             };
-            if r.status != expected {
+            crate::receipts::validate(r)?;
+            if r.cancellation.is_none() && r.status != expected {
                 return Err("Receipt state disagrees with received quantities".into());
             }
         }
         let mut movement_ids = BTreeSet::new();
         for m in &self.movements {
-            self.product(&m.sku)?;
+            product(&m.sku)?;
             if !movement_ids.insert(&m.id)
                 || m.quantity <= 0
                 || m.quantity > 1_000_000_000
@@ -1294,17 +1730,26 @@ impl State {
             if m.kind != "receipt" && (m.receipt_id.is_some() || m.receipt_line_id.is_some()) {
                 return Err("Only receipt movements can own a receipt line".into());
             }
+            let transfer = ["transfer_dispatch", "transfer_receive"].contains(&m.kind.as_str());
+            if transfer != (m.transfer_id.is_some() && m.transfer_line_id.is_some())
+                || (!transfer
+                    && (m.transfer_id.is_some()
+                        || m.transfer_line_id.is_some()
+                        || m.transfer_event_id.is_some()))
+            {
+                return Err("Transfer movements require exact original line ownership".into());
+            }
             if let Some(from) = &m.from {
-                self.location(from)?;
+                location(from)?;
             }
             if let Some(to) = &m.to {
-                self.location(to)?;
+                location(to)?;
             }
         }
         let mut keys = BTreeSet::new();
         for s in &self.stocks {
-            self.product(&s.sku)?;
-            self.location(&s.location)?;
+            product(&s.sku)?;
+            location(&s.location)?;
             if !keys.insert((&s.sku, &s.lot, &s.location)) {
                 return Err("Duplicate stock identity".into());
             }
@@ -1323,6 +1768,8 @@ impl State {
                     "pending",
                     "allocated",
                     "picking",
+                    "partially_shipped",
+                    "closed_partial",
                     "picked",
                     "packed",
                     "shipped",
@@ -1339,30 +1786,41 @@ impl State {
             }
             let mut lines = BTreeSet::new();
             for l in &o.lines {
-                self.product(&l.sku)?;
+                product(&l.sku)?;
                 quantity(l.quantity)?;
                 if !lines.insert(&l.id) {
                     return Err("Duplicate order line identity".into());
                 }
             }
-            if o.status == "pending" && !o.allocations.is_empty() {
+            let split = o.shipment_mode.as_deref() == Some("packages");
+            crate::order_cancellation::validate(o)?;
+            if o.shipment_mode.is_some() && !split {
+                return Err("Unknown shipment mode".into());
+            }
+            if split && o.status != "cancelled" && o.status != crate::split_fulfillment::status(o) {
+                return Err("Split fulfillment status disagrees with physical progress".into());
+            }
+            if !split && o.status == "pending" && !o.allocations.is_empty() {
                 return Err("Pending orders cannot have allocations".into());
             }
             if o.status == "allocated" && o.allocations.iter().any(|a| a.picked != 0) {
                 return Err("Allocated orders cannot already contain picked stock".into());
             }
-            if o.status == "picking"
+            if !split
+                && o.status == "picking"
                 && (!o.allocations.iter().any(|a| a.picked > 0)
                     || o.allocations.iter().all(|a| a.picked == a.quantity))
             {
                 return Err("Picking orders require a physically partial pick".into());
             }
-            if ["picked", "packed", "shipped"].contains(&o.status.as_str())
+            if !split
+                && ["picked", "packed", "shipped"].contains(&o.status.as_str())
                 && o.allocations.iter().any(|a| a.picked != a.quantity)
             {
                 return Err("Completed picks require every reserved unit".into());
             }
-            if o.status == "shipped"
+            if !split
+                && o.status == "shipped"
                 && (o.carrier.is_empty()
                     || o.handoff_reference.is_empty()
                     || o.shipped_at.is_none()
@@ -1370,7 +1828,7 @@ impl State {
             {
                 return Err("Shipment requires physical handoff evidence".into());
             }
-            if o.status != "shipped" && o.allocations.iter().any(|a| a.shipped != 0) {
+            if !split && o.status != "shipped" && o.allocations.iter().any(|a| a.shipped != 0) {
                 return Err("Unshipped order has shipped allocations".into());
             }
             if o.status == "cancelled"
@@ -1385,10 +1843,10 @@ impl State {
                 if !allocation_keys.insert((&a.line_id, &a.location, &a.lot)) {
                     return Err("Duplicate allocation ownership identity".into());
                 }
-                if o.status != "cancelled" && a.released != 0 {
+                if !split && o.status != "cancelled" && a.released != 0 {
                     return Err("Active allocation cannot contain released reservations".into());
                 }
-                if self.location(&a.location)?.kind != "storage" {
+                if location(&a.location)?.kind != "storage" {
                     return Err("Reservations must originate in storage".into());
                 }
                 if a.quantity <= 0
@@ -1414,17 +1872,23 @@ impl State {
                     .filter(|a| a.line_id == l.id)
                     .map(|a| a.quantity)
                     .sum();
-                if o.status != "pending"
-                    && !(o.status == "cancelled" && allocated == 0)
-                    && allocated != l.quantity
+                if (split
+                    && o.allocations
+                        .iter()
+                        .filter(|a| a.line_id == l.id)
+                        .map(|a| a.quantity - a.released)
+                        .sum::<i64>()
+                        > l.quantity)
+                    || (!split
+                        && o.status != "pending"
+                        && !(o.status == "cancelled" && allocated == 0)
+                        && allocated != l.quantity)
                 {
                     return Err("Line reservation total must equal ordered quantity".into());
                 }
             }
         }
-        if self.reconciliation().iter().any(|r| r["ok"] != true) {
-            return Err("Ledger or reservation reconciliation failed".into());
-        }
+        crate::returns::validate_loaded(self)?;
         Ok(())
     }
 }
@@ -1453,6 +1917,7 @@ pub fn demo_state() -> State {
         ("SS-SOCK-006", "Crew Socks · 3 Pack", "Apparel", 30),
     ] {
         apply(Command::CreateProduct {
+            serial_controlled: false,
             sku: sku.into(),
             name: name.into(),
             category: category.into(),

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "production_qualified": false,
+  "report": "http-500-8-operators-independent.json",
+  "sha256": "535aa4847c021c4e44ff47aefcabcc4fcc078dd592f13f4a9aa26b1ec0b235e1",
+  "traffic_model": "independent-operators",
+  "image_id": "sha256:fe24dece52ab8a48a5784e29da6729e6ee7b480cbbca91db3a157fab381ff275",
+  "image_source_inputs_sha256": "9dcff2a56157b2902ccb93a78d218c6528e52d1ee1253a11bbbfc124d0c132db",
+  "software_source_inputs_sha256": "384da00d3a89b9049e065c3363ad5bf3503d33bf87abd3049432e20f7e18f268",
+  "release_provenance": "../qualification/release-20261018-independent-operators/provenance.json",
+  "command": "WMS_RESILIENCE_IMAGE=<qualified immutable image ID> WMS_RESILIENCE_PRODUCTS=500 WMS_RESILIENCE_BINS=100 WMS_RESILIENCE_LOTS=2 WMS_RESILIENCE_OPEN_ORDERS=500 WMS_RESILIENCE_CLIENTS=8 WMS_RESILIENCE_SECONDS=300 WMS_RESILIENCE_REVIEW_MODE=resources WMS_RESILIENCE_TRAFFIC_MODEL=independent-operators bash scripts/resilience-rehearsal.sh",
+  "limits": [
+    "Same immutable application image as the complete release gate and preceding selective shared-snapshot profile; this changes the measured client protocol, not application code",
+    "Every operator has its own initial review and validated full post-save refresh; no round barrier or shared snapshot",
+    "Save latency includes post-commit refresh; original replay excluded from action latency and included in throughput",
+    "Clients, two API replicas and single PostgreSQL primary share a development host; clients use Python threads and a new HTTP connection per request",
+    "Browser rendering, human timing, physical devices, deployed integrations and managed failover remain outside this profile",
+    "No declared facility service target supplied; different traffic models and scales are not speedup comparisons"
+  ]
+}

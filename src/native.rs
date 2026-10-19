@@ -272,7 +272,7 @@ pub struct OmsOrderPage {
     pub items: Vec<OmsOrder>,
     pub pagination: OmsPagination,
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ImportDetails {
     pub customer: String,
@@ -708,7 +708,7 @@ impl NativeIntegrations {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct TransportStop {
     pub facility: String,
@@ -773,7 +773,7 @@ fn wire_text(value: &str, label: &str, max: usize) -> Result<()> {
 }
 /// Exact direct-route subset of Freight NewLoad. Prices, weight, mileage,
 /// facilities and dates must come from an operator; the WMS derives none.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct TransportPlan {
     pub reference: String,
@@ -859,6 +859,14 @@ pub fn ready_export(tenant: &str, state: &State, order_id: &str) -> Result<Wareh
         return Err(
             "Transport readiness requires a fully packed order awaiting physical handoff".into(),
         );
+    }
+    let at = chrono::Utc::now();
+    for allocation in &order.allocations {
+        if crate::lot_control::availability_at(state, &allocation.sku, &allocation.lot, at)
+            != crate::lot_control::Availability::Available
+        {
+            return Err("Transport readiness is held by an unavailable lot".into());
+        }
     }
     Ok(WarehouseReadiness {
         schema_version: 1,

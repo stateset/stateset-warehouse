@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "production_qualified": false,
+  "report": "http-500-8-operators-pack-units.json",
+  "sha256": "3c414aad467bc376dffc0953e7a73d3dd3801b11e64d096802ce8d4813cb300e",
+  "image_id": "sha256:7c74f8c03d743e2a8dd921fc55275dd9927501de55114ebc81695ef2e2034eee",
+  "image_source_inputs_sha256": "5b8eb56b2d1a5e4b18977dec050cbd86f5a25619b4a742aec875cfe73312cd41",
+  "software_source_inputs_sha256": "cf2a64ddd67e59ed2943606a61da781263b0d7491753f497459a569a8959f609",
+  "release_provenance": "../qualification/release-20261018-pack-units/provenance.json",
+  "traffic_model": "independent-operators",
+  "qualifier_sha256": {
+    "scripts/resilience-rehearsal.sh": "5fa42466238d4be5b260021da30541441d2c7d779b74b0594c8ac59099408227",
+    "scripts/resilience_probe.py": "67c2ceab339b0d21a5daa25af0b518f3cb476b4d856cedd914ed316cf27526ac"
+  },
+  "mcp": {
+    "unauthenticated_status": 401,
+    "authenticated_session_matches_rest": true,
+    "catalog_tools": 65,
+    "catalog_bytes": 96006,
+    "partial_fulfillment_tools_present": true
+  },
+  "limits": [
+    "The container and resilience stages use the same immutable image; other stages execute builds from the same frozen software inputs",
+    "Reviewed pack definitions and exact each conversions have eleven HTTP/PostgreSQL acceptance cases, original legacy digest compatibility, definition/observation concurrency, complete-source independent SQL cap rejection, source/immutability checks, final-outbox rollback, actual19 upgrade, MCP, scanner and read-side browser contracts, actual desktop/mobile workflow and nonempty43-table cross-timezone restore. Timed bin moves do not qualify pack-conversion throughput.",
+    "Transfer loss and reversal are separately covered by exact destination-admin authority, HTTP/PostgreSQL line caps and concurrent arrival, independently attributed raw SQL commit rejection, immutable source forgery checks, rollback/replay, actual18 upgrade, paginated destination-head fencing, MCP, six browser contracts, actual desktop/mobile custody workflow and nonempty43-table cross-timezone archive restoration",
+    "Cross-facility exact lot trace is separately covered by actual HTTP/PostgreSQL, a controlled concurrent snapshot/quarantine race, version-fenced pagination/phantoms, event/authorization forgery checks, actual migrated legacy source, MCP long-cursor recovery, browser contracts, actual desktop/mobile workflow and nonempty nine-section cross-timezone archive restore",
+    "Sustained actions remain REST bin moves, full post-save snapshots and original-request replays; this does not measure repeated pack observations/conversions, lot-trace reads, lot controls, expiry-heavy fulfillment, loss settlement, shipment-package, transfer-specific or MCP throughput",
+    "Clients, APIs and PostgreSQL share an uncontrolled development host. No causal speedup, deployed capacity, managed failover or facility SLO is inferred",
+    "The earlier split-release timeout and passing diagnostic replay remain retained. The original lock-holder/root cause is unconfirmed and this feature does not establish a fix",
+    "No deployment, actual physical counts/scanners, deployed WorkOS/MCP/native-client acceptance, tenant-wide recall, automated quality disposition, upstream refund or multiple-shipment receiver qualification is claimed"
+  ],
+  "unit_restore": {
+    "original_requests": 15,
+    "definitions": 4,
+    "observations": 6,
+    "original_case_each": 12,
+    "current_case_each": 6,
+    "disabled_inner_retained": true,
+    "remaining_custody_each": 12,
+    "post_restore_fresh_observations": 7
+  },
+  "transfer_loss_restore": {
+    "original_workflow_requests": 10,
+    "original_loss_records": 2,
+    "net_lost_each": 1,
+    "in_transit_each": 3,
+    "reversal_does_not_credit_stock": true,
+    "actual_recovered_arrival_separate": true
+  },
+  "development_source_archive_sha256": "09b57a673651915110ba936ffcfa931088be79021d56d84f84fb1c8b21f5289e",
+  "focused_development_artifacts": {
+    "private_path": ".local/qualification/pack-units-development-20261018",
+    "manifest_sha256": "238635c9d2a27ce85dcde56f2fb11a74dbdb3c5361762b7690070d818aaa37a7",
+    "intermediate_source_capsules_complete": false,
+    "final_frozen_source_matches_release": true
+  },
+  "private_restore_artifact_manifest_sha256": "490957eba411e268d7f4aaed3172745a118c40145df58797fa7860beb9889cec",
+  "unit_browser_screenshots": {
+    "pack-units-desktop.png": {
+      "path": "../screenshots/pack-units-desktop.png",
+      "sha256": "ef0e5a65d97d3394b752e0c20e10d2219689d28f0d03820bc55b85c6da59f00f",
+      "source_inputs_sha256": "cf2a64ddd67e59ed2943606a61da781263b0d7491753f497459a569a8959f609",
+      "scope": "actual desktop/mobile browser against rebuilt canonical HTTP/PostgreSQL service; not a deployed device or physical acceptance observation"
+    },
+    "pack-units-mobile.png": {
+      "path": "../screenshots/pack-units-mobile.png",
+      "sha256": "93be7b54763de495b43d3dab1a7ec0ff8dc3d3aa6e7cbb831d2c9615124845db",
+      "source_inputs_sha256": "cf2a64ddd67e59ed2943606a61da781263b0d7491753f497459a569a8959f609",
+      "scope": "actual desktop/mobile browser against rebuilt canonical HTTP/PostgreSQL service; not a deployed device or physical acceptance observation"
+    }
+  },
+  "preceding_failed_lot_gate": {
+    "public_context": "../qualification/attempt-20261018-lot-controls-live-review/failure-context.json",
+    "original_result": "failed",
+    "container_and_resilience_ran": false,
+    "private_retention": ".local/qualification/lot-controls-integrity-development-20261018/first-release-attempt",
+    "private_artifact_manifest_sha256": "7ba4afbc4419467ddda73a2c7dc7735b81db87fe0d486da681823d0edd6e2978"
+  },
+  "preceding_pack_gate": {
+    "public_context": "../qualification/attempt-20261018-pack-units-pattern-validation/failure-context.json",
+    "original_result": "failed",
+    "classification": "intentionally interrupted for independently reproduced Chrome form-pattern defect",
+    "container_and_resilience_ran": false,
+    "private_retention": ".local/qualification/pack-units-development-20261018/first-interrupted-release",
+    "private_manifest_sha256": "b1e840921b3644f09fc8f1177cc1fa5d99368c20a1d2f175fd438c49226dbc6b"
+  },
+  "preceding_pack_live_gate": {
+    "public_context": "../qualification/attempt-20261018-pack-units-live-sku-review/failure-context.json",
+    "original_result": "failed",
+    "passed_stages": 6,
+    "actual_browser_cases_passed": 12,
+    "container_and_resilience_ran": false,
+    "private_retention": ".local/qualification/pack-units-development-20261018/failed-live-review-release",
+    "private_manifest_sha256": "8733d482067a1caec00073c5c9d31d44542d93bd58ceb0ee8e6cf31458685ca6"
+  }
+}

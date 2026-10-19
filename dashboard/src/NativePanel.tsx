@@ -636,6 +636,19 @@ export default function NativePanel({
       {conditionalOms && (
         <section className="integration-card">
           <h3>Record the physical handoff in OMS</h3>
+          {state.orders.some(
+            (o) =>
+              o.shipment_mode === "packages" &&
+              o.status === "shipped" &&
+              !o.carrier &&
+              o.source_order_id?.startsWith("oms:"),
+          ) && (
+            <p role="status">
+              Orders with multiple handoffs need an OMS connection that
+              preserves every original shipment. Review their recorded packages;
+              the current connection cannot mark them fulfilled.
+            </p>
+          )}
           <p>
             The OMS receiver must support conditional fulfillment. The original
             source revision, shipment event, and delivery receipt are retained.
@@ -655,6 +668,7 @@ export default function NativePanel({
                 .filter(
                   (order) =>
                     order.status === "shipped" &&
+                    !(order.shipment_mode === "packages" && !order.carrier) &&
                     order.source_order_id?.startsWith("oms:"),
                 )
                 .map((order) => (

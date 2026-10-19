@@ -1,0 +1,12 @@
+{
+  "production_qualified": false,
+  "physical_acceptance_performed": false,
+  "goal_remains_active": true,
+  "limits": [
+    "Crash/lost-response recovery commands are the untracked PROBE SKU in both profiles. Committed serial data survive the crashes and subsequent serial traffic passes; pending serial-write crash recovery is unqualified.",
+    "Each profile uses500products/100bins/two lots/500orders/eight operators/two replicas/300seconds. Serial mode has16000literal IDs but timed traffic moves eight fixed labels; broad random-label contention and managed failover are unqualified.",
+    "Image reports have aggregate distributions, not native raw cycle journals. Shared-host conditions are uncontrolled. No causal speedup, deployed/native/MCP-client/device/facility acceptance or A+ claimed."
+  ],
+  "next_bottleneck": "Serial save/full-refresh/source-review p95 is3954.229ms and throughput2.187moves/s in this500-SKU16000-label fixture. This is a local functional qualification, not a facility latency SLO or A+.",
+  "pending_serial_write_crash_qualified": false
+}

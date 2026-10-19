@@ -1,0 +1,27 @@
+{
+  "recorded_at": "2026-10-19T12:42:49.403648+00:00",
+  "kind": "derived_browser_count_correction",
+  "reason": "Earlier context records and commentary added two unobserved live cases. Actual retained transcripts for both source32 and source35 full-gate attempts say Running21tests and21passed. All selected tests passed; no test selection or product source changed.",
+  "records": [
+    {
+      "attempt": "attempt-20261019-serial-reference-cost",
+      "raw_live_log_sha256": "c195a229ebdffdb7f86bce3c283eb7a0d352bb4197a890a89e98ef9d60edfcb7",
+      "previous_derived_actual_browser_passed": 23,
+      "correct_actual_browser_passed": 21,
+      "offline_browser_passed": 149,
+      "total_browser_passed": 170,
+      "original_raw_log_unchanged": true
+    },
+    {
+      "attempt": "attempt-20261019-serial-read-space",
+      "raw_live_log_sha256": "54f0d9230cdb9c13dfd8c0c63208ec0954c53b2c8d9ae54abfd77d8634261a29",
+      "previous_derived_actual_browser_passed": 23,
+      "correct_actual_browser_passed": 21,
+      "offline_browser_passed": 149,
+      "total_browser_passed": 170,
+      "original_raw_log_unchanged": true
+    }
+  ],
+  "original_summaries_artifact_hashes_sources_and_private_capsules_preserved": true,
+  "production_qualified": false
+}

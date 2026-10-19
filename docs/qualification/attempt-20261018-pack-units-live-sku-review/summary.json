@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "scope": "software_release_gate",
+  "recorded_at": "2026-10-19T02:47:11.568430+00:00",
+  "result": "failed",
+  "production_qualified": false,
+  "synthetic": true,
+  "release_revision": "pack-units-2ecc3469f6b6890d3dc14a223d7c9a9e2a98f8641a9cdf01a9400e3257cd7255",
+  "elapsed_seconds": 393,
+  "stages": [
+    {
+      "name": "prerequisites",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 0.473
+    },
+    {
+      "name": "software_checks",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 212.404
+    },
+    {
+      "name": "observability_rules",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 1.154
+    },
+    {
+      "name": "release_builds",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 53.534
+    },
+    {
+      "name": "standard_workload",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 12.794
+    },
+    {
+      "name": "archive_restore",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 21.711
+    },
+    {
+      "name": "live_browsers",
+      "status": "failed",
+      "exit_code": 1,
+      "elapsed_seconds": 90.811
+    },
+    {
+      "name": "production_container",
+      "status": "not_run"
+    },
+    {
+      "name": "image_resilience",
+      "status": "not_run"
+    },
+    {
+      "name": "stable_source_inputs",
+      "status": "not_run"
+    }
+  ],
+  "artifacts": [
+    {
+      "stage": "standard_workload",
+      "path": "standard_workload.json",
+      "sha256": "7c85fa1c586c8e41abbb455ce78a1e62cd793f7ceb8b8ad194e885296edaeea2"
+    },
+    {
+      "stage": "archive_restore",
+      "path": "archive_restore.json",
+      "sha256": "540fdae92a1f5bc1844c715ff06575aae0d4636d79117611d52b005b1cf18133"
+    },
+    {
+      "stage": "observability_rules",
+      "path": "observability_rules.json",
+      "sha256": "7165a653317bb0cf086a4feab31e9ba0b6aa7b0bbe82b01c75e62bd064f1713e"
+    },
+    {
+      "path": "source-inputs-before.json",
+      "sha256": "6bf4da07f589f7a2b0c9144faf72f58951fdffab87d3ee67a0fc4bc2c6c6bbef"
+    },
+    {
+      "path": "tool-versions.json",
+      "sha256": "fb353776fcb627064e6ae049b0f4af0fa62007cc594ca9b5063098dd9946e8b5"
+    },
+    {
+      "path": "archive_restore.log",
+      "sha256": "69f5c53a45d89f6a70dcb924324fc74a09658d7fc735b8b5b0abcb8743fea0ba"
+    },
+    {
+      "path": "demo-api.log",
+      "sha256": "33eedd9a04a3019506ab10ce89937e059c7dfda378cacd772413aaf68490edf6"
+    },
+    {
+      "path": "live_browsers.log",
+      "sha256": "8ad7df704e41a25070802d359d0869dff56d2a9df40d79a14ab026e08667e15c"
+    },
+    {
+      "path": "observability_rules.log",
+      "sha256": "6ea89889bde1dea45385eded927b4b88c7b45fc33c61084d5897a674a470d9ee"
+    },
+    {
+      "path": "prerequisites.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "release_builds.log",
+      "sha256": "4ce2c10a7f89ee2084d1c8ca0d09c3cc922007e0918b10aa4b383f6b1f9e1aee"
+    },
+    {
+      "path": "scanner-api.log",
+      "sha256": "5d735461ae7fe9352cdb3f6dd871b70fa6860eddc9a06ecb0c5cc28a63d94a9e"
+    },
+    {
+      "path": "software_checks.log",
+      "sha256": "2d2ea49e8eae9da2374aaff5607d93f45c020e5bc6f6ef684575718e4c34c0b2"
+    },
+    {
+      "path": "standard_workload.log",
+      "sha256": "4a026a8c2a18c0aa745ab8c35a800beea6a699da3fadc914de95f59b9e3255db"
+    }
+  ],
+  "not_performed": [
+    "Deployed WorkOS sign-in and membership lifecycle",
+    "Deployed OMS/Freight qualification",
+    "Physical warehouse and scanner acceptance",
+    "Organization-hosted GitHub execution"
+  ],
+  "limits": [
+    "All inventory and native-service fixtures are synthetic",
+    "Performance results apply to the recorded profiles and host",
+    "Process/database restart is not managed database failover",
+    "Published logs are sanitized; private raw artifacts stay in the fresh evidence directory"
+  ]
+}

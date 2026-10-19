@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "production_qualified": false,
+  "report": "http-500-8-operators-receipt-cancellation.json",
+  "sha256": "b610bf48fa9a160e0d76f1ccdb721e1f733e03c1a4982fdac1acc7ce467025cf",
+  "image_id": "sha256:a0b2641e89a4a8c24f557b3988de5507638d4199373c6782ec429014105e3e3b",
+  "image_source_inputs_sha256": "61eba6bffc88553cc30a815ae5bdeccb07e9d1ccd4a31867f91acc2ee036cf56",
+  "software_source_inputs_sha256": "190ea5997cb8ad0a5b6c023d12e3c936388eb169d5453ba65b144913e482760f",
+  "release_provenance": "../qualification/release-20261018-receipt-cancellation/provenance.json",
+  "traffic_model": "independent-operators",
+  "qualifier_sha256": {
+    "scripts/resilience-rehearsal.sh": "5fa42466238d4be5b260021da30541441d2c7d779b74b0594c8ac59099408227",
+    "scripts/resilience_probe.py": "67c2ceab339b0d21a5daa25af0b518f3cb476b4d856cedd914ed316cf27526ac"
+  },
+  "limits": [
+    "Same immutable image as all ten current software release stages",
+    "Receipt cancellation is exercised by real database races/guard tests, live browser/API execution and a nonempty archive restore with original cancellation replay",
+    "Sustained traffic consists of physical bin moves and original-request replays; this is not a cancellation-specific sustained load model",
+    "Shared development host, two API replicas and one PostgreSQL primary; no deployed capacity or facility SLO is inferred",
+    "All earlier performance windows remain retained; no causal speedup comparison is claimed"
+  ]
+}

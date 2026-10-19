@@ -1,130 +1,150 @@
 # Physical warehouse acceptance
 
-Facility acceptance requires observations from an actual operator and independent inventory controller using the deployed release, scanner hardware, printed labels and physical stock. Automated browser input and synthetic database fixtures do not supply those observations. No facility acceptance has been performed merely by adding this runbook or passing its validator.
+The default `current-v2` gate validates signed captures for 23 current workflows against an independently pinned software release. It requires a plan signed before work and separate operator/controller signatures on the same final bytes. No physical acceptance has been performed by adding this validator, passing synthetic tests or passing local software qualification.
 
-`scripts/qualify-native.py facility` validates signed witness evidence, recomputes custody equations and verifies the actual captured artifact bytes. A missing signature, missing physical fact, synthetic run, failed scenario, changed artifact or missed declared service target produces `unqualified` and exit 2. A passing document yields `passed` only for the supplied signed evidence. `production_qualified` remains false: key trust, truthful observations and the deployment release decision belong to the facility owner.
+A passing result means the supplied evidence satisfies the checks below. `production_qualified` always remains false. Public keys must be obtained independently; signatures do not establish authority, prove a physical count, inspect hardware or query an external receiver. The independent controller owns truthful observations and completeness. [Native deployment preflight](native-acceptance.md) and [operations](operations.md) remain separate prerequisites.
 
-## Run and capture
+## Plan before work
 
-Use a controlled acceptance area and reconcile its starting physical counts against system stock before work. Record the exact warehouse, deployed source SHA/image, time, operator and inventory controller; record scanner make/model/device/firmware/input mode, symbology, label stock and printer. Choose expected peak action rate, p95 latency, concurrent operators, RTO and RPO before the run. Do not derive a passing target from a result already measured.
+Use a controlled acceptance area with actual printed labels, deployed scanner hardware and independently counted stock. Keep signing keys, credentials and raw evidence outside the repository. Use one document per facility/warehouse; predeclare counterpart warehouse IDs and every controlled SKU/lot/location, including receiving and staging. Reconcile starting physical counts with system stock.
 
-Keep the original label values and exact receipt/allocation line IDs. For each receive/pick, capture bin, SKU, explicit lot, whole-each quantity, selected line and original request ID. Include two independent receipt lines and two independent picked lines sharing one SKU. Have the controller observe physical custody and count independently; a screenshot of system stock alone is not a physical count.
+Obtain the reviewed local software qualification bundle. Independently pin SHA256 of `summary.json`, its complete software-input hash and immutable image digest. The complete software hash and image-build hash have distinct scopes; the gate checks each against its own provenance. The bundle must retain all ten passing stages, unchanged source manifests, matching image evidence and current migration/table identities.
 
-| Required scenario name | Acceptance observation |
-|---|---|
-| `receiving_exact_lines` | Receive same-SKU lines independently; a replay adds no second physical receipt |
-| `putaway` | Scan actual source/destination labels and count stock moved into storage |
-| `allocation_same_sku_lines` | Exact line owners reserve available stock without overselling |
-| `picking_exact_lines` | Scan actual bin/SKU/lot; staged quantities belong to the selected same-SKU line |
-| `packing_handoff` | Complete packing and record an actual carrier/handoff reference and time |
-| `wrong_label_rejected` | Wrong bin/SKU/lot is denied; no stock, receipt or reservation movement occurs |
-| `short_pick_return_release_recount` | Block work, return staged units, release, physically recount, resolve and allocate again |
-| `stale_operator_rescan` | A second operator changes stock after labels are captured; confirmation requires reload/rescan |
-| `lost_response_exact_replay` | Interrupt response after commit, reload and retry one original request; one committed command and physical effect remain |
-| `tenant_and_role_denial` | Actual viewer/foreign credentials cannot perform or resolve unauthorized work |
-| `oms_conditional_handoff` | Deployed conditional receiver confirms exact immutable shipment identity; rejected and uncertain recovery behave as documented |
-| `tms_planned_load` | One intended planned load is created and replayed without a second load or invented pickup/delivery |
-| `backup_restore_reconcile` | Restore an actual backup, reconcile physical/remote effects after its cutoff, and meet predeclared RTO/RPO |
+Create blank templates offline:
 
-Capture at least five continuous minutes at the declared operator concurrency/peak rate; retain original timing samples and errors, not just a p95 number. Restore to an isolated target before any cutover and review physical/remote effects occurring after the backup cutoff. The [native deployment preflight](native-acceptance.md) and [operations runbook](operations.md) provide the service and recovery prerequisites.
-
-## Evidence document
-
-Keep evidence, artifacts and signing material outside the repository. This is the required shape; `performed: false` and `synthetic: true` intentionally prevent this template from passing. Replace values only after recording actual observations. The full required scenario set above must appear exactly once. `observation` contains a literal observed result, and every scenario references at least one captured artifact.
-
-```json
-{
-  "schema_version": 1,
-  "performed": false,
-  "synthetic": true,
-  "observed_at": "2026-10-17T16:00:00Z",
-  "facility_id": "REPLACE-AFTER-ACTUAL-RUN",
-  "wms_tenant": "warehouse-tenant",
-  "warehouse_id": "wh-main",
-  "release_sha": "0000000000000000000000000000000000000000",
-  "signed_by": "Named operator",
-  "witnesses": [
-    {"name": "Named operator", "role": "operator"},
-    {"name": "Independent controller", "role": "inventory_controller"}
-  ],
-  "scanner": {
-    "make_model": "RECORD", "device_id": "RECORD", "firmware": "RECORD",
-    "input_mode": "RECORD", "symbology": "RECORD", "label_stock": "RECORD",
-    "printer_model": "RECORD", "physical_hardware": false, "printed_labels": false
-  },
-  "scenarios": [
-    {
-      "name": "receiving_exact_lines", "passed": false,
-      "request_ids": ["original-request-id"],
-      "observation": "Record actual observation", "artifact_ids": ["controller-notes"]
-    }
-  ],
-  "scans": [
-    {
-      "operation": "receive", "line_id": "exact-receipt-line-id",
-      "bin_label": "literal-bin-code", "sku_label": "literal-SKU-code",
-      "lot_label": "literal-lot-code", "quantity_each": 1,
-      "request_id": "original-request-id"
-    }
-  ],
-  "inventory": [
-    {
-      "sku": "literal-SKU-code", "lot": "literal-lot-code", "location": "literal-bin-code",
-      "start_physical": 0, "received": 0, "moved_in": 0, "moved_out": 0,
-      "shipped": 0, "count_gain": 0, "count_loss": 0,
-      "end_physical": 0, "end_system": 0
-    }
-  ],
-  "lost_response": {
-    "original_request_id": "original-request-id", "retry_request_id": "original-request-id",
-    "committed_commands": 0, "physical_effects": 0, "replayed": false
-  },
-  "peak": {
-    "required_actions_per_second": 1, "observed_actions_per_second": 0,
-    "max_p95_ms": 1000, "p95_ms": 0, "duration_seconds": 0, "concurrent_operators": 1
-  },
-  "recovery": {
-    "max_rto_seconds": 60, "actual_rto_seconds": 0,
-    "max_rpo_seconds": 0, "actual_rpo_seconds": 0,
-    "post_restore_reconciliation": false, "post_backup_effects_reviewed": false
-  },
-  "artifacts": [
-    {
-      "id": "controller-notes", "path": "notes/controller-notes.txt",
-      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
-    }
-  ]
-}
+```bash
+python3 scripts/facility-template.py \
+  --qualified-release /secure/reviewed-software-release \
+  --expected-release-summary-sha256 REVIEWED_SUMMARY_SHA256 \
+  --expected-source-inputs-sha256 REVIEWED_COMPLETE_SOFTWARE_SHA256 \
+  --expected-image-digest sha256:REVIEWED_IMAGE_SHA256 \
+  --expected-facility YOUR-FACILITY --expected-tenant YOUR-TENANT \
+  --expected-warehouse YOUR-WAREHOUSE \
+  --destination /secure/new-facility-run
 ```
 
-Every inventory custody row must independently satisfy:
+The destination must not exist. Its mode is 0700; `plan.json` and `evidence.json` are 0600. Templates contain `performed:false`, `synthetic:true`, no observations and no passing scenarios. They deliberately fail. No keys or witness facts are generated.
+
+Before work, fill the plan's `inventory_scope` entries `{sku,lot,location}`, counterpart IDs, `approved_at` and targets. Choose peak duration (300–86400 seconds), distinct concurrent operators (1–256), positive successful actions/second and maximum save-through-refresh p95 milliseconds. Choose positive RTO and nonnegative RPO seconds. Do not derive targets from a measured result. Approval follows software qualification and precedes the complete run.
+
+```bash
+openssl dgst -sha256 -sign /secure/plan-authority-private.pem \
+  -out /secure/new-facility-run/plan.sig /secure/new-facility-run/plan.json
+sha256sum /secure/new-facility-run/plan.json
+```
+
+Put that exact digest in `evidence.plan_sha256`. Preserve signed plan bytes. Changed scope, targets or release require a new plan approved before a new run.
+
+## Observe all workflows
+
+Record actual start/end/observation times, literal scanner facts and independent named witnesses with public-key DER SHA256 fingerprints. Supply every scenario exactly once with `passed`, literal `observation`, `artifact_ids` and applicable original `capture_ids`. Retain failures and uncertain requests alongside successes; a timeout or missing receipt never proves rejection.
+
+| Scenario | Required observation and captured sources |
+|---|---|
+| `receiving_exact_lines` | Two independent same-SKU lines in one receipt; actual receiving and replay custody |
+| `putaway` | Actual source/destination scans and physical movement |
+| `allocation_same_sku_lines` | Exact line ownership without overselling |
+| `picking_exact_lines` | Two independent same-SKU lines in one order; exact bin/lot and staging |
+| `packing_handoff` | Original package tuples and actual carrier/handoff |
+| `wrong_label_rejected` | Literal wrong label rejected with zero physical effect |
+| `short_pick_return_release_recount` | Exception, unpick, reset/release, physical count, resolution and new allocation |
+| `stale_operator_rescan` | Actual definitive 409, fresh review, new request and accepted literal scan |
+| `lost_response_exact_replay` | Lost response after commit; exact original request retains one physical effect |
+| `tenant_and_role_denial` | Actual viewer denial; foreign lookup of a known original order |
+| `oms_conditional_handoff` | Original completed, rejected, uncertain and exact completed-replay native receipts |
+| `tms_planned_load` | Original planned-load intent and exact replay; no invented pickup/delivery |
+| `backup_restore_reconcile` | Actual archive, complete current table hashes and effect-cutoff review |
+| `facility_selection_pending_save` | Device ID/code/city; uncertain warehouse and native saves prevent switching |
+| `replenishment_actual_move` | Actual move matches original plan, quantity and dependencies |
+| `receipt_return_remainder_cancellation` | Original return/cap, physical receive and cancelled unreceived demand |
+| `partial_packages_backorders_returns` | Available allocation, partial package handoff and original return allowance |
+| `partial_order_remainder_recovery` | Same order: unpack, unpick, release unpicked ownership, cancel remainder |
+| `facility_transfer_custody` | Original dispatch and exact-line destination arrival; distinct unresolved transit |
+| `lot_expiry_quarantine_recovery` | Policy/expiry/holds; stop forward work, unpack/unpick and reviewed release |
+| `cross_facility_lot_trace` | Nine nonempty sections, original reviews/cursors, source flags and unchanged custody |
+| `transfer_loss_reversal_arrival` | Destination administrator loss, capped original reversal and separate arrival |
+| `reviewed_pack_units` | Original factors/targets, size change, disabled code and exact old-factor replay |
+
+These are witness-attested scenarios with machine checks of retained source relationships. The gate does not simulate every physical/UI step or prove every label, expiry or carrier fact. Independently observe exact expiry boundaries and facility offsets, missing-label denial, earliest-expiry allocation, multiple holds, changed restrictions, partial return caps and conservative transfer controls where applicable. Serial identity and fractional measured goods remain unsupported.
+
+## Capture formats and machine checks
+
+Each artifact entry has `{id,kind,path,sha256}`. Paths are relative to `--artifact-root`. Absolute paths, `..`, symlink components, nonregular files and changed hashes fail. The validator consumes one byte snapshot per structured artifact: 32 MiB each, 128 MiB combined; each decoded JSON document is at most 2 MiB. Split large journals across unique artifacts. Peak NDJSON lines are limited to 8192 bytes. Archive/device capture bytes are streamed from one open descriptor without retention, with a 1 TiB per-file limit. Keep originals immutable during validation.
+
+| Kind | Structure |
+|---|---|
+| `command_journal` | `{schema_version:1,records:[...]}` with original request/response and durable event/receipt |
+| `native_receipts` | `{records:[{tenant,warehouse_id,actor,request_id,response}]}` with original native bodies |
+| `trace_pages` | `{checked_at,before_custody,after_custody,pages:[{query,response}]}` with original API pages |
+| `full_reconciliation` | Exactly one `{tenant,warehouse_id,response}` from final full reconciliation |
+| `peak_samples` | NDJSON `{capture_id,start_elapsed_ms,duration_ms}` for confirmed original save/refresh actions |
+| `recovery` | Exactly one original backup/incident/ready/cutoff observation, all table hashes and reconciliation |
+| `deployment_observation` | Exactly one facility/tenant/warehouse observation with the complete `release` binding |
+| `device_observations` | `{observations:[...]}` for pending switching, stale rescan and replenishment |
+| `device_capture` | Original hardware/display bytes referenced by pending-switch observations |
+| `archive` | Actual backup bytes referenced by recovery |
+| `physical_notes` | Optional original controller counts and custody notes |
+
+Never capture authorization headers, tokens or private keys. A release-matched offline helper fingerprints an exact retained command envelope without network/database access:
+
+```bash
+cargo run --locked --example request_fingerprint < /secure/original-request.json
+```
+
+Command records contain `capture_id`, `tenant`, `warehouse_id`, `actor`, authenticated `role`, `phase` (`baseline`/`performed`), `request`, `canonical_request_json`, `http_status`, `body`, `event` and `receipt`. Successful event/receipt data must come from durable original sources. Scope, actor, request ID, result, version, command and canonical digest must agree. Replays follow the original and preserve request/event/receipt bytes. Denied captures have null event/receipt. Uncertain responses cannot count as confirmed work; preserve them separately until resolved.
+
+Baseline records establish history but cannot satisfy performed work, scans, timing or the current facility's pack size-change/disable trial. That trial also requires an exact original conversion replay after a size change. Successful work stays within the signed facility/counterpart set. Original main-facility stock changes stay within signed inventory scope.
+
+Scans contain `operation` (`receive`/`pick`), `owner_id`, `line_id`, literal `bin_label`, `sku_label`, `lot_label`, `quantity_each`, `accepted`, `expected` labels and `review_capture_id`. Accepted scans name an original `capture_id`; rejected scans have null `capture_id` and integer `physical_effects:0`. Labels must join original line/bin/lot/quantity. Independent same-SKU lines share one original receipt for receiving and one order for picking.
+
+Inventory rows identify `{sku,lot,location}` and nonnegative integer each columns:
 
 ```text
 start_physical + received + moved_in - moved_out - shipped
-  + count_gain - count_loss = end_physical = end_system
+  + transfer_in - transfer_out + count_gain - count_loss
+  = end_physical = end_system
 ```
 
-All values are nonnegative integer each quantities; gains/losses have explicit separate columns. Supply every affected SKU/lot/location and preserve the independent physical count notes and system ledger exports. The validator checks each supplied row and rejects duplicate custody identities. It cannot discover an omitted physical location or infer whether a signed count is truthful; the independent controller owns completeness and accuracy.
+Every gross column is independently rebuilt from original performed event stock deltas; final counts join captured full reconciliation. Balanced omitted moves fail. Identities match signed scope exactly. The gate cannot discover unobserved physical stock elsewhere. `lost_response` names `original_capture_id`, `retry_capture_id` and observed `physical_effects:1`.
 
-The document requires all thirteen scenarios; at least four literal scans with independent same-SKU lines for both receiving and picking; one original lost-response identity and a single command/effect; a sustained peak meeting declared throughput/latency; and recovery meeting declared RTO/RPO with reviewed post-backup effects. Observations expire after seven days for this acceptance run. Requalify changes to hardware, label formats, tenant mappings or deployed releases using a new signed document.
+Trace custody rows are `{warehouse_id,sku,lot,location,on_hand,reserved}`. All nine sections retain the same SKU/lot/review/summary, original section/after/review query fields, advancing cursors, unique item warehouse/key identities and successful page/item sources. Section totals are complete and nonempty. Before/after physical/reserved totals agree with summary, and each page's observation time belongs to the run. Supplied captures do not establish manufacturer genealogy or a tenant-wide recall.
 
-## Sign and verify captured bytes
+Device observation `kind` selects these fields:
 
-Use an existing facility-owned RSA/ECDSA signing key held by the named witness. The controller obtains its public key through the facility trust process, independently of the evidence bundle. Signing with an arbitrary newly generated key does not establish facility authority. A single signature authenticates the witness's complete statement, including the second named controller's observation; organizations requiring separate countersignatures should retain those artifacts as well.
+* `pending_facility_switch`: `pending_kind` (`warehouse`/`native`), `pending_save_state:"uncertain"`, `switch_enabled:false`, retained `pending_request_id`, actual `warehouse_metadata:{id,code,city}`, displayed warehouse/code/city, `attempted_warehouse_id` and `device_capture_artifact_id`.
+* `stale_rescan`: `denied_capture_id` and `fresh_capture_id`. The original 409 `command_outcome` must bind definitive noncommit to scope/actor/request/dependencies and changed version. Fresh work uses a new request and literal scan.
+* `replenishment_move`: `move_capture_id` and original `plan:{warehouse_id,version,tasks}`. Its matching task retains `command`, `quantity` and `resource_versions`.
+
+Native completed replay preserves frozen `evidence`, original `response` and `attempts`; its completed original must precede it. These checks do not contact the real receiver or prove an external effect.
+
+`evidence.peak` supplies `started_at`, `duration_seconds`, `concurrent_operators`, reported `p95_ms` and `observed_actions_per_second`. Samples join distinct successful performed original commits within their measured interval (five-second clock tolerance). Each actor contributes in every ten-second bucket throughout the run. Intervals must show declared distinct actors active concurrently. Rate and nearest-rank p95 are recomputed. Witnesses own series/error completeness; omitted physical actions or unreported device failures cannot be discovered offline.
+
+Recovery contains the complete `release` binding, `backup_at`, `incident_at`, `ready_at`, `last_durable_effect_at`, `last_restored_effect_at`, `source_table_hashes`, `restored_table_hashes`, `reconciliation`, `post_backup_effects_reviewed:true` and `archive_artifact_id`. Both table maps match and cover the exact qualified schema. Reconciliation includes successful lot/unit controls. RTO/RPO are recomputed with nanosecond precision. Witnesses must verify actual restored data and post-backup physical/remote effects; equal supplied fingerprints alone do not prove a restore occurred.
+
+## Sign and verify
+
+After actual work, fill truthful observations and performed/synthetic flags. Both facility-owned witness keys sign the same final evidence bytes. Independently trusted operator/controller keys and names must differ. Plan authority may be an authorized existing signer. Observations expire after seven days.
 
 ```bash
-openssl dgst -sha256 -sign /secure/facility-signing-private.pem \
-  -out /secure/acceptance/facility.sig /secure/acceptance/facility.json
+openssl dgst -sha256 -sign /secure/operator-private.pem \
+  -out /secure/new-facility-run/operator.sig /secure/new-facility-run/evidence.json
+openssl dgst -sha256 -sign /secure/controller-private.pem \
+  -out /secure/new-facility-run/controller.sig /secure/new-facility-run/evidence.json
 python3 scripts/qualify-native.py facility \
-  --evidence /secure/acceptance/facility.json \
-  --signature /secure/acceptance/facility.sig \
-  --trust-key /secure/trust/facility-signing-public.pem \
-  --artifact-root /secure/acceptance/artifacts \
-  --expected-facility YOUR-ACTUAL-FACILITY \
-  --expected-tenant warehouse-tenant \
-  --expected-warehouse wh-main \
-  --expected-release-sha ACTUAL-REVIEWED-40-CHARACTER-RELEASE-SHA \
-  --output /secure/acceptance/validation.json
+  --qualified-release /secure/reviewed-software-release \
+  --expected-release-summary-sha256 REVIEWED_SUMMARY_SHA256 \
+  --expected-source-inputs-sha256 REVIEWED_COMPLETE_SOFTWARE_SHA256 \
+  --expected-image-digest sha256:REVIEWED_IMAGE_SHA256 \
+  --plan /secure/new-facility-run/plan.json \
+  --plan-signature /secure/new-facility-run/plan.sig --plan-trust-key /secure/trust/plan-public.pem \
+  --evidence /secure/new-facility-run/evidence.json \
+  --signature /secure/new-facility-run/operator.sig --trust-key /secure/trust/operator-public.pem \
+  --controller-signature /secure/new-facility-run/controller.sig --controller-trust-key /secure/trust/controller-public.pem \
+  --artifact-root /secure/new-facility-run/artifacts \
+  --expected-facility YOUR-FACILITY --expected-tenant YOUR-TENANT --expected-warehouse YOUR-WAREHOUSE \
+  --output /secure/new-facility-run/validation.json
 ```
 
-The caller pins the expected facility, WMS tenant, warehouse and reviewed release separately from the evidence file; a valid signed run for another scope fails. Artifact paths resolve beneath `--artifact-root`; missing files, path escapes and SHA256 mismatches fail. Hash original exported bytes before signing; edits require a new digest and signature. The validator creates a mode-0600 JSON result atomically, binds its result to the exact signed document digest, and retains no raw label values, customer details, credentials or signing keys. Retain the full private acceptance bundle under the facility's evidence policy and publish only an approved sanitized summary.
+Missing, malformed, failed, changed or untrusted supplied input produces `unqualified` and exit 2; passing exits 0. Reports are written atomically with mode 0600 and contain digests/check summaries without raw labels or keys. Retain private original evidence; publish only approved sanitized summaries. Repeat after release, hardware, label or mapping changes.
+
+Explicit `--profile legacy-v1` supports [historical thirteen-scenario evidence](facility-acceptance-legacy.md). Its limited report cannot qualify current workflows and is never selected automatically.

@@ -1,0 +1,21 @@
+{
+  "recorded_at": "2026-10-19T15:02:48.739609+00:00",
+  "scope": "Post-publication local Docker image retention; separate from completed source39 software qualification.",
+  "current_image_id": "sha256:81928d12a38b64c25c22ffd7005508a3908e33bd355741d31b0d59dd16951047",
+  "present_and_saved_image_ids": [
+    "sha256:81928d12a38b64c25c22ffd7005508a3908e33bd355741d31b0d59dd16951047",
+    "sha256:d4daf2909aeff0d0846477f1ff0641637a6bef6eb5f0ad6ec668d5e87b45b5f6",
+    "sha256:13d687086d48f9c9d6f1123e9646cfde959ad52b9d2fa05832a3864adef28bd0"
+  ],
+  "verified_archives": 3,
+  "current_image_archive_actual_docker_reload_passed": true,
+  "missing_historical_image_ids": [
+    "sha256:5740c4e4fd3a89c47fba21f6770f4c17a18f2a4afa8d6c38e904fbf3efec74aa"
+  ],
+  "all_historical_sources_and_qualification_records_preserved": true,
+  "prior_source35_review_confirmed_missing_image_present_at": "2026-10-19T13:13:11.382503+00:00",
+  "cause_and_time_of_image_removal_unknown": true,
+  "policy": "Current and preceding serial image archives preserve exact config IDs and every uncompressed layer digest; no image removed by this operation.",
+  "clarification": "The earlier build-storage plan describes an intended image-retention policy, not a post-run inspection of every historical image. This observation is authoritative for current availability.",
+  "production_qualified": false
+}

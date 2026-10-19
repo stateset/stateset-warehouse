@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "ok": true,
+  "stable_software_inputs_sha256": "639c886f3a9b6ad0afb0c7188d56b9a1cb7cbd828a3e31869fc179f882738f52",
+  "image_id": "sha256:398aa9cb3f536bd91d225f643d7dec3e5472b8aa93c4ea779ab409be839a444e",
+  "image_source_inputs_sha256": "3c7f6a5e081c3d2f90177a705ab0616112bbcd47b5d58bcdce9ea03e73db3d04",
+  "restore_container_resilience_migrations_identical": true,
+  "migrations": {
+    "004_native_source_ownership": "366979c9630c4c62cb7d71beb5c89cd917764558b4e05267c4eb4aac486a6cb9",
+    "012_receipt_cancellation": "5a36bc5c39f49fe9fdf9e6cd292d71ed50c85daffea2777fda890d9b2d68a676",
+    "003_native_operations": "f9a5cfa4a1e4f7830613febe6b37f11a8485beef46d6b96791c78435fe784108",
+    "007_operations_indexes": "b0b9b422f570ed77ca1252df42c96b29544849621ed748cadd1f068b708576b5",
+    "010_customer_returns": "dfafb0547d0af2ba11f86dfa31f7facebe89adf582d6b215d02b734e1413fb71",
+    "014_facility_transfers": "b98005fca14a6aa180c09e77d998105662b3f11147a3284d6a145147de3182b1",
+    "001_initial": "8e5c3fa5f0065b63076c33b8bd3c337b8490d4b7a88f3e774ec17e2290e1f4d4",
+    "006_oms_rejections": "567e061943a1602ff25b5d5c988be810808b8c6e1638885ee6ef9b71a9ba4ed4",
+    "008_delivery_recipient": "050f40c80b9e73a3edc8a19545ab08cfe41051616b84d9445dfdea9a30de9d19",
+    "011_immutable_command_receipts": "0a7c69928f38527f542a55e795de9b62c65f4907d7d05cba2d47f7eeebdf8a73",
+    "002_relational_execution": "660cd0fdbc7205644c7c3d7ac3da43cbaf1c6d9f80c4d0f2ea4d0c0986e6ff90",
+    "013_shipment_evidence": "e867e6b35c3cbcb10ea5f4a952c916f10e7b5d16b53c80aad656a9fba286334e",
+    "009_resource_versions": "b702a003a1d74210fdfc06cef1fbfb6e737146a25314642094a2f8383dc2e209",
+    "005_conditional_oms_fulfillment": "b8892cbaa4a1b26c6e1732616ec30503d3698f44e363240386078398e29e9a41"
+  },
+  "limit": "The source fingerprint binds this working tree; it does not assert a clean Git checkout or deployed acceptance"
+}

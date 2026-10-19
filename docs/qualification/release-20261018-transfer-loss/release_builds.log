@@ -1,0 +1,3 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.15s
+   Compiling stateset-warehouse v0.1.0 (/home/dom/stateset-warehouse)
+    Finished `release` profile [optimized] target(s) in 47.72s

@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-19T09:55:37.569009+00:00",
+  "synthetic": true,
+  "production_qualified": false,
+  "source_before": {
+    "revision": 26,
+    "inputs": 204,
+    "sha256": "937214b8c296415dee17f78c26b9b3078fcc1c1b922170f83c04a9ba519077d1",
+    "archive_sha256": "d452960eab40b05efe116df0703a01d28571bcaea3f1b24a909575e2fdc52178"
+  },
+  "intermediate_source": {
+    "revision": 30,
+    "inputs": 207,
+    "sha256": "2a8f3bb538ba10ef28dad1aa730bd0f80061421ab4508dc8db6bddc2d8d91199",
+    "archive_sha256": "6d97443dbcefc3b7e6afeb7c048c47ff89d77ef359360a65004edca84bdf8b02"
+  },
+  "source_after": {
+    "revision": 31,
+    "inputs": 208,
+    "sha256": "6d945eee56e7bc51086874d6dbeb094e913840254565e8968c788b85bb0e9e4d",
+    "archive_sha256": "e1078c5690fb746508597e4b8ff6d4f12cd0c2e7992d2d7c1def5ccfaf028230"
+  },
+  "raw_report": {
+    "path": "serial-event-source-diagnostic-20261019.json",
+    "sha256": "cba63c5ce2b9eec4cb7245685c6be396ec819aa9b5d9b94db2f154d2e88f3829"
+  },
+  "cycles": {
+    "path": "serial-event-source-cycles-20261019.jsonl",
+    "sha256": "d80c5b27689916f385e32ce41bb2257fc0fda1c8c428483c90a5455f4e34dbe9"
+  },
+  "checks": {
+    "rust_default": 120,
+    "rust_postgres12": 196,
+    "rust_unique_total": 316,
+    "rust_postgres16_repeated": 48,
+    "live_browser": 10,
+    "new_complete_and_per_event_oracle_cases": 2,
+    "forensic_damage_vectors": 26,
+    "distinct_metadata_history_commands": 200,
+    "formatting": "passed",
+    "clippy_all_targets": "passed",
+    "actual_archive_roundtrips": 2,
+    "tables_populated_each_archive": 49,
+    "warehouse_proofs_each_archive": 10,
+    "migrations": 26,
+    "mcp_admin_tools_unchanged": 68,
+    "old_original_requests_replayed": 4703,
+    "old_failed_events_retained": 4703,
+    "new_serial_traffic_moves": 5434,
+    "new_serial_traffic_exact_replays": 5434,
+    "new_serial_current_source_reviews": 5434,
+    "new_serial_traffic_seconds": 300.222,
+    "new_serial_traffic_errors": 0,
+    "new_python_suite_runs": 1,
+    "python_cases": 55,
+    "new_full_gate_runs": 0
+  },
+  "limits": [
+    "Development checkpoint only: no new production image, complete ten-stage gate, deployment, managed failover, physical/scanner/device/native receiver or deployedMCP-client/facility acceptance. Accepted facility-evidence-v2 remains unchanged.",
+    "Native traffic uses the debug executable, uncontrolled shared host, one PG12primary, two loopback API processes, four independent operators, eight controlledSKUs,16literal units perSKU, one lot, eight bins and eight open orders. Four fixed labels move;124labels stay in place. No think time, rate cap or operator-round barrier. This is not a large complete-count or broad random-label/facility workload.",
+    "Every own regression/browser/restore/benchmark process was terminal before the final native interval. Shared-host background activity remains uncontrolled. EarlierAPItrial during concurrentPG12/16checks timed out and is retained; later resolved-only API proofs were near10seconds. Neither is substituted for the final set/index API repair and successful full new profile.",
+    "Same-history query variants alternate over the same retained4703events, keep three samples after warmup and compare complete JSON; indexDDL touches only a newly owned probe index and rolls back. The final ordinary query also adds a fail-closed COALESCE for unexpectedNULL; complete/per-event oracle cases cover the final compiled query. Function times are inclusive/overlapping; they must not be summed.",
+    "All25older migrations and stored function/constraint bodies remain unchanged. Migration26 adds an event-leading batch index without rewriting inventory. Ordinary source predicates are evaluated from complete normalized bindings in the same read snapshot; full original stored validation handles counts, derived historical closures and malformed envelopes. No verdict is persisted or reused across snapshots.",
+    "The unused five-argument read component from migration25 remains for compatibility with the intermediate SQL. The nine-argument prototype was never adopted or installed permanently. Counts and all historical closure rules remain the exact original stored validator.",
+    "The55Python cases are rerun for the final source/migration inputs.149offline-browser cases retain prior provenance because the domain/HTTP-demo/dashboard inputs are unchanged.316Rust/48PG16/tenlive and both actual26migration archives are new runs. Large reviewed-count sessions, commissioning, fractional units, multiple-handoff commercial integration and broader loaded history/facility acceptance remain open."
+  ]
+}

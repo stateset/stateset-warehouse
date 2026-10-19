@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ImportRequest {
     pub request_id: String,
@@ -25,7 +25,7 @@ pub struct ImportRequest {
     pub source_updated_at: DateTime<Utc>,
     pub details: ImportDetails,
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct TransportRequest {
     pub request_id: String,
@@ -133,8 +133,11 @@ async fn import_oms(
             .import_command(&i.tenant, &order, &body.details)
             .map_err(|e| Error::new(422, e))?;
         let command_request = Request {
+            serial_inputs: Vec::new(),
+            unit_inputs: Vec::new(),
             request_id: native_store::import_command_id(&i.tenant, &w, &body.request_id),
             expected_version: body.expected_version,
+            resource_versions: None,
             command,
         };
         let frozen = json!({"command_request":command_request,"oms_order":order});
@@ -317,7 +320,30 @@ async fn oms_proposal(
     let value = app.store.detail(&i.tenant, &w, "orders", &order_id).await?;
     let order: Order = serde_json::from_value(value)
         .map_err(|_| Error::new(503, "Stored order requires repair"))?;
-    let event_id: String=sqlx::query_scalar("SELECT id FROM wms_events WHERE tenant=$1 AND warehouse_id=$2 AND payload->>'type'='fulfillment.shipped' AND payload->'order'->>'id'=$3 ORDER BY version DESC LIMIT 1").bind(&i.tenant).bind(&w).bind(&order.id).fetch_optional(&app.store.pool).await?.ok_or_else(||Error::new(409,"A committed physical handoff event is required for an OMS fulfillment proposal"))?;
+    let mut connection = app.store.pool.acquire().await?;
+    let (_, source) = crate::shipments::source(&mut connection, &i.tenant, &w, &order.id)
+        .await
+        .map_err(|e| {
+            if e.status == 422 {
+                Error::new(
+                    409,
+                    "A complete original handoff is required for OMS fulfillment",
+                )
+            } else {
+                e
+            }
+        })?;
+    drop(connection);
+    let event_id = source["event_id"]
+        .as_str()
+        .filter(|_| source["kind"] == "event" && order.status == "shipped")
+        .ok_or_else(|| {
+            Error::new(
+                409,
+                "A complete single original handoff is required by the current OMS contract",
+            )
+        })?
+        .to_owned();
     let proposal = integrations()?
         .prepare_oms_fulfillment(&i.tenant, &w, &event_id, &order)
         .await

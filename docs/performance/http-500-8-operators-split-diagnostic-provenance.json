@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "scope": "standalone_diagnostic_replay",
+  "synthetic": true,
+  "production_qualified": false,
+  "report": "http-500-8-operators-split-diagnostic.json",
+  "sha256": "4f747105a092ca00b9b0677e765ba97bd82b43d6528b57d0eb11448f1834790c",
+  "image_id": "sha256:cbf62efc5eaa53ec24fd51758707eb5d900e995a76d63cd9df5ce75e69dbfc55",
+  "software_source_inputs_sha256": "360819eda499580ca67647edbaf9c24efe186ce44b3eac85120a10654c2a6020",
+  "qualifier_sha256": {
+    "scripts/resilience-rehearsal.sh": "5fa42466238d4be5b260021da30541441d2c7d779b74b0594c8ac59099408227",
+    "scripts/resilience_probe.py": "67c2ceab339b0d21a5daa25af0b518f3cb476b4d856cedd914ed316cf27526ac"
+  },
+  "preceding_failed_attempt": "../qualification/attempt-20261018-split-fulfillment-timeout/failure-context.json",
+  "additional_instrumentation": "Read-only pg_stat_activity/pg_blocking_pids and host pressure samples approximately every 750 ms; raw samples remain private",
+  "root_cause_of_preceding_timeout": "Unconfirmed; replay did not reproduce it",
+  "limits": [
+    "Passing standalone replay is not a full software release qualification",
+    "Diagnostic sampling and shared-host conditions prevent a controlled performance comparison",
+    "No deployed capacity, availability or facility SLO claim"
+  ],
+  "private_database_host_samples": {
+    "sha256": "2513eed6099c7f38538fb2a91c6eddb14255f5d56c21d9b7ee1ae901692c53b5",
+    "records": 582,
+    "postgres_records": 574,
+    "startup_or_control_error_records": 7,
+    "private_directory": ".local/qualification/release-20261018-split-fulfillment",
+    "private_file": "diagnostic-lock-host-samples.jsonl",
+    "scope": "Includes fixture setup, deliberate crash controls and sustained traffic; raw records are private"
+  }
+}

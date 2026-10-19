@@ -1,0 +1,618 @@
+{
+  "ok": true,
+  "synthetic": true,
+  "qualified_at_utc": "2026-10-18T21:30:25Z",
+  "qualification": "two-replica sustained HTTP and crash recovery",
+  "image_id": "sha256:cbf62efc5eaa53ec24fd51758707eb5d900e995a76d63cd9df5ce75e69dbfc55",
+  "image_source_inputs_sha256": "269eacd320e068e8295b60a186017f0e6ef44c0d70fcc2e20d66c31a9a07aa47",
+  "image_release_revision": "unrecorded-working-tree",
+  "qualifier_sha256": {
+    "scripts/resilience-rehearsal.sh": "5fa42466238d4be5b260021da30541441d2c7d779b74b0594c8ac59099408227",
+    "scripts/resilience_probe.py": "67c2ceab339b0d21a5daa25af0b518f3cb476b4d856cedd914ed316cf27526ac"
+  },
+  "postgres_image_id": "sha256:81bd698b4594e751a3269e4dcd3e03a4a0ec0daf7b72e7aa1abd43cce9887542",
+  "postgres_version": "16.15",
+  "runtime": {
+    "api_replicas": 2,
+    "uid": 10001,
+    "read_only_rootfs": true,
+    "capabilities_dropped": "ALL",
+    "no_new_privileges": true,
+    "postgres_named_volume_survived_crash": true,
+    "random_loopback_api_ports": true,
+    "native_and_webhook_connections": 0
+  },
+  "elapsed_total_seconds": 404.274,
+  "phases": {
+    "seed": {
+      "method": "authenticated actual HTTP commands only; opening counts are disclosed synthetic fixtures",
+      "seconds": 83.0,
+      "operational_products": 500,
+      "additional_recovery_product": 1,
+      "storage_bins": 100,
+      "lots_per_product": 2,
+      "opening_bin_lot_balances": 1000,
+      "opening_each_per_balance": 100000,
+      "open_orders": 500,
+      "allocated_orders": 250,
+      "commands_before_recovery_lifecycle": 2352,
+      "expected_setup_commands": 2352,
+      "observed_setup_commands": 2352,
+      "independent_setup_command_count_matches": true,
+      "excluded_from_sustained_timing": true
+    },
+    "lost_http_success": {
+      "downstream_response_lost": true,
+      "upstream_commit_observed_before_drop": true,
+      "retry_other_replica": true,
+      "original_result_unchanged": true,
+      "exact_receipt_lines": {
+        "same-sku-first": 7,
+        "same-sku-second": 0
+      }
+    },
+    "api_sigkill": {
+      "database_blocking_pid_barrier": true,
+      "exit_code": 137,
+      "surviving_replica_ready": true,
+      "uncommitted_original_absent": true,
+      "same_original_request_recovered_other_replica": true,
+      "restarted_replica_exact_replay": true,
+      "local_restart_to_readiness_seconds": 0.334,
+      "interrupted_response": {
+        "transport_error": "RemoteDisconnected"
+      }
+    },
+    "postgres_sigkill": {
+      "database_blocking_pid_barrier": true,
+      "exit_code": 137,
+      "named_volume_preserved": true,
+      "readiness_during_outage": [
+        503,
+        503
+      ],
+      "liveness_during_outage": [
+        200,
+        200
+      ],
+      "local_database_restart_to_both_api_readiness_seconds": 0.979,
+      "both_replicas_recovered_without_api_restart": true,
+      "all_table_fingerprints_unchanged": {
+        "wms_activity": {
+          "rows": 2364,
+          "sha256": "8180d84fd6cf3f718c21800e7ae5c82676fe0817d4b04813f30d39c6daf6a3fc"
+        },
+        "wms_admin_audit": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_allocations": {
+          "rows": 253,
+          "sha256": "30f0d9267e20375d88813547563c88365acbc50831b8f78affcfcb890f0c9fe9"
+        },
+        "wms_commands": {
+          "rows": 2364,
+          "sha256": "0ed48bf89841295dcc99d90662dbf5050de284b3b40c69470a58799478f6aaa4"
+        },
+        "wms_delivery_attempts": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_events": {
+          "rows": 2364,
+          "sha256": "a8e322ef35d838abd4f0c7a5d288229d4c0053c2269ba276d2f5f9958bcd6578"
+        },
+        "wms_exceptions": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_locations": {
+          "rows": 104,
+          "sha256": "552a6c243e5d598af02d0dc98f3b477adf61df9cc65ef2cbe57c0604a1ce205e"
+        },
+        "wms_movements": {
+          "rows": 1008,
+          "sha256": "bbb71e9d4478965c2c5a0ddfa9456dc5f73b3a9429f4429993bb26b3f1d98dc3"
+        },
+        "wms_native_attempts": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_native_requests": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_order_lines": {
+          "rows": 503,
+          "sha256": "7b8ecdd1ddf2deff19cd3a47f080fcc50f293f8115df1b536f63a8c3509babf7"
+        },
+        "wms_orders": {
+          "rows": 502,
+          "sha256": "6d4d888ae2186b9ce2dea3f27820b4b468064c2ba2f7fda399a2918f738178dc"
+        },
+        "wms_outbox": {
+          "rows": 2366,
+          "sha256": "49322d2abd4b78f0a847b4c6f0f8bc4558b263785c1972c8edce21c91bcf9dfe"
+        },
+        "wms_package_closures": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_package_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_packages": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_products": {
+          "rows": 501,
+          "sha256": "8c3848d964f5ba4172439d07f544d5377525b20cc4ba2d7b6174c29501242559"
+        },
+        "wms_receipt_cancellations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_receipt_cancelled_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_receipt_evidence": {
+          "rows": 2,
+          "sha256": "93caa50af6d2cadf63fa983261096d320c94a7a6c80ab16baa0adce0c37e3aa1"
+        },
+        "wms_receipt_lines": {
+          "rows": 2,
+          "sha256": "0e96da580d75fc85b53763acb0ce330d88399a80e1832c1ec2b0202c21db9d96"
+        },
+        "wms_receipts": {
+          "rows": 1,
+          "sha256": "a0a2ccd1abf7d541152c3446873779cd293e8bc3c5fe10941f8598c21f7e043b"
+        },
+        "wms_resource_versions": {
+          "rows": 2613,
+          "sha256": "7c64d4af0101aa6c28ddea0a1d0ea81b904c74c399259ee353c7721346e40d17"
+        },
+        "wms_return_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_schema_migrations": {
+          "rows": 15,
+          "sha256": "10f133942324fb385c3c2de0774928e2ce33b1872c3c388064eb74b0bb3672ed"
+        },
+        "wms_shipment_evidence": {
+          "rows": 1,
+          "sha256": "f884928c1571395dfc91412af896b4455df9df7398db6a457a94b72908a1c820"
+        },
+        "wms_split_orders": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_stock": {
+          "rows": 1004,
+          "sha256": "78aede0645eb10345cd9d5116ce52d50397e3a9c70c3405c5bcb1c4d1d8638e6"
+        },
+        "wms_stock_ledger": {
+          "rows": 1004,
+          "sha256": "91429fa742938314f29917790b165bd95ebd00db813cccc94c17866ccfaf8ef5"
+        },
+        "wms_stock_reserved": {
+          "rows": 502,
+          "sha256": "56585020520e40cf9e772081d0c3ec226342698781108d04bdbcd868ad663634"
+        },
+        "wms_transfer_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_transfers": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_warehouses": {
+          "rows": 2,
+          "sha256": "04a3776cfb39f41a8de2d7243da0c1e05e6539c0614d416fad69d57bbaedb0ae"
+        },
+        "wms_workspaces": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      },
+      "unclean_shutdown_recovery_observed": true,
+      "uncommitted_original_absent": true,
+      "same_original_request_committed_once_then_replayed": true,
+      "interrupted_response": {
+        "http_status": 503
+      }
+    },
+    "snapshot_fixture": {
+      "sha256": "a3b1790e47282f090f6ff6a92b24ab1279483b690cc92601a386b90fad4b3da9",
+      "bytes": 875690,
+      "version": 2365,
+      "outside_sustained_interval": true
+    },
+    "sustained_http": {
+      "requested_seconds": 300,
+      "review_mode": "resources",
+      "traffic_model": "independent-operators",
+      "client_schedule": "independent continuous client loops without think time or an operator barrier",
+      "measurement_limit": "Authenticated loopback HTTP and JSON processing; Python clients open HTTP connections per request; browser rendering, human timing and physical scanner input are excluded",
+      "elapsed_seconds": 300.234,
+      "replicas": 2,
+      "distinct_operator_identities": 8,
+      "rounds": null,
+      "committed_moves": 11011,
+      "exact_cross_replica_replays": 11011,
+      "definite_stale_conflicts": 0,
+      "unexpected_errors": 0,
+      "committed_moves_per_second": 36.675,
+      "action_latency": {
+        "samples": 11011,
+        "p50_ms": 174.013,
+        "p95_ms": 252.719,
+        "p99_ms": 298.635,
+        "max_ms": 494.726
+      },
+      "action_latency_scope": "command submission from the client's cached review through committed write and its own validated post-commit full warehouse refresh; initial review and subsequent exact replay excluded",
+      "throughput_scope": "all completed client cycles, including initial reviews, physical commands, post-commit refreshes when enabled, conflicts and exact cross-replica replays; replay is not another physical move",
+      "http_write_attempt_latency": {
+        "samples": 11011,
+        "p50_ms": 40.065,
+        "p95_ms": 92.056,
+        "p99_ms": 121.262,
+        "max_ms": 311.339
+      },
+      "frozen_replay_latency": {
+        "samples": 11011,
+        "p50_ms": 33.28,
+        "p95_ms": 89.369,
+        "p99_ms": 118.172,
+        "max_ms": 167.483
+      },
+      "operational_snapshot_latency": {
+        "samples": 11019,
+        "p50_ms": 127.64,
+        "p95_ms": 198.244,
+        "p99_ms": 236.903,
+        "max_ms": 433.024
+      },
+      "shared_round_snapshot_reads": 0,
+      "independent_post_commit_stock_visibility_verified": true,
+      "snapshot_coverage": "exact configured catalog SKU set and every seeded order ID/state, with completed history permitted",
+      "operators": [
+        {
+          "actor": "operator:resilience-0",
+          "commits": 1383,
+          "stale_conflicts": 0,
+          "exact_replays": 1383,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 1383,
+          "snapshot_reads": 1384
+        },
+        {
+          "actor": "operator:resilience-1",
+          "commits": 1383,
+          "stale_conflicts": 0,
+          "exact_replays": 1383,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 1383,
+          "snapshot_reads": 1384
+        },
+        {
+          "actor": "operator:resilience-2",
+          "commits": 1375,
+          "stale_conflicts": 0,
+          "exact_replays": 1375,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 1375,
+          "snapshot_reads": 1376
+        },
+        {
+          "actor": "operator:resilience-3",
+          "commits": 1376,
+          "stale_conflicts": 0,
+          "exact_replays": 1376,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 1376,
+          "snapshot_reads": 1377
+        },
+        {
+          "actor": "operator:resilience-4",
+          "commits": 1373,
+          "stale_conflicts": 0,
+          "exact_replays": 1373,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 1373,
+          "snapshot_reads": 1374
+        },
+        {
+          "actor": "operator:resilience-5",
+          "commits": 1373,
+          "stale_conflicts": 0,
+          "exact_replays": 1373,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 1373,
+          "snapshot_reads": 1374
+        },
+        {
+          "actor": "operator:resilience-6",
+          "commits": 1382,
+          "stale_conflicts": 0,
+          "exact_replays": 1382,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 1382,
+          "snapshot_reads": 1383
+        },
+        {
+          "actor": "operator:resilience-7",
+          "commits": 1366,
+          "stale_conflicts": 0,
+          "exact_replays": 1366,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 1366,
+          "snapshot_reads": 1367
+        }
+      ]
+    }
+  },
+  "independent_proof": {
+    "physical_recomputed_from_append_only_movements": true,
+    "reserved_recomputed_from_allocation_lines": true,
+    "receipt_quantities_recomputed_per_exact_line": true,
+    "expected_probe_on_hand": 13,
+    "expected_total_on_hand": 100000013,
+    "expected_reserved": 253,
+    "all_seeded_open_order_states_retained": true,
+    "per_operator_bin_totals_match_committed_move_parity": true,
+    "commands": 13376,
+    "events": 13376,
+    "activity": 13376,
+    "movements": 12020,
+    "outbox": 13378,
+    "independent_execution_counts": {
+      "expected": {
+        "setup_commands": 2352,
+        "recovery_commands": 13,
+        "sustained_physical_commands": 11011,
+        "commands": 13376,
+        "events": 13376,
+        "activity": 13376,
+        "movements": 12020,
+        "outbox": 13378
+      },
+      "observed": {
+        "setup_commands": 2352,
+        "recovery_commands": 13,
+        "sustained_physical_commands": 11011,
+        "commands": 13376,
+        "events": 13376,
+        "activity": 13376,
+        "movements": 12020,
+        "outbox": 13378
+      },
+      "all_match": true
+    },
+    "contiguous_versions_and_atomic_actor_result_evidence": true,
+    "cross_tenant_isolation": true,
+    "cross_actor_replay_rejected": true,
+    "unconfigured_external_delivery_attempts": 0,
+    "replica_reconciliations": [
+      {
+        "ok": true,
+        "version": 13376,
+        "method": "full_append_only_ledger_and_order_line_allocations"
+      },
+      {
+        "ok": true,
+        "version": 13376,
+        "method": "full_append_only_ledger_and_order_line_allocations"
+      }
+    ],
+    "final_table_fingerprints": {
+      "wms_activity": {
+        "rows": 13376,
+        "sha256": "619ab0d31871ad4939901a58ef48f5d8d38244a3c8b6393c947fb0d41c8230b8"
+      },
+      "wms_admin_audit": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_allocations": {
+        "rows": 253,
+        "sha256": "30f0d9267e20375d88813547563c88365acbc50831b8f78affcfcb890f0c9fe9"
+      },
+      "wms_commands": {
+        "rows": 13376,
+        "sha256": "9863f9aa6bf170780df3042e028eb929f2426659ee9791541ead0b8291f059c6"
+      },
+      "wms_delivery_attempts": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_events": {
+        "rows": 13376,
+        "sha256": "4c4afe34378d6c5ae97015b47d6c0a7c7393ee91921716e42070f53f2aa5475d"
+      },
+      "wms_exceptions": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_locations": {
+        "rows": 104,
+        "sha256": "552a6c243e5d598af02d0dc98f3b477adf61df9cc65ef2cbe57c0604a1ce205e"
+      },
+      "wms_movements": {
+        "rows": 12020,
+        "sha256": "a06548415371fb0415a40e71beb4f7d9be0806653535d61c2720afe1b5d467fb"
+      },
+      "wms_native_attempts": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_native_requests": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_order_lines": {
+        "rows": 503,
+        "sha256": "7b8ecdd1ddf2deff19cd3a47f080fcc50f293f8115df1b536f63a8c3509babf7"
+      },
+      "wms_orders": {
+        "rows": 502,
+        "sha256": "6d4d888ae2186b9ce2dea3f27820b4b468064c2ba2f7fda399a2918f738178dc"
+      },
+      "wms_outbox": {
+        "rows": 13378,
+        "sha256": "15a0973c66fa888c3941e8ea38437983369aa0fcb89b4a18cfa52b164b636670"
+      },
+      "wms_package_closures": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_package_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_packages": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_products": {
+        "rows": 501,
+        "sha256": "8c3848d964f5ba4172439d07f544d5377525b20cc4ba2d7b6174c29501242559"
+      },
+      "wms_receipt_cancellations": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_receipt_cancelled_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_receipt_evidence": {
+        "rows": 2,
+        "sha256": "93caa50af6d2cadf63fa983261096d320c94a7a6c80ab16baa0adce0c37e3aa1"
+      },
+      "wms_receipt_lines": {
+        "rows": 2,
+        "sha256": "0e96da580d75fc85b53763acb0ce330d88399a80e1832c1ec2b0202c21db9d96"
+      },
+      "wms_receipts": {
+        "rows": 1,
+        "sha256": "a0a2ccd1abf7d541152c3446873779cd293e8bc3c5fe10941f8598c21f7e043b"
+      },
+      "wms_resource_versions": {
+        "rows": 2621,
+        "sha256": "c8f853afd6c133fecf3b36f1cb13e38669c0b5c45829b0bb1c5f871850d0dfdc"
+      },
+      "wms_return_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_schema_migrations": {
+        "rows": 15,
+        "sha256": "10f133942324fb385c3c2de0774928e2ce33b1872c3c388064eb74b0bb3672ed"
+      },
+      "wms_shipment_evidence": {
+        "rows": 1,
+        "sha256": "f884928c1571395dfc91412af896b4455df9df7398db6a457a94b72908a1c820"
+      },
+      "wms_split_orders": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_stock": {
+        "rows": 1012,
+        "sha256": "bfcac9f72d6c328eb05ac40fa4893d9ec6b9761abe3e7285b66dbffcfdd552ca"
+      },
+      "wms_stock_ledger": {
+        "rows": 1012,
+        "sha256": "be1a033998d327035ff24b77dfb382c012b99ccb8e7dea80c75d2a7eeb4b2117"
+      },
+      "wms_stock_reserved": {
+        "rows": 502,
+        "sha256": "56585020520e40cf9e772081d0c3ec226342698781108d04bdbcd868ad663634"
+      },
+      "wms_transfer_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_transfers": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_warehouses": {
+        "rows": 2,
+        "sha256": "8926ba27f9411ea42800bc249fbbc19de5286db3cbb02ddd99c4ffea1faad098"
+      },
+      "wms_workspaces": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      }
+    }
+  },
+  "migrations": [
+    {
+      "name": "001_initial",
+      "sha256": "8e5c3fa5f0065b63076c33b8bd3c337b8490d4b7a88f3e774ec17e2290e1f4d4"
+    },
+    {
+      "name": "002_relational_execution",
+      "sha256": "660cd0fdbc7205644c7c3d7ac3da43cbaf1c6d9f80c4d0f2ea4d0c0986e6ff90"
+    },
+    {
+      "name": "003_native_operations",
+      "sha256": "f9a5cfa4a1e4f7830613febe6b37f11a8485beef46d6b96791c78435fe784108"
+    },
+    {
+      "name": "004_native_source_ownership",
+      "sha256": "366979c9630c4c62cb7d71beb5c89cd917764558b4e05267c4eb4aac486a6cb9"
+    },
+    {
+      "name": "005_conditional_oms_fulfillment",
+      "sha256": "b8892cbaa4a1b26c6e1732616ec30503d3698f44e363240386078398e29e9a41"
+    },
+    {
+      "name": "006_oms_rejections",
+      "sha256": "567e061943a1602ff25b5d5c988be810808b8c6e1638885ee6ef9b71a9ba4ed4"
+    },
+    {
+      "name": "007_operations_indexes",
+      "sha256": "b0b9b422f570ed77ca1252df42c96b29544849621ed748cadd1f068b708576b5"
+    },
+    {
+      "name": "008_delivery_recipient",
+      "sha256": "050f40c80b9e73a3edc8a19545ab08cfe41051616b84d9445dfdea9a30de9d19"
+    },
+    {
+      "name": "009_resource_versions",
+      "sha256": "b702a003a1d74210fdfc06cef1fbfb6e737146a25314642094a2f8383dc2e209"
+    },
+    {
+      "name": "010_customer_returns",
+      "sha256": "dfafb0547d0af2ba11f86dfa31f7facebe89adf582d6b215d02b734e1413fb71"
+    },
+    {
+      "name": "011_immutable_command_receipts",
+      "sha256": "0a7c69928f38527f542a55e795de9b62c65f4907d7d05cba2d47f7eeebdf8a73"
+    },
+    {
+      "name": "012_receipt_cancellation",
+      "sha256": "5a36bc5c39f49fe9fdf9e6cd292d71ed50c85daffea2777fda890d9b2d68a676"
+    },
+    {
+      "name": "013_shipment_evidence",
+      "sha256": "e867e6b35c3cbcb10ea5f4a952c916f10e7b5d16b53c80aad656a9fba286334e"
+    },
+    {
+      "name": "014_facility_transfers",
+      "sha256": "b98005fca14a6aa180c09e77d998105662b3f11147a3284d6a145147de3182b1"
+    },
+    {
+      "name": "015_split_fulfillment",
+      "sha256": "dd2e0b0625cec5d9cd1a6209e094f924fc4cb503a0b82ed3fcc2253109fe393a"
+    }
+  ],
+  "qualification_limit": "Local synthetic single-host and single-PostgreSQL-primary rehearsal. API replica survival and PostgreSQL crash recovery were tested; database failover, host loss, deployed latency, native receivers and physical facility acceptance were not."
+}

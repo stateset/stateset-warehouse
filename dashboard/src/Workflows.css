@@ -1,0 +1,238 @@
+.workflow-panel {
+  border: 1px solid var(--border, #dce4dc);
+  border-radius: 10px;
+  padding: 20px;
+  margin: 16px 0;
+  background: #fff;
+}
+.workflow-panel > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.workflow-panel > p {
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 12px 0;
+}
+.workflow-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+.workflow-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.workflow-form input,
+.workflow-form select,
+.workflow-form textarea {
+  width: 100%;
+  min-height: 40px;
+  padding: 9px;
+  border: 1px solid #cdd8ce;
+  border-radius: 6px;
+  background: #fff;
+  font: inherit;
+  color: inherit;
+}
+.workflow-form textarea {
+  min-height: 70px;
+}
+.workflow-form .workflow-wide {
+  grid-column: 1 / -1;
+}
+.workflow-form button {
+  align-self: end;
+  justify-self: start;
+}
+.workflow-task {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0;
+  border-top: 1px solid #e4eae4;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.workflow-error {
+  color: #963a26;
+}
+.workflow-task > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.transfer-loss-journal {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.transfer-loss-journal summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 12px 0;
+}
+.transfer-loss-record {
+  border-top: 1px solid #e4eae4;
+  padding: 14px 0;
+}
+.transfer-loss-record p {
+  margin: 6px 0;
+}
+.transfer-loss-journal .btn {
+  max-width: 100%;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.transfer-loss-journal .workflow-form > h4,
+.transfer-loss-journal .workflow-form > p,
+.transfer-loss-journal .loss-confirmation {
+  grid-column: 1 / -1;
+}
+@media (max-width: 640px) {
+  .workflow-form {
+    grid-template-columns: 1fr;
+  }
+  .workflow-task {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+.workflow-form label.workflow-checkbox {
+  flex-direction: row;
+  align-items: center;
+}
+.workflow-form input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  padding: 0;
+  flex: none;
+}
+
+.lot-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin: 14px 0;
+  font-size: 13px;
+}
+.lot-selector select {
+  max-width: 100%;
+  padding: 9px;
+  border: 1px solid #cdd8ce;
+  border-radius: 6px;
+  font: inherit;
+}
+.lot-review {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid #cdd8ce;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.lot-review .workflow-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lot-review .row-actions {
+  margin-top: 14px;
+}
+
+.lot-controls-panel table {
+  min-width: 1040px;
+}
+.lot-controls-panel th {
+  font-size: 12px;
+  color: #52634f;
+}
+.lot-controls-panel td {
+  font-size: 13px;
+  color: #344b3b;
+  vertical-align: top;
+}
+.lot-controls-panel .subline {
+  font-size: 12px;
+  color: #586d57;
+  white-space: normal;
+  line-height: 1.5;
+  min-width: 160px;
+  max-width: 320px;
+  overflow-wrap: anywhere;
+}
+.lot-controls-panel .row-actions {
+  flex-wrap: wrap;
+}
+
+.lot-trace-panel th {
+  font-size: 12px;
+  color: #52634f;
+}
+.lot-trace-panel td {
+  font-size: 13px;
+  color: #344b3b;
+  vertical-align: top;
+}
+.lot-trace-panel .subline {
+  font-size: 12px;
+  color: #52634f;
+  line-height: 1.6;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  .lot-trace-table,
+  .lot-trace-table tbody,
+  .lot-trace-table tr,
+  .lot-trace-table td {
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+  .lot-trace-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .lot-trace-table tbody tr {
+    border: 1px solid #dce5dc;
+    border-radius: 8px;
+    margin: 0 0 12px;
+    padding: 12px;
+  }
+  .lot-trace-table td {
+    border: 0;
+    padding: 6px 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .lot-trace-table .subline {
+    max-width: none;
+  }
+  .lot-trace-table td:first-child::before,
+  .lot-trace-table td:last-child::before {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #52634f;
+  }
+  .lot-trace-table td:first-child::before {
+    content: "Warehouse";
+  }
+  .lot-trace-table td:last-child::before {
+    content: "Source check";
+  }
+}

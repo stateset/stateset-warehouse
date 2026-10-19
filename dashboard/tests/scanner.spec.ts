@@ -438,3 +438,191 @@ test("an open order exception blocks scanner picks before any labels can be acce
   ).toBeDisabled();
   expect(fixture.submissions).toHaveLength(0);
 });
+
+for (const loseResponse of [false, true])
+  test(`pack scanner retains the exact reviewed definition${loseResponse ? " across lost-response recovery" : ""}`, async ({
+    page,
+  }) => {
+    const fixture = await setup(page, loseResponse);
+    fixture.apply({
+      type: "set_unit_pack",
+      sku: "SS-CAP-004",
+      code: "CASE",
+      label: "Small case",
+      each_per_pack: 2,
+      enabled: true,
+      reason: "Reviewed actual synthetic label",
+    });
+    await page.getByRole("button", { name: "Refresh warehouse" }).click();
+    const pack = fixture.state().unit_packs[0];
+    await load(page, "SCAN-RECEIPT");
+    await verifyReceipt(page);
+    await page
+      .getByRole("combobox", { name: "Units for Physical quantity (each)" })
+      .selectOption(pack.id);
+    const input = page.getByRole("spinbutton", {
+      name: "Physical quantity (each) (CASE packs)",
+      exact: true,
+    });
+    await input.fill("1.5");
+    await expect(
+      page.getByRole("button", { name: "Confirm scanned receipt" }),
+    ).toBeDisabled();
+    await input.fill("3");
+    await expect(
+      page.getByRole("button", { name: "Confirm scanned receipt" }),
+    ).toBeDisabled();
+    await input.fill("2");
+    await expect(
+      page.getByText("2 × 2 = 4 each", { exact: true }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Confirm scanned receipt" }).click();
+    if (loseResponse) {
+      await expect(
+        page.getByText("A save needs confirmation", { exact: true }),
+      ).toBeVisible();
+      fixture.apply({
+        type: "set_unit_pack",
+        sku: "SS-CAP-004",
+        code: "CASE",
+        label: "Changed case",
+        each_per_pack: 3,
+        enabled: true,
+        reason: "Later synthetic label",
+      });
+      await page.reload();
+      await expect(page.getByText(/Original pack observation/)).toContainText(
+        "2 CASE × 2 = 4 each",
+      );
+      await expect(page.getByText(/Original pack observation/)).toContainText(
+        pack.id,
+      );
+      await page.getByRole("button", { name: "Check original save" }).click();
+      await expect(
+        page.getByText("A save needs confirmation", { exact: true }),
+      ).toHaveCount(0);
+    }
+    expect(fixture.submissions).toHaveLength(1);
+    expect(fixture.submissions[0].unit_inputs).toEqual([
+      {
+        target: [],
+        sku: "SS-CAP-004",
+        pack_code: "CASE",
+        definition_id: pack.id,
+        pack_quantity: 2,
+        each_per_pack: 2,
+      },
+    ]);
+    expect(fixture.submissions[0].command.quantity).toBe(4);
+  });
+
+test("a changed pack definition invalidates scanner work until an explicit fresh review", async ({
+  page,
+}) => {
+  const fixture = await setup(page);
+  fixture.apply({
+    type: "set_unit_pack",
+    sku: "SS-CAP-004",
+    code: "CASE",
+    label: "Original case",
+    each_per_pack: 2,
+    enabled: true,
+    reason: "Original synthetic label",
+  });
+  await page.getByRole("button", { name: "Refresh warehouse" }).click();
+  const pack = fixture.state().unit_packs[0];
+  await load(page, "SCAN-RECEIPT");
+  await verifyReceipt(page);
+  await page
+    .getByRole("combobox", { name: "Units for Physical quantity (each)" })
+    .selectOption(pack.id);
+  await page
+    .getByRole("spinbutton", {
+      name: "Physical quantity (each) (CASE packs)",
+      exact: true,
+    })
+    .fill("1");
+  fixture.apply({
+    type: "set_unit_pack",
+    sku: "SS-CAP-004",
+    code: "CASE",
+    label: "New case",
+    each_per_pack: 3,
+    enabled: true,
+    reason: "Changed synthetic label",
+  });
+  await page.getByRole("button", { name: "Refresh warehouse" }).click();
+  await expect(
+    page.getByRole("button", { name: "Confirm scanned receipt" }),
+  ).toBeDisabled();
+  expect(fixture.submissions).toHaveLength(0);
+  await page.getByRole("button", { name: "Reload work", exact: true }).click();
+  await verifyReceipt(page);
+  await page
+    .getByRole("combobox", { name: "Units for Physical quantity (each)" })
+    .selectOption(fixture.state().unit_packs[0].id);
+  await page
+    .getByRole("spinbutton", {
+      name: "Physical quantity (each) (CASE packs)",
+      exact: true,
+    })
+    .fill("1");
+  await page.getByRole("button", { name: "Confirm scanned receipt" }).click();
+  expect(fixture.submissions[0].command.quantity).toBe(3);
+  expect(fixture.submissions[0].unit_inputs[0].definition_id).not.toBe(pack.id);
+});
+
+test("an unreadable captured pack conversion remains retained and holds uncertain-save recovery", async ({
+  page,
+}) => {
+  const fixture = await setup(page, true);
+  fixture.apply({
+    type: "set_unit_pack",
+    sku: "SS-CAP-004",
+    code: "CASE",
+    label: "Physical case",
+    each_per_pack: 2,
+    enabled: true,
+    reason: "Original synthetic label",
+  });
+  await page.getByRole("button", { name: "Refresh warehouse" }).click();
+  await load(page, "SCAN-RECEIPT");
+  await verifyReceipt(page);
+  await page
+    .getByRole("combobox", {
+      name: "Units for Physical quantity (each)",
+      exact: true,
+    })
+    .selectOption(fixture.state().unit_packs[0].id);
+  await page
+    .getByRole("spinbutton", {
+      name: "Physical quantity (each) (CASE packs)",
+      exact: true,
+    })
+    .fill("1");
+  await page
+    .getByRole("button", { name: "Confirm scanned receipt", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Check original save", exact: true }),
+  ).toBeVisible();
+  const retained = await page.evaluate(() => {
+    const key = Object.keys(sessionStorage).find((k) =>
+      k.startsWith("wms-pending:"),
+    )!;
+    const body = JSON.parse(sessionStorage.getItem(key)!);
+    body.request.unit_inputs[0].each_per_pack = 1.5;
+    const raw = JSON.stringify(body);
+    sessionStorage.setItem(key, raw);
+    return { key, raw };
+  });
+  await page.reload();
+  await expect(page.getByText(/saved request is unreadable/)).toBeVisible();
+  expect(
+    await page.evaluate((key) => sessionStorage.getItem(key), retained.key),
+  ).toBe(retained.raw);
+  await expect(
+    page.getByRole("button", { name: "Receive with scanner", exact: true }),
+  ).toBeDisabled();
+  expect(fixture.submissions).toHaveLength(1);
+});

@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "production_qualified": false,
+  "report": "http-500-8-operators-multi-facility.json",
+  "sha256": "a849f1ca586826f7fdb7d29faa713d0abfe55b5dae898a1292a99c9352742ed6",
+  "image_id": "sha256:07ba6293b0f01a00b72d4cd864a056bbbb00d54a59c1425c848b86f175a0c1b1",
+  "image_source_inputs_sha256": "6bba4c658de267ceabc6bbb7383844fb99601854e421c83ef8326b5c775f3461",
+  "software_source_inputs_sha256": "bb767c9f25a2c377a6b78f9bf05d9f7fed939e9e340a42c38a2c97c1a21ec387",
+  "release_provenance": "../qualification/release-20261018-multi-facility/provenance.json",
+  "traffic_model": "independent-operators",
+  "snapshot_coverage": "exact configured catalog SKU set and every seeded order ID/state, with completed history permitted",
+  "host_observation": {
+    "path": "http-500-8-operators-multi-facility-host-observation.json",
+    "sha256": "374221a2a852df7acbc9a40a9b6f48e107fcd0514f840c396e1e81ea78d096bd",
+    "scope": "diagnostic shared-host context; not part of correctness qualification or a causal estimate"
+  },
+  "command": "WMS_RESILIENCE_IMAGE=<qualified immutable image ID> WMS_RESILIENCE_PRODUCTS=500 WMS_RESILIENCE_BINS=100 WMS_RESILIENCE_LOTS=2 WMS_RESILIENCE_OPEN_ORDERS=500 WMS_RESILIENCE_CLIENTS=8 WMS_RESILIENCE_SECONDS=300 WMS_RESILIENCE_TRAFFIC_MODEL=independent-operators bash scripts/resilience-rehearsal.sh",
+  "limits": [
+    "Same immutable image as the complete multi-facility release gate",
+    "Application code and exact snapshot-coverage verification changed from the preceding independent-operator profile",
+    "The shared host had compiler processes visible during part of the timed window; its causal effect was not isolated",
+    "No capacity improvement, production SLO or physical device acceptance is inferred from this single synthetic window",
+    "Operator action latency includes its own full post-save refresh; exact replay is excluded from action latency and included in throughput"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "production_qualified": false,
+  "report": "http-500-8-operators.json",
+  "sha256": "065bf6c6c37db4db69981744e84c63b18095a5cc14c724137ebb1a1505d6a79c",
+  "image_id": "sha256:1df632843a0330bc9b980296acb7d0fbe5afd6cc96171ed5ea3035cb91dc187d",
+  "image_source_inputs_sha256": "67420456ac467ff84894f696e1959f60af3c2307feb09a454d26df860331a16f",
+  "software_source_inputs_sha256": "2d978ac8030a264ab7ccc9f07054db6e711795e68607c7f448544d6f8952fb3b",
+  "command": "WMS_RESILIENCE_IMAGE=<qualified immutable image ID> WMS_RESILIENCE_PRODUCTS=500 WMS_RESILIENCE_BINS=100 WMS_RESILIENCE_LOTS=2 WMS_RESILIENCE_OPEN_ORDERS=500 WMS_RESILIENCE_CLIENTS=8 WMS_RESILIENCE_SECONDS=300 WMS_RESILIENCE_REVIEW_MODE=resources bash scripts/resilience-rehearsal.sh",
+  "limits": [
+    "Same immutable image as complete release gate",
+    "Local synthetic fixture on a shared development host",
+    "No predeclared facility throughput or latency target supplied",
+    "Physical hardware, deployed identity/integrations and managed failover remain unqualified"
+  ]
+}

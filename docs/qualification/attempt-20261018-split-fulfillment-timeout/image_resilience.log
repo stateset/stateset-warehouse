@@ -1,0 +1,49 @@
+Seeding 500 products, 1000 opening bin-lots and 500 open orders through authenticated HTTP.
+Seeded 100 stocked products in 6.6s.
+Seeded 200 stocked products in 13.8s.
+Seeded 300 stocked products in 24.7s.
+Seeded 400 stocked products in 33.5s.
+Seeded 500 stocked products in 44.0s.
+Seeded 100 active orders in 50.0s.
+Seeded 200 active orders in 57.3s.
+Seeded 300 active orders in 64.8s.
+Seeded 400 active orders in 72.9s.
+Seeded 500 active orders in 83.1s.
+Qualifying a deliberately lost HTTP success through the other API replica.
+Killing one API only after PostgreSQL proves its original HTTP write is waiting.
+Crashing PostgreSQL with a blocked HTTP write; both replicas must fail readiness before recovery.
+Starting 300s sustained HTTP qualification with 8 distinct operators, two replicas and independent-operators traffic.
+10.0s: 280 committed moves, 0 definite stale conflicts, same number of exact replays.
+20.0s: 583 committed moves, 0 definite stale conflicts, same number of exact replays.
+30.1s: 851 committed moves, 0 definite stale conflicts, same number of exact replays.
+40.1s: 1141 committed moves, 0 definite stale conflicts, same number of exact replays.
+50.1s: 1460 committed moves, 0 definite stale conflicts, same number of exact replays.
+60.1s: 1773 committed moves, 0 definite stale conflicts, same number of exact replays.
+70.2s: 2065 committed moves, 0 definite stale conflicts, same number of exact replays.
+80.2s: 2269 committed moves, 0 definite stale conflicts, same number of exact replays.
+90.2s: 2475 committed moves, 0 definite stale conflicts, same number of exact replays.
+100.2s: 2661 committed moves, 0 definite stale conflicts, same number of exact replays.
+110.2s: 2699 committed moves, 0 definite stale conflicts, same number of exact replays.
+Traceback (most recent call last):
+  File "scripts/resilience_probe.py", line 1504, in <module>
+    main()
+  File "scripts/resilience_probe.py", line 1500, in main
+    Probe(args).run()
+  File "scripts/resilience_probe.py", line 1457, in run
+    self.sustained()
+  File "scripts/resilience_probe.py", line 1029, in sustained
+    future.result()  # A failed client cannot become a passing report.
+  File "/usr/lib/python3.8/concurrent/futures/_base.py", line 437, in result
+    return self.__get_result()
+  File "/usr/lib/python3.8/concurrent/futures/_base.py", line 389, in __get_result
+    raise self._exception
+  File "/usr/lib/python3.8/concurrent/futures/thread.py", line 57, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "scripts/resilience_probe.py", line 1010, in client
+    sample = self.reviewed_move(index, moves[index], reviewed, time.monotonic(), True, stop)
+  File "scripts/resilience_probe.py", line 926, in reviewed_move
+    require(
+  File "scripts/resilience_probe.py", line 23, in require
+    raise AssertionError(message)
+AssertionError: Sustained write failed: 503 {'error': 'Database operation unavailable; retry with the same request ID'}
+Resilience qualification evidence: /tmp/wms-split-release.1WpgdWi0/resilience

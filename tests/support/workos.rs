@@ -710,3 +710,52 @@ async fn signed_identity_owns_persisted_commands_across_refresh_and_tenant_chang
     .expect("persisted actor");
     assert_eq!(owner, "workos:user_alice");
 }
+
+#[tokio::test]
+async fn mcp_uses_current_verified_workos_membership_for_every_request() {
+    let fixture = Fixture::new().await;
+    let app = app(fixture.auth.clone(), lazy_store());
+    for (organization, role, tenant) in [
+        ("org_acme", "warehouse_reader", "acme"),
+        ("org_second", "warehouse_reader", "second"),
+    ] {
+        let mut claim = claims();
+        claim["org_id"] = json!(organization);
+        claim["role"] = json!(role);
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/mcp")
+                    .header("host", "localhost")
+                    .header("authorization", format!("Bearer {}", signed(&claim, false)))
+                    .header("x-tenant-id", "victim")
+                    .header("x-role", "admin")
+                    .header("content-type", "application/json")
+                    .header("accept", "application/json, text/event-stream")
+                    .header("mcp-protocol-version", "2025-11-25")
+                    .body(Body::from(
+                        json!({"jsonrpc":"2.0","id":1,"method":"tools/call","params":{
+                "name":"wms_session","arguments":{},"_meta":{"tenant":"victim","role":"admin"}}})
+                        .to_string(),
+                    ))
+                    .expect("request"),
+            )
+            .await
+            .expect("MCP response");
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response
+            .into_body()
+            .collect()
+            .await
+            .expect("body")
+            .to_bytes();
+        let result: Value = serde_json::from_slice(&bytes).expect("JSON response");
+        assert_eq!(
+            result["result"]["structuredContent"]["body"]["identity"],
+            json!({
+            "tenant":tenant,"actor":"workos:user_alice","role":"viewer"})
+        );
+    }
+}

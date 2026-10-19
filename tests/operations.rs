@@ -209,7 +209,7 @@ fn metric_samples(body: &str) -> BTreeMap<String, i64> {
 async fn event(store: &Store, tenant: &str, version: i64, age: i64) -> String {
     let id = domain::id();
     sqlx::query("INSERT INTO wms_events(id,tenant,warehouse_id,version,payload,created_at) VALUES($1,$2,'wh-main',$3,$4,now()-($5::bigint*interval '1 second'))")
-        .bind(&id).bind(tenant).bind(version).bind(json!({"type":"inventory.counted","private":SECRET})).bind(age)
+        .bind(&id).bind(tenant).bind(version).bind(json!({"type":"inventory.counted","private":SECRET,"lot_changes":[],"lot_decisions":[]})).bind(age)
         .execute(&store.pool).await.expect("synthetic event");
     id
 }
@@ -557,7 +557,7 @@ async fn operational_snapshot_keeps_one_database_view_across_concurrent_commits(
         .await
         .expect("concurrent committed update");
     let second_event = domain::id();
-    sqlx::query("INSERT INTO wms_events(id,tenant,warehouse_id,version,payload) VALUES($1,$2,'wh-main',2,'{}')")
+    sqlx::query("INSERT INTO wms_events(id,tenant,warehouse_id,version,payload) VALUES($1,$2,'wh-main',2,'{\"lot_changes\":[],\"lot_decisions\":[]}')")
         .bind(&second_event).bind(&tenant).execute(&mut *update).await.expect("new event");
     sqlx::query("INSERT INTO wms_outbox(id,event_id,tenant,destination) VALUES($1,$2,$3,'oms')")
         .bind(domain::id())

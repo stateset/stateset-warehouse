@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-19T02:48:26.773484+00:00",
+  "synthetic": true,
+  "production_qualified": false,
+  "original_gate_result": "failed",
+  "passed_stages": 6,
+  "failed_stage": "live_browsers",
+  "actual_browser_cases_passed": 12,
+  "actual_browser_cases_failed": 1,
+  "classification": "new browser fixture assumed a one-product catalog",
+  "reason": "After Scanner \u2192 Inventory, the pack panel correctly initialized to the first catalog SKU. The new test did not explicitly reselect its SKU before reviewing a changed factor. The full suite had other products present; the original-factor assertion failed before confirmation. The focused empty-catalog run masked this assumption.",
+  "correction": "Explicitly select and assert the original fixture SKU after returning to Inventory; seed an unrelated earlier-sorting SKU in the focused fixture. Product code unchanged from revision2.",
+  "inventory_failure_observed": false,
+  "container_and_resilience_ran": false,
+  "frozen_source_sha256": "2ecc3469f6b6890d3dc14a223d7c9a9e2a98f8641a9cdf01a9400e3257cd7255",
+  "frozen_source_private": ".local/qualification/pack-units-development-20261018/revision-2/source.tar.gz",
+  "frozen_source_archive_sha256": "c8e7847adedcd2c9190192f6da5e9ef2c0979c95ad13522ae30e9f58bef6c808",
+  "private_raw_retention": ".local/qualification/pack-units-development-20261018/failed-live-review-release",
+  "private_manifest_sha256": "8733d482067a1caec00073c5c9d31d44542d93bd58ceb0ee8e6cf31458685ca6",
+  "limits": [
+    "This failed gate cannot supersede the accepted transfer-loss release.",
+    "Software checks passed 257 Rust,26 Python,137 browser contracts; archive restore and independent43-table audit passed. Later stages did not run.",
+    "Raw traces may contain disposable synthetic credentials and remain private."
+  ]
+}

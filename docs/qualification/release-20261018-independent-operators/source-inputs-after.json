@@ -1,0 +1,453 @@
+{
+  "sha256": "384da00d3a89b9049e065c3363ad5bf3503d33bf87abd3049432e20f7e18f268",
+  "inputs": [
+    {
+      "path": ".dockerignore",
+      "sha256": "3a4fc58e15e3d6c6eef44e378d112ebfdf6b6840755f13d654a24bc5e5877c63"
+    },
+    {
+      "path": ".github/workflows/check.yml",
+      "sha256": "27d71975d0094b0bc3b0f9fc9bf5fc4ecb2a2588b4536aad3e9d87f38e38c3d8"
+    },
+    {
+      "path": ".nvmrc",
+      "sha256": "f14b4987904bcb5814e4459a057ed4d20f58a633152288a761214dcd28780b56"
+    },
+    {
+      "path": "Cargo.lock",
+      "sha256": "3e82f7c09b17a573f5ad6d07d8ba5e0dc1ee627c21cef8dd7af18c1fe602474c"
+    },
+    {
+      "path": "Cargo.toml",
+      "sha256": "770c6c2c87578b0185fc837cc85f9693d8eee0143609158ebf94d2ab58ba2fb7"
+    },
+    {
+      "path": "Dockerfile",
+      "sha256": "352191818bdfd1af198cc89c17db681626b23f5355308e45dc316427cda6c947"
+    },
+    {
+      "path": "dashboard/index.html",
+      "sha256": "66cd221529193872707eb84c6a9aecc4a01b451675d8682d49f667b02bf4bfa1"
+    },
+    {
+      "path": "dashboard/package-lock.json",
+      "sha256": "5e66b38ba8027d4971d68a64567f63fe64e64e31ee1eca609d99241354e55c17"
+    },
+    {
+      "path": "dashboard/package.json",
+      "sha256": "bbf9fa6f859caee284c048a8e82541e00b6d749ef14549dbc634e193cff164f8"
+    },
+    {
+      "path": "dashboard/playwright.config.ts",
+      "sha256": "eb9f37041f39b5ad932634d0e9bde7a0aca2fbb518a2f357c87815a63eb0c879"
+    },
+    {
+      "path": "dashboard/src/App.tsx",
+      "sha256": "abe455efab3afc2e47a4da2e037ae796b7a3e25470cd87f4de3ad6a2d9e937a4"
+    },
+    {
+      "path": "dashboard/src/Auth.tsx",
+      "sha256": "a87ff13939bbb0d516714c1e7662ef6e57c298f74695ad139b70b0f27a2157b4"
+    },
+    {
+      "path": "dashboard/src/NativePanel.tsx",
+      "sha256": "431c327faa7a7c0a5cb6b9ef5cecc07474b78b31c081b6cc695b4a8cdb909e4d"
+    },
+    {
+      "path": "dashboard/src/OperationsPanel.css",
+      "sha256": "b568799187d79fefd54a489fbb09d5cff239ba847a365bcc37add67819651834"
+    },
+    {
+      "path": "dashboard/src/OperationsPanel.tsx",
+      "sha256": "ee36111b0279be1210f54049a3ad59fac051f1a67aee9f75694e2eb9e1742233"
+    },
+    {
+      "path": "dashboard/src/ReplenishmentPanel.tsx",
+      "sha256": "567dfc4ab406b59358f0937b62ec40f9f7bd4398bea76a8c9f844b040ca49d77"
+    },
+    {
+      "path": "dashboard/src/ReturnForm.tsx",
+      "sha256": "4f6690eb3db992ef12d7922b008668a26b8763ab18df6be3500921ae26ba3c37"
+    },
+    {
+      "path": "dashboard/src/ScannerPanel.css",
+      "sha256": "bf1e3abda90a79c96db19058b1532dca0ac2abb6fce68af5573646991c2ebe74"
+    },
+    {
+      "path": "dashboard/src/ScannerPanel.tsx",
+      "sha256": "91bcc0bf92cfdd61fe822b8562e3a5d2e8b8b8ac959b09bb2f0b2a0db44d9c19"
+    },
+    {
+      "path": "dashboard/src/Workflows.css",
+      "sha256": "595391d3304bd2c61843e5a48b782ba68ed529103b335006aca90ce3409ddd74"
+    },
+    {
+      "path": "dashboard/src/concurrency.ts",
+      "sha256": "a51d12f000bbf3226b614774f4483f860ceb39c0e6541e23c92768bacfc99508"
+    },
+    {
+      "path": "dashboard/src/main.tsx",
+      "sha256": "c417538b28b88c6038a823c88e281a5dcd7ffcaa20ba2bbe8f9a6fb796160f69"
+    },
+    {
+      "path": "dashboard/src/styles.css",
+      "sha256": "0da9cb5d449614487ea28683bfdca4b9f53311fadb869b54b248c307e2e0d6c3"
+    },
+    {
+      "path": "dashboard/src/types.ts",
+      "sha256": "d1efc4d8749dbfdf73a8eae9df0223a4024209a4a2378cf10fb5d66d9266f964"
+    },
+    {
+      "path": "dashboard/tests/auth.spec.ts",
+      "sha256": "7d2738311d781db2805bf9da0c370bf04cf15f507e13116faaa4ca6fd8cdda10"
+    },
+    {
+      "path": "dashboard/tests/live.spec.ts",
+      "sha256": "ce553d2d31d9635197a09c4b34027b8463e0df40ad5459436b87251eb2f8f2ab"
+    },
+    {
+      "path": "dashboard/tests/native.spec.ts",
+      "sha256": "d53e286848a6e1097629bce69ed2c3141f55bcf73232103c06250e17ce4dd2d8"
+    },
+    {
+      "path": "dashboard/tests/offline.spec.ts",
+      "sha256": "011f7c142838f0f0878c739caf22d5aebd0b9ed1858bf8d91fe38735966cabc0"
+    },
+    {
+      "path": "dashboard/tests/operations-live.spec.ts",
+      "sha256": "b5c2cfd78dc0496b7661c1765756449a18264e21f3dc80db83c1f6efdc68c802"
+    },
+    {
+      "path": "dashboard/tests/operations.spec.ts",
+      "sha256": "991f59f6cda8f3768f1ceadd887ae58f53935d7c3ca87f5e83a021d5d1986b76"
+    },
+    {
+      "path": "dashboard/tests/scanner-live.spec.ts",
+      "sha256": "66fdf01b70f2eeecc00514f8a89d2eba1379ffe24e272acbda51489200f73746"
+    },
+    {
+      "path": "dashboard/tests/scanner.spec.ts",
+      "sha256": "fe18e19355b88f2bc401abe5621f3a1e588a59df2cde038ddef89ff1cc5af618"
+    },
+    {
+      "path": "dashboard/tsconfig.json",
+      "sha256": "c1317d4798e92373f96d90f9dc75c13d2b2bdf0c610cc3f88af2ad29906e1e51"
+    },
+    {
+      "path": "dashboard/vite.config.ts",
+      "sha256": "c5581d616f3e732443a54dc188e2af5d07905f2388c0d2b10c92e8d5f24e2401"
+    },
+    {
+      "path": "deploy/monitoring/alerts.test.yml",
+      "sha256": "27c6301b966f8cf55446d2f72a6ff862ccb29bc342fe9a7f9ad68aef72d26f9c"
+    },
+    {
+      "path": "deploy/monitoring/alerts.yml",
+      "sha256": "b54143aea85ba48972539cae63268fb592081132cae2440594b752c5bea58d82"
+    },
+    {
+      "path": "deploy/monitoring/check.sh",
+      "sha256": "0eb1248a7e06210b630d5a9d1122d7fd99f4c625977465fedd6c718fb3da4041"
+    },
+    {
+      "path": "docker-compose.yml",
+      "sha256": "f1349f94ec577f5fa3863c3b0cf046fd17f7586d1bc299bf68968e8ceb42fa86"
+    },
+    {
+      "path": "examples/domain_driver.rs",
+      "sha256": "01269fe5df45a60e3754fa665204cfc48d1f75ae8da8a66cf4e805e697e2353b"
+    },
+    {
+      "path": "examples/restore_probe.rs",
+      "sha256": "13e99973f3b437e629caeaca892e6b9d178ea4aa492d5206fd1a7c3a4f5a6b55"
+    },
+    {
+      "path": "examples/workload.rs",
+      "sha256": "33511eed2570bab0725168a341623a9b62310fd99986b798851397af9881e978"
+    },
+    {
+      "path": "integrations/stateset-sync-server/README.md",
+      "sha256": "70d74795d3d2a18c614dd293728eff62de541e5afb14571ee8cf112ea1fb5ab1"
+    },
+    {
+      "path": "integrations/stateset-sync-server/assertions.sql",
+      "sha256": "88aba36e29bcbf5b034efd02c4d073061d4f31497898fdabc23d07c61357a615"
+    },
+    {
+      "path": "integrations/stateset-sync-server/check-upstream.py",
+      "sha256": "bd95cae6b964ee86c0959e44d5bb8d34e4a0a4d44b565953c918250f3f84f13a"
+    },
+    {
+      "path": "integrations/stateset-sync-server/check.py",
+      "sha256": "7076230d852c1bbbd679ca93e801ca68af3c70d10a8f0095d9ad71705e5d57cb"
+    },
+    {
+      "path": "integrations/stateset-sync-server/migrations/20261017000000_warehouse_fulfillment_receipts.sql",
+      "sha256": "9487a1975a80f2e69705b177f12f43c24eb4cd07547c0ebf3f76f930f2b0dd66"
+    },
+    {
+      "path": "integrations/stateset-sync-server/proof.sql",
+      "sha256": "a67aadbb3462cfcfae5dc6219946e8e907de8659e1a6cbf76e1875b3c60a58bf"
+    },
+    {
+      "path": "integrations/stateset-sync-server/refresh-patch.py",
+      "sha256": "f6d60390a522ff9cfc688e4940570500ed1f918a9af4341b1ffc828d5bc00cee"
+    },
+    {
+      "path": "integrations/stateset-sync-server/src/warehouse_fulfillment.rs",
+      "sha256": "f9351bb526aa07120bcc5aeda14c72cb71f2984c55cdb4a5b12d207120cc440c"
+    },
+    {
+      "path": "integrations/stateset-sync-server/upstream.patch",
+      "sha256": "9db777c45307ded36fef316d860708fee43b03afe7655aa2cdf04896ce94d359"
+    },
+    {
+      "path": "migrations/001_initial.sql",
+      "sha256": "8e5c3fa5f0065b63076c33b8bd3c337b8490d4b7a88f3e774ec17e2290e1f4d4"
+    },
+    {
+      "path": "migrations/002_relational_execution.sql",
+      "sha256": "660cd0fdbc7205644c7c3d7ac3da43cbaf1c6d9f80c4d0f2ea4d0c0986e6ff90"
+    },
+    {
+      "path": "migrations/003_native_operations.sql",
+      "sha256": "f9a5cfa4a1e4f7830613febe6b37f11a8485beef46d6b96791c78435fe784108"
+    },
+    {
+      "path": "migrations/004_native_source_ownership.sql",
+      "sha256": "366979c9630c4c62cb7d71beb5c89cd917764558b4e05267c4eb4aac486a6cb9"
+    },
+    {
+      "path": "migrations/005_conditional_oms_fulfillment.sql",
+      "sha256": "b8892cbaa4a1b26c6e1732616ec30503d3698f44e363240386078398e29e9a41"
+    },
+    {
+      "path": "migrations/006_oms_rejections.sql",
+      "sha256": "567e061943a1602ff25b5d5c988be810808b8c6e1638885ee6ef9b71a9ba4ed4"
+    },
+    {
+      "path": "migrations/007_operations_indexes.sql",
+      "sha256": "b0b9b422f570ed77ca1252df42c96b29544849621ed748cadd1f068b708576b5"
+    },
+    {
+      "path": "migrations/008_delivery_recipient.sql",
+      "sha256": "050f40c80b9e73a3edc8a19545ab08cfe41051616b84d9445dfdea9a30de9d19"
+    },
+    {
+      "path": "migrations/009_resource_versions.sql",
+      "sha256": "b702a003a1d74210fdfc06cef1fbfb6e737146a25314642094a2f8383dc2e209"
+    },
+    {
+      "path": "migrations/010_customer_returns.sql",
+      "sha256": "dfafb0547d0af2ba11f86dfa31f7facebe89adf582d6b215d02b734e1413fb71"
+    },
+    {
+      "path": "migrations/011_immutable_command_receipts.sql",
+      "sha256": "0a7c69928f38527f542a55e795de9b62c65f4907d7d05cba2d47f7eeebdf8a73"
+    },
+    {
+      "path": "scripts/check-sql.py",
+      "sha256": "1529adde82b98839928b40f1e2b8cc8f164e950dda954e3b92a87e4b7b2611cd"
+    },
+    {
+      "path": "scripts/check.sh",
+      "sha256": "b09613288b87b6ec067baed2961f4f410e04e0a706b90f87fe323926deac6514"
+    },
+    {
+      "path": "scripts/container-smoke.sh",
+      "sha256": "5953e166762a6bea9616b8180eed4e6b13ecd30ddffcf1a9710f289df74f5be7"
+    },
+    {
+      "path": "scripts/dev.sh",
+      "sha256": "23102cd9ca151f798ba8049287a4833fe34860386d316ea08cf09858f65aebbc"
+    },
+    {
+      "path": "scripts/fault-proof.sql",
+      "sha256": "917e1e1d46fa679e76848626d827535b46cf7fbcaec92fe72c1909e3dcb93014"
+    },
+    {
+      "path": "scripts/local-postgres.sh",
+      "sha256": "bf3a964983824dc2f39ee2092ab812105ddca0f11daaba3f06376dbfbee87d47"
+    },
+    {
+      "path": "scripts/qualify-native.py",
+      "sha256": "ec9df2850718009f6d89bdf2ea41aa3977edb138f1dd95638b31e86618445a83"
+    },
+    {
+      "path": "scripts/qualify-release.sh",
+      "sha256": "b8ebd1f0bd92823c7c02182dc7277021e3ea23b13ea12f29584960f7af9d29dc"
+    },
+    {
+      "path": "scripts/relational-proof.sql",
+      "sha256": "5dfec21634977d9511dff7264a12b109f40853eb0f6eb2c674800dc25a27858e"
+    },
+    {
+      "path": "scripts/resilience-rehearsal.sh",
+      "sha256": "5fa42466238d4be5b260021da30541441d2c7d779b74b0594c8ac59099408227"
+    },
+    {
+      "path": "scripts/resilience_probe.py",
+      "sha256": "518d8bc0b7caa5879834d307ddb327b645d8a429d5073652956551bd03d43ca1"
+    },
+    {
+      "path": "scripts/restore-rehearsal.sh",
+      "sha256": "7ef3844d7d7815f8425c5565cdb64dfc01bd1bbf23619a74879a975b0b0224d9"
+    },
+    {
+      "path": "scripts/test_qualify_native.py",
+      "sha256": "fe23b9b5642d8336aea39f9851d62c4580dff44d1fd7f1fe7d29cefaa5faa8fb"
+    },
+    {
+      "path": "scripts/test_resilience_probe.py",
+      "sha256": "c1469dc087144d25d7729c4a359db3969d53fe614aba0c2c7612a16267716833"
+    },
+    {
+      "path": "src/api.rs",
+      "sha256": "25c4d021105da44959dcb4026e1443b6c23336f8e26173e8844ff7167887e388"
+    },
+    {
+      "path": "src/auth.rs",
+      "sha256": "5e5098de620454789a222f68311b1035afdc57423be23b12deac03eb5a58df5d"
+    },
+    {
+      "path": "src/command_state.rs",
+      "sha256": "ed2c26c297369960819d304276a83c2ed4e562332929f47cededcd443a47e9b8"
+    },
+    {
+      "path": "src/concurrency.rs",
+      "sha256": "568ceb9b82c418827504fa2874af1874815c28bc6d760d179a1af9e1f8ced168"
+    },
+    {
+      "path": "src/domain.rs",
+      "sha256": "f5d95fffecf94f384a54e3d09533571c5534bb5debaba31c6364917b895aa8de"
+    },
+    {
+      "path": "src/integrations.rs",
+      "sha256": "0c4b3f8dd395cfb4130de24ba2f4e9b1010532831ef7368c77808eaed4a9690f"
+    },
+    {
+      "path": "src/lib.rs",
+      "sha256": "3544a1c6746e273d2af86301ae1c3fc8800fd095f2931a287945d883fbeda5bc"
+    },
+    {
+      "path": "src/main.rs",
+      "sha256": "da1c5a7e676f4d70cf99e908f96338b83b291e87582dce8b5f6d2580d8d983ca"
+    },
+    {
+      "path": "src/native.rs",
+      "sha256": "85af1460f28691274434afe6ddb12c98ac1d253d0073642b5f74c6a2f0b6015d"
+    },
+    {
+      "path": "src/native_api.rs",
+      "sha256": "9e8053c1531d132a8998a6c3c2724a973a86b8885992378f628fa697b6e5b1e2"
+    },
+    {
+      "path": "src/native_store.rs",
+      "sha256": "0f2e4f746e66de8c23ed27512f84b87f16f081f6f6cd88b6fa35a2b314f288c0"
+    },
+    {
+      "path": "src/oms_client.rs",
+      "sha256": "2c94c9264968eae6a8beec310d7b4939d0c0bb036cdd17f799be47f1314f3edb"
+    },
+    {
+      "path": "src/oms_fulfillment_api.rs",
+      "sha256": "75a3c33e4802760fc40e9cc85698a4fd40dc38ec7abfee3f75fc461b8d970ac6"
+    },
+    {
+      "path": "src/operations.rs",
+      "sha256": "07be1a2e297cfa32a41c16a232558ef886189403e954bb3d1cc6defd15ef980a"
+    },
+    {
+      "path": "src/persistence.rs",
+      "sha256": "0628a46ce1a330111e682909542f52035fef64953eab8c96ede3d4d20e48d804"
+    },
+    {
+      "path": "src/reconciliation.sql",
+      "sha256": "6d88cec8fb77922b03c696c7a65e34b710cd3b8b16d13f23731f486c42821a82"
+    },
+    {
+      "path": "src/replenishment.rs",
+      "sha256": "9e47992df610088bd8de2985dc4469fc2becd0c94cfac5551d0b2db223db778e"
+    },
+    {
+      "path": "src/returns.rs",
+      "sha256": "179c128d8bfc1c9fcd6e95135ac91791f2697738957616c4d6e60bdd82d8dceb"
+    },
+    {
+      "path": "src/store.rs",
+      "sha256": "f7a66e070217dfaaa4d14aca33e28be3092e7e48a27f1f15bd6b998661f610a1"
+    },
+    {
+      "path": "tests/domain.rs",
+      "sha256": "7ba4c91920316f562f7464820d267b6e6b7659acfaa8f46ae338f5ef2342c3c4"
+    },
+    {
+      "path": "tests/fixtures/README.md",
+      "sha256": "79479b98ae87fb4337d54bf52072e8a253373dfee31df7ee806630fa538236a3"
+    },
+    {
+      "path": "tests/fixtures/workos-test-jwk.json",
+      "sha256": "2a3ddc233b758bf7c280f9fbd4df054196c7615f7be6d2ff1458e85c79646aef"
+    },
+    {
+      "path": "tests/fixtures/workos-test-jwk2.json",
+      "sha256": "017dc9b93757e0923aa932b8f94f1fe39e2a3a4afe1c01fa949287080a7c89b6"
+    },
+    {
+      "path": "tests/fixtures/workos-test-key.der",
+      "sha256": "13fcf965425ebaa8f9e7e6b82b6f92d95f0deebed7101626c1f792ae07d2761d"
+    },
+    {
+      "path": "tests/fixtures/workos-test-key2.der",
+      "sha256": "6ce91f87286991dc711a2ffce591d8257435d763a7dd0d9020ca5856e0edff90"
+    },
+    {
+      "path": "tests/http_auth.rs",
+      "sha256": "0e227a2afc252d56e62bb0774de1b7693d630f53ae6ad6d0348932925bdb5e48"
+    },
+    {
+      "path": "tests/native_api.rs",
+      "sha256": "6afcf5b9107fb6c9b2e407b0f3f885e6c5b0086cd188dc35ac318010a61ee8eb"
+    },
+    {
+      "path": "tests/native_contracts.rs",
+      "sha256": "ad7b76c38ba91c4c5baf6eef5247f2de6b5027f8887619e8ec55026341f216ef"
+    },
+    {
+      "path": "tests/oms_client.rs",
+      "sha256": "b3b40217af927a6448a4e4d5a14f47f947047fbac1f26042ab1994ffb27a4443"
+    },
+    {
+      "path": "tests/oms_fulfillment_api.rs",
+      "sha256": "0a413399680b4ec9899330ee2e1bd644811319da4fe83b5538557e102b2147d2"
+    },
+    {
+      "path": "tests/oms_receiver.rs",
+      "sha256": "0be85747951e397144922c46715d64cea951e3551c6df69c9300501f6a2af96d"
+    },
+    {
+      "path": "tests/operations.rs",
+      "sha256": "b968b2cee4f7f73191190847f446c19a184baef9375b76c6dcdb426957d0ca5b"
+    },
+    {
+      "path": "tests/persistence_acceptance.rs",
+      "sha256": "eb2eed4d4de766c3f3aaa7092fe69fcdb49767fa9d5f5b8c1e4b3938b11e0f6f"
+    },
+    {
+      "path": "tests/persistence_guards.rs",
+      "sha256": "8d439662db8680395de44551f5803f8b199a17cfd0b7c6eb3b5c3631ab154c43"
+    },
+    {
+      "path": "tests/postgres.rs",
+      "sha256": "bc05ba8da08707f6c287e5ef85ce5fc146a87a3837b6095eb1a5f29344392a11"
+    },
+    {
+      "path": "tests/startup.rs",
+      "sha256": "5a7a4aafd5b6dc278aefa8a21b18b86c3da77145d5e08e996575e6496463f861"
+    },
+    {
+      "path": "tests/support/workos.rs",
+      "sha256": "6acefbd05d50439ec9266467795d9692c0e3d798c2bcb9a5d422c608ee171091"
+    }
+  ]
+}

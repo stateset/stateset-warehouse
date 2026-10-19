@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-19T09:06:02.620408+00:00",
+  "synthetic": true,
+  "production_qualified": false,
+  "overall_result": "failed",
+  "source_before": {
+    "revision": 23,
+    "inputs": 200,
+    "sha256": "86658aa786228190e5a6fa6c70707d5c00a143f98b5a18299d7220a20bb2a7c0",
+    "archive_sha256": "92bf8119196aa13928cc775fed6255d56f0e8155c71b2bd66bfb923154e561f9"
+  },
+  "source_after": {
+    "revision": 26,
+    "inputs": 204,
+    "sha256": "937214b8c296415dee17f78c26b9b3078fcc1c1b922170f83c04a9ba519077d1",
+    "archive_sha256": "d452960eab40b05efe116df0703a01d28571bcaea3f1b24a909575e2fdc52178"
+  },
+  "raw_report": {
+    "path": "serial-traffic-attempt-20261019.json",
+    "sha256": "82ada0740d9bfa5193a934d0fc053943626cf25109f63787a235ffa417815d28"
+  },
+  "cycles": {
+    "path": "serial-traffic-attempt-cycles-20261019.jsonl",
+    "sha256": "84208a385f43667f230d4ee6c4ba817655b5daf7fc1c34f5eefe0312ea6aa137"
+  },
+  "checks": {
+    "python_cases_passed": 55,
+    "new_python_regressions": 4,
+    "smoke_seconds": 10,
+    "smoke_moves": 199,
+    "sustained_requested_seconds": 300,
+    "sustained_elapsed_seconds": 300.22,
+    "sustained_moves": 4665,
+    "exact_replays": 4665,
+    "serial_source_reviews": 4665,
+    "traffic_errors": 0,
+    "stale_conflicts": 0,
+    "final_complete_api_reconciliation": "failed: unchanged10secondSQLstatementtimeout",
+    "independent_literal_history_rebuild": "passed",
+    "literal_units": 128,
+    "literal_steps": 4793,
+    "controlled_skus": 8,
+    "operators": 4,
+    "native_api_processes": 2,
+    "migrations": 24,
+    "new_rust_suite_runs": 0,
+    "new_browser_runs": 0,
+    "new_full_gate_runs": 0
+  },
+  "limits": [
+    "FAILED qualification: sustained traffic completed but final full-history API reconciliation exceeded the unchanged10second product statement limit. No successful overall serial traffic report exists.",
+    "Debug native executable, uncontrolled shared host, two loopback API processes and one PostgreSQL12primary; not production image/crash/failover/deployed/device/native-receiver/facility qualification.",
+    "Eight controlledSKUs, one lot and16literal each perSKU, eight bins and eight open orders. Four distinct operators continuously move one fixed original label each;124labels stay in place. No think time, rate cap or operator-round barrier. This does not qualify large reviewed counts or broad random-label contention.",
+    "Traffic latency includes committed write, client full operational refresh and exact serial source/custody review. Initial review and subsequent exact replay are excluded. Throughput includes all client cycles and timing-journal writes.",
+    "The separate read-only diagnostic permits60seconds solely to collect EXPLAIN ANALYZE and function counters on the exact retained history. Product timeout remains10seconds. EXPLAIN execution is not successful API qualification, and inclusive function times overlap.",
+    "Independent literal-row rebuild verifies every identity/immutablelot/custody, revision predecessor, normalized original step, complete original observations and globalhead/batch binding. This separate proof does not replace the failed full API reconciliation.",
+    "Rust/SQL/dashboard/application inputs are unchanged from revision23. Earlier314Rust/46PG16/10live/dual49table restore checks retain original provenance, not reruns for these tools. First smoke raced migration/readiness; source25 corrects it. Source26 adds raw timing and exact OMS event-intent checks before this failed sustained attempt."
+  ]
+}

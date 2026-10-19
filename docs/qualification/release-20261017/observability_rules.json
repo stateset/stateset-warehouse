@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "ok": true,
+  "synthetic": true,
+  "recorded_at": "2026-10-17T19:10:55.391903+00:00",
+  "release_revision": "unrecorded-working-tree",
+  "check": "Official pinned promtool syntax and behavior tests",
+  "source_sha256": {
+    "deploy/monitoring/check.sh": "0eb1248a7e06210b630d5a9d1122d7fd99f4c625977465fedd6c718fb3da4041",
+    "deploy/monitoring/alerts.yml": "b54143aea85ba48972539cae63268fb592081132cae2440594b752c5bea58d82",
+    "deploy/monitoring/alerts.test.yml": "27c6301b966f8cf55446d2f72a6ff862ccb29bc342fe9a7f9ad68aef72d26f9c"
+  },
+  "limit": "Example alert policies; facility alert thresholds require operator review"
+}

@@ -68,6 +68,8 @@ fn shipped() -> Order {
         })
         .collect();
     Order {
+        remainder_cancellation: None,
+        shipment_mode: None,
         id: ORDER.into(),
         reference: "SO-CONDITIONAL-1".into(),
         source_order_id: Some(format!("oms:oms-acme:{SOURCE}")),

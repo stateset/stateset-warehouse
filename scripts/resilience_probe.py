@@ -15,6 +15,9 @@ import threading
 import time
 import urllib.error
 import urllib.request
+import urllib.parse
+
+from serial_traffic_proof import serial_proof
 import uuid
 
 
@@ -91,7 +94,9 @@ class Probe:
             name: hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest()
             for name in (
                 "scripts/resilience-rehearsal.sh",
+                "scripts/qualification_resources.sh",
                 "scripts/resilience_probe.py",
+                "scripts/serial_traffic_proof.py",
             )
         }
 
@@ -105,6 +110,13 @@ class Probe:
     @staticmethod
     def lot(index):
         return f"LOT-{index:03}"
+
+    def opening_quantity(self):
+        return getattr(self.args, "serial_units", 0) or 100000
+
+    @staticmethod
+    def serial_id(index, lot, unit):
+        return f"Load-{index:05}-Lot-{lot:03}-Unit-{unit:05}"
 
     def expected_setup_commands(self):
         # Storage bins; recovery product/receipt; operational products/counts;
@@ -239,7 +251,7 @@ class Probe:
             if item["warehouse"]["id"] == "wh-main"
         )
 
-    def snapshot_version(self, base=None, token=None):
+    def snapshot_review(self, base=None, token=None):
         started = time.monotonic()
         status, snapshot = self.http(
             base or self.bases[0], "GET", self.route, token or self.admin
@@ -248,15 +260,22 @@ class Probe:
             status == 200 and snapshot["reconciliation"]["ok"] is True,
             "Operational snapshot failed reconciliation during sustained traffic",
         )
-        require(
-            len(snapshot["products"]) == self.args.products + 1,
-            "Operational snapshot lost catalog records",
-        )
-        require(
-            len(snapshot["orders"]) >= self.args.open_orders,
-            "Operational snapshot lost open work",
-        )
-        return snapshot["version"], (time.monotonic() - started) * 1000
+        self.check_snapshot_coverage(snapshot)
+        return snapshot, (time.monotonic() - started) * 1000
+
+    def check_snapshot_coverage(self, snapshot):
+        require(snapshot.get("warehouse", {}).get("id") == "wh-main",
+                "Operational snapshot belongs to another warehouse")
+        expected_skus = {"PROBE"} | {self.sku(i) for i in range(self.args.products)}
+        require(len(snapshot["products"]) == len(expected_skus)
+                and {p["sku"] for p in snapshot["products"]} == expected_skus,
+                "Operational snapshot lost or substituted catalog records")
+        orders = {o["id"]: o for o in snapshot["orders"]}
+        require(len(orders) == len(snapshot["orders"])
+                and len(self.seeded_orders) == self.args.open_orders
+                and all(order_id in orders and orders[order_id]["status"] == ("allocated" if i % 2 == 0 else "pending")
+                        for i, order_id in enumerate(self.seeded_orders)),
+                "Operational snapshot lost or substituted active order identities/states")
 
     def envelope(self, command, base=None, token=None):
         return {
@@ -276,10 +295,12 @@ class Probe:
             "A committed request changed identity/result",
         )
 
-    def submit(self, command, token=None, base=None):
+    def submit(self, command, token=None, base=None, serial_inputs=None):
         token = token or self.admin
         base = base or self.bases[0]
         request = self.envelope(command, base, token)
+        if serial_inputs is not None:
+            request["serial_inputs"] = serial_inputs
         status, data = self.http(base, "POST", self.route + "/commands", token, request)
         require(
             status == 200 and data["replayed"] is False,
@@ -363,6 +384,7 @@ class Probe:
                     "type": "create_product",
                     "sku": self.sku(i),
                     "name": f"Operational product {i}",
+                    **({"serial_controlled": True} if getattr(self.args, "serial_units", 0) else {}),
                     "category": "Qualification",
                     "reorder_point": 0,
                 }
@@ -374,9 +396,12 @@ class Probe:
                         "sku": self.sku(i),
                         "lot": self.lot(lot),
                         "location": self.bin(i),
-                        "counted": 100000,
+                        "counted": self.opening_quantity(),
                         "reason": "Synthetic opening balance observed by qualifier",
-                    }
+                    },
+                    serial_inputs=[{"target": [], "sku": self.sku(i),
+                                    "serials": [self.serial_id(i, lot, n) for n in range(self.args.serial_units)]}]
+                    if getattr(self.args, "serial_units", 0) else None,
                 )
             if (i + 1) % 100 == 0:
                 print(
@@ -422,7 +447,8 @@ class Probe:
             "storage_bins": self.args.bins,
             "lots_per_product": self.args.lots,
             "opening_bin_lot_balances": self.args.products * self.args.lots,
-            "opening_each_per_balance": 100000,
+            "opening_each_per_balance": self.opening_quantity(),
+            "serial_units_per_bin_lot": getattr(self.args, "serial_units", 0),
             "open_orders": self.args.open_orders,
             "allocated_orders": (self.args.open_orders + 1) // 2,
             "commands_before_recovery_lifecycle": len(self.accepted),
@@ -866,166 +892,259 @@ class Probe:
             "interrupted_response": interrupted,
         }
 
+    def move_request(self, index, move_number, reviewed):
+        command = {
+            "type": "move_stock",
+            "sku": self.sku(index),
+            "lot": self.lot(0),
+            "from": self.bin(index) if move_number % 2 == 0 else self.bin(index + 1),
+            "to": self.bin(index + 1) if move_number % 2 == 0 else self.bin(index),
+            "quantity": 1,
+        }
+        request = {
+            "request_id": str(uuid.uuid4()),
+            "expected_version": reviewed["version"],
+            "command": command,
+        }
+        if self.args.review_mode == "resources":
+            parts = [
+                ["stock", command["sku"], command["lot"], command["from"]],
+                ["stock", command["sku"], command["lot"], command["to"]],
+                ["product", command["sku"]],
+                ["location", command["from"]], ["location", command["to"]],
+            ]
+            keys = {json.dumps(k, separators=(",", ":"), ensure_ascii=False) for k in parts}
+            request["resource_versions"] = {
+                k: reviewed["resource_versions"].get(k, 0) for k in sorted(keys)
+            }
+        if getattr(self.args, "serial_units", 0):
+            request["serial_inputs"] = [{"target": [], "sku": self.sku(index),
+                                         "serials": [self.serial_id(index, 0, 0)]}]
+        return request
+
+    def serial_visibility(self, index, move_number, base, token):
+        if not getattr(self.args, "serial_units", 0):
+            return None
+        started = time.monotonic()
+        sku, label = self.sku(index), self.serial_id(index, 0, 0)
+        query = urllib.parse.urlencode({"sku": sku, "serial": label, "limit": 1})
+        status, page = self.http(base, "GET", "/v1/serials?" + query, token)
+        destination = self.bin(index + 1) if move_number % 2 == 0 else self.bin(index)
+        require(status == 200 and page.get("page_source_ok") is True
+                and page.get("total_records") == 1 and page.get("next_cursor") is None
+                and len(page.get("items", [])) == 1,
+                "Post-commit literal serial source review failed")
+        item = page["items"][0]
+        require(item.get("sku") == sku and item.get("serial") == label
+                and item.get("lot") == self.lot(0) and item.get("source_ok") is True
+                and item.get("place") == {"status": "on_hand", "warehouse_id": "wh-main", "location": destination},
+                "Post-commit serial identity or exact custody is invisible")
+        return (time.monotonic() - started) * 1000
+
+    def reviewed_move(self, index, move_number, reviewed, started, refresh_after_save, stop=None):
+        _actor, token = self.operators[index]
+        base = self.bases[index % 2]
+        conflicts = 0
+        attempts = []
+        snapshots = []
+        while True:
+            if stop is not None and stop.is_set():
+                return None  # No submission, or the preceding attempt definitively failed.
+            request = self.move_request(index, move_number, reviewed)
+            attempted = time.monotonic()
+            status, data = self.http(base, "POST", self.route + "/commands", token, request)
+            attempts.append((time.monotonic() - attempted) * 1000)
+            if status == 409:
+                require(
+                    data.get("command_outcome", {}).get("reason") in ("stale_version", "changed_resources"),
+                    "Unexpected request-key conflict",
+                )
+                conflicts += 1
+                require(conflicts < 100, "Writer starvation exceeded bounded qualification retries")
+                reviewed, refresh_latency = self.snapshot_review(self.bases[1 - index % 2], token)
+                snapshots.append(refresh_latency)
+                continue  # Only a definitive rejection permits a reviewed new key.
+            require(
+                status == 200 and data["replayed"] is False,
+                f"Sustained write failed: {status} {data}",
+            )
+            self.retain(request, data["result"], token)
+            if refresh_after_save:
+                reviewed, refresh_latency = self.snapshot_review(base, token)
+                snapshots.append(refresh_latency)
+                require(
+                    reviewed["version"] >= data["result"]["version"],
+                    "Post-commit snapshot predates the confirmed command",
+                )
+                # The other operators own different SKUs. Their activity cannot
+                # hide this client's exact source/destination custody change.
+                stock = {(s["sku"], s["lot"], s["location"]): s["on_hand"] for s in reviewed["stocks"]}
+                require(
+                    stock.get((self.sku(index), self.lot(0), self.bin(index)), 0)
+                    == self.opening_quantity() - (move_number + 1) % 2
+                    and stock.get((self.sku(index), self.lot(0), self.bin(index + 1)), 0)
+                    == (move_number + 1) % 2,
+                    "Post-commit snapshot did not expose the client's physical movement",
+                )
+            serial_latency = self.serial_visibility(index, move_number, base, token) if refresh_after_save else None
+            latency = (time.monotonic() - started) * 1000
+            replay_started = time.monotonic()
+            replay_status, replay = self.http(
+                self.bases[1 - index % 2], "POST", self.route + "/commands", token, request,
+            )
+            require(
+                replay_status == 200 and replay["replayed"] is True and replay["result"] == data["result"],
+                "Cross-replica replay changed result",
+            )
+            return {
+                "reviewed": reviewed,
+                "conflicts": conflicts,
+                "latency": latency,
+                "attempts": attempts,
+                "snapshots": snapshots,
+                "replay_latency": (time.monotonic() - replay_started) * 1000,
+                "serial_latency": serial_latency,
+                "request_id": request["request_id"],
+                "action_started_monotonic": started,
+                "cycle_ended_monotonic": time.monotonic(),
+            }
+
     def sustained(self):
+        independent = self.args.traffic_model == "independent-operators"
         print(
-            f"Starting {self.args.seconds}s sustained HTTP qualification with {len(self.operators)} distinct operators and two replicas.",
+            f"Starting {self.args.seconds}s sustained HTTP qualification with {len(self.operators)} distinct operators, two replicas and {self.args.traffic_model} traffic.",
             flush=True,
         )
         started = time.monotonic()
+        self.traffic_started_monotonic = started
+        deadline = started + self.args.seconds
         rounds = 0
         moves = [0] * len(self.operators)
         results = [
-            {
-                "actor": actor,
-                "commits": 0,
-                "stale_conflicts": 0,
-                "exact_replays": 0,
-                "latencies": [],
-                "attempt_latencies": [],
-                "snapshot_latencies": [],
-            }
+            {"actor": actor, "commits": 0, "stale_conflicts": 0, "exact_replays": 0,
+             "initial_snapshot_reads": 0, "post_commit_refreshes": 0,
+             "latencies": [], "attempt_latencies": [], "snapshot_latencies": [], "replay_latencies": [], "serial_latencies": []}
             for actor, _ in self.operators
         ]
         last_update = started
+        stop = threading.Event()
 
-        def action(index, expected, round_started):
-            _actor, token = self.operators[index]
-            base = self.bases[index % 2]
-            command = {
-                "type": "move_stock",
-                "sku": self.sku(index),
-                "lot": self.lot(0),
-                "from": self.bin(index)
-                if moves[index] % 2 == 0
-                else self.bin(index + 1),
-                "to": self.bin(index + 1) if moves[index] % 2 == 0 else self.bin(index),
-                "quantity": 1,
-            }
-            action_started = round_started
-            conflicts = 0
-            attempts = []
-            snapshots = []
-            while True:
-                request = {
-                    "request_id": str(uuid.uuid4()),
-                    "expected_version": expected,
-                    "command": command,
-                }
-                attempted = time.monotonic()
-                status, data = self.http(
-                    base, "POST", self.route + "/commands", token, request
-                )
-                attempts.append((time.monotonic() - attempted) * 1000)
-                if status == 409:
-                    require(
-                        "Warehouse changed" in data.get("error", ""),
-                        "Unexpected request-key conflict",
-                    )
-                    conflicts += 1
-                    require(
-                        conflicts < 100,
-                        "Writer starvation exceeded bounded qualification retries",
-                    )
-                    expected, refresh_latency = self.snapshot_version(
-                        self.bases[1 - index % 2], token
-                    )
-                    snapshots.append(refresh_latency)
-                    continue  # A definite stale rejection permits a reviewed new key.
-                require(
-                    status == 200 and data["replayed"] is False,
-                    f"Sustained write failed: {status} {data}",
-                )
-                latency = (time.monotonic() - action_started) * 1000
-                replay_status, replay = self.http(
-                    self.bases[1 - index % 2],
-                    "POST",
-                    self.route + "/commands",
-                    token,
-                    request,
-                )
-                require(
-                    replay_status == 200
-                    and replay["replayed"] is True
-                    and replay["result"] == data["result"],
-                    "Cross-replica replay changed result",
-                )
-                return request, data["result"], conflicts, latency, attempts, snapshots
+        def record(index, sample):
+            result = results[index]
+            moves[index] += 1
+            result["commits"] += 1
+            result["exact_replays"] += 1
+            result["stale_conflicts"] += sample["conflicts"]
+            result["post_commit_refreshes"] += int(independent)
+            result["latencies"].append(sample["latency"])
+            result["attempt_latencies"].extend(sample["attempts"])
+            result["snapshot_latencies"].extend(sample["snapshots"])
+            result["replay_latencies"].append(sample["replay_latency"])
+            if sample["serial_latency"] is not None:
+                result["serial_latencies"].append(sample["serial_latency"])
+
+        def progress():
+            print(
+                f"{time.monotonic() - started:.1f}s: {sum(moves)} committed moves, {sum(r['stale_conflicts'] for r in results)} definite stale conflicts, same number of exact replays.",
+                flush=True,
+            )
+
+        def client(index):
+            try:
+                _, token = self.operators[index]
+                reviewed, latency = self.snapshot_review(self.bases[index % 2], token)
+                results[index]["snapshot_latencies"].append(latency)
+                results[index]["initial_snapshot_reads"] += 1
+                while time.monotonic() < deadline and not stop.is_set():
+                    sample = self.reviewed_move(index, moves[index], reviewed, time.monotonic(), True, stop)
+                    if sample is None:
+                        break
+                    record(index, sample)
+                    reviewed = sample["reviewed"]
+            except BaseException:
+                stop.set()
+                raise
 
         round_snapshot_latencies = []
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=len(self.operators)
-        ) as pool:
-            while time.monotonic() - started < self.args.seconds:
-                # All first attempts intentionally share one observed version. At least
-                # clients-1 must receive a definite stale conflict on every round.
-                round_started = time.monotonic()
-                expected, refresh_latency = self.snapshot_version()
-                round_snapshot_latencies.append(refresh_latency)
-                futures = [
-                    pool.submit(action, i, expected, round_started)
-                    for i in range(len(self.operators))
-                ]
-                for i, future in enumerate(futures):
-                    (
-                        request,
-                        result,
-                        conflicts,
-                        latency,
-                        attempts,
-                        snapshots,
-                    ) = future.result()
-                    self.retain(request, result, self.operators[i][1])
-                    moves[i] += 1
-                    results[i]["commits"] += 1
-                    results[i]["exact_replays"] += 1
-                    results[i]["stale_conflicts"] += conflicts
-                    results[i]["latencies"].append(latency)
-                    results[i]["attempt_latencies"].extend(attempts)
-                    results[i]["snapshot_latencies"].extend(snapshots)
-                rounds += 1
-                if time.monotonic() - last_update >= 10:
-                    print(
-                        f"{time.monotonic() - started:.1f}s: {rounds * len(self.operators)} committed moves, {sum(r['stale_conflicts'] for r in results)} definite stale conflicts, same number of exact replays.",
-                        flush=True,
-                    )
-                    last_update = time.monotonic()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(self.operators)) as pool:
+            if independent:
+                pending = {pool.submit(client, i) for i in range(len(self.operators))}
+                try:
+                    while pending:
+                        done, pending = concurrent.futures.wait(
+                            pending, timeout=10, return_when=concurrent.futures.FIRST_EXCEPTION,
+                        )
+                        for future in done:
+                            future.result()  # A failed client cannot become a passing report.
+                        if time.monotonic() - last_update >= 10:
+                            progress()
+                            last_update = time.monotonic()
+                finally:
+                    stop.set()  # Interrupts must not wait for the full traffic interval.
+            else:
+                while time.monotonic() < deadline:
+                    round_started = time.monotonic()
+                    reviewed, latency = self.snapshot_review()
+                    round_snapshot_latencies.append(latency)
+                    futures = [pool.submit(self.reviewed_move, i, moves[i], reviewed, round_started, False)
+                               for i in range(len(self.operators))]
+                    for i, future in enumerate(futures):
+                        record(i, future.result())
+                    rounds += 1
+                    if time.monotonic() - last_update >= 10:
+                        progress()
+                        last_update = time.monotonic()
         elapsed = time.monotonic() - started
-        require(
-            elapsed >= self.args.seconds and rounds > 0,
-            "Sustained phase did not run its full interval",
-        )
-        require(
-            sum(r["stale_conflicts"] for r in results)
-            >= rounds * (len(self.operators) - 1),
-            "Same-version race did not produce required stale protection",
-        )
+        require(elapsed >= self.args.seconds and all(moves), "Every operator must complete work across the full interval")
+        conflicts = sum(r["stale_conflicts"] for r in results)
+        if self.args.review_mode == "resources":
+            require(conflicts == 0, "Independent resource reviews produced spurious conflicts")
+        elif not independent:
+            require(conflicts >= rounds * (len(self.operators) - 1),
+                    "Legacy same-version race did not produce required stale protection")
         latencies = [v for r in results for v in r["latencies"]]
         attempts = [v for r in results for v in r["attempt_latencies"]]
-        snapshots = round_snapshot_latencies + [
-            v for r in results for v in r["snapshot_latencies"]
-        ]
+        snapshots = round_snapshot_latencies + [v for r in results for v in r["snapshot_latencies"]]
+        replays = [v for r in results for v in r["replay_latencies"]]
+        require(len(latencies) == len(replays) == sum(moves), "Incomplete client cycle timing evidence")
+        if independent:
+            require(len(snapshots) == len(self.operators) + sum(moves) + conflicts,
+                    "Every independent client needs its own initial review and post-commit refresh")
         self.moves = moves
         self.phase_evidence["sustained_http"] = {
             "requested_seconds": self.args.seconds,
+            "review_mode": self.args.review_mode,
+            "traffic_model": self.args.traffic_model,
+            "client_schedule": "independent continuous client loops without think time or an operator barrier" if independent else "one full snapshot shared by all clients at each concurrent round barrier",
+            "serial_units_per_bin_lot": getattr(self.args, "serial_units", 0),
+            "serial_current_source_reads": sum(len(r["serial_latencies"]) for r in results),
+            "serial_current_source_latency": latency_summary([v for r in results for v in r["serial_latencies"]]),
+            "measurement_limit": "Authenticated loopback HTTP and JSON processing; Python clients open HTTP connections per request; browser rendering, human timing and physical scanner input are excluded",
             "elapsed_seconds": round(elapsed, 3),
             "replicas": 2,
             "distinct_operator_identities": len(self.operators),
-            "rounds": rounds,
+            "rounds": None if independent else rounds,
             "committed_moves": sum(moves),
             "exact_cross_replica_replays": sum(r["exact_replays"] for r in results),
-            "definite_stale_conflicts": sum(r["stale_conflicts"] for r in results),
+            "definite_stale_conflicts": conflicts,
             "unexpected_errors": 0,
             "committed_moves_per_second": round(sum(moves) / elapsed, 3),
             "action_latency": latency_summary(latencies),
-            "action_latency_scope": "shared round snapshot through committed physical write, including stale conflicts and full snapshot refreshes; subsequent exact replay excluded",
+            "action_latency_scope": (
+                "command submission from the client's cached review through committed write and its own validated post-commit full warehouse refresh and, when enabled, exact literal serial source/custody review; initial review and subsequent exact replay excluded"
+                if independent else
+                "shared round snapshot through committed physical write, including stale conflicts and full snapshot refreshes; subsequent exact replay excluded"
+            ),
+            "throughput_scope": "all completed client cycles, including initial reviews, physical commands, post-commit refreshes when enabled, conflicts and exact cross-replica replays; replay is not another physical move",
             "http_write_attempt_latency": latency_summary(attempts),
+            "frozen_replay_latency": latency_summary(replays),
             "operational_snapshot_latency": latency_summary(snapshots),
+            "shared_round_snapshot_reads": len(round_snapshot_latencies),
+            "independent_post_commit_stock_visibility_verified": independent,
+            "snapshot_coverage": "exact configured catalog SKU set and every seeded order ID/state, with completed history permitted",
             "operators": [
-                {
-                    k: v
-                    for k, v in r.items()
-                    if k not in ("latencies", "attempt_latencies", "snapshot_latencies")
-                }
+                {**{k: v for k, v in r.items() if not isinstance(v, list)},
+                 "snapshot_reads": len(r["snapshot_latencies"])}
                 for r in results
             ],
         }
@@ -1101,7 +1220,7 @@ class Probe:
             "Independent receive18 minus shipped5 is not13",
         )
         expected_reserved = 3 + (self.args.open_orders + 1) // 2
-        expected_physical = self.args.products * self.args.lots * 100000 + 13
+        expected_physical = self.args.products * self.args.lots * self.opening_quantity() + 13
         require(
             sum(row["reserved"] for row in stock_rows) == expected_reserved,
             "Outstanding operational/recovery reservations changed",
@@ -1113,7 +1232,7 @@ class Probe:
         for i, count in enumerate(self.moves):
             require(
                 actual[(self.sku(i), self.lot(0), self.bin(i))][0]
-                == 100000 - count % 2,
+                == self.opening_quantity() - count % 2,
                 "Per-operator source bin conservation failed",
             )
             require(
@@ -1228,7 +1347,16 @@ class Probe:
                     "method": proof["method"],
                 }
             )
+        literal_proof = None
+        if getattr(self.args, "serial_units", 0):
+            tables = {name: self.table(name) for name in (
+                "wms_serial_units", "wms_serial_steps", "wms_serial_observations",
+                "wms_serial_heads", "wms_serial_batches")}
+            tables["wms_events"] = events
+            literal_proof = serial_proof(tables, self.accepted, self.args.products,
+                                         self.args.lots, self.args.serial_units, self.moves, self.args.bins)
         return {
+            "serial_identity_proof": literal_proof,
             "physical_recomputed_from_append_only_movements": True,
             "reserved_recomputed_from_allocation_lines": True,
             "receipt_quantities_recomputed_per_exact_line": True,
@@ -1375,6 +1503,18 @@ class Probe:
         self.lifecycle()
         self.crash_api()
         self.crash_postgres()
+        # Keep an exact synthetic read fixture outside the measured interval.
+        # It permits serialization/validation comparisons without credentials,
+        # database setup, or a second competing load generator.
+        snapshot, _ = self.snapshot_review()
+        fixture = json.dumps(snapshot, sort_keys=True, separators=(",", ":")).encode()
+        (self.root / "snapshot-fixture.json").write_bytes(fixture)
+        self.phase_evidence["snapshot_fixture"] = {
+            "sha256": hashlib.sha256(fixture).hexdigest(),
+            "bytes": len(fixture),
+            "version": snapshot["version"],
+            "outside_sustained_interval": True,
+        }
         self.sustained()
         self.report(self.independent_proof())
 
@@ -1386,10 +1526,13 @@ def main():
     parser.add_argument("--postgres", required=True)
     parser.add_argument("--api", action="append", required=True)
     parser.add_argument("--seconds", type=int, default=60)
+    parser.add_argument("--review-mode", choices=("resources", "warehouse"), default="resources")
+    parser.add_argument("--traffic-model", choices=("shared-snapshot", "independent-operators"), default="independent-operators")
     parser.add_argument("--products", type=int, default=100)
     parser.add_argument("--open-orders", type=int, default=100)
     parser.add_argument("--lots", type=int, default=2)
     parser.add_argument("--bins", type=int, default=20)
+    parser.add_argument("--serial-units", type=int, default=0, help="0 retains untracked traffic; otherwise literal each IDs per opening bin/lot")
     args = parser.parse_args()
     require(
         re.fullmatch(r"[0-9]+-[0-9a-f]{8}", args.run), "Invalid ownership run identity"
@@ -1408,6 +1551,11 @@ def main():
     require(0 <= args.open_orders <= 5000, "Open orders must be between 0 and 5000")
     require(1 <= args.lots <= 10, "Lots must be between 1 and 10")
     require(2 <= args.bins <= 1000, "Storage bins must be between 2 and 1000")
+    require(args.serial_units == 0 or 2 <= args.serial_units <= 256,
+            "Serial units must be zero or2..256 per bin/lot")
+    require(not args.serial_units or (args.traffic_model == "independent-operators"
+            and args.serial_units > (args.open_orders + args.products - 1) // args.products),
+            "Serial traffic needs independent clients and opening custody above active order allocations")
     credentials = json.loads(
         (pathlib.Path(args.artifacts) / "credentials.json").read_text()
     )

@@ -1,0 +1,4318 @@
+{
+  "ok": true,
+  "synthetic": true,
+  "release_revision": "pack-units-2ecc3469f6b6890d3dc14a223d7c9a9e2a98f8641a9cdf01a9400e3257cd7255",
+  "elapsed_archive_restore_verify_seconds": 10,
+  "cargo_lock_sha256": "1ea91fe9d96f04bd532f108e08a484a9efae2b90609c3cbc570366d722896313",
+  "probe_binary_sha256": "cfa1e2a6f52ed918ca3b8f81148379006c1ff3b38095b675a6c32a93a37b1bf9",
+  "archive_sha256": "f24b02d5b37c41b9ba79fe6436e8b91add716219e8c9632a57c64ccb2392c25c",
+  "verification": {
+    "active_packing_and_backorder_ownership_preserved": true,
+    "actual_handoff_return_allowance_preserved_after_close": true,
+    "all_table_hashes_identical_before_retry": true,
+    "all_warehouse_reconciliation": [
+      {
+        "proof": {
+          "lot_controls": {
+            "baseline_version": 0,
+            "eligibility_decisions": 0,
+            "ok": true,
+            "policy_changes": 0
+          },
+          "method": "full_append_only_ledger_and_order_line_allocations",
+          "ok": true,
+          "packages": [],
+          "receipt_cancellations": [],
+          "receipts": [],
+          "returns": [],
+          "rows": [],
+          "shipments": [],
+          "transfers": [],
+          "units": {
+            "definition_changes": 0,
+            "method": "immutable_definition_and_original_command_each_conversion",
+            "ok": true,
+            "quantity_observations": 0
+          },
+          "version": 0
+        },
+        "tenant": "restore-other-tenant",
+        "warehouse_id": "wh-main"
+      },
+      {
+        "proof": {
+          "lot_controls": {
+            "baseline_version": 0,
+            "eligibility_decisions": 0,
+            "ok": true,
+            "policy_changes": 1
+          },
+          "method": "full_append_only_ledger_and_order_line_allocations",
+          "ok": true,
+          "packages": [],
+          "receipt_cancellations": [],
+          "receipts": [],
+          "returns": [],
+          "rows": [
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 1,
+              "location": "RECV-01",
+              "lot": "ORIGINAL-LOSS-LOT",
+              "ok": true,
+              "on_hand": 1,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "RESTORE-LOSS"
+            }
+          ],
+          "shipments": [],
+          "transfers": [
+            {
+              "destination_warehouse_id": "wh-loss-destination",
+              "lines": [
+                {
+                  "dispatched": 5,
+                  "in_transit": 3,
+                  "line_id": "original-loss-line",
+                  "loss_record_count": 2,
+                  "lost": 1,
+                  "lot": "ORIGINAL-LOSS-LOT",
+                  "received": 1,
+                  "sku": "RESTORE-LOSS"
+                }
+              ],
+              "ok": true,
+              "source_event_id": "1149cedc-e7e2-41b3-a6af-b05522171e13",
+              "source_warehouse_id": "wh-loss-source",
+              "transfer_id": "933353f3-78a3-4dbd-8ce1-6cf1d2ef9f3c"
+            }
+          ],
+          "units": {
+            "definition_changes": 0,
+            "method": "immutable_definition_and_original_command_each_conversion",
+            "ok": true,
+            "quantity_observations": 0
+          },
+          "version": 5
+        },
+        "tenant": "restore-rehearsal",
+        "warehouse_id": "wh-loss-destination"
+      },
+      {
+        "proof": {
+          "lot_controls": {
+            "baseline_version": 0,
+            "eligibility_decisions": 1,
+            "ok": true,
+            "policy_changes": 0
+          },
+          "method": "full_append_only_ledger_and_order_line_allocations",
+          "ok": true,
+          "packages": [],
+          "receipt_cancellations": [],
+          "receipts": [],
+          "returns": [],
+          "rows": [
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 5,
+              "location": "LOSS-A",
+              "lot": "ORIGINAL-LOSS-LOT",
+              "ok": true,
+              "on_hand": 5,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "RESTORE-LOSS"
+            }
+          ],
+          "shipments": [],
+          "transfers": [
+            {
+              "destination_warehouse_id": "wh-loss-destination",
+              "lines": [
+                {
+                  "dispatched": 5,
+                  "in_transit": 3,
+                  "line_id": "original-loss-line",
+                  "loss_record_count": 2,
+                  "lost": 1,
+                  "lot": "ORIGINAL-LOSS-LOT",
+                  "received": 1,
+                  "sku": "RESTORE-LOSS"
+                }
+              ],
+              "ok": true,
+              "source_event_id": "1149cedc-e7e2-41b3-a6af-b05522171e13",
+              "source_warehouse_id": "wh-loss-source",
+              "transfer_id": "933353f3-78a3-4dbd-8ce1-6cf1d2ef9f3c"
+            }
+          ],
+          "units": {
+            "definition_changes": 0,
+            "method": "immutable_definition_and_original_command_each_conversion",
+            "ok": true,
+            "quantity_observations": 0
+          },
+          "version": 5
+        },
+        "tenant": "restore-rehearsal",
+        "warehouse_id": "wh-loss-source"
+      },
+      {
+        "proof": {
+          "lot_controls": {
+            "baseline_version": 0,
+            "eligibility_decisions": 27,
+            "ok": true,
+            "policy_changes": 6
+          },
+          "method": "full_append_only_ledger_and_order_line_allocations",
+          "ok": true,
+          "packages": [
+            {
+              "ok": true,
+              "order_id": "065cb5d6-b7d1-44d6-b207-72dee2f13415",
+              "packages": [
+                {
+                  "actor": "rehearsal:admin",
+                  "closure": {
+                    "actor": "rehearsal:admin",
+                    "carrier": "Synthetic split carrier",
+                    "closed_at": "2026-10-19T02:45:24.284240804+00:00",
+                    "event_id": "daa16e5a-847a-4302-9173-acfeba57fba3",
+                    "handoff_reference": "RESTORE-SPLIT-HANDOFF",
+                    "kind": "handed_off",
+                    "reason": "",
+                    "version": 32
+                  },
+                  "id": "5fd666fe-2032-4cb8-a0ea-556ccb9d2dda",
+                  "lines": [
+                    {
+                      "line_id": "a",
+                      "location": "SPLIT-A",
+                      "lot": "SPLIT-LOT",
+                      "quantity": 3,
+                      "sku": "RESTORE-SPLIT"
+                    }
+                  ],
+                  "order_id": "065cb5d6-b7d1-44d6-b207-72dee2f13415",
+                  "packed_at": "2026-10-19T02:45:24.214348890+00:00",
+                  "reference": "RESTORE-SPLIT-SENT",
+                  "source_event_id": "eb301dca-92ee-4faf-b911-8dfa5540e2c9",
+                  "source_version": 31
+                },
+                {
+                  "actor": "rehearsal:admin",
+                  "closure": null,
+                  "id": "82b48b97-1fd5-4777-aaa0-46e4b68600c9",
+                  "lines": [
+                    {
+                      "line_id": "b",
+                      "location": "SPLIT-A",
+                      "lot": "SPLIT-LOT",
+                      "quantity": 1,
+                      "sku": "RESTORE-SPLIT"
+                    }
+                  ],
+                  "order_id": "065cb5d6-b7d1-44d6-b207-72dee2f13415",
+                  "packed_at": "2026-10-19T02:45:24.381356446+00:00",
+                  "reference": "RESTORE-SPLIT-ACTIVE",
+                  "source_event_id": "d43364df-c9f0-4f7a-8d7d-e63c5fd674e4",
+                  "source_version": 33
+                },
+                {
+                  "actor": "rehearsal:admin",
+                  "closure": {
+                    "actor": "rehearsal:admin",
+                    "carrier": "",
+                    "closed_at": "2026-10-19T02:45:24.520350876+00:00",
+                    "event_id": "4dd6d875-4339-41e6-ab36-4d59d04c208b",
+                    "handoff_reference": "",
+                    "kind": "unpacked",
+                    "reason": "Physical repacking before recovery point",
+                    "version": 35
+                  },
+                  "id": "e013dfc8-d7dd-4614-9c63-19d80e85d934",
+                  "lines": [
+                    {
+                      "line_id": "b",
+                      "location": "SPLIT-A",
+                      "lot": "SPLIT-LOT",
+                      "quantity": 1,
+                      "sku": "RESTORE-SPLIT"
+                    }
+                  ],
+                  "order_id": "065cb5d6-b7d1-44d6-b207-72dee2f13415",
+                  "packed_at": "2026-10-19T02:45:24.464892475+00:00",
+                  "reference": "RESTORE-SPLIT-UNPACKED",
+                  "source_event_id": "5850166b-c493-4e16-809c-529b220b92ea",
+                  "source_version": 34
+                }
+              ],
+              "source_event_id": "d5df397e-e638-4881-9711-3b6ff5725f36",
+              "status": "partially_shipped"
+            },
+            {
+              "ok": true,
+              "order_id": "9435f6b0-3dc4-43db-85fc-c2a41b549ee3",
+              "packages": [
+                {
+                  "actor": "rehearsal:admin",
+                  "closure": {
+                    "actor": "rehearsal:admin",
+                    "carrier": "Actual synthetic carrier",
+                    "closed_at": "2026-10-19T02:45:24.993603101+00:00",
+                    "event_id": "774bad64-62bc-49c4-9383-9046653a2e16",
+                    "handoff_reference": "RESTORE-CLOSED-HANDOFF",
+                    "kind": "handed_off",
+                    "reason": "",
+                    "version": 42
+                  },
+                  "id": "558a5f84-48d3-4e02-b873-66d4cad78d88",
+                  "lines": [
+                    {
+                      "line_id": "a",
+                      "location": "SPLIT-A",
+                      "lot": "CLOSED-LOT",
+                      "quantity": 3,
+                      "sku": "RESTORE-SPLIT"
+                    }
+                  ],
+                  "order_id": "9435f6b0-3dc4-43db-85fc-c2a41b549ee3",
+                  "packed_at": "2026-10-19T02:45:24.924431778+00:00",
+                  "reference": "RESTORE-CLOSED-PACKAGE",
+                  "source_event_id": "849a790c-83bd-4b5e-8250-f8960d24872d",
+                  "source_version": 41
+                }
+              ],
+              "source_event_id": "f8901499-7102-4ef0-a9fa-4b898a69d395",
+              "status": "closed_partial"
+            },
+            {
+              "ok": true,
+              "order_id": "b430f144-8601-426e-a9e8-e4cde40ce926",
+              "packages": [
+                {
+                  "actor": "rehearsal:admin",
+                  "closure": {
+                    "actor": "rehearsal:admin",
+                    "carrier": "Synthetic customer carrier",
+                    "closed_at": "2026-10-19T02:45:25.838232926+00:00",
+                    "event_id": "43a0b442-890c-49b0-b1e4-be4588d84bb8",
+                    "handoff_reference": "QUALITY-WITNESSED-CUSTOMER-HANDOFF",
+                    "kind": "handed_off",
+                    "reason": "",
+                    "version": 54
+                  },
+                  "id": "d3dd2b54-6837-4a4a-8f59-645ab5ecfc50",
+                  "lines": [
+                    {
+                      "line_id": "quality-line",
+                      "location": "A-01",
+                      "lot": "QUALITY-LOT",
+                      "quantity": 1,
+                      "sku": "RESTORE-QUALITY"
+                    }
+                  ],
+                  "order_id": "b430f144-8601-426e-a9e8-e4cde40ce926",
+                  "packed_at": "2026-10-19T02:45:25.775211013+00:00",
+                  "reference": "RESTORE-QUALITY-HANDED",
+                  "source_event_id": "b1abdeef-e453-48ea-80c2-0d79a3b45996",
+                  "source_version": 53
+                },
+                {
+                  "actor": "rehearsal:admin",
+                  "closure": null,
+                  "id": "94c5541d-b651-4f3b-9941-70070f579321",
+                  "lines": [
+                    {
+                      "line_id": "quality-line",
+                      "location": "A-01",
+                      "lot": "QUALITY-LOT",
+                      "quantity": 1,
+                      "sku": "RESTORE-QUALITY"
+                    }
+                  ],
+                  "order_id": "b430f144-8601-426e-a9e8-e4cde40ce926",
+                  "packed_at": "2026-10-19T02:45:25.941923967+00:00",
+                  "reference": "RESTORE-QUALITY-ACTIVE",
+                  "source_event_id": "8305f956-76fd-4f6a-9a2d-7c6b798d3762",
+                  "source_version": 55
+                }
+              ],
+              "source_event_id": "ee074f74-e022-480f-8878-40a54d2f4bcd",
+              "status": "partially_shipped"
+            }
+          ],
+          "receipt_cancellations": [
+            {
+              "cancelled": 2,
+              "ok": true,
+              "receipt_id": "33e9b542-3aec-47b9-a08d-259a2f77326d",
+              "status": "cancelled"
+            },
+            {
+              "cancelled": 0,
+              "ok": true,
+              "receipt_id": "596233f0-2f4e-456a-bacf-45d27ae76574",
+              "status": "received"
+            },
+            {
+              "cancelled": 0,
+              "ok": true,
+              "receipt_id": "d34fef74-ca14-48c9-aa1a-2367f303d39c",
+              "status": "received"
+            },
+            {
+              "cancelled": 0,
+              "ok": true,
+              "receipt_id": "d42cf41c-16db-4478-b584-475b83bfcbe7",
+              "status": "expected"
+            },
+            {
+              "cancelled": 1,
+              "ok": true,
+              "receipt_id": "ee34c6bd-eda9-44ee-baad-77fab4696624",
+              "status": "cancelled"
+            },
+            {
+              "cancelled": 0,
+              "ok": true,
+              "receipt_id": "f33976aa-e190-4eb8-8859-b1f42d743f73",
+              "status": "expected"
+            }
+          ],
+          "receipts": [
+            {
+              "evidence": 1,
+              "line_id": "closed-line",
+              "ok": true,
+              "receipt_id": "33e9b542-3aec-47b9-a08d-259a2f77326d",
+              "received": 1
+            },
+            {
+              "evidence": 1,
+              "line_id": "return-line",
+              "ok": true,
+              "receipt_id": "596233f0-2f4e-456a-bacf-45d27ae76574",
+              "received": 1
+            },
+            {
+              "evidence": 12,
+              "line_id": "receipt-line",
+              "ok": true,
+              "receipt_id": "d34fef74-ca14-48c9-aa1a-2367f303d39c",
+              "received": 12
+            },
+            {
+              "evidence": 0,
+              "line_id": "return-a",
+              "ok": true,
+              "receipt_id": "d42cf41c-16db-4478-b584-475b83bfcbe7",
+              "received": 0
+            },
+            {
+              "evidence": 0,
+              "line_id": "quality-return-line",
+              "ok": true,
+              "receipt_id": "ee34c6bd-eda9-44ee-baad-77fab4696624",
+              "received": 0
+            },
+            {
+              "evidence": 0,
+              "line_id": "closed-rma-line",
+              "ok": true,
+              "receipt_id": "f33976aa-e190-4eb8-8859-b1f42d743f73",
+              "received": 0
+            }
+          ],
+          "returns": [
+            {
+              "authorized": 1,
+              "lot": "SPLIT-LOT",
+              "ok": true,
+              "order_id": "065cb5d6-b7d1-44d6-b207-72dee2f13415",
+              "order_line_id": "a",
+              "received": 0,
+              "shipped": 3,
+              "sku": "RESTORE-SPLIT"
+            },
+            {
+              "authorized": 1,
+              "lot": "CLOSED-LOT",
+              "ok": true,
+              "order_id": "9435f6b0-3dc4-43db-85fc-c2a41b549ee3",
+              "order_line_id": "a",
+              "received": 0,
+              "shipped": 3,
+              "sku": "RESTORE-SPLIT"
+            },
+            {
+              "authorized": 0,
+              "lot": "QUALITY-LOT",
+              "ok": true,
+              "order_id": "b430f144-8601-426e-a9e8-e4cde40ce926",
+              "order_line_id": "quality-line",
+              "received": 0,
+              "shipped": 1,
+              "sku": "RESTORE-QUALITY"
+            },
+            {
+              "authorized": 1,
+              "lot": "RESTORE-LOT",
+              "ok": true,
+              "order_id": "eccf3f97-0dc3-46f4-b20c-31d19a9ad971",
+              "order_line_id": "oms-line-db55067a83f4a20cb2ce42c3d516aa6d2712ec72695555b57f1180d5b973a5fa",
+              "received": 1,
+              "shipped": 1,
+              "sku": "RESTORE-EACH"
+            }
+          ],
+          "rows": [
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 1,
+              "location": "RECV-01",
+              "lot": "CLOSED-LOT",
+              "ok": true,
+              "on_hand": 1,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "RESTORE-EACH"
+            },
+            {
+              "allocation_reserved": 2,
+              "difference": 0,
+              "ledger": 3,
+              "location": "A-01",
+              "lot": "RESTORE-LOT",
+              "ok": true,
+              "on_hand": 3,
+              "reserved": 2,
+              "reserved_difference": 0,
+              "sku": "RESTORE-EACH"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 1,
+              "location": "RECV-01",
+              "lot": "RESTORE-LOT",
+              "ok": true,
+              "on_hand": 1,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "RESTORE-EACH"
+            },
+            {
+              "allocation_reserved": 5,
+              "difference": 0,
+              "ledger": 5,
+              "location": "STAGE-01",
+              "lot": "RESTORE-LOT",
+              "ok": true,
+              "on_hand": 5,
+              "reserved": 5,
+              "reserved_difference": 0,
+              "sku": "RESTORE-EACH"
+            },
+            {
+              "allocation_reserved": 1,
+              "difference": 0,
+              "ledger": 6,
+              "location": "A-01",
+              "lot": "QUALITY-LOT",
+              "ok": true,
+              "on_hand": 6,
+              "reserved": 1,
+              "reserved_difference": 0,
+              "sku": "RESTORE-QUALITY"
+            },
+            {
+              "allocation_reserved": 1,
+              "difference": 0,
+              "ledger": 1,
+              "location": "STAGE-01",
+              "lot": "QUALITY-LOT",
+              "ok": true,
+              "on_hand": 1,
+              "reserved": 1,
+              "reserved_difference": 0,
+              "sku": "RESTORE-QUALITY"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 4,
+              "location": "SPLIT-A",
+              "lot": "CLOSED-LOT",
+              "ok": true,
+              "on_hand": 4,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "RESTORE-SPLIT"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 0,
+              "location": "STAGE-01",
+              "lot": "CLOSED-LOT",
+              "ok": true,
+              "on_hand": 0,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "RESTORE-SPLIT"
+            },
+            {
+              "allocation_reserved": 2,
+              "difference": 0,
+              "ledger": 2,
+              "location": "SPLIT-A",
+              "lot": "SPLIT-LOT",
+              "ok": true,
+              "on_hand": 2,
+              "reserved": 2,
+              "reserved_difference": 0,
+              "sku": "RESTORE-SPLIT"
+            },
+            {
+              "allocation_reserved": 2,
+              "difference": 0,
+              "ledger": 2,
+              "location": "STAGE-01",
+              "lot": "SPLIT-LOT",
+              "ok": true,
+              "on_hand": 2,
+              "reserved": 2,
+              "reserved_difference": 0,
+              "sku": "RESTORE-SPLIT"
+            }
+          ],
+          "shipments": [
+            {
+              "event_id": null,
+              "ok": true,
+              "order_id": "065cb5d6-b7d1-44d6-b207-72dee2f13415",
+              "source_kind": "handoff_events",
+              "source_version": null
+            },
+            {
+              "event_id": null,
+              "ok": true,
+              "order_id": "9435f6b0-3dc4-43db-85fc-c2a41b549ee3",
+              "source_kind": "handoff_events",
+              "source_version": null
+            },
+            {
+              "event_id": null,
+              "ok": true,
+              "order_id": "b430f144-8601-426e-a9e8-e4cde40ce926",
+              "source_kind": "handoff_events",
+              "source_version": null
+            },
+            {
+              "event_id": "7447f0c6-9636-4d7f-a5c5-5a888893bd30",
+              "ok": true,
+              "order_id": "eccf3f97-0dc3-46f4-b20c-31d19a9ad971",
+              "source_kind": "event",
+              "source_version": 17
+            }
+          ],
+          "transfers": [
+            {
+              "destination_warehouse_id": "wh-restore-secondary",
+              "lines": [
+                {
+                  "dispatched": 3,
+                  "in_transit": 2,
+                  "line_id": "original-line",
+                  "loss_record_count": 0,
+                  "lost": 0,
+                  "lot": "RESTORE-LOT",
+                  "received": 1,
+                  "sku": "RESTORE-EACH"
+                }
+              ],
+              "ok": true,
+              "source_event_id": "8248230c-60e6-456e-b679-e32f9d04036e",
+              "source_warehouse_id": "wh-main",
+              "transfer_id": "a41f18b4-11dd-40cd-a79e-03f34a0a157e"
+            },
+            {
+              "destination_warehouse_id": "wh-restore-secondary",
+              "lines": [
+                {
+                  "dispatched": 2,
+                  "in_transit": 1,
+                  "line_id": "quality-transfer-line",
+                  "loss_record_count": 0,
+                  "lost": 0,
+                  "lot": "QUALITY-LOT",
+                  "received": 1,
+                  "sku": "RESTORE-QUALITY"
+                }
+              ],
+              "ok": true,
+              "source_event_id": "7d8b9a91-2bf6-4103-bcc8-935e102a751e",
+              "source_warehouse_id": "wh-main",
+              "transfer_id": "4bbecaf5-08d8-4aca-a716-c30ae1f1ff22"
+            }
+          ],
+          "units": {
+            "definition_changes": 0,
+            "method": "immutable_definition_and_original_command_each_conversion",
+            "ok": true,
+            "quantity_observations": 0
+          },
+          "version": 61
+        },
+        "tenant": "restore-rehearsal",
+        "warehouse_id": "wh-main"
+      },
+      {
+        "proof": {
+          "lot_controls": {
+            "baseline_version": 0,
+            "eligibility_decisions": 0,
+            "ok": true,
+            "policy_changes": 3
+          },
+          "method": "full_append_only_ledger_and_order_line_allocations",
+          "ok": true,
+          "packages": [],
+          "receipt_cancellations": [],
+          "receipts": [],
+          "returns": [],
+          "rows": [
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 1,
+              "location": "RECV-01",
+              "lot": "RESTORE-LOT",
+              "ok": true,
+              "on_hand": 1,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "RESTORE-EACH"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 1,
+              "location": "RECV-01",
+              "lot": "QUALITY-LOT",
+              "ok": true,
+              "on_hand": 1,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "RESTORE-QUALITY"
+            }
+          ],
+          "shipments": [],
+          "transfers": [
+            {
+              "destination_warehouse_id": "wh-restore-secondary",
+              "lines": [
+                {
+                  "dispatched": 3,
+                  "in_transit": 2,
+                  "line_id": "original-line",
+                  "loss_record_count": 0,
+                  "lost": 0,
+                  "lot": "RESTORE-LOT",
+                  "received": 1,
+                  "sku": "RESTORE-EACH"
+                }
+              ],
+              "ok": true,
+              "source_event_id": "8248230c-60e6-456e-b679-e32f9d04036e",
+              "source_warehouse_id": "wh-main",
+              "transfer_id": "a41f18b4-11dd-40cd-a79e-03f34a0a157e"
+            },
+            {
+              "destination_warehouse_id": "wh-restore-secondary",
+              "lines": [
+                {
+                  "dispatched": 2,
+                  "in_transit": 1,
+                  "line_id": "quality-transfer-line",
+                  "loss_record_count": 0,
+                  "lost": 0,
+                  "lot": "QUALITY-LOT",
+                  "received": 1,
+                  "sku": "RESTORE-QUALITY"
+                }
+              ],
+              "ok": true,
+              "source_event_id": "7d8b9a91-2bf6-4103-bcc8-935e102a751e",
+              "source_warehouse_id": "wh-main",
+              "transfer_id": "4bbecaf5-08d8-4aca-a716-c30ae1f1ff22"
+            }
+          ],
+          "units": {
+            "definition_changes": 0,
+            "method": "immutable_definition_and_original_command_each_conversion",
+            "ok": true,
+            "quantity_observations": 0
+          },
+          "version": 6
+        },
+        "tenant": "restore-rehearsal",
+        "warehouse_id": "wh-restore-secondary"
+      },
+      {
+        "proof": {
+          "lot_controls": {
+            "baseline_version": 0,
+            "eligibility_decisions": 4,
+            "ok": true,
+            "policy_changes": 0
+          },
+          "method": "full_append_only_ledger_and_order_line_allocations",
+          "ok": true,
+          "packages": [
+            {
+              "ok": true,
+              "order_id": "e6192c74-d680-46fc-aa1f-c57122968be3",
+              "packages": [
+                {
+                  "actor": "rehearsal:admin",
+                  "closure": {
+                    "actor": "rehearsal:admin",
+                    "carrier": "Synthetic",
+                    "closed_at": "2026-10-19T02:45:27.722492559+00:00",
+                    "event_id": "c4c0aa54-9aa0-42db-9aa7-63a256c3b229",
+                    "handoff_reference": "RESTORE-CASE-HANDOFF",
+                    "kind": "handed_off",
+                    "reason": "",
+                    "version": 12
+                  },
+                  "id": "ea91f02f-df23-4a1b-857c-fa78a7002dcb",
+                  "lines": [
+                    {
+                      "line_id": "a",
+                      "location": "PACK-01",
+                      "lot": "ORIGINAL-PACK-LOT",
+                      "quantity": 12,
+                      "sku": "RESTORE-PACK"
+                    }
+                  ],
+                  "order_id": "e6192c74-d680-46fc-aa1f-c57122968be3",
+                  "packed_at": "2026-10-19T02:45:27.630487957+00:00",
+                  "reference": "RESTORE-CASE-PACKAGE",
+                  "source_event_id": "6dc9b461-853f-4bef-9e07-c9253e8e608a",
+                  "source_version": 11
+                }
+              ],
+              "source_event_id": "6dc9b461-853f-4bef-9e07-c9253e8e608a",
+              "status": "shipped"
+            }
+          ],
+          "receipt_cancellations": [
+            {
+              "cancelled": 0,
+              "ok": true,
+              "receipt_id": "39f6580f-20ab-4103-8220-04e802927f6a",
+              "status": "partial"
+            }
+          ],
+          "receipts": [
+            {
+              "evidence": 24,
+              "line_id": "a",
+              "ok": true,
+              "receipt_id": "39f6580f-20ab-4103-8220-04e802927f6a",
+              "received": 24
+            }
+          ],
+          "returns": [],
+          "rows": [
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 0,
+              "location": "PACK-01",
+              "lot": "ORIGINAL-PACK-LOT",
+              "ok": true,
+              "on_hand": 0,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "RESTORE-PACK"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 12,
+              "location": "RECV-01",
+              "lot": "ORIGINAL-PACK-LOT",
+              "ok": true,
+              "on_hand": 12,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "RESTORE-PACK"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 0,
+              "location": "STAGE-01",
+              "lot": "ORIGINAL-PACK-LOT",
+              "ok": true,
+              "on_hand": 0,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "RESTORE-PACK"
+            }
+          ],
+          "shipments": [
+            {
+              "event_id": null,
+              "ok": true,
+              "order_id": "e6192c74-d680-46fc-aa1f-c57122968be3",
+              "source_kind": "handoff_events",
+              "source_version": null
+            }
+          ],
+          "transfers": [],
+          "units": {
+            "definition_changes": 4,
+            "method": "immutable_definition_and_original_command_each_conversion",
+            "ok": true,
+            "quantity_observations": 6
+          },
+          "version": 15
+        },
+        "tenant": "restore-rehearsal",
+        "warehouse_id": "wh-unit-packs"
+      }
+    ],
+    "archive_round_trip": "pg_dump custom / pg_restore single transaction",
+    "cancelled_demand_original_request_replayed": true,
+    "cancelled_partial_receipt_restored": true,
+    "customer_return_receipt_restored": true,
+    "early_partial_return_restored": true,
+    "facility_creation_original_request_replayed": true,
+    "immutable_original_shipment_source_restored": true,
+    "lot_controls_required_expiry_holds_and_original_decisions_restored": true,
+    "lot_original_requests_replayed_without_table_changes": true,
+    "lot_post_restore_recovery": {
+      "actual_unpack_unpick_release_succeeded": true,
+      "original_shipped_return_allowance": 1,
+      "proof": {
+        "lot_controls": {
+          "baseline_version": 0,
+          "eligibility_decisions": 27,
+          "ok": true,
+          "policy_changes": 6
+        },
+        "method": "full_append_only_ledger_and_order_line_allocations",
+        "ok": true,
+        "packages": [
+          {
+            "ok": true,
+            "order_id": "065cb5d6-b7d1-44d6-b207-72dee2f13415",
+            "packages": [
+              {
+                "actor": "rehearsal:admin",
+                "closure": {
+                  "actor": "rehearsal:admin",
+                  "carrier": "Synthetic split carrier",
+                  "closed_at": "2026-10-19T02:45:24.284240804+00:00",
+                  "event_id": "daa16e5a-847a-4302-9173-acfeba57fba3",
+                  "handoff_reference": "RESTORE-SPLIT-HANDOFF",
+                  "kind": "handed_off",
+                  "reason": "",
+                  "version": 32
+                },
+                "id": "5fd666fe-2032-4cb8-a0ea-556ccb9d2dda",
+                "lines": [
+                  {
+                    "line_id": "a",
+                    "location": "SPLIT-A",
+                    "lot": "SPLIT-LOT",
+                    "quantity": 3,
+                    "sku": "RESTORE-SPLIT"
+                  }
+                ],
+                "order_id": "065cb5d6-b7d1-44d6-b207-72dee2f13415",
+                "packed_at": "2026-10-19T02:45:24.214348890+00:00",
+                "reference": "RESTORE-SPLIT-SENT",
+                "source_event_id": "eb301dca-92ee-4faf-b911-8dfa5540e2c9",
+                "source_version": 31
+              },
+              {
+                "actor": "rehearsal:admin",
+                "closure": null,
+                "id": "82b48b97-1fd5-4777-aaa0-46e4b68600c9",
+                "lines": [
+                  {
+                    "line_id": "b",
+                    "location": "SPLIT-A",
+                    "lot": "SPLIT-LOT",
+                    "quantity": 1,
+                    "sku": "RESTORE-SPLIT"
+                  }
+                ],
+                "order_id": "065cb5d6-b7d1-44d6-b207-72dee2f13415",
+                "packed_at": "2026-10-19T02:45:24.381356446+00:00",
+                "reference": "RESTORE-SPLIT-ACTIVE",
+                "source_event_id": "d43364df-c9f0-4f7a-8d7d-e63c5fd674e4",
+                "source_version": 33
+              },
+              {
+                "actor": "rehearsal:admin",
+                "closure": {
+                  "actor": "rehearsal:admin",
+                  "carrier": "",
+                  "closed_at": "2026-10-19T02:45:24.520350876+00:00",
+                  "event_id": "4dd6d875-4339-41e6-ab36-4d59d04c208b",
+                  "handoff_reference": "",
+                  "kind": "unpacked",
+                  "reason": "Physical repacking before recovery point",
+                  "version": 35
+                },
+                "id": "e013dfc8-d7dd-4614-9c63-19d80e85d934",
+                "lines": [
+                  {
+                    "line_id": "b",
+                    "location": "SPLIT-A",
+                    "lot": "SPLIT-LOT",
+                    "quantity": 1,
+                    "sku": "RESTORE-SPLIT"
+                  }
+                ],
+                "order_id": "065cb5d6-b7d1-44d6-b207-72dee2f13415",
+                "packed_at": "2026-10-19T02:45:24.464892475+00:00",
+                "reference": "RESTORE-SPLIT-UNPACKED",
+                "source_event_id": "5850166b-c493-4e16-809c-529b220b92ea",
+                "source_version": 34
+              }
+            ],
+            "source_event_id": "d5df397e-e638-4881-9711-3b6ff5725f36",
+            "status": "partially_shipped"
+          },
+          {
+            "ok": true,
+            "order_id": "9435f6b0-3dc4-43db-85fc-c2a41b549ee3",
+            "packages": [
+              {
+                "actor": "rehearsal:admin",
+                "closure": {
+                  "actor": "rehearsal:admin",
+                  "carrier": "Actual synthetic carrier",
+                  "closed_at": "2026-10-19T02:45:24.993603101+00:00",
+                  "event_id": "774bad64-62bc-49c4-9383-9046653a2e16",
+                  "handoff_reference": "RESTORE-CLOSED-HANDOFF",
+                  "kind": "handed_off",
+                  "reason": "",
+                  "version": 42
+                },
+                "id": "558a5f84-48d3-4e02-b873-66d4cad78d88",
+                "lines": [
+                  {
+                    "line_id": "a",
+                    "location": "SPLIT-A",
+                    "lot": "CLOSED-LOT",
+                    "quantity": 3,
+                    "sku": "RESTORE-SPLIT"
+                  }
+                ],
+                "order_id": "9435f6b0-3dc4-43db-85fc-c2a41b549ee3",
+                "packed_at": "2026-10-19T02:45:24.924431778+00:00",
+                "reference": "RESTORE-CLOSED-PACKAGE",
+                "source_event_id": "849a790c-83bd-4b5e-8250-f8960d24872d",
+                "source_version": 41
+              }
+            ],
+            "source_event_id": "f8901499-7102-4ef0-a9fa-4b898a69d395",
+            "status": "closed_partial"
+          },
+          {
+            "ok": true,
+            "order_id": "b430f144-8601-426e-a9e8-e4cde40ce926",
+            "packages": [
+              {
+                "actor": "rehearsal:admin",
+                "closure": {
+                  "actor": "rehearsal:admin",
+                  "carrier": "Synthetic customer carrier",
+                  "closed_at": "2026-10-19T02:45:25.838232926+00:00",
+                  "event_id": "43a0b442-890c-49b0-b1e4-be4588d84bb8",
+                  "handoff_reference": "QUALITY-WITNESSED-CUSTOMER-HANDOFF",
+                  "kind": "handed_off",
+                  "reason": "",
+                  "version": 54
+                },
+                "id": "d3dd2b54-6837-4a4a-8f59-645ab5ecfc50",
+                "lines": [
+                  {
+                    "line_id": "quality-line",
+                    "location": "A-01",
+                    "lot": "QUALITY-LOT",
+                    "quantity": 1,
+                    "sku": "RESTORE-QUALITY"
+                  }
+                ],
+                "order_id": "b430f144-8601-426e-a9e8-e4cde40ce926",
+                "packed_at": "2026-10-19T02:45:25.775211013+00:00",
+                "reference": "RESTORE-QUALITY-HANDED",
+                "source_event_id": "b1abdeef-e453-48ea-80c2-0d79a3b45996",
+                "source_version": 53
+              },
+              {
+                "actor": "rehearsal:admin",
+                "closure": {
+                  "actor": "rehearsal:admin",
+                  "carrier": "",
+                  "closed_at": "2026-10-19T02:45:38.273709026+00:00",
+                  "event_id": "353a35a0-9f7c-43ef-b67c-d48554527c72",
+                  "handoff_reference": "",
+                  "kind": "unpacked",
+                  "reason": "Actually unpacked held restored package for recovery",
+                  "version": 62
+                },
+                "id": "94c5541d-b651-4f3b-9941-70070f579321",
+                "lines": [
+                  {
+                    "line_id": "quality-line",
+                    "location": "A-01",
+                    "lot": "QUALITY-LOT",
+                    "quantity": 1,
+                    "sku": "RESTORE-QUALITY"
+                  }
+                ],
+                "order_id": "b430f144-8601-426e-a9e8-e4cde40ce926",
+                "packed_at": "2026-10-19T02:45:25.941923967+00:00",
+                "reference": "RESTORE-QUALITY-ACTIVE",
+                "source_event_id": "8305f956-76fd-4f6a-9a2d-7c6b798d3762",
+                "source_version": 55
+              }
+            ],
+            "source_event_id": "ee074f74-e022-480f-8878-40a54d2f4bcd",
+            "status": "partially_shipped"
+          }
+        ],
+        "receipt_cancellations": [
+          {
+            "cancelled": 2,
+            "ok": true,
+            "receipt_id": "33e9b542-3aec-47b9-a08d-259a2f77326d",
+            "status": "cancelled"
+          },
+          {
+            "cancelled": 0,
+            "ok": true,
+            "receipt_id": "596233f0-2f4e-456a-bacf-45d27ae76574",
+            "status": "received"
+          },
+          {
+            "cancelled": 0,
+            "ok": true,
+            "receipt_id": "d34fef74-ca14-48c9-aa1a-2367f303d39c",
+            "status": "received"
+          },
+          {
+            "cancelled": 0,
+            "ok": true,
+            "receipt_id": "d42cf41c-16db-4478-b584-475b83bfcbe7",
+            "status": "expected"
+          },
+          {
+            "cancelled": 1,
+            "ok": true,
+            "receipt_id": "ee34c6bd-eda9-44ee-baad-77fab4696624",
+            "status": "cancelled"
+          },
+          {
+            "cancelled": 0,
+            "ok": true,
+            "receipt_id": "f33976aa-e190-4eb8-8859-b1f42d743f73",
+            "status": "expected"
+          }
+        ],
+        "receipts": [
+          {
+            "evidence": 1,
+            "line_id": "closed-line",
+            "ok": true,
+            "receipt_id": "33e9b542-3aec-47b9-a08d-259a2f77326d",
+            "received": 1
+          },
+          {
+            "evidence": 1,
+            "line_id": "return-line",
+            "ok": true,
+            "receipt_id": "596233f0-2f4e-456a-bacf-45d27ae76574",
+            "received": 1
+          },
+          {
+            "evidence": 12,
+            "line_id": "receipt-line",
+            "ok": true,
+            "receipt_id": "d34fef74-ca14-48c9-aa1a-2367f303d39c",
+            "received": 12
+          },
+          {
+            "evidence": 0,
+            "line_id": "return-a",
+            "ok": true,
+            "receipt_id": "d42cf41c-16db-4478-b584-475b83bfcbe7",
+            "received": 0
+          },
+          {
+            "evidence": 0,
+            "line_id": "quality-return-line",
+            "ok": true,
+            "receipt_id": "ee34c6bd-eda9-44ee-baad-77fab4696624",
+            "received": 0
+          },
+          {
+            "evidence": 0,
+            "line_id": "closed-rma-line",
+            "ok": true,
+            "receipt_id": "f33976aa-e190-4eb8-8859-b1f42d743f73",
+            "received": 0
+          }
+        ],
+        "returns": [
+          {
+            "authorized": 1,
+            "lot": "SPLIT-LOT",
+            "ok": true,
+            "order_id": "065cb5d6-b7d1-44d6-b207-72dee2f13415",
+            "order_line_id": "a",
+            "received": 0,
+            "shipped": 3,
+            "sku": "RESTORE-SPLIT"
+          },
+          {
+            "authorized": 1,
+            "lot": "CLOSED-LOT",
+            "ok": true,
+            "order_id": "9435f6b0-3dc4-43db-85fc-c2a41b549ee3",
+            "order_line_id": "a",
+            "received": 0,
+            "shipped": 3,
+            "sku": "RESTORE-SPLIT"
+          },
+          {
+            "authorized": 0,
+            "lot": "QUALITY-LOT",
+            "ok": true,
+            "order_id": "b430f144-8601-426e-a9e8-e4cde40ce926",
+            "order_line_id": "quality-line",
+            "received": 0,
+            "shipped": 1,
+            "sku": "RESTORE-QUALITY"
+          },
+          {
+            "authorized": 1,
+            "lot": "RESTORE-LOT",
+            "ok": true,
+            "order_id": "eccf3f97-0dc3-46f4-b20c-31d19a9ad971",
+            "order_line_id": "oms-line-db55067a83f4a20cb2ce42c3d516aa6d2712ec72695555b57f1180d5b973a5fa",
+            "received": 1,
+            "shipped": 1,
+            "sku": "RESTORE-EACH"
+          }
+        ],
+        "rows": [
+          {
+            "allocation_reserved": 0,
+            "difference": 0,
+            "ledger": 1,
+            "location": "RECV-01",
+            "lot": "CLOSED-LOT",
+            "ok": true,
+            "on_hand": 1,
+            "reserved": 0,
+            "reserved_difference": 0,
+            "sku": "RESTORE-EACH"
+          },
+          {
+            "allocation_reserved": 2,
+            "difference": 0,
+            "ledger": 3,
+            "location": "A-01",
+            "lot": "RESTORE-LOT",
+            "ok": true,
+            "on_hand": 3,
+            "reserved": 2,
+            "reserved_difference": 0,
+            "sku": "RESTORE-EACH"
+          },
+          {
+            "allocation_reserved": 0,
+            "difference": 0,
+            "ledger": 1,
+            "location": "RECV-01",
+            "lot": "RESTORE-LOT",
+            "ok": true,
+            "on_hand": 1,
+            "reserved": 0,
+            "reserved_difference": 0,
+            "sku": "RESTORE-EACH"
+          },
+          {
+            "allocation_reserved": 5,
+            "difference": 0,
+            "ledger": 5,
+            "location": "STAGE-01",
+            "lot": "RESTORE-LOT",
+            "ok": true,
+            "on_hand": 5,
+            "reserved": 5,
+            "reserved_difference": 0,
+            "sku": "RESTORE-EACH"
+          },
+          {
+            "allocation_reserved": 0,
+            "difference": 0,
+            "ledger": 7,
+            "location": "A-01",
+            "lot": "QUALITY-LOT",
+            "ok": true,
+            "on_hand": 7,
+            "reserved": 0,
+            "reserved_difference": 0,
+            "sku": "RESTORE-QUALITY"
+          },
+          {
+            "allocation_reserved": 0,
+            "difference": 0,
+            "ledger": 0,
+            "location": "STAGE-01",
+            "lot": "QUALITY-LOT",
+            "ok": true,
+            "on_hand": 0,
+            "reserved": 0,
+            "reserved_difference": 0,
+            "sku": "RESTORE-QUALITY"
+          },
+          {
+            "allocation_reserved": 0,
+            "difference": 0,
+            "ledger": 4,
+            "location": "SPLIT-A",
+            "lot": "CLOSED-LOT",
+            "ok": true,
+            "on_hand": 4,
+            "reserved": 0,
+            "reserved_difference": 0,
+            "sku": "RESTORE-SPLIT"
+          },
+          {
+            "allocation_reserved": 0,
+            "difference": 0,
+            "ledger": 0,
+            "location": "STAGE-01",
+            "lot": "CLOSED-LOT",
+            "ok": true,
+            "on_hand": 0,
+            "reserved": 0,
+            "reserved_difference": 0,
+            "sku": "RESTORE-SPLIT"
+          },
+          {
+            "allocation_reserved": 2,
+            "difference": 0,
+            "ledger": 2,
+            "location": "SPLIT-A",
+            "lot": "SPLIT-LOT",
+            "ok": true,
+            "on_hand": 2,
+            "reserved": 2,
+            "reserved_difference": 0,
+            "sku": "RESTORE-SPLIT"
+          },
+          {
+            "allocation_reserved": 2,
+            "difference": 0,
+            "ledger": 2,
+            "location": "STAGE-01",
+            "lot": "SPLIT-LOT",
+            "ok": true,
+            "on_hand": 2,
+            "reserved": 2,
+            "reserved_difference": 0,
+            "sku": "RESTORE-SPLIT"
+          }
+        ],
+        "shipments": [
+          {
+            "event_id": null,
+            "ok": true,
+            "order_id": "065cb5d6-b7d1-44d6-b207-72dee2f13415",
+            "source_kind": "handoff_events",
+            "source_version": null
+          },
+          {
+            "event_id": null,
+            "ok": true,
+            "order_id": "9435f6b0-3dc4-43db-85fc-c2a41b549ee3",
+            "source_kind": "handoff_events",
+            "source_version": null
+          },
+          {
+            "event_id": null,
+            "ok": true,
+            "order_id": "b430f144-8601-426e-a9e8-e4cde40ce926",
+            "source_kind": "handoff_events",
+            "source_version": null
+          },
+          {
+            "event_id": "7447f0c6-9636-4d7f-a5c5-5a888893bd30",
+            "ok": true,
+            "order_id": "eccf3f97-0dc3-46f4-b20c-31d19a9ad971",
+            "source_kind": "event",
+            "source_version": 17
+          }
+        ],
+        "transfers": [
+          {
+            "destination_warehouse_id": "wh-restore-secondary",
+            "lines": [
+              {
+                "dispatched": 3,
+                "in_transit": 2,
+                "line_id": "original-line",
+                "loss_record_count": 0,
+                "lost": 0,
+                "lot": "RESTORE-LOT",
+                "received": 1,
+                "sku": "RESTORE-EACH"
+              }
+            ],
+            "ok": true,
+            "source_event_id": "8248230c-60e6-456e-b679-e32f9d04036e",
+            "source_warehouse_id": "wh-main",
+            "transfer_id": "a41f18b4-11dd-40cd-a79e-03f34a0a157e"
+          },
+          {
+            "destination_warehouse_id": "wh-restore-secondary",
+            "lines": [
+              {
+                "dispatched": 2,
+                "in_transit": 1,
+                "line_id": "quality-transfer-line",
+                "loss_record_count": 0,
+                "lost": 0,
+                "lot": "QUALITY-LOT",
+                "received": 1,
+                "sku": "RESTORE-QUALITY"
+              }
+            ],
+            "ok": true,
+            "source_event_id": "7d8b9a91-2bf6-4103-bcc8-935e102a751e",
+            "source_warehouse_id": "wh-main",
+            "transfer_id": "4bbecaf5-08d8-4aca-a716-c30ae1f1ff22"
+          }
+        ],
+        "units": {
+          "definition_changes": 0,
+          "method": "immutable_definition_and_original_command_each_conversion",
+          "ok": true,
+          "quantity_observations": 0
+        },
+        "version": 64
+      },
+      "recovery_commands": [
+        {
+          "request": {
+            "command": {
+              "reason": "Actually unpacked held restored package for recovery",
+              "shipment_id": "94c5541d-b651-4f3b-9941-70070f579321",
+              "type": "unpack_shipment"
+            },
+            "expected_version": 61,
+            "request_id": "restore-quality-post-unpack"
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "94c5541d-b651-4f3b-9941-70070f579321",
+              "type": "shipment.unpacked",
+              "version": 62
+            }
+          },
+          "warehouse_id": "wh-main"
+        },
+        {
+          "request": {
+            "command": {
+              "line_id": "quality-line",
+              "location": "A-01",
+              "lot": "QUALITY-LOT",
+              "order_id": "b430f144-8601-426e-a9e8-e4cde40ce926",
+              "quantity": 1,
+              "reason": "Actually returned the one unshipped staged unit",
+              "type": "unpick"
+            },
+            "expected_version": 62,
+            "request_id": "restore-quality-post-unpick"
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "b430f144-8601-426e-a9e8-e4cde40ce926",
+              "type": "fulfillment.unpicked",
+              "version": 63
+            }
+          },
+          "warehouse_id": "wh-main"
+        },
+        {
+          "request": {
+            "command": {
+              "order_id": "b430f144-8601-426e-a9e8-e4cde40ce926",
+              "reason": "Release only remaining unpicked held reservations",
+              "type": "release_unpicked"
+            },
+            "expected_version": 63,
+            "request_id": "restore-quality-post-release"
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "b430f144-8601-426e-a9e8-e4cde40ce926",
+              "type": "fulfillment.unpicked_released",
+              "version": 64
+            }
+          },
+          "warehouse_id": "wh-main"
+        }
+      ],
+      "source_physical": 7,
+      "source_reserved": 0,
+      "unavailable_handoff_rejected_without_changes": true
+    },
+    "lot_trace": {
+      "lot": "QUALITY-LOT",
+      "observation_clock_excluded_from_immutable_fact_comparison": true,
+      "review": "1b2bf7ba3845e0451b3b8358c8f109c4c2ed3988d6ad2a736e62dc7d7643bd02",
+      "scope": "all_nine_sections_of_the_nonempty_synthetic_recovery_point",
+      "sections": {
+        "allocations": [
+          {
+            "document": {
+              "line_id": "quality-line",
+              "location": "A-01",
+              "order_id": "b430f144-8601-426e-a9e8-e4cde40ce926",
+              "order_reference": "RESTORE-QUALITY-ORDER",
+              "order_status": "partially_shipped",
+              "original_line_quantity": 3,
+              "picked": 2,
+              "quantity": 3,
+              "released": 0,
+              "shipped": 1,
+              "source_kind": "normalized_allocation",
+              "staged": 1,
+              "storage_reserved": 1
+            },
+            "key": [
+              "b430f144-8601-426e-a9e8-e4cde40ce926",
+              "quality-line",
+              "A-01"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-main"
+          }
+        ],
+        "decisions": [
+          {
+            "document": {
+              "decision": {
+                "checked_at": "2026-10-19T02:45:25.513515Z",
+                "document": {
+                  "expires_at": "2099-10-21T12:00:00+00:00",
+                  "expiry_recorded": true,
+                  "holds": [],
+                  "lot": "QUALITY-LOT",
+                  "sku": "RESTORE-QUALITY"
+                },
+                "kind": "transfer_dispatch",
+                "lot": "QUALITY-LOT",
+                "required": true,
+                "sku": "RESTORE-QUALITY"
+              },
+              "event_id": "7d8b9a91-2bf6-4103-bcc8-935e102a751e",
+              "kind": "transfer_dispatch",
+              "source_kind": "eligibility_decision",
+              "version": 49
+            },
+            "key": [
+              "00000000000000000049",
+              "transfer_dispatch"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-main"
+          },
+          {
+            "document": {
+              "decision": {
+                "checked_at": "2026-10-19T02:45:25.654557Z",
+                "document": {
+                  "expires_at": "2099-10-21T12:00:00+00:00",
+                  "expiry_recorded": true,
+                  "holds": [],
+                  "lot": "QUALITY-LOT",
+                  "sku": "RESTORE-QUALITY"
+                },
+                "kind": "allocation",
+                "lot": "QUALITY-LOT",
+                "required": true,
+                "sku": "RESTORE-QUALITY"
+              },
+              "event_id": "ee074f74-e022-480f-8878-40a54d2f4bcd",
+              "kind": "allocation",
+              "source_kind": "eligibility_decision",
+              "version": 51
+            },
+            "key": [
+              "00000000000000000051",
+              "allocation"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-main"
+          },
+          {
+            "document": {
+              "decision": {
+                "checked_at": "2026-10-19T02:45:25.717475Z",
+                "document": {
+                  "expires_at": "2099-10-21T12:00:00+00:00",
+                  "expiry_recorded": true,
+                  "holds": [],
+                  "lot": "QUALITY-LOT",
+                  "sku": "RESTORE-QUALITY"
+                },
+                "kind": "pick",
+                "lot": "QUALITY-LOT",
+                "required": true,
+                "sku": "RESTORE-QUALITY"
+              },
+              "event_id": "a24c6edc-43e4-409a-98e4-89f4574ba6f0",
+              "kind": "pick",
+              "source_kind": "eligibility_decision",
+              "version": 52
+            },
+            "key": [
+              "00000000000000000052",
+              "pick"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-main"
+          },
+          {
+            "document": {
+              "decision": {
+                "checked_at": "2026-10-19T02:45:25.777764Z",
+                "document": {
+                  "expires_at": "2099-10-21T12:00:00+00:00",
+                  "expiry_recorded": true,
+                  "holds": [],
+                  "lot": "QUALITY-LOT",
+                  "sku": "RESTORE-QUALITY"
+                },
+                "kind": "pack",
+                "lot": "QUALITY-LOT",
+                "required": true,
+                "sku": "RESTORE-QUALITY"
+              },
+              "event_id": "b1abdeef-e453-48ea-80c2-0d79a3b45996",
+              "kind": "pack",
+              "source_kind": "eligibility_decision",
+              "version": 53
+            },
+            "key": [
+              "00000000000000000053",
+              "pack"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-main"
+          },
+          {
+            "document": {
+              "decision": {
+                "checked_at": "2026-10-19T02:45:25.840886Z",
+                "document": {
+                  "expires_at": "2099-10-21T12:00:00+00:00",
+                  "expiry_recorded": true,
+                  "holds": [],
+                  "lot": "QUALITY-LOT",
+                  "sku": "RESTORE-QUALITY"
+                },
+                "kind": "handoff",
+                "lot": "QUALITY-LOT",
+                "required": true,
+                "sku": "RESTORE-QUALITY"
+              },
+              "event_id": "43a0b442-890c-49b0-b1e4-be4588d84bb8",
+              "kind": "handoff",
+              "source_kind": "eligibility_decision",
+              "version": 54
+            },
+            "key": [
+              "00000000000000000054",
+              "handoff"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-main"
+          },
+          {
+            "document": {
+              "decision": {
+                "checked_at": "2026-10-19T02:45:25.944253Z",
+                "document": {
+                  "expires_at": "2099-10-21T12:00:00+00:00",
+                  "expiry_recorded": true,
+                  "holds": [],
+                  "lot": "QUALITY-LOT",
+                  "sku": "RESTORE-QUALITY"
+                },
+                "kind": "pack",
+                "lot": "QUALITY-LOT",
+                "required": true,
+                "sku": "RESTORE-QUALITY"
+              },
+              "event_id": "8305f956-76fd-4f6a-9a2d-7c6b798d3762",
+              "kind": "pack",
+              "source_kind": "eligibility_decision",
+              "version": 55
+            },
+            "key": [
+              "00000000000000000055",
+              "pack"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-main"
+          }
+        ],
+        "facilities": [
+          {
+            "document": {
+              "availability": "quarantined",
+              "balance": {
+                "physical": 7,
+                "physical_reconciliation_ok": true,
+                "reserved": 2,
+                "usable_storage": 0
+              },
+              "control": {
+                "expires_at": "2000-01-01T00:00:00+00:00",
+                "expiry_recorded": true,
+                "holds": [
+                  {
+                    "actor": "rehearsal:admin",
+                    "id": "028d89d2-be1d-4f8a-85c4-78ead87e79dc",
+                    "quarantined_at": "2026-10-19T02:45:26.210478+00:00",
+                    "reason": "Independent temperature investigation remains open"
+                  }
+                ],
+                "lot": "QUALITY-LOT",
+                "sku": "RESTORE-QUALITY"
+              },
+              "expiry_required": true,
+              "historic_eligibility_unknown_through_version": 0,
+              "version": 61,
+              "warehouse": {
+                "city": "Configure facility before live operations",
+                "code": "MAIN",
+                "id": "wh-main",
+                "name": "Main Warehouse",
+                "timezone": "UTC"
+              }
+            },
+            "key": [],
+            "source_ok": true,
+            "warehouse_id": "wh-main"
+          },
+          {
+            "document": {
+              "availability": "quarantined",
+              "balance": {
+                "physical": 1,
+                "physical_reconciliation_ok": true,
+                "reserved": 0,
+                "usable_storage": 0
+              },
+              "control": {
+                "expires_at": "2000-01-01T00:00:00+00:00",
+                "expiry_recorded": true,
+                "holds": [
+                  {
+                    "actor": "rehearsal:admin",
+                    "id": "32658e13-7804-47cd-911f-3a79e18ebbcb",
+                    "quarantined_at": "2026-10-19T02:45:26.317535+00:00",
+                    "reason": "Transfer arrival retains original and current lot restrictions"
+                  }
+                ],
+                "lot": "QUALITY-LOT",
+                "sku": "RESTORE-QUALITY"
+              },
+              "expiry_required": true,
+              "historic_eligibility_unknown_through_version": 0,
+              "version": 6,
+              "warehouse": {
+                "city": "Restore fixture",
+                "code": "SECOND",
+                "id": "wh-restore-secondary",
+                "name": "Synthetic second facility",
+                "timezone": "UTC"
+              }
+            },
+            "key": [],
+            "source_ok": true,
+            "warehouse_id": "wh-restore-secondary"
+          }
+        ],
+        "movements": [
+          {
+            "document": {
+              "actor": "rehearsal:admin",
+              "allocation_location": null,
+              "at": "2026-10-19T02:45:25.324951507+00:00",
+              "from_location": null,
+              "id": "08e24194-7b51-4dbb-91ac-5a470d46cf12",
+              "kind": "count",
+              "order_line_id": null,
+              "package_id": null,
+              "quantity": 10,
+              "reason": "Witnessed synthetic quality opening count",
+              "receipt_id": null,
+              "receipt_line_id": null,
+              "reference": "cycle count",
+              "sequence": 18,
+              "shipment_event_id": null,
+              "source_kind": "append_only_movement",
+              "to_location": "A-01",
+              "transfer_event_id": null,
+              "transfer_id": null,
+              "transfer_line_id": null
+            },
+            "key": [
+              "00000000000000000018"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-main"
+          },
+          {
+            "document": {
+              "actor": "rehearsal:admin",
+              "allocation_location": null,
+              "at": "2026-10-19T02:45:25.508505010+00:00",
+              "from_location": "A-01",
+              "id": "3ef0f17a-f771-4893-afbb-325ce91621ce",
+              "kind": "transfer_dispatch",
+              "order_line_id": null,
+              "package_id": null,
+              "quantity": 2,
+              "reason": "QUALITY-ORIGINAL-DEPARTURE",
+              "receipt_id": null,
+              "receipt_line_id": null,
+              "reference": "4bbecaf5-08d8-4aca-a716-c30ae1f1ff22",
+              "sequence": 19,
+              "shipment_event_id": null,
+              "source_kind": "append_only_movement",
+              "to_location": null,
+              "transfer_event_id": "7d8b9a91-2bf6-4103-bcc8-935e102a751e",
+              "transfer_id": "4bbecaf5-08d8-4aca-a716-c30ae1f1ff22",
+              "transfer_line_id": "quality-transfer-line"
+            },
+            "key": [
+              "00000000000000000019"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-main"
+          },
+          {
+            "document": {
+              "actor": "rehearsal:admin",
+              "allocation_location": null,
+              "at": "2026-10-19T02:45:25.705527731+00:00",
+              "from_location": "A-01",
+              "id": "62b55d94-979b-4d7f-ad71-28383c00905a",
+              "kind": "pick",
+              "order_line_id": null,
+              "package_id": null,
+              "quantity": 2,
+              "reason": "Order line pick",
+              "receipt_id": null,
+              "receipt_line_id": null,
+              "reference": "RESTORE-QUALITY-ORDER",
+              "sequence": 20,
+              "shipment_event_id": null,
+              "source_kind": "append_only_movement",
+              "to_location": "STAGE-01",
+              "transfer_event_id": null,
+              "transfer_id": null,
+              "transfer_line_id": null
+            },
+            "key": [
+              "00000000000000000020"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-main"
+          },
+          {
+            "document": {
+              "actor": "rehearsal:admin",
+              "allocation_location": "A-01",
+              "at": "2026-10-19T02:45:25.838232926+00:00",
+              "from_location": "STAGE-01",
+              "id": "4efeac56-c56d-4015-9a88-90e340374d0a",
+              "kind": "shipment",
+              "order_line_id": "quality-line",
+              "package_id": "d3dd2b54-6837-4a4a-8f59-645ab5ecfc50",
+              "quantity": 1,
+              "reason": "QUALITY-WITNESSED-CUSTOMER-HANDOFF",
+              "receipt_id": null,
+              "receipt_line_id": null,
+              "reference": "RESTORE-QUALITY-ORDER",
+              "sequence": 21,
+              "shipment_event_id": "43a0b442-890c-49b0-b1e4-be4588d84bb8",
+              "source_kind": "append_only_movement",
+              "to_location": null,
+              "transfer_event_id": null,
+              "transfer_id": null,
+              "transfer_line_id": null
+            },
+            "key": [
+              "00000000000000000021"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-main"
+          },
+          {
+            "document": {
+              "actor": "rehearsal:admin",
+              "allocation_location": null,
+              "at": "2026-10-19T02:45:26.317704083+00:00",
+              "from_location": null,
+              "id": "00ae2cbd-ed71-46a4-b06d-c78be1abd7be",
+              "kind": "transfer_receive",
+              "order_line_id": null,
+              "package_id": null,
+              "quantity": 1,
+              "reason": "QUALITY-WITNESSED-ONE-ARRIVED",
+              "receipt_id": null,
+              "receipt_line_id": null,
+              "reference": "4bbecaf5-08d8-4aca-a716-c30ae1f1ff22",
+              "sequence": 22,
+              "shipment_event_id": null,
+              "source_kind": "append_only_movement",
+              "to_location": "RECV-01",
+              "transfer_event_id": "441ed8e7-d2ee-4bda-af4e-e86773b7e645",
+              "transfer_id": "4bbecaf5-08d8-4aca-a716-c30ae1f1ff22",
+              "transfer_line_id": "quality-transfer-line"
+            },
+            "key": [
+              "00000000000000000022"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-restore-secondary"
+          }
+        ],
+        "policies": [
+          {
+            "document": {
+              "change": {
+                "actor": "rehearsal:admin",
+                "expires_at": null,
+                "hold_id": null,
+                "kind": "inventory.expiry_policy_changed",
+                "lot": null,
+                "reason": "Original expiry labels are required for this SKU",
+                "recorded_at": "2026-10-19T02:45:25.361129+00:00",
+                "required": true,
+                "sku": "RESTORE-QUALITY"
+              },
+              "event_id": "bc7c75f9-5cec-42db-a834-b20a027a2e81",
+              "ordinal": 0,
+              "source_kind": "policy_event",
+              "version": 47
+            },
+            "key": [
+              "00000000000000000047",
+              "0000000000"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-main"
+          },
+          {
+            "document": {
+              "change": {
+                "actor": "rehearsal:admin",
+                "expires_at": "2099-10-21T12:00:00+00:00",
+                "hold_id": null,
+                "kind": "lot.expiry_recorded",
+                "lot": "QUALITY-LOT",
+                "reason": "Read the exact original synthetic manufacturer label",
+                "recorded_at": "2026-10-19T02:45:25.468035+00:00",
+                "required": null,
+                "sku": "RESTORE-QUALITY"
+              },
+              "event_id": "0e27dce2-2960-4230-9677-3c74e2c139ad",
+              "ordinal": 0,
+              "source_kind": "policy_event",
+              "version": 48
+            },
+            "key": [
+              "00000000000000000048",
+              "0000000000"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-main"
+          },
+          {
+            "document": {
+              "change": {
+                "actor": "rehearsal:admin",
+                "expires_at": "2000-01-01T00:00:00+00:00",
+                "hold_id": null,
+                "kind": "lot.expiry_corrected",
+                "lot": "QUALITY-LOT",
+                "reason": "Supervisor corrected a label transcription after original observed work",
+                "recorded_at": "2026-10-19T02:45:26.105323+00:00",
+                "required": null,
+                "sku": "RESTORE-QUALITY"
+              },
+              "event_id": "d79a170e-a48e-4e3f-bafd-c076628d7af7",
+              "ordinal": 0,
+              "source_kind": "policy_event",
+              "version": 58
+            },
+            "key": [
+              "00000000000000000058",
+              "0000000000"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-main"
+          },
+          {
+            "document": {
+              "change": {
+                "actor": "rehearsal:admin",
+                "expires_at": null,
+                "hold_id": "6d433896-b0b7-4308-a5f1-e05dd5080f55",
+                "kind": "lot.quarantined",
+                "lot": "QUALITY-LOT",
+                "reason": "Independent label investigation",
+                "recorded_at": "2026-10-19T02:45:26.158070+00:00",
+                "required": null,
+                "sku": "RESTORE-QUALITY"
+              },
+              "event_id": "3954ca7b-e4b7-4a41-897d-b83a6783d78e",
+              "ordinal": 0,
+              "source_kind": "policy_event",
+              "version": 59
+            },
+            "key": [
+              "00000000000000000059",
+              "0000000000"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-main"
+          },
+          {
+            "document": {
+              "change": {
+                "actor": "rehearsal:admin",
+                "expires_at": null,
+                "hold_id": "028d89d2-be1d-4f8a-85c4-78ead87e79dc",
+                "kind": "lot.quarantined",
+                "lot": "QUALITY-LOT",
+                "reason": "Independent temperature investigation remains open",
+                "recorded_at": "2026-10-19T02:45:26.210478+00:00",
+                "required": null,
+                "sku": "RESTORE-QUALITY"
+              },
+              "event_id": "9c5841a9-bdbe-4a37-be2f-8c38ff7f161d",
+              "ordinal": 0,
+              "source_kind": "policy_event",
+              "version": 60
+            },
+            "key": [
+              "00000000000000000060",
+              "0000000000"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-main"
+          },
+          {
+            "document": {
+              "change": {
+                "actor": "rehearsal:admin",
+                "expires_at": null,
+                "hold_id": "6d433896-b0b7-4308-a5f1-e05dd5080f55",
+                "kind": "lot.hold_released",
+                "lot": "QUALITY-LOT",
+                "reason": "Supervisor closed only the exact label investigation",
+                "recorded_at": "2026-10-19T02:45:26.259656+00:00",
+                "required": null,
+                "sku": "RESTORE-QUALITY"
+              },
+              "event_id": "0a57f02f-a497-410a-8168-32c45042c829",
+              "ordinal": 0,
+              "source_kind": "policy_event",
+              "version": 61
+            },
+            "key": [
+              "00000000000000000061",
+              "0000000000"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-main"
+          },
+          {
+            "document": {
+              "change": {
+                "actor": "rehearsal:admin",
+                "expires_at": null,
+                "hold_id": null,
+                "kind": "inventory.expiry_policy_changed",
+                "lot": null,
+                "reason": "Original expiry labels are required for this SKU",
+                "recorded_at": "2026-10-19T02:45:25.412019+00:00",
+                "required": true,
+                "sku": "RESTORE-QUALITY"
+              },
+              "event_id": "775cfbec-df58-47ca-b476-961022177ee2",
+              "ordinal": 0,
+              "source_kind": "policy_event",
+              "version": 5
+            },
+            "key": [
+              "00000000000000000005",
+              "0000000000"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-restore-secondary"
+          },
+          {
+            "document": {
+              "change": {
+                "actor": "rehearsal:admin",
+                "arrival": {
+                  "dispatched": {
+                    "expires_at": "2099-10-21T12:00:00+00:00",
+                    "expiry_recorded": true,
+                    "holds": [],
+                    "lot": "QUALITY-LOT",
+                    "sku": "RESTORE-QUALITY"
+                  },
+                  "expiry_recorded": true,
+                  "line_id": "quality-transfer-line",
+                  "source": {
+                    "expires_at": "2000-01-01T00:00:00+00:00",
+                    "expiry_recorded": true,
+                    "holds": [
+                      {
+                        "actor": "rehearsal:admin",
+                        "id": "028d89d2-be1d-4f8a-85c4-78ead87e79dc",
+                        "quarantined_at": "2026-10-19T02:45:26.210478+00:00",
+                        "reason": "Independent temperature investigation remains open"
+                      }
+                    ],
+                    "lot": "QUALITY-LOT",
+                    "sku": "RESTORE-QUALITY"
+                  },
+                  "source_required": true,
+                  "source_version": 61,
+                  "source_warehouse_id": "wh-main",
+                  "transfer_id": "4bbecaf5-08d8-4aca-a716-c30ae1f1ff22"
+                },
+                "expires_at": "2000-01-01T00:00:00+00:00",
+                "hold_id": "32658e13-7804-47cd-911f-3a79e18ebbcb",
+                "kind": "lot.arrival_restricted",
+                "lot": "QUALITY-LOT",
+                "reason": "Transfer arrival retains original and current lot restrictions",
+                "recorded_at": "2026-10-19T02:45:26.317535+00:00",
+                "required": null,
+                "sku": "RESTORE-QUALITY"
+              },
+              "event_id": "441ed8e7-d2ee-4bda-af4e-e86773b7e645",
+              "ordinal": 0,
+              "source_kind": "policy_event",
+              "version": 6
+            },
+            "key": [
+              "00000000000000000006",
+              "0000000000"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-restore-secondary"
+          }
+        ],
+        "positions": [
+          {
+            "document": {
+              "allocation_reserved": 1,
+              "availability": "quarantined",
+              "kind": "storage",
+              "ledger": 6,
+              "location": "A-01",
+              "physical": 6,
+              "reserved": 1,
+              "source_kind": "original_movements_and_allocation_ownership",
+              "usable_storage": 0
+            },
+            "key": [
+              "A-01"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-main"
+          },
+          {
+            "document": {
+              "allocation_reserved": 1,
+              "availability": "quarantined",
+              "kind": "staging",
+              "ledger": 1,
+              "location": "STAGE-01",
+              "physical": 1,
+              "reserved": 1,
+              "source_kind": "original_movements_and_allocation_ownership",
+              "usable_storage": 0
+            },
+            "key": [
+              "STAGE-01"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-main"
+          },
+          {
+            "document": {
+              "allocation_reserved": 0,
+              "availability": "quarantined",
+              "kind": "receiving",
+              "ledger": 1,
+              "location": "RECV-01",
+              "physical": 1,
+              "reserved": 0,
+              "source_kind": "original_movements_and_allocation_ownership",
+              "usable_storage": 0
+            },
+            "key": [
+              "RECV-01"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-restore-secondary"
+          }
+        ],
+        "receipts": [
+          {
+            "document": {
+              "cancelled": 1,
+              "expected": 1,
+              "line_id": "quality-return-line",
+              "receipt_id": "ee34c6bd-eda9-44ee-baad-77fab4696624",
+              "received": 0,
+              "reference": "RESTORE-QUALITY-RMA",
+              "return_order_id": "b430f144-8601-426e-a9e8-e4cde40ce926",
+              "return_order_line_id": "quality-line",
+              "source_kind": "authorized_customer_return",
+              "status": "cancelled"
+            },
+            "key": [
+              "ee34c6bd-eda9-44ee-baad-77fab4696624",
+              "quality-return-line"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-main"
+          }
+        ],
+        "shipments": [
+          {
+            "document": {
+              "carrier": null,
+              "closed_at": null,
+              "closure_event_id": null,
+              "closure_version": null,
+              "handoff_reference": null,
+              "line_id": "quality-line",
+              "order_id": "b430f144-8601-426e-a9e8-e4cde40ce926",
+              "package_id": "94c5541d-b651-4f3b-9941-70070f579321",
+              "package_reference": "RESTORE-QUALITY-ACTIVE",
+              "packed_at": "2026-10-19T02:45:25.941923967+00:00",
+              "packed_event_id": "8305f956-76fd-4f6a-9a2d-7c6b798d3762",
+              "packed_version": 55,
+              "quantity": 1,
+              "source_kind": "package_event",
+              "source_location": "A-01",
+              "state": "packed"
+            },
+            "key": [
+              "package",
+              "94c5541d-b651-4f3b-9941-70070f579321",
+              "quality-line",
+              "A-01"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-main"
+          },
+          {
+            "document": {
+              "carrier": "Synthetic customer carrier",
+              "closed_at": "2026-10-19T02:45:25.838232926+00:00",
+              "closure_event_id": "43a0b442-890c-49b0-b1e4-be4588d84bb8",
+              "closure_version": 54,
+              "handoff_reference": "QUALITY-WITNESSED-CUSTOMER-HANDOFF",
+              "line_id": "quality-line",
+              "order_id": "b430f144-8601-426e-a9e8-e4cde40ce926",
+              "package_id": "d3dd2b54-6837-4a4a-8f59-645ab5ecfc50",
+              "package_reference": "RESTORE-QUALITY-HANDED",
+              "packed_at": "2026-10-19T02:45:25.775211013+00:00",
+              "packed_event_id": "b1abdeef-e453-48ea-80c2-0d79a3b45996",
+              "packed_version": 53,
+              "quantity": 1,
+              "source_kind": "package_event",
+              "source_location": "A-01",
+              "state": "handed_off"
+            },
+            "key": [
+              "package",
+              "d3dd2b54-6837-4a4a-8f59-645ab5ecfc50",
+              "quality-line",
+              "A-01"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-main"
+          }
+        ],
+        "transfers": [
+          {
+            "document": {
+              "carrier": "Synthetic carrier",
+              "destination_warehouse_id": "wh-restore-secondary",
+              "dispatched": 2,
+              "dispatched_at": "2026-10-19T02:45:25.508505010+00:00",
+              "handoff_reference": "QUALITY-ORIGINAL-DEPARTURE",
+              "line_id": "quality-transfer-line",
+              "loss_record_count": 0,
+              "lost": 0,
+              "movement_id": "3ef0f17a-f771-4893-afbb-325ce91621ce",
+              "received": 1,
+              "reference": "RESTORE-QUALITY-TRANSFER",
+              "source_event_id": "7d8b9a91-2bf6-4103-bcc8-935e102a751e",
+              "source_kind": "transfer_event",
+              "source_location": "A-01",
+              "source_version": 49,
+              "source_warehouse_id": "wh-main",
+              "transfer_id": "4bbecaf5-08d8-4aca-a716-c30ae1f1ff22"
+            },
+            "key": [
+              "4bbecaf5-08d8-4aca-a716-c30ae1f1ff22",
+              "quality-transfer-line"
+            ],
+            "source_ok": true,
+            "warehouse_id": "wh-main"
+          }
+        ]
+      },
+      "sku": "RESTORE-QUALITY",
+      "summary": {
+        "physical": 8,
+        "physical_reconciliation_ok": true,
+        "receiving": 1,
+        "reserved": 2,
+        "sections": {
+          "allocations": 1,
+          "decisions": 6,
+          "facilities": 2,
+          "movements": 5,
+          "policies": 8,
+          "positions": 3,
+          "receipts": 1,
+          "shipments": 2,
+          "transfers": 1
+        },
+        "staged": 1,
+        "usable_storage": 0
+      }
+    },
+    "lot_trace_all_nine_sections_unchanged_after_original_replays": true,
+    "lot_trace_original_records_and_review_restored": true,
+    "migrations": [
+      {
+        "name": "001_initial",
+        "sha256": "8e5c3fa5f0065b63076c33b8bd3c337b8490d4b7a88f3e774ec17e2290e1f4d4"
+      },
+      {
+        "name": "002_relational_execution",
+        "sha256": "660cd0fdbc7205644c7c3d7ac3da43cbaf1c6d9f80c4d0f2ea4d0c0986e6ff90"
+      },
+      {
+        "name": "003_native_operations",
+        "sha256": "f9a5cfa4a1e4f7830613febe6b37f11a8485beef46d6b96791c78435fe784108"
+      },
+      {
+        "name": "004_native_source_ownership",
+        "sha256": "366979c9630c4c62cb7d71beb5c89cd917764558b4e05267c4eb4aac486a6cb9"
+      },
+      {
+        "name": "005_conditional_oms_fulfillment",
+        "sha256": "b8892cbaa4a1b26c6e1732616ec30503d3698f44e363240386078398e29e9a41"
+      },
+      {
+        "name": "006_oms_rejections",
+        "sha256": "567e061943a1602ff25b5d5c988be810808b8c6e1638885ee6ef9b71a9ba4ed4"
+      },
+      {
+        "name": "007_operations_indexes",
+        "sha256": "b0b9b422f570ed77ca1252df42c96b29544849621ed748cadd1f068b708576b5"
+      },
+      {
+        "name": "008_delivery_recipient",
+        "sha256": "050f40c80b9e73a3edc8a19545ab08cfe41051616b84d9445dfdea9a30de9d19"
+      },
+      {
+        "name": "009_resource_versions",
+        "sha256": "b702a003a1d74210fdfc06cef1fbfb6e737146a25314642094a2f8383dc2e209"
+      },
+      {
+        "name": "010_customer_returns",
+        "sha256": "dfafb0547d0af2ba11f86dfa31f7facebe89adf582d6b215d02b734e1413fb71"
+      },
+      {
+        "name": "011_immutable_command_receipts",
+        "sha256": "0a7c69928f38527f542a55e795de9b62c65f4907d7d05cba2d47f7eeebdf8a73"
+      },
+      {
+        "name": "012_receipt_cancellation",
+        "sha256": "5a36bc5c39f49fe9fdf9e6cd292d71ed50c85daffea2777fda890d9b2d68a676"
+      },
+      {
+        "name": "013_shipment_evidence",
+        "sha256": "e867e6b35c3cbcb10ea5f4a952c916f10e7b5d16b53c80aad656a9fba286334e"
+      },
+      {
+        "name": "014_facility_transfers",
+        "sha256": "b98005fca14a6aa180c09e77d998105662b3f11147a3284d6a145147de3182b1"
+      },
+      {
+        "name": "015_split_fulfillment",
+        "sha256": "dd2e0b0625cec5d9cd1a6209e094f924fc4cb503a0b82ed3fcc2253109fe393a"
+      },
+      {
+        "name": "016_order_remainder_cancellation",
+        "sha256": "c79180323838e6353c3c32f77564aa3ae37eae6b523bf405e12311496f0f3f43"
+      },
+      {
+        "name": "017_lot_controls",
+        "sha256": "cbca465647b18f84e9d74deeabbe011a7572957b90c4046de9f2f0e9738360bf"
+      },
+      {
+        "name": "018_lot_trace",
+        "sha256": "c4d000be8cc2bae0097c629f98556177b97225cc6ba753cb29731e5464a85d4c"
+      },
+      {
+        "name": "019_transfer_loss",
+        "sha256": "30822c5f49905f192d4eff2de3b90e885ed800d26d1bc97e6b383b1fef47eae1"
+      },
+      {
+        "name": "020_pack_units",
+        "sha256": "7ba3eefed9e4386fc2f11002540bd703d0e6c584780ca3a378e308831c4bccf1"
+      }
+    ],
+    "most_restrictive_transfer_arrival_policy_restored": true,
+    "native_external_http_attempted": false,
+    "native_import_original_request_replayed": true,
+    "new_post_restore_command_reconciled": true,
+    "ok": true,
+    "original_transfer_dispatch_and_partial_arrival_restored": true,
+    "original_utc_authority_preserved_across_timezones": true,
+    "partial_order_remainder_cancellation_restored": true,
+    "partial_shipment_original_requests_restored": true,
+    "post_restore_reconciliation": {
+      "lot_controls": {
+        "baseline_version": 0,
+        "eligibility_decisions": 27,
+        "ok": true,
+        "policy_changes": 6
+      },
+      "method": "full_append_only_ledger_and_order_line_allocations",
+      "ok": true,
+      "packages": [
+        {
+          "ok": true,
+          "order_id": "065cb5d6-b7d1-44d6-b207-72dee2f13415",
+          "packages": [
+            {
+              "actor": "rehearsal:admin",
+              "closure": {
+                "actor": "rehearsal:admin",
+                "carrier": "Synthetic split carrier",
+                "closed_at": "2026-10-19T02:45:24.284240804+00:00",
+                "event_id": "daa16e5a-847a-4302-9173-acfeba57fba3",
+                "handoff_reference": "RESTORE-SPLIT-HANDOFF",
+                "kind": "handed_off",
+                "reason": "",
+                "version": 32
+              },
+              "id": "5fd666fe-2032-4cb8-a0ea-556ccb9d2dda",
+              "lines": [
+                {
+                  "line_id": "a",
+                  "location": "SPLIT-A",
+                  "lot": "SPLIT-LOT",
+                  "quantity": 3,
+                  "sku": "RESTORE-SPLIT"
+                }
+              ],
+              "order_id": "065cb5d6-b7d1-44d6-b207-72dee2f13415",
+              "packed_at": "2026-10-19T02:45:24.214348890+00:00",
+              "reference": "RESTORE-SPLIT-SENT",
+              "source_event_id": "eb301dca-92ee-4faf-b911-8dfa5540e2c9",
+              "source_version": 31
+            },
+            {
+              "actor": "rehearsal:admin",
+              "closure": null,
+              "id": "82b48b97-1fd5-4777-aaa0-46e4b68600c9",
+              "lines": [
+                {
+                  "line_id": "b",
+                  "location": "SPLIT-A",
+                  "lot": "SPLIT-LOT",
+                  "quantity": 1,
+                  "sku": "RESTORE-SPLIT"
+                }
+              ],
+              "order_id": "065cb5d6-b7d1-44d6-b207-72dee2f13415",
+              "packed_at": "2026-10-19T02:45:24.381356446+00:00",
+              "reference": "RESTORE-SPLIT-ACTIVE",
+              "source_event_id": "d43364df-c9f0-4f7a-8d7d-e63c5fd674e4",
+              "source_version": 33
+            },
+            {
+              "actor": "rehearsal:admin",
+              "closure": {
+                "actor": "rehearsal:admin",
+                "carrier": "",
+                "closed_at": "2026-10-19T02:45:24.520350876+00:00",
+                "event_id": "4dd6d875-4339-41e6-ab36-4d59d04c208b",
+                "handoff_reference": "",
+                "kind": "unpacked",
+                "reason": "Physical repacking before recovery point",
+                "version": 35
+              },
+              "id": "e013dfc8-d7dd-4614-9c63-19d80e85d934",
+              "lines": [
+                {
+                  "line_id": "b",
+                  "location": "SPLIT-A",
+                  "lot": "SPLIT-LOT",
+                  "quantity": 1,
+                  "sku": "RESTORE-SPLIT"
+                }
+              ],
+              "order_id": "065cb5d6-b7d1-44d6-b207-72dee2f13415",
+              "packed_at": "2026-10-19T02:45:24.464892475+00:00",
+              "reference": "RESTORE-SPLIT-UNPACKED",
+              "source_event_id": "5850166b-c493-4e16-809c-529b220b92ea",
+              "source_version": 34
+            }
+          ],
+          "source_event_id": "d5df397e-e638-4881-9711-3b6ff5725f36",
+          "status": "partially_shipped"
+        },
+        {
+          "ok": true,
+          "order_id": "9435f6b0-3dc4-43db-85fc-c2a41b549ee3",
+          "packages": [
+            {
+              "actor": "rehearsal:admin",
+              "closure": {
+                "actor": "rehearsal:admin",
+                "carrier": "Actual synthetic carrier",
+                "closed_at": "2026-10-19T02:45:24.993603101+00:00",
+                "event_id": "774bad64-62bc-49c4-9383-9046653a2e16",
+                "handoff_reference": "RESTORE-CLOSED-HANDOFF",
+                "kind": "handed_off",
+                "reason": "",
+                "version": 42
+              },
+              "id": "558a5f84-48d3-4e02-b873-66d4cad78d88",
+              "lines": [
+                {
+                  "line_id": "a",
+                  "location": "SPLIT-A",
+                  "lot": "CLOSED-LOT",
+                  "quantity": 3,
+                  "sku": "RESTORE-SPLIT"
+                }
+              ],
+              "order_id": "9435f6b0-3dc4-43db-85fc-c2a41b549ee3",
+              "packed_at": "2026-10-19T02:45:24.924431778+00:00",
+              "reference": "RESTORE-CLOSED-PACKAGE",
+              "source_event_id": "849a790c-83bd-4b5e-8250-f8960d24872d",
+              "source_version": 41
+            }
+          ],
+          "source_event_id": "f8901499-7102-4ef0-a9fa-4b898a69d395",
+          "status": "closed_partial"
+        },
+        {
+          "ok": true,
+          "order_id": "b430f144-8601-426e-a9e8-e4cde40ce926",
+          "packages": [
+            {
+              "actor": "rehearsal:admin",
+              "closure": {
+                "actor": "rehearsal:admin",
+                "carrier": "Synthetic customer carrier",
+                "closed_at": "2026-10-19T02:45:25.838232926+00:00",
+                "event_id": "43a0b442-890c-49b0-b1e4-be4588d84bb8",
+                "handoff_reference": "QUALITY-WITNESSED-CUSTOMER-HANDOFF",
+                "kind": "handed_off",
+                "reason": "",
+                "version": 54
+              },
+              "id": "d3dd2b54-6837-4a4a-8f59-645ab5ecfc50",
+              "lines": [
+                {
+                  "line_id": "quality-line",
+                  "location": "A-01",
+                  "lot": "QUALITY-LOT",
+                  "quantity": 1,
+                  "sku": "RESTORE-QUALITY"
+                }
+              ],
+              "order_id": "b430f144-8601-426e-a9e8-e4cde40ce926",
+              "packed_at": "2026-10-19T02:45:25.775211013+00:00",
+              "reference": "RESTORE-QUALITY-HANDED",
+              "source_event_id": "b1abdeef-e453-48ea-80c2-0d79a3b45996",
+              "source_version": 53
+            },
+            {
+              "actor": "rehearsal:admin",
+              "closure": {
+                "actor": "rehearsal:admin",
+                "carrier": "",
+                "closed_at": "2026-10-19T02:45:38.273709026+00:00",
+                "event_id": "353a35a0-9f7c-43ef-b67c-d48554527c72",
+                "handoff_reference": "",
+                "kind": "unpacked",
+                "reason": "Actually unpacked held restored package for recovery",
+                "version": 62
+              },
+              "id": "94c5541d-b651-4f3b-9941-70070f579321",
+              "lines": [
+                {
+                  "line_id": "quality-line",
+                  "location": "A-01",
+                  "lot": "QUALITY-LOT",
+                  "quantity": 1,
+                  "sku": "RESTORE-QUALITY"
+                }
+              ],
+              "order_id": "b430f144-8601-426e-a9e8-e4cde40ce926",
+              "packed_at": "2026-10-19T02:45:25.941923967+00:00",
+              "reference": "RESTORE-QUALITY-ACTIVE",
+              "source_event_id": "8305f956-76fd-4f6a-9a2d-7c6b798d3762",
+              "source_version": 55
+            }
+          ],
+          "source_event_id": "ee074f74-e022-480f-8878-40a54d2f4bcd",
+          "status": "partially_shipped"
+        }
+      ],
+      "receipt_cancellations": [
+        {
+          "cancelled": 2,
+          "ok": true,
+          "receipt_id": "33e9b542-3aec-47b9-a08d-259a2f77326d",
+          "status": "cancelled"
+        },
+        {
+          "cancelled": 0,
+          "ok": true,
+          "receipt_id": "596233f0-2f4e-456a-bacf-45d27ae76574",
+          "status": "received"
+        },
+        {
+          "cancelled": 0,
+          "ok": true,
+          "receipt_id": "d34fef74-ca14-48c9-aa1a-2367f303d39c",
+          "status": "received"
+        },
+        {
+          "cancelled": 0,
+          "ok": true,
+          "receipt_id": "d42cf41c-16db-4478-b584-475b83bfcbe7",
+          "status": "expected"
+        },
+        {
+          "cancelled": 1,
+          "ok": true,
+          "receipt_id": "ee34c6bd-eda9-44ee-baad-77fab4696624",
+          "status": "cancelled"
+        },
+        {
+          "cancelled": 0,
+          "ok": true,
+          "receipt_id": "f33976aa-e190-4eb8-8859-b1f42d743f73",
+          "status": "expected"
+        }
+      ],
+      "receipts": [
+        {
+          "evidence": 1,
+          "line_id": "closed-line",
+          "ok": true,
+          "receipt_id": "33e9b542-3aec-47b9-a08d-259a2f77326d",
+          "received": 1
+        },
+        {
+          "evidence": 1,
+          "line_id": "return-line",
+          "ok": true,
+          "receipt_id": "596233f0-2f4e-456a-bacf-45d27ae76574",
+          "received": 1
+        },
+        {
+          "evidence": 12,
+          "line_id": "receipt-line",
+          "ok": true,
+          "receipt_id": "d34fef74-ca14-48c9-aa1a-2367f303d39c",
+          "received": 12
+        },
+        {
+          "evidence": 0,
+          "line_id": "return-a",
+          "ok": true,
+          "receipt_id": "d42cf41c-16db-4478-b584-475b83bfcbe7",
+          "received": 0
+        },
+        {
+          "evidence": 0,
+          "line_id": "quality-return-line",
+          "ok": true,
+          "receipt_id": "ee34c6bd-eda9-44ee-baad-77fab4696624",
+          "received": 0
+        },
+        {
+          "evidence": 0,
+          "line_id": "closed-rma-line",
+          "ok": true,
+          "receipt_id": "f33976aa-e190-4eb8-8859-b1f42d743f73",
+          "received": 0
+        }
+      ],
+      "returns": [
+        {
+          "authorized": 1,
+          "lot": "SPLIT-LOT",
+          "ok": true,
+          "order_id": "065cb5d6-b7d1-44d6-b207-72dee2f13415",
+          "order_line_id": "a",
+          "received": 0,
+          "shipped": 3,
+          "sku": "RESTORE-SPLIT"
+        },
+        {
+          "authorized": 1,
+          "lot": "CLOSED-LOT",
+          "ok": true,
+          "order_id": "9435f6b0-3dc4-43db-85fc-c2a41b549ee3",
+          "order_line_id": "a",
+          "received": 0,
+          "shipped": 3,
+          "sku": "RESTORE-SPLIT"
+        },
+        {
+          "authorized": 0,
+          "lot": "QUALITY-LOT",
+          "ok": true,
+          "order_id": "b430f144-8601-426e-a9e8-e4cde40ce926",
+          "order_line_id": "quality-line",
+          "received": 0,
+          "shipped": 1,
+          "sku": "RESTORE-QUALITY"
+        },
+        {
+          "authorized": 1,
+          "lot": "RESTORE-LOT",
+          "ok": true,
+          "order_id": "eccf3f97-0dc3-46f4-b20c-31d19a9ad971",
+          "order_line_id": "oms-line-db55067a83f4a20cb2ce42c3d516aa6d2712ec72695555b57f1180d5b973a5fa",
+          "received": 1,
+          "shipped": 1,
+          "sku": "RESTORE-EACH"
+        }
+      ],
+      "rows": [
+        {
+          "allocation_reserved": 0,
+          "difference": 0,
+          "ledger": 1,
+          "location": "RECV-01",
+          "lot": "CLOSED-LOT",
+          "ok": true,
+          "on_hand": 1,
+          "reserved": 0,
+          "reserved_difference": 0,
+          "sku": "RESTORE-EACH"
+        },
+        {
+          "allocation_reserved": 2,
+          "difference": 0,
+          "ledger": 4,
+          "location": "A-01",
+          "lot": "RESTORE-LOT",
+          "ok": true,
+          "on_hand": 4,
+          "reserved": 2,
+          "reserved_difference": 0,
+          "sku": "RESTORE-EACH"
+        },
+        {
+          "allocation_reserved": 0,
+          "difference": 0,
+          "ledger": 1,
+          "location": "RECV-01",
+          "lot": "RESTORE-LOT",
+          "ok": true,
+          "on_hand": 1,
+          "reserved": 0,
+          "reserved_difference": 0,
+          "sku": "RESTORE-EACH"
+        },
+        {
+          "allocation_reserved": 5,
+          "difference": 0,
+          "ledger": 5,
+          "location": "STAGE-01",
+          "lot": "RESTORE-LOT",
+          "ok": true,
+          "on_hand": 5,
+          "reserved": 5,
+          "reserved_difference": 0,
+          "sku": "RESTORE-EACH"
+        },
+        {
+          "allocation_reserved": 0,
+          "difference": 0,
+          "ledger": 7,
+          "location": "A-01",
+          "lot": "QUALITY-LOT",
+          "ok": true,
+          "on_hand": 7,
+          "reserved": 0,
+          "reserved_difference": 0,
+          "sku": "RESTORE-QUALITY"
+        },
+        {
+          "allocation_reserved": 0,
+          "difference": 0,
+          "ledger": 0,
+          "location": "STAGE-01",
+          "lot": "QUALITY-LOT",
+          "ok": true,
+          "on_hand": 0,
+          "reserved": 0,
+          "reserved_difference": 0,
+          "sku": "RESTORE-QUALITY"
+        },
+        {
+          "allocation_reserved": 0,
+          "difference": 0,
+          "ledger": 4,
+          "location": "SPLIT-A",
+          "lot": "CLOSED-LOT",
+          "ok": true,
+          "on_hand": 4,
+          "reserved": 0,
+          "reserved_difference": 0,
+          "sku": "RESTORE-SPLIT"
+        },
+        {
+          "allocation_reserved": 0,
+          "difference": 0,
+          "ledger": 0,
+          "location": "STAGE-01",
+          "lot": "CLOSED-LOT",
+          "ok": true,
+          "on_hand": 0,
+          "reserved": 0,
+          "reserved_difference": 0,
+          "sku": "RESTORE-SPLIT"
+        },
+        {
+          "allocation_reserved": 2,
+          "difference": 0,
+          "ledger": 2,
+          "location": "SPLIT-A",
+          "lot": "SPLIT-LOT",
+          "ok": true,
+          "on_hand": 2,
+          "reserved": 2,
+          "reserved_difference": 0,
+          "sku": "RESTORE-SPLIT"
+        },
+        {
+          "allocation_reserved": 2,
+          "difference": 0,
+          "ledger": 2,
+          "location": "STAGE-01",
+          "lot": "SPLIT-LOT",
+          "ok": true,
+          "on_hand": 2,
+          "reserved": 2,
+          "reserved_difference": 0,
+          "sku": "RESTORE-SPLIT"
+        }
+      ],
+      "shipments": [
+        {
+          "event_id": null,
+          "ok": true,
+          "order_id": "065cb5d6-b7d1-44d6-b207-72dee2f13415",
+          "source_kind": "handoff_events",
+          "source_version": null
+        },
+        {
+          "event_id": null,
+          "ok": true,
+          "order_id": "9435f6b0-3dc4-43db-85fc-c2a41b549ee3",
+          "source_kind": "handoff_events",
+          "source_version": null
+        },
+        {
+          "event_id": null,
+          "ok": true,
+          "order_id": "b430f144-8601-426e-a9e8-e4cde40ce926",
+          "source_kind": "handoff_events",
+          "source_version": null
+        },
+        {
+          "event_id": "7447f0c6-9636-4d7f-a5c5-5a888893bd30",
+          "ok": true,
+          "order_id": "eccf3f97-0dc3-46f4-b20c-31d19a9ad971",
+          "source_kind": "event",
+          "source_version": 17
+        }
+      ],
+      "transfers": [
+        {
+          "destination_warehouse_id": "wh-restore-secondary",
+          "lines": [
+            {
+              "dispatched": 3,
+              "in_transit": 2,
+              "line_id": "original-line",
+              "loss_record_count": 0,
+              "lost": 0,
+              "lot": "RESTORE-LOT",
+              "received": 1,
+              "sku": "RESTORE-EACH"
+            }
+          ],
+          "ok": true,
+          "source_event_id": "8248230c-60e6-456e-b679-e32f9d04036e",
+          "source_warehouse_id": "wh-main",
+          "transfer_id": "a41f18b4-11dd-40cd-a79e-03f34a0a157e"
+        },
+        {
+          "destination_warehouse_id": "wh-restore-secondary",
+          "lines": [
+            {
+              "dispatched": 2,
+              "in_transit": 1,
+              "line_id": "quality-transfer-line",
+              "loss_record_count": 0,
+              "lost": 0,
+              "lot": "QUALITY-LOT",
+              "received": 1,
+              "sku": "RESTORE-QUALITY"
+            }
+          ],
+          "ok": true,
+          "source_event_id": "7d8b9a91-2bf6-4103-bcc8-935e102a751e",
+          "source_warehouse_id": "wh-main",
+          "transfer_id": "4bbecaf5-08d8-4aca-a716-c30ae1f1ff22"
+        }
+      ],
+      "units": {
+        "definition_changes": 0,
+        "method": "immutable_definition_and_original_command_each_conversion",
+        "ok": true,
+        "quantity_observations": 0
+      },
+      "version": 65
+    },
+    "receipt_cancellation_original_request_replayed": true,
+    "receive_original_request_replayed": true,
+    "rejected_conditional_oms_receipt_replayed_unchanged": true,
+    "replays_changed_no_evidence": true,
+    "scoped_return_receive_replayed": true,
+    "source_session_timezone": "Pacific/Auckland",
+    "synthetic": true,
+    "table_evidence": {
+      "wms_activity": {
+        "rows": 92,
+        "sha256": "1c92176f7077cd7cd078c01310c1b74814ea25fd5b53802946f7b5a1d80d3253"
+      },
+      "wms_admin_audit": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_allocations": {
+        "rows": 10,
+        "sha256": "8ca7e2808529a39ffbd8c7d30a2b648b0b274e80f8c81717ea03bfe0774b83eb"
+      },
+      "wms_commands": {
+        "rows": 92,
+        "sha256": "9a69bedf0989e398a4b7fe53b94fd6a2fea597c2e0463cf54b49895d68dbc94d"
+      },
+      "wms_delivery_attempts": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_events": {
+        "rows": 92,
+        "sha256": "c2ea785fe05fbb50e0d5b08bc0254409f5fbfec08eb177534fef4bc924db84f5"
+      },
+      "wms_exceptions": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_locations": {
+        "rows": 16,
+        "sha256": "fc7ddabccd0504c1c626c3cce74c8a6523de77beee12012b97d3ba69b950ccd9"
+      },
+      "wms_lot_changes": {
+        "rows": 10,
+        "sha256": "79ad8b610f2a2b3e0ee597d311a78bac5a9973e8bf025ef914b63fe0ca880fe3"
+      },
+      "wms_lot_decisions": {
+        "rows": 32,
+        "sha256": "6a705cfc910b11f2e4b426bc48b9da33f7e2ec604be876f3bf9266e9f1237753"
+      },
+      "wms_lot_enforcement": {
+        "rows": 6,
+        "sha256": "1cbd238c20d97566c580e639865810e18519dee12915e670f0f80a5e23a0386f"
+      },
+      "wms_movements": {
+        "rows": 29,
+        "sha256": "bc28e3f2e1405fede9a905b16b766857526800d6d8c70290d68d80c7c37c89f0"
+      },
+      "wms_native_attempts": {
+        "rows": 3,
+        "sha256": "87289b16031e526391a408823aaf158b216e9817e043162cbbfafdb3045f66e9"
+      },
+      "wms_native_requests": {
+        "rows": 4,
+        "sha256": "184c46cab8ede3bc7643601fb66b9d85b37ef92daf62b3c97815557dc8dc3a50"
+      },
+      "wms_order_cancellations": {
+        "rows": 1,
+        "sha256": "c3c3d388b2e9e0e854b5550c4914bff0bf6cf3c446859953dcc38b6371f115ac"
+      },
+      "wms_order_cancelled_lines": {
+        "rows": 2,
+        "sha256": "2e84bcfeaa22350d2741fc6b677479649cb6f6e860f16b95ef7f052679981add"
+      },
+      "wms_order_lines": {
+        "rows": 10,
+        "sha256": "fe94a60d388687cae590388d1ae0c83a00fe94ba196835db10c88431b1fb1196"
+      },
+      "wms_orders": {
+        "rows": 7,
+        "sha256": "30ff6d1c8f31b11fc0d7cd035272cdda36a1094bb4da601a53df5a7e7e7e0389"
+      },
+      "wms_outbox": {
+        "rows": 99,
+        "sha256": "9520d1461e2c6c063955197883799c1a7201bb14dbf058969d41c3309fe00bb4"
+      },
+      "wms_package_closures": {
+        "rows": 5,
+        "sha256": "f16f5cd4a170021d5843fed33631878430ea0dd5b9a55b64079650c5092e3e88"
+      },
+      "wms_package_lines": {
+        "rows": 7,
+        "sha256": "0b03b28403146651182574162fea0f5908574609e3547d6d36624fe4864e1bfa"
+      },
+      "wms_packages": {
+        "rows": 7,
+        "sha256": "3b61da341479742b674490b0f70bccf35f227d750b537414771e734b6bb3309d"
+      },
+      "wms_products": {
+        "rows": 8,
+        "sha256": "2702699c535a47d4333fee5a5ab16c7d66b31114f6caaf1794ba18da5ae37074"
+      },
+      "wms_receipt_cancellations": {
+        "rows": 2,
+        "sha256": "a59984dd6e2ab13b1f6de0bc4d523522ac055251d15d83f5a93ea9429879fbc2"
+      },
+      "wms_receipt_cancelled_lines": {
+        "rows": 2,
+        "sha256": "7c34d917f7e7a4f860934e140c09b2000425192d4277d9458cf6e8e8cd5e570a"
+      },
+      "wms_receipt_evidence": {
+        "rows": 4,
+        "sha256": "1a6691f9baa4c434fcf100b5bd5af5a599cd7d9758e64c76ffeaf81fbfa3474f"
+      },
+      "wms_receipt_lines": {
+        "rows": 7,
+        "sha256": "28caf809a2387dce36a023fd99c5c2467c47c602b94370024fb760be2421162d"
+      },
+      "wms_receipts": {
+        "rows": 7,
+        "sha256": "8b252e234a51a5b0fece4df0c7a7cfbff4024755b4ceb214d2a97bd0572301c2"
+      },
+      "wms_resource_versions": {
+        "rows": 67,
+        "sha256": "b730253e83d45e9753c0425794e37caa5cbb3933580d783166fe373a7b77fe8f"
+      },
+      "wms_return_lines": {
+        "rows": 4,
+        "sha256": "17bc2feeb791da13a4d6a50d330871d92862bb79c0d95809e2fd4385d285aa4d"
+      },
+      "wms_schema_migrations": {
+        "rows": 20,
+        "sha256": "92094ef6f9953865dffaca67c4941ee55ea04af8d7a8220547ba6798de9f4746"
+      },
+      "wms_shipment_evidence": {
+        "rows": 1,
+        "sha256": "bee7978084d8a1d525caa8957f20c484171744260d4af30b5422e9b69ae4a8c1"
+      },
+      "wms_split_orders": {
+        "rows": 4,
+        "sha256": "712f1d209943b54e5f4793eff588f70903efac01d242906b888c8f81cb1eb93e"
+      },
+      "wms_stock": {
+        "rows": 17,
+        "sha256": "535b19da314251b641e1a5e91919e589f93bae021797d0319df2f5261bdff585"
+      },
+      "wms_stock_ledger": {
+        "rows": 17,
+        "sha256": "11ab03164a9970475ca0e4cacb488351245e3936e8df0db16d41eaef4c3d0907"
+      },
+      "wms_stock_reserved": {
+        "rows": 10,
+        "sha256": "fef4ce8e553dbe8f1939ea9391c7a022075a85c9d8c411c1fb2e89aa8ed779ed"
+      },
+      "wms_transfer_lines": {
+        "rows": 3,
+        "sha256": "f29b4f9219f1e265a1cb2a44b61d1f06537f974075b65dd194f49b955459f634"
+      },
+      "wms_transfer_loss_records": {
+        "rows": 2,
+        "sha256": "362f442da399b4fcbb5a9c4baff615bbdcaf259a37251871be4cd30c43464dd2"
+      },
+      "wms_transfers": {
+        "rows": 3,
+        "sha256": "b8026072e1b76bd6eaca6ea390a2d06239ec60f9c25fa633a5776535810c2d8b"
+      },
+      "wms_unit_observations": {
+        "rows": 6,
+        "sha256": "19422b812f424b348c752073bba1d4a409eddc965220bf1b5d561d37a1dd3973"
+      },
+      "wms_unit_pack_changes": {
+        "rows": 4,
+        "sha256": "397a51bc5b6b42b47dfa6c99a643f51d62358d22657236c04aa50f576e5d474e"
+      },
+      "wms_warehouses": {
+        "rows": 6,
+        "sha256": "e926f140a43b78402ba4804aff500dbeafbbeb669ace2c058b004f29f18ef100"
+      },
+      "wms_workspaces": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      }
+    },
+    "target_session_timezone": "UTC",
+    "transfer_in_transit_custody_preserved": true,
+    "transfer_loss": {
+      "destination_warehouse_id": "wh-loss-destination",
+      "journal": {
+        "destination_warehouse_id": "wh-loss-destination",
+        "records": [
+          {
+            "actor": "rehearsal:admin",
+            "event_id": "36349963-d92e-4bac-a5c7-7af9feb3f45e",
+            "id": "8d31dc38-1cbe-4c57-b5e5-d4413ebbdbfc",
+            "incident_reference": "RESTORE-CARRIER-LOSS-CASE",
+            "kind": "loss",
+            "line_id": "original-loss-line",
+            "original_loss_id": null,
+            "quantity": 2,
+            "reason": "Carrier and controller confirmed original missing units",
+            "recorded_at": "2026-10-19T02:45:26.924663+00:00",
+            "reversed": 1,
+            "source_ok": true,
+            "transfer_id": "933353f3-78a3-4dbd-8ce1-6cf1d2ef9f3c",
+            "version": 4,
+            "warehouse_id": "wh-loss-destination"
+          },
+          {
+            "actor": "rehearsal:admin",
+            "event_id": "881f5a54-3657-40bf-b150-55e8947b49e6",
+            "id": "3b00212f-a810-4828-8b8e-df64577ea285",
+            "incident_reference": null,
+            "kind": "reversal",
+            "line_id": "original-loss-line",
+            "original_loss_id": "8d31dc38-1cbe-4c57-b5e5-d4413ebbdbfc",
+            "quantity": 1,
+            "reason": "One original unit located; actual arrival remains separate",
+            "recorded_at": "2026-10-19T02:45:27.062366+00:00",
+            "reversed": 0,
+            "source_ok": true,
+            "transfer_id": "933353f3-78a3-4dbd-8ce1-6cf1d2ef9f3c",
+            "version": 5,
+            "warehouse_id": "wh-loss-destination"
+          }
+        ],
+        "review": 5,
+        "transfer_id": "933353f3-78a3-4dbd-8ce1-6cf1d2ef9f3c"
+      },
+      "loss_id": "8d31dc38-1cbe-4c57-b5e5-d4413ebbdbfc",
+      "originals": [
+        {
+          "request": {
+            "command": {
+              "city": "Vancouver",
+              "code": "LOSS-SRC",
+              "name": "Synthetic restored loss facility",
+              "timezone": "America/Vancouver",
+              "type": "create_warehouse"
+            },
+            "expected_version": 0,
+            "request_id": "restore-loss-create-LOSS-SRC"
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "wh-loss-source",
+              "type": "warehouse.created",
+              "version": 1
+            }
+          },
+          "warehouse_id": "wh-loss-source"
+        },
+        {
+          "request": {
+            "command": {
+              "category": "Restore",
+              "name": "Synthetic loss each",
+              "reorder_point": 0,
+              "sku": "RESTORE-LOSS",
+              "type": "create_product"
+            },
+            "expected_version": 1,
+            "request_id": "restore-loss-product-LOSS-SRC"
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "RESTORE-LOSS",
+              "type": "product.created",
+              "version": 2
+            }
+          },
+          "warehouse_id": "wh-loss-source"
+        },
+        {
+          "request": {
+            "command": {
+              "city": "Vancouver",
+              "code": "LOSS-DST",
+              "name": "Synthetic restored loss facility",
+              "timezone": "America/Vancouver",
+              "type": "create_warehouse"
+            },
+            "expected_version": 0,
+            "request_id": "restore-loss-create-LOSS-DST"
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "wh-loss-destination",
+              "type": "warehouse.created",
+              "version": 1
+            }
+          },
+          "warehouse_id": "wh-loss-destination"
+        },
+        {
+          "request": {
+            "command": {
+              "category": "Restore",
+              "name": "Synthetic loss each",
+              "reorder_point": 0,
+              "sku": "RESTORE-LOSS",
+              "type": "create_product"
+            },
+            "expected_version": 1,
+            "request_id": "restore-loss-product-LOSS-DST"
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "RESTORE-LOSS",
+              "type": "product.created",
+              "version": 2
+            }
+          },
+          "warehouse_id": "wh-loss-destination"
+        },
+        {
+          "request": {
+            "command": {
+              "code": "LOSS-A",
+              "kind": "storage",
+              "type": "create_location",
+              "zone": "Storage"
+            },
+            "expected_version": 2,
+            "request_id": "restore-loss-location"
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "LOSS-A",
+              "type": "location.created",
+              "version": 3
+            }
+          },
+          "warehouse_id": "wh-loss-source"
+        },
+        {
+          "request": {
+            "command": {
+              "counted": 10,
+              "location": "LOSS-A",
+              "lot": "ORIGINAL-LOSS-LOT",
+              "reason": "Synthetic original source custody",
+              "sku": "RESTORE-LOSS",
+              "type": "count_stock"
+            },
+            "expected_version": 3,
+            "request_id": "restore-loss-opening"
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "RESTORE-LOSS / LOSS-A",
+              "type": "inventory.counted",
+              "version": 4
+            }
+          },
+          "warehouse_id": "wh-loss-source"
+        },
+        {
+          "request": {
+            "command": {
+              "carrier": "Synthetic loss carrier",
+              "destination_warehouse_id": "wh-loss-destination",
+              "handoff_reference": "ORIGINAL-LOSS-HANDOFF",
+              "lines": [
+                {
+                  "id": "original-loss-line",
+                  "location": "LOSS-A",
+                  "lot": "ORIGINAL-LOSS-LOT",
+                  "quantity": 5,
+                  "sku": "RESTORE-LOSS"
+                }
+              ],
+              "reference": "RESTORE-LOSS-TRANSFER",
+              "type": "dispatch_transfer"
+            },
+            "expected_version": 4,
+            "request_id": "restore-loss-dispatch"
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "933353f3-78a3-4dbd-8ce1-6cf1d2ef9f3c",
+              "type": "transfer.dispatched",
+              "version": 5
+            }
+          },
+          "warehouse_id": "wh-loss-source"
+        },
+        {
+          "request": {
+            "command": {
+              "arrival_reference": "One original each physically arrived",
+              "line_id": "original-loss-line",
+              "location": "RECV-01",
+              "quantity": 1,
+              "transfer_id": "933353f3-78a3-4dbd-8ce1-6cf1d2ef9f3c",
+              "type": "receive_transfer"
+            },
+            "expected_version": 2,
+            "request_id": "restore-loss-arrival"
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "933353f3-78a3-4dbd-8ce1-6cf1d2ef9f3c",
+              "type": "transfer.received",
+              "version": 3
+            }
+          },
+          "warehouse_id": "wh-loss-destination"
+        },
+        {
+          "request": {
+            "command": {
+              "incident_reference": "RESTORE-CARRIER-LOSS-CASE",
+              "line_id": "original-loss-line",
+              "quantity": 2,
+              "reason": "Carrier and controller confirmed original missing units",
+              "transfer_id": "933353f3-78a3-4dbd-8ce1-6cf1d2ef9f3c",
+              "type": "record_transfer_loss"
+            },
+            "expected_version": 3,
+            "request_id": "restore-loss-record"
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "8d31dc38-1cbe-4c57-b5e5-d4413ebbdbfc",
+              "type": "transfer.loss_recorded",
+              "version": 4
+            }
+          },
+          "warehouse_id": "wh-loss-destination"
+        },
+        {
+          "request": {
+            "command": {
+              "loss_id": "8d31dc38-1cbe-4c57-b5e5-d4413ebbdbfc",
+              "quantity": 1,
+              "reason": "One original unit located; actual arrival remains separate",
+              "type": "reverse_transfer_loss"
+            },
+            "expected_version": 4,
+            "request_id": "restore-loss-reversal"
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "3b00212f-a810-4828-8b8e-df64577ea285",
+              "type": "transfer.loss_reversed",
+              "version": 5
+            }
+          },
+          "warehouse_id": "wh-loss-destination"
+        }
+      ],
+      "source_warehouse_id": "wh-loss-source",
+      "transfer": {
+        "actor": "rehearsal:admin",
+        "carrier": "Synthetic loss carrier",
+        "destination_warehouse_id": "wh-loss-destination",
+        "dispatched_at": "2026-10-19T02:45:26.782310917+00:00",
+        "handoff_reference": "ORIGINAL-LOSS-HANDOFF",
+        "id": "933353f3-78a3-4dbd-8ce1-6cf1d2ef9f3c",
+        "lines": [
+          {
+            "id": "original-loss-line",
+            "location": "LOSS-A",
+            "loss_record_count": 2,
+            "lost": 1,
+            "lot": "ORIGINAL-LOSS-LOT",
+            "movement_id": "deba0045-4d4b-4b4b-9744-d65057734a77",
+            "quantity": 5,
+            "received": 1,
+            "sku": "RESTORE-LOSS"
+          }
+        ],
+        "reference": "RESTORE-LOSS-TRANSFER",
+        "seq": 3,
+        "source_event_id": "1149cedc-e7e2-41b3-a6af-b05522171e13",
+        "source_version": 5,
+        "source_warehouse_id": "wh-loss-source"
+      },
+      "transfer_id": "933353f3-78a3-4dbd-8ce1-6cf1d2ef9f3c"
+    },
+    "transfer_loss_original_records_and_capped_reversal_restored": true,
+    "transfer_loss_original_replays_changed_no_evidence": true,
+    "transfer_loss_post_restore_recovery": {
+      "actual_recovered_arrival_succeeded": true,
+      "excess_arrival_and_reversal_rejected_without_changes": true,
+      "originals": [
+        {
+          "request": {
+            "command": {
+              "loss_id": "8d31dc38-1cbe-4c57-b5e5-d4413ebbdbfc",
+              "quantity": 1,
+              "reason": "Remaining original missing unit located after restore",
+              "type": "reverse_transfer_loss"
+            },
+            "expected_version": 5,
+            "request_id": "restore-loss-new-reversal"
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "c7febea2-76a1-4785-bc62-3f4e626d4a28",
+              "type": "transfer.loss_reversed",
+              "version": 6
+            }
+          },
+          "warehouse_id": "wh-loss-destination"
+        },
+        {
+          "request": {
+            "command": {
+              "arrival_reference": "Actual recovered original each observed after restore",
+              "line_id": "original-loss-line",
+              "location": "RECV-01",
+              "quantity": 1,
+              "transfer_id": "933353f3-78a3-4dbd-8ce1-6cf1d2ef9f3c",
+              "type": "receive_transfer"
+            },
+            "expected_version": 6,
+            "request_id": "restore-loss-new-arrival"
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "933353f3-78a3-4dbd-8ce1-6cf1d2ef9f3c",
+              "type": "transfer.received",
+              "version": 7
+            }
+          },
+          "warehouse_id": "wh-loss-destination"
+        }
+      ],
+      "proof": {
+        "lot_controls": {
+          "baseline_version": 0,
+          "eligibility_decisions": 0,
+          "ok": true,
+          "policy_changes": 2
+        },
+        "method": "full_append_only_ledger_and_order_line_allocations",
+        "ok": true,
+        "packages": [],
+        "receipt_cancellations": [],
+        "receipts": [],
+        "returns": [],
+        "rows": [
+          {
+            "allocation_reserved": 0,
+            "difference": 0,
+            "ledger": 2,
+            "location": "RECV-01",
+            "lot": "ORIGINAL-LOSS-LOT",
+            "ok": true,
+            "on_hand": 2,
+            "reserved": 0,
+            "reserved_difference": 0,
+            "sku": "RESTORE-LOSS"
+          }
+        ],
+        "shipments": [],
+        "transfers": [
+          {
+            "destination_warehouse_id": "wh-loss-destination",
+            "lines": [
+              {
+                "dispatched": 5,
+                "in_transit": 3,
+                "line_id": "original-loss-line",
+                "loss_record_count": 3,
+                "lost": 0,
+                "lot": "ORIGINAL-LOSS-LOT",
+                "received": 2,
+                "sku": "RESTORE-LOSS"
+              }
+            ],
+            "ok": true,
+            "source_event_id": "1149cedc-e7e2-41b3-a6af-b05522171e13",
+            "source_warehouse_id": "wh-loss-source",
+            "transfer_id": "933353f3-78a3-4dbd-8ce1-6cf1d2ef9f3c"
+          }
+        ],
+        "units": {
+          "definition_changes": 0,
+          "method": "immutable_definition_and_original_command_each_conversion",
+          "ok": true,
+          "quantity_observations": 0
+        },
+        "version": 7
+      },
+      "reversal_credited_no_stock": true
+    },
+    "uncertain_conditional_oms_retry_reclaimed": true,
+    "uncertain_native_frozen_retry_reclaimed": true,
+    "unit_original_definitions_and_observations_restored": true,
+    "unit_original_replays_changed_no_tables": true,
+    "unit_post_restore_recovery": {
+      "fresh_original_request": {
+        "command": {
+          "counted": 12,
+          "location": "RECV-01",
+          "lot": "ORIGINAL-PACK-LOT",
+          "reason": "Observed original pack label requires review",
+          "sku": "RESTORE-PACK",
+          "type": "count_stock"
+        },
+        "expected_version": 15,
+        "request_id": "restore-unit-fresh-definition",
+        "unit_inputs": [
+          {
+            "definition_id": "6621f7fa-a450-456f-99e9-e963d138902f",
+            "each_per_pack": 6,
+            "pack_code": "CASE",
+            "pack_quantity": 2,
+            "sku": "RESTORE-PACK",
+            "target": []
+          }
+        ]
+      },
+      "old_definition_rejected_without_table_changes": true,
+      "proof": {
+        "lot_controls": {
+          "baseline_version": 0,
+          "eligibility_decisions": 4,
+          "ok": true,
+          "policy_changes": 0
+        },
+        "method": "full_append_only_ledger_and_order_line_allocations",
+        "ok": true,
+        "packages": [
+          {
+            "ok": true,
+            "order_id": "e6192c74-d680-46fc-aa1f-c57122968be3",
+            "packages": [
+              {
+                "actor": "rehearsal:admin",
+                "closure": {
+                  "actor": "rehearsal:admin",
+                  "carrier": "Synthetic",
+                  "closed_at": "2026-10-19T02:45:27.722492559+00:00",
+                  "event_id": "c4c0aa54-9aa0-42db-9aa7-63a256c3b229",
+                  "handoff_reference": "RESTORE-CASE-HANDOFF",
+                  "kind": "handed_off",
+                  "reason": "",
+                  "version": 12
+                },
+                "id": "ea91f02f-df23-4a1b-857c-fa78a7002dcb",
+                "lines": [
+                  {
+                    "line_id": "a",
+                    "location": "PACK-01",
+                    "lot": "ORIGINAL-PACK-LOT",
+                    "quantity": 12,
+                    "sku": "RESTORE-PACK"
+                  }
+                ],
+                "order_id": "e6192c74-d680-46fc-aa1f-c57122968be3",
+                "packed_at": "2026-10-19T02:45:27.630487957+00:00",
+                "reference": "RESTORE-CASE-PACKAGE",
+                "source_event_id": "6dc9b461-853f-4bef-9e07-c9253e8e608a",
+                "source_version": 11
+              }
+            ],
+            "source_event_id": "6dc9b461-853f-4bef-9e07-c9253e8e608a",
+            "status": "shipped"
+          }
+        ],
+        "receipt_cancellations": [
+          {
+            "cancelled": 0,
+            "ok": true,
+            "receipt_id": "39f6580f-20ab-4103-8220-04e802927f6a",
+            "status": "partial"
+          }
+        ],
+        "receipts": [
+          {
+            "evidence": 24,
+            "line_id": "a",
+            "ok": true,
+            "receipt_id": "39f6580f-20ab-4103-8220-04e802927f6a",
+            "received": 24
+          }
+        ],
+        "returns": [],
+        "rows": [
+          {
+            "allocation_reserved": 0,
+            "difference": 0,
+            "ledger": 0,
+            "location": "PACK-01",
+            "lot": "ORIGINAL-PACK-LOT",
+            "ok": true,
+            "on_hand": 0,
+            "reserved": 0,
+            "reserved_difference": 0,
+            "sku": "RESTORE-PACK"
+          },
+          {
+            "allocation_reserved": 0,
+            "difference": 0,
+            "ledger": 12,
+            "location": "RECV-01",
+            "lot": "ORIGINAL-PACK-LOT",
+            "ok": true,
+            "on_hand": 12,
+            "reserved": 0,
+            "reserved_difference": 0,
+            "sku": "RESTORE-PACK"
+          },
+          {
+            "allocation_reserved": 0,
+            "difference": 0,
+            "ledger": 0,
+            "location": "STAGE-01",
+            "lot": "ORIGINAL-PACK-LOT",
+            "ok": true,
+            "on_hand": 0,
+            "reserved": 0,
+            "reserved_difference": 0,
+            "sku": "RESTORE-PACK"
+          }
+        ],
+        "shipments": [
+          {
+            "event_id": null,
+            "ok": true,
+            "order_id": "e6192c74-d680-46fc-aa1f-c57122968be3",
+            "source_kind": "handoff_events",
+            "source_version": null
+          }
+        ],
+        "transfers": [],
+        "units": {
+          "definition_changes": 4,
+          "method": "immutable_definition_and_original_command_each_conversion",
+          "ok": true,
+          "quantity_observations": 7
+        },
+        "version": 16
+      },
+      "response": {
+        "replayed": false,
+        "result": {
+          "entity_id": "RESTORE-PACK / RECV-01",
+          "type": "inventory.counted",
+          "version": 16
+        }
+      }
+    },
+    "units": {
+      "evidence": {
+        "active_packs": [
+          {
+            "code": "CASE",
+            "each_per_pack": 6,
+            "id": "6621f7fa-a450-456f-99e9-e963d138902f",
+            "label": "Reviewed CASE",
+            "sku": "RESTORE-PACK"
+          }
+        ],
+        "definitions": [
+          {
+            "actor": "rehearsal:admin",
+            "code": "CASE",
+            "each_per_pack": 12,
+            "enabled": true,
+            "id": "432ec269-3592-4d31-89ce-cab3357e2de8",
+            "label": "Reviewed CASE",
+            "reason": "Witnessed synthetic packaging label",
+            "recorded_at": "2026-10-19T02:45:27.240119+00:00",
+            "sku": "RESTORE-PACK",
+            "source_event_id": "6c8ba0ac-e1d4-4b82-90b0-fedad5af947a",
+            "version": 4,
+            "warehouse_id": "wh-unit-packs"
+          },
+          {
+            "actor": "rehearsal:admin",
+            "code": "CASE",
+            "each_per_pack": 6,
+            "enabled": true,
+            "id": "6621f7fa-a450-456f-99e9-e963d138902f",
+            "label": "Reviewed CASE",
+            "reason": "Witnessed synthetic packaging label",
+            "recorded_at": "2026-10-19T02:45:27.793192+00:00",
+            "sku": "RESTORE-PACK",
+            "source_event_id": "d451879b-2568-4a44-8244-2914dc1844e3",
+            "version": 13,
+            "warehouse_id": "wh-unit-packs"
+          },
+          {
+            "actor": "rehearsal:admin",
+            "code": "INNER",
+            "each_per_pack": 3,
+            "enabled": true,
+            "id": "0a628178-b6f0-4e6e-9b96-da846b7c39a5",
+            "label": "Reviewed INNER",
+            "reason": "Witnessed synthetic packaging label",
+            "recorded_at": "2026-10-19T02:45:27.861617+00:00",
+            "sku": "RESTORE-PACK",
+            "source_event_id": "fb4226a5-a60c-436e-8db5-511d50fe52a2",
+            "version": 14,
+            "warehouse_id": "wh-unit-packs"
+          },
+          {
+            "actor": "rehearsal:admin",
+            "code": "INNER",
+            "each_per_pack": 3,
+            "enabled": false,
+            "id": "5e0931ca-c21a-47df-8928-60d524451a32",
+            "label": "Reviewed INNER",
+            "reason": "Witnessed synthetic packaging label",
+            "recorded_at": "2026-10-19T02:45:27.888664+00:00",
+            "sku": "RESTORE-PACK",
+            "source_event_id": "d874dac9-9639-4af7-bc6b-c9346efa7740",
+            "version": 15,
+            "warehouse_id": "wh-unit-packs"
+          }
+        ],
+        "observations": [
+          {
+            "definition_id": "432ec269-3592-4d31-89ce-cab3357e2de8",
+            "each_per_pack": 12,
+            "each_quantity": 36,
+            "event_id": "fc7ef867-c7b0-4e87-91cd-4c696e8c1a0c",
+            "ordinal": 1,
+            "pack_code": "CASE",
+            "pack_quantity": 3,
+            "sku": "RESTORE-PACK",
+            "target": [
+              "a"
+            ],
+            "version": 5,
+            "warehouse_id": "wh-unit-packs"
+          },
+          {
+            "definition_id": "432ec269-3592-4d31-89ce-cab3357e2de8",
+            "each_per_pack": 12,
+            "each_quantity": 24,
+            "event_id": "eea7281a-4ba2-496d-900c-ac068a8feb2d",
+            "ordinal": 1,
+            "pack_code": "CASE",
+            "pack_quantity": 2,
+            "sku": "RESTORE-PACK",
+            "target": [],
+            "version": 6,
+            "warehouse_id": "wh-unit-packs"
+          },
+          {
+            "definition_id": "432ec269-3592-4d31-89ce-cab3357e2de8",
+            "each_per_pack": 12,
+            "each_quantity": 12,
+            "event_id": "434f6436-c56c-401e-a073-7d6448587a56",
+            "ordinal": 1,
+            "pack_code": "CASE",
+            "pack_quantity": 1,
+            "sku": "RESTORE-PACK",
+            "target": [],
+            "version": 7,
+            "warehouse_id": "wh-unit-packs"
+          },
+          {
+            "definition_id": "432ec269-3592-4d31-89ce-cab3357e2de8",
+            "each_per_pack": 12,
+            "each_quantity": 12,
+            "event_id": "6b3314de-35a9-41da-9609-7518c2345a97",
+            "ordinal": 1,
+            "pack_code": "CASE",
+            "pack_quantity": 1,
+            "sku": "RESTORE-PACK",
+            "target": [
+              "a"
+            ],
+            "version": 8,
+            "warehouse_id": "wh-unit-packs"
+          },
+          {
+            "definition_id": "432ec269-3592-4d31-89ce-cab3357e2de8",
+            "each_per_pack": 12,
+            "each_quantity": 12,
+            "event_id": "619658c7-dea3-4f78-8143-518888b995a1",
+            "ordinal": 1,
+            "pack_code": "CASE",
+            "pack_quantity": 1,
+            "sku": "RESTORE-PACK",
+            "target": [],
+            "version": 10,
+            "warehouse_id": "wh-unit-packs"
+          },
+          {
+            "definition_id": "432ec269-3592-4d31-89ce-cab3357e2de8",
+            "each_per_pack": 12,
+            "each_quantity": 12,
+            "event_id": "6dc9b461-853f-4bef-9e07-c9253e8e608a",
+            "ordinal": 1,
+            "pack_code": "CASE",
+            "pack_quantity": 1,
+            "sku": "RESTORE-PACK",
+            "target": [
+              "a",
+              "PACK-01",
+              "ORIGINAL-PACK-LOT"
+            ],
+            "version": 11,
+            "warehouse_id": "wh-unit-packs"
+          }
+        ],
+        "stock": [
+          {
+            "location": "PACK-01",
+            "lot": "ORIGINAL-PACK-LOT",
+            "on_hand": 0,
+            "reserved": 0,
+            "sku": "RESTORE-PACK"
+          },
+          {
+            "location": "RECV-01",
+            "lot": "ORIGINAL-PACK-LOT",
+            "on_hand": 12,
+            "reserved": 0,
+            "sku": "RESTORE-PACK"
+          },
+          {
+            "location": "STAGE-01",
+            "lot": "ORIGINAL-PACK-LOT",
+            "on_hand": 0,
+            "reserved": 0,
+            "sku": "RESTORE-PACK"
+          }
+        ]
+      },
+      "original_definition_id": "432ec269-3592-4d31-89ce-cab3357e2de8",
+      "originals": [
+        {
+          "request": {
+            "command": {
+              "city": "Vancouver",
+              "code": "UNIT",
+              "name": "Synthetic packaging facility",
+              "timezone": "America/Vancouver",
+              "type": "create_warehouse"
+            },
+            "expected_version": 0,
+            "request_id": "restore-unit-warehouse"
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "wh-unit-packs",
+              "type": "warehouse.created",
+              "version": 1
+            }
+          },
+          "warehouse_id": "wh-unit-packs"
+        },
+        {
+          "request": {
+            "command": {
+              "category": "Test",
+              "name": "Synthetic packaging product",
+              "reorder_point": 0,
+              "sku": "RESTORE-PACK",
+              "type": "create_product"
+            },
+            "expected_version": 1,
+            "request_id": "restore-unit-product"
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "RESTORE-PACK",
+              "type": "product.created",
+              "version": 2
+            }
+          },
+          "warehouse_id": "wh-unit-packs"
+        },
+        {
+          "request": {
+            "command": {
+              "code": "PACK-01",
+              "kind": "storage",
+              "type": "create_location",
+              "zone": "Synthetic"
+            },
+            "expected_version": 2,
+            "request_id": "restore-unit-bin"
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "PACK-01",
+              "type": "location.created",
+              "version": 3
+            }
+          },
+          "warehouse_id": "wh-unit-packs"
+        },
+        {
+          "request": {
+            "command": {
+              "code": "CASE",
+              "each_per_pack": 12,
+              "enabled": true,
+              "label": "Reviewed CASE",
+              "reason": "Witnessed synthetic packaging label",
+              "sku": "RESTORE-PACK",
+              "type": "set_unit_pack"
+            },
+            "expected_version": 3,
+            "request_id": "restore-unit-original-case"
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "432ec269-3592-4d31-89ce-cab3357e2de8",
+              "type": "inventory.unit_pack_changed",
+              "version": 4
+            }
+          },
+          "warehouse_id": "wh-unit-packs"
+        },
+        {
+          "request": {
+            "command": {
+              "lines": [
+                {
+                  "id": "a",
+                  "lot": "ORIGINAL-PACK-LOT",
+                  "quantity": 36,
+                  "sku": "RESTORE-PACK"
+                }
+              ],
+              "reference": "RESTORE-CASES",
+              "supplier": "Synthetic",
+              "type": "create_receipt"
+            },
+            "expected_version": 4,
+            "request_id": "restore-unit-receipt",
+            "unit_inputs": [
+              {
+                "definition_id": "432ec269-3592-4d31-89ce-cab3357e2de8",
+                "each_per_pack": 12,
+                "pack_code": "CASE",
+                "pack_quantity": 3,
+                "sku": "RESTORE-PACK",
+                "target": [
+                  "a"
+                ]
+              }
+            ]
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "39f6580f-20ab-4103-8220-04e802927f6a",
+              "type": "receipt.created",
+              "version": 5
+            }
+          },
+          "warehouse_id": "wh-unit-packs"
+        },
+        {
+          "request": {
+            "command": {
+              "line_id": "a",
+              "location": "RECV-01",
+              "quantity": 24,
+              "receipt_id": "39f6580f-20ab-4103-8220-04e802927f6a",
+              "type": "receive"
+            },
+            "expected_version": 5,
+            "request_id": "restore-unit-receive",
+            "unit_inputs": [
+              {
+                "definition_id": "432ec269-3592-4d31-89ce-cab3357e2de8",
+                "each_per_pack": 12,
+                "pack_code": "CASE",
+                "pack_quantity": 2,
+                "sku": "RESTORE-PACK",
+                "target": []
+              }
+            ]
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "39f6580f-20ab-4103-8220-04e802927f6a",
+              "type": "receipt.received",
+              "version": 6
+            }
+          },
+          "warehouse_id": "wh-unit-packs"
+        },
+        {
+          "request": {
+            "command": {
+              "from": "RECV-01",
+              "lot": "ORIGINAL-PACK-LOT",
+              "quantity": 12,
+              "sku": "RESTORE-PACK",
+              "to": "PACK-01",
+              "type": "move_stock"
+            },
+            "expected_version": 6,
+            "request_id": "restore-unit-move",
+            "unit_inputs": [
+              {
+                "definition_id": "432ec269-3592-4d31-89ce-cab3357e2de8",
+                "each_per_pack": 12,
+                "pack_code": "CASE",
+                "pack_quantity": 1,
+                "sku": "RESTORE-PACK",
+                "target": []
+              }
+            ]
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "RECV-01 \u2192 PACK-01",
+              "type": "inventory.moved",
+              "version": 7
+            }
+          },
+          "warehouse_id": "wh-unit-packs"
+        },
+        {
+          "request": {
+            "command": {
+              "customer": "Synthetic",
+              "destination": "Test",
+              "lines": [
+                {
+                  "id": "a",
+                  "quantity": 12,
+                  "sku": "RESTORE-PACK"
+                }
+              ],
+              "priority": "normal",
+              "reference": "RESTORE-CASE-ORDER",
+              "source_order_id": null,
+              "type": "create_order"
+            },
+            "expected_version": 7,
+            "request_id": "restore-unit-order",
+            "unit_inputs": [
+              {
+                "definition_id": "432ec269-3592-4d31-89ce-cab3357e2de8",
+                "each_per_pack": 12,
+                "pack_code": "CASE",
+                "pack_quantity": 1,
+                "sku": "RESTORE-PACK",
+                "target": [
+                  "a"
+                ]
+              }
+            ]
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "e6192c74-d680-46fc-aa1f-c57122968be3",
+              "type": "fulfillment.created",
+              "version": 8
+            }
+          },
+          "warehouse_id": "wh-unit-packs"
+        },
+        {
+          "request": {
+            "command": {
+              "order_id": "e6192c74-d680-46fc-aa1f-c57122968be3",
+              "type": "allocate"
+            },
+            "expected_version": 8,
+            "request_id": "restore-unit-allocate"
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "e6192c74-d680-46fc-aa1f-c57122968be3",
+              "type": "fulfillment.allocated",
+              "version": 9
+            }
+          },
+          "warehouse_id": "wh-unit-packs"
+        },
+        {
+          "request": {
+            "command": {
+              "line_id": "a",
+              "location": "PACK-01",
+              "lot": "ORIGINAL-PACK-LOT",
+              "order_id": "e6192c74-d680-46fc-aa1f-c57122968be3",
+              "quantity": 12,
+              "type": "pick"
+            },
+            "expected_version": 9,
+            "request_id": "restore-unit-pick",
+            "unit_inputs": [
+              {
+                "definition_id": "432ec269-3592-4d31-89ce-cab3357e2de8",
+                "each_per_pack": 12,
+                "pack_code": "CASE",
+                "pack_quantity": 1,
+                "sku": "RESTORE-PACK",
+                "target": []
+              }
+            ]
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "e6192c74-d680-46fc-aa1f-c57122968be3",
+              "type": "fulfillment.picked",
+              "version": 10
+            }
+          },
+          "warehouse_id": "wh-unit-packs"
+        },
+        {
+          "request": {
+            "command": {
+              "lines": [
+                {
+                  "line_id": "a",
+                  "location": "PACK-01",
+                  "lot": "ORIGINAL-PACK-LOT",
+                  "quantity": 12
+                }
+              ],
+              "order_id": "e6192c74-d680-46fc-aa1f-c57122968be3",
+              "reference": "RESTORE-CASE-PACKAGE",
+              "type": "pack_shipment"
+            },
+            "expected_version": 10,
+            "request_id": "restore-unit-pack",
+            "unit_inputs": [
+              {
+                "definition_id": "432ec269-3592-4d31-89ce-cab3357e2de8",
+                "each_per_pack": 12,
+                "pack_code": "CASE",
+                "pack_quantity": 1,
+                "sku": "RESTORE-PACK",
+                "target": [
+                  "a",
+                  "PACK-01",
+                  "ORIGINAL-PACK-LOT"
+                ]
+              }
+            ]
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "ea91f02f-df23-4a1b-857c-fa78a7002dcb",
+              "type": "shipment.packed",
+              "version": 11
+            }
+          },
+          "warehouse_id": "wh-unit-packs"
+        },
+        {
+          "request": {
+            "command": {
+              "carrier": "Synthetic",
+              "handoff_reference": "RESTORE-CASE-HANDOFF",
+              "shipment_id": "ea91f02f-df23-4a1b-857c-fa78a7002dcb",
+              "type": "handoff_shipment"
+            },
+            "expected_version": 11,
+            "request_id": "restore-unit-handoff"
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "ea91f02f-df23-4a1b-857c-fa78a7002dcb",
+              "type": "shipment.handed_off",
+              "version": 12
+            }
+          },
+          "warehouse_id": "wh-unit-packs"
+        },
+        {
+          "request": {
+            "command": {
+              "code": "CASE",
+              "each_per_pack": 6,
+              "enabled": true,
+              "label": "Reviewed CASE",
+              "reason": "Witnessed synthetic packaging label",
+              "sku": "RESTORE-PACK",
+              "type": "set_unit_pack"
+            },
+            "expected_version": 12,
+            "request_id": "restore-unit-changed-case"
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "6621f7fa-a450-456f-99e9-e963d138902f",
+              "type": "inventory.unit_pack_changed",
+              "version": 13
+            }
+          },
+          "warehouse_id": "wh-unit-packs"
+        },
+        {
+          "request": {
+            "command": {
+              "code": "INNER",
+              "each_per_pack": 3,
+              "enabled": true,
+              "label": "Reviewed INNER",
+              "reason": "Witnessed synthetic packaging label",
+              "sku": "RESTORE-PACK",
+              "type": "set_unit_pack"
+            },
+            "expected_version": 13,
+            "request_id": "restore-unit-inner"
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "0a628178-b6f0-4e6e-9b96-da846b7c39a5",
+              "type": "inventory.unit_pack_changed",
+              "version": 14
+            }
+          },
+          "warehouse_id": "wh-unit-packs"
+        },
+        {
+          "request": {
+            "command": {
+              "code": "INNER",
+              "each_per_pack": 3,
+              "enabled": false,
+              "label": "Reviewed INNER",
+              "reason": "Witnessed synthetic packaging label",
+              "sku": "RESTORE-PACK",
+              "type": "set_unit_pack"
+            },
+            "expected_version": 14,
+            "request_id": "restore-unit-disable-inner"
+          },
+          "response": {
+            "replayed": false,
+            "result": {
+              "entity_id": "5e0931ca-c21a-47df-8928-60d524451a32",
+              "type": "inventory.unit_pack_changed",
+              "version": 15
+            }
+          },
+          "warehouse_id": "wh-unit-packs"
+        }
+      ],
+      "warehouse_id": "wh-unit-packs"
+    }
+  },
+  "qualification_limit": "Synthetic database recovery and application invariants; no facility or external service acceptance claimed"
+}

@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "production_qualified": false,
+  "report": "http-500-8-operators-facility-transfers.json",
+  "sha256": "c255614600b6d7e1409efb4cfc0325ed3fc0a95dc9daaef827b0cb926fcad888",
+  "image_id": "sha256:398aa9cb3f536bd91d225f643d7dec3e5472b8aa93c4ea779ab409be839a444e",
+  "image_source_inputs_sha256": "3c7f6a5e081c3d2f90177a705ab0616112bbcd47b5d58bcdce9ea03e73db3d04",
+  "software_source_inputs_sha256": "639c886f3a9b6ad0afb0c7188d56b9a1cb7cbd828a3e31869fc179f882738f52",
+  "release_provenance": "../qualification/release-20261018-facility-transfers/provenance.json",
+  "traffic_model": "independent-operators",
+  "qualifier_sha256": {
+    "scripts/resilience-rehearsal.sh": "5fa42466238d4be5b260021da30541441d2c7d779b74b0594c8ac59099408227",
+    "scripts/resilience_probe.py": "67c2ceab339b0d21a5daa25af0b518f3cb476b4d856cedd914ed316cf27526ac"
+  },
+  "limits": [
+    "Container runtime and HTTP resilience use one immutable image; the other stages execute builds from the same frozen software inputs",
+    "Facility dispatch and partial arrival are exercised by actual HTTP/SQL race, forgery and rollback tests, a real browser workflow, original cross-warehouse journal recovery and nonempty archive restoration",
+    "Sustained actions are bin moves and original-request replays; this does not measure repeated inter-facility dispatch/receiving throughput",
+    "Client, two API replicas and PostgreSQL share a development host; no deployed capacity, causal speedup or facility SLO is inferred",
+    "All earlier performance windows and dated qualification bundles remain retained"
+  ],
+  "host_observation": {
+    "scope": "single_point_shared_host_observation_during_timed_window",
+    "recorded_at": "2026-10-18T19:43:07.520909+00:00",
+    "load_average_1_5_15_minutes": [
+      38.25,
+      34.8,
+      21.05
+    ],
+    "compiler_process_sample_sha256": "1a32e3df31b1a6d0dc20701c579d85803974d7a12bc923f185ad0bea7d87f1e8",
+    "rust_compilers_in_sample": 0,
+    "cargo_processes_in_sample": 1,
+    "conditions_controlled": false,
+    "limit": "One host sample does not identify the cause of latency or establish facility capacity"
+  }
+}

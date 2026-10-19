@@ -39,6 +39,7 @@ async fn setup() -> (Store, Identity, State) {
         .expect("provision normalized warehouse");
     for c in [
         Command::CreateProduct {
+            serial_controlled: false,
             sku: "SKU".into(),
             name: "Product".into(),
             category: "General".into(),
@@ -77,11 +78,6 @@ async fn setup() -> (Store, Identity, State) {
         .execute(&store.pool)
         .await
         .expect("clear fixture queue");
-    sqlx::query("DELETE FROM wms_commands WHERE tenant=$1")
-        .bind(&identity.tenant)
-        .execute(&store.pool)
-        .await
-        .expect("clear fixture receipts");
     let s = store
         .state(&identity.tenant, "wh-main")
         .await
@@ -90,8 +86,11 @@ async fn setup() -> (Store, Identity, State) {
 }
 fn req(version: i64, command: Command) -> Request {
     Request {
+        serial_inputs: Vec::new(),
+        unit_inputs: Vec::new(),
         request_id: id(),
         expected_version: version,
+        resource_versions: None,
         command,
     }
 }
@@ -118,7 +117,7 @@ async fn execute(store: &Store, i: &Identity, c: Command) -> Value {
         .clone()
 }
 async fn counts(store: &Store, tenant: &str) -> (i64, i64, i64) {
-    let row=sqlx::query("SELECT (SELECT count(*) FROM wms_commands WHERE tenant=$1) AS commands,(SELECT count(*)-4 FROM wms_events WHERE tenant=$1) AS events,(SELECT count(*) FROM wms_outbox WHERE tenant=$1) AS deliveries").bind(tenant).fetch_one(&store.pool).await.expect("counts");
+    let row=sqlx::query("SELECT (SELECT count(*)-4 FROM wms_commands WHERE tenant=$1) AS commands,(SELECT count(*)-4 FROM wms_events WHERE tenant=$1) AS events,(SELECT count(*) FROM wms_outbox WHERE tenant=$1) AS deliveries").bind(tenant).fetch_one(&store.pool).await.expect("counts");
     (
         row.get("commands"),
         row.get("events"),
@@ -1231,4 +1230,601 @@ async fn delivery_recipient_migration_preserves_history_and_fences_identity_chan
     tx.rollback()
         .await
         .expect("delivery recipient fixture operation");
+}
+
+#[tokio::test]
+#[ignore = "requires isolated Postgres; scripts/check.sh --postgres"]
+async fn lot_controls_persist_hold_independence_and_fence_scoped_forward_work_without_mutating_custody(
+) {
+    let (store, i, _) = setup().await;
+    let original = req(
+        store
+            .state(&i.tenant, "wh-main")
+            .await
+            .expect("lot control fixture and original evidence")
+            .version,
+        Command::RecordLotExpiry {
+            sku: "SKU".into(),
+            lot: "LOT".into(),
+            expires_at: "2099-10-21T05:00:00-07:00".into(),
+            reason: "Read original manufacturer label".into(),
+        },
+    );
+    let recorded = store
+        .execute(&i, "wh-main", &original)
+        .await
+        .expect("lot control fixture and original evidence");
+    let order = execute(&store, &i, create_order("LOT-CONTROL", 4)).await["entity_id"]
+        .as_str()
+        .expect("lot control fixture and original evidence")
+        .to_string();
+    execute(
+        &store,
+        &i,
+        Command::Allocate {
+            order_id: order.clone(),
+        },
+    )
+    .await;
+    let before = store
+        .state(&i.tenant, "wh-main")
+        .await
+        .expect("lot control fixture and original evidence");
+    assert_eq!(
+        before.lot_controls[0].expires_at.as_deref(),
+        Some("2099-10-21T12:00:00+00:00")
+    );
+    let pick = Command::Pick {
+        order_id: order.clone(),
+        line_id: "1".into(),
+        location: "A".into(),
+        lot: "LOT".into(),
+        quantity: 1,
+    };
+    let mut old_pick = req(before.version, pick.clone());
+    old_pick.resource_versions = stateset_warehouse::concurrency::reviewed_versions(&before, &pick)
+        .expect("lot control fixture and original evidence");
+    let hold1 = execute(
+        &store,
+        &i,
+        Command::QuarantineLot {
+            sku: "SKU".into(),
+            lot: "LOT".into(),
+            reason: "Damaged label under investigation".into(),
+        },
+    )
+    .await["entity_id"]
+        .as_str()
+        .expect("lot control fixture and original evidence")
+        .to_string();
+    let hold2 = execute(
+        &store,
+        &i,
+        Command::QuarantineLot {
+            sku: "SKU".into(),
+            lot: "LOT".into(),
+            reason: "Separate temperature excursion".into(),
+        },
+    )
+    .await["entity_id"]
+        .as_str()
+        .expect("lot control fixture and original evidence")
+        .to_string();
+    execute(
+        &store,
+        &i,
+        Command::ReleaseLotHold {
+            hold_id: hold1.clone(),
+            reason: "Label independently verified".into(),
+        },
+    )
+    .await;
+    let held = store
+        .state(&i.tenant, "wh-main")
+        .await
+        .expect("lot control fixture and original evidence");
+    assert_eq!(held.stocks, before.stocks);
+    assert_eq!(held.lot_controls[0].holds.len(), 1);
+    assert_eq!(held.lot_controls[0].holds[0].id, hold2);
+    let denied = store
+        .execute(&i, "wh-main", &req(held.version, pick.clone()))
+        .await
+        .expect_err("lot control must reject this action");
+    assert_eq!(denied.status, 422);
+    assert!(denied.message.contains("Quarantined"));
+    let operator = Identity {
+        role: "operator".into(),
+        ..i.clone()
+    };
+    assert_eq!(
+        store
+            .execute(
+                &operator,
+                "wh-main",
+                &req(
+                    held.version,
+                    Command::ReleaseLotHold {
+                        hold_id: hold2.clone(),
+                        reason: "Unauthorized release".into()
+                    }
+                )
+            )
+            .await
+            .expect_err("lot control must reject this action")
+            .status,
+        403
+    );
+    execute(
+        &store,
+        &i,
+        Command::ReleaseLotHold {
+            hold_id: hold2,
+            reason: "Temperature review complete".into(),
+        },
+    )
+    .await;
+    assert_eq!(
+        store
+            .execute(&i, "wh-main", &old_pick)
+            .await
+            .expect_err("lot control must reject this action")
+            .status,
+        409,
+        "a hold/release ABA invalidates the old scan"
+    );
+    execute(&store, &i, pick).await;
+    execute(
+        &store,
+        &i,
+        Command::CorrectLotExpiry {
+            sku: "SKU".into(),
+            lot: "LOT".into(),
+            expires_at: Some("2000-01-01T00:00:00Z".into()),
+            reason: "Correct transcription against original label".into(),
+        },
+    )
+    .await;
+    assert_eq!(
+        store
+            .execute(&i, "wh-main", &original)
+            .await
+            .expect("lot control fixture and original evidence")["result"],
+        recorded["result"],
+        "replay retains original time and result after correction"
+    );
+    let now = store
+        .state(&i.tenant, "wh-main")
+        .await
+        .expect("lot control fixture and original evidence");
+    assert_eq!(
+        now.orders
+            .iter()
+            .find(|o| o.id == order)
+            .expect("lot control fixture and original evidence")
+            .allocations[0]
+            .picked,
+        1
+    );
+    assert_eq!(
+        stateset_warehouse::lot_control::availability_at(&now, "SKU", "LOT", chrono::Utc::now()),
+        stateset_warehouse::lot_control::Availability::Expired
+    );
+    execute(
+        &store,
+        &i,
+        Command::Unpick {
+            order_id: order.clone(),
+            line_id: "1".into(),
+            location: "A".into(),
+            lot: "LOT".into(),
+            quantity: 1,
+            reason: "Actually returned expired unit".into(),
+        },
+    )
+    .await;
+    execute(
+        &store,
+        &i,
+        Command::ResetAllocation {
+            order_id: order,
+            reason: "Release remaining unpicked expired stock".into(),
+        },
+    )
+    .await;
+    let proof = store
+        .reconciliation(&i.tenant, "wh-main")
+        .await
+        .expect("lot control fixture and original evidence");
+    assert_eq!(
+        proof["ok"], true,
+        "original eligibility must be proved at its original version/time: {proof}"
+    );
+    assert_eq!(proof["lot_controls"]["policy_changes"], 6);
+    assert_eq!(proof["lot_controls"]["eligibility_decisions"], 2);
+}
+
+#[tokio::test]
+#[ignore = "requires isolated Postgres; scripts/check.sh --postgres"]
+async fn lot_required_missing_labels_and_fefo_work_in_full_and_selective_database_snapshots() {
+    let (store, i, _) = setup().await;
+    execute(
+        &store,
+        &i,
+        Command::SetProductExpiryPolicy {
+            sku: "SKU".into(),
+            required: true,
+            reason: "Manufacturer requires exact expiry label".into(),
+        },
+    )
+    .await;
+    let order = execute(&store, &i, create_order("LOT-FEFO", 4)).await["entity_id"]
+        .as_str()
+        .expect("lot control fixture and original evidence")
+        .to_string();
+    let state = store
+        .state(&i.tenant, "wh-main")
+        .await
+        .expect("lot control fixture and original evidence");
+    let allocate = Command::Allocate {
+        order_id: order.clone(),
+    };
+    assert_eq!(
+        store
+            .execute(&i, "wh-main", &req(state.version, allocate.clone()))
+            .await
+            .expect_err("lot control must reject this action")
+            .status,
+        422
+    );
+    for command in [
+        Command::CountStock {
+            sku: "SKU".into(),
+            lot: "EARLY".into(),
+            location: "B".into(),
+            counted: 3,
+            reason: "Observed another labelled lot".into(),
+        },
+        Command::RecordLotExpiry {
+            sku: "SKU".into(),
+            lot: "LOT".into(),
+            expires_at: "2099-10-22T00:00:00Z".into(),
+            reason: "Read original late label".into(),
+        },
+        Command::RecordLotExpiry {
+            sku: "SKU".into(),
+            lot: "EARLY".into(),
+            expires_at: "2099-10-21T00:00:00Z".into(),
+            reason: "Read original early label".into(),
+        },
+    ] {
+        execute(&store, &i, command).await;
+    }
+    let state = store
+        .state(&i.tenant, "wh-main")
+        .await
+        .expect("lot control fixture and original evidence");
+    let mut scoped = req(state.version, allocate.clone());
+    scoped.resource_versions =
+        stateset_warehouse::concurrency::reviewed_versions(&state, &allocate)
+            .expect("lot control fixture and original evidence");
+    store
+        .execute(&i, "wh-main", &scoped)
+        .await
+        .expect("lot control fixture and original evidence");
+    let state = store
+        .state(&i.tenant, "wh-main")
+        .await
+        .expect("lot control fixture and original evidence");
+    let allocations = &state
+        .orders
+        .iter()
+        .find(|o| o.id == order)
+        .expect("lot control fixture and original evidence")
+        .allocations;
+    assert_eq!(
+        allocations
+            .iter()
+            .find(|a| a.lot == "EARLY")
+            .expect("lot control fixture and original evidence")
+            .quantity,
+        3
+    );
+    assert_eq!(
+        allocations
+            .iter()
+            .find(|a| a.lot == "LOT")
+            .expect("lot control fixture and original evidence")
+            .quantity,
+        1
+    );
+    assert_eq!(
+        store
+            .reconciliation(&i.tenant, "wh-main")
+            .await
+            .expect("lot control fixture and original evidence")["ok"],
+        true
+    );
+}
+
+#[tokio::test]
+#[ignore = "requires isolated Postgres; scripts/check.sh --postgres"]
+async fn lot_database_guards_reject_unattributed_policy_and_direct_held_pick() {
+    let (store, i, _) = setup().await;
+    let forged=sqlx::query("UPDATE wms_products SET data=data||'{\"expiry_required\":true}'::jsonb WHERE tenant=$1 AND warehouse_id='wh-main' AND sku='SKU'").bind(&i.tenant).execute(&store.pool).await;
+    assert!(
+        forged.is_err(),
+        "product JSON cannot grant its own expiry policy without a source"
+    );
+    let order = execute(&store, &i, create_order("LOT-SQL", 2)).await["entity_id"]
+        .as_str()
+        .expect("lot control fixture and original evidence")
+        .to_string();
+    execute(
+        &store,
+        &i,
+        Command::Allocate {
+            order_id: order.clone(),
+        },
+    )
+    .await;
+    execute(
+        &store,
+        &i,
+        Command::QuarantineLot {
+            sku: "SKU".into(),
+            lot: "LOT".into(),
+            reason: "Actual quality concern".into(),
+        },
+    )
+    .await;
+    let before = store
+        .state(&i.tenant, "wh-main")
+        .await
+        .expect("lot control fixture and original evidence");
+    let direct=sqlx::query("UPDATE wms_allocations SET picked=1 WHERE tenant=$1 AND warehouse_id='wh-main' AND order_id=$2").bind(&i.tenant).bind(&order).execute(&store.pool).await;
+    assert!(
+        direct.is_err(),
+        "a direct SQL pick must pass the same current quality check"
+    );
+    let immutable=sqlx::query("UPDATE wms_lot_changes SET document=document||'{\"reason\":\"rewritten\"}'::jsonb WHERE tenant=$1").bind(&i.tenant).execute(&store.pool).await;
+    assert!(
+        immutable.is_err(),
+        "original attributed policy evidence is immutable"
+    );
+    let after = store
+        .state(&i.tenant, "wh-main")
+        .await
+        .expect("lot control fixture and original evidence");
+    assert_eq!(before.stocks, after.stocks);
+    assert_eq!(before.orders, after.orders);
+    assert_eq!(
+        store
+            .reconciliation(&i.tenant, "wh-main")
+            .await
+            .expect("lot control fixture and original evidence")["ok"],
+        true
+    );
+}
+
+#[tokio::test]
+#[ignore = "requires isolated Postgres; scripts/check.sh --postgres"]
+async fn lot_metadata_and_revisions_roll_back_with_the_final_delivery_and_exact_retry_records_one_hold(
+) {
+    let (store, i, before) = setup().await;
+    let suffix = id().replace('-', "");
+    let function = format!("wms_lot_fault_{suffix}");
+    let trigger = format!("wms_lot_fault_trigger_{suffix}");
+    sqlx::raw_sql(&format!("CREATE FUNCTION {function}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.tenant='{}' THEN RAISE EXCEPTION 'injected final lot outbox failure'; END IF; RETURN NEW; END $$; CREATE TRIGGER {trigger} BEFORE INSERT ON wms_outbox FOR EACH ROW EXECUTE FUNCTION {function}();",i.tenant))
+        .execute(&store.pool).await.expect("install isolated tenant fault");
+    let request = req(
+        before.version,
+        Command::QuarantineLot {
+            sku: "SKU".into(),
+            lot: "LOT".into(),
+            reason: "Observed quality issue".into(),
+        },
+    );
+    let failed = store.execute(&i, "wh-main", &request).await;
+    sqlx::raw_sql(&format!(
+        "DROP TRIGGER {trigger} ON wms_outbox; DROP FUNCTION {function}();"
+    ))
+    .execute(&store.pool)
+    .await
+    .expect("remove isolated fault");
+    assert!(failed.is_err());
+    assert_eq!(
+        store
+            .state(&i.tenant, "wh-main")
+            .await
+            .expect("rolled back state"),
+        before
+    );
+    assert_eq!(counts(&store, &i.tenant).await, (0, 0, 0));
+    let n: i64 = sqlx::query_scalar("SELECT count(*) FROM wms_lot_changes WHERE tenant=$1")
+        .bind(&i.tenant)
+        .fetch_one(&store.pool)
+        .await
+        .expect("original policy count");
+    assert_eq!(n, 0);
+    let accepted = store
+        .execute(&i, "wh-main", &request)
+        .await
+        .expect("original retry after rollback");
+    let replay = store
+        .execute(&i, "wh-main", &request)
+        .await
+        .expect("exact committed replay");
+    assert_eq!(accepted["result"], replay["result"]);
+    let after = store
+        .state(&i.tenant, "wh-main")
+        .await
+        .expect("one committed hold");
+    assert_eq!(after.lot_controls[0].holds.len(), 1);
+    assert_eq!(counts(&store, &i.tenant).await, (1, 1, 1));
+}
+
+#[tokio::test]
+#[ignore = "requires isolated Postgres; scripts/check.sh --postgres"]
+async fn lot_forensic_proofs_detect_missing_decisions_and_rewritten_policy_even_when_custody_balances(
+) {
+    let (store, i, _) = setup().await;
+    execute(
+        &store,
+        &i,
+        Command::RecordLotExpiry {
+            sku: "SKU".into(),
+            lot: "LOT".into(),
+            expires_at: "2099-01-01T00:00:00Z".into(),
+            reason: "Original exact label".into(),
+        },
+    )
+    .await;
+    let order = execute(&store, &i, create_order("LOT-FORENSIC", 2)).await["entity_id"]
+        .as_str()
+        .expect("order")
+        .to_string();
+    execute(
+        &store,
+        &i,
+        Command::Allocate {
+            order_id: order.clone(),
+        },
+    )
+    .await;
+    let mut tx = store
+        .pool
+        .begin()
+        .await
+        .expect("isolated forensic transaction");
+    sqlx::query("SET LOCAL TIME ZONE 'Pacific/Auckland'")
+        .execute(&mut *tx)
+        .await
+        .expect("different database session timezone");
+    let timezone_valid: bool = sqlx::query_scalar("SELECT bool_and(wms_lot_event_valid(tenant,warehouse_id,version)) FROM wms_events WHERE tenant=$1")
+        .bind(&i.tenant).fetch_one(&mut *tx).await.expect("original proofs in another timezone");
+    assert!(
+        timezone_valid,
+        "eligibility evidence must retain canonical UTC across sessions and restores"
+    );
+    // Privileged corruption is deliberately injected only inside a rolled-back
+    // test transaction. The independent verifier must not trust trigger success.
+    sqlx::query("ALTER TABLE wms_lot_decisions DISABLE TRIGGER USER")
+        .execute(&mut *tx)
+        .await
+        .expect("inject privileged missing evidence");
+    let version: i64 =
+        sqlx::query_scalar("DELETE FROM wms_lot_decisions WHERE tenant=$1 RETURNING version")
+            .bind(&i.tenant)
+            .fetch_one(&mut *tx)
+            .await
+            .expect("remove original decision");
+    let valid: bool = sqlx::query_scalar("SELECT wms_lot_event_valid($1,'wh-main',$2)")
+        .bind(&i.tenant)
+        .bind(version)
+        .fetch_one(&mut *tx)
+        .await
+        .expect("independent missing-row proof");
+    assert!(
+        !valid,
+        "balanced custody cannot substitute for the missing eligibility decision"
+    );
+    let order_valid: bool = sqlx::query_scalar("SELECT wms_lot_order_valid($1,'wh-main',$2)")
+        .bind(&i.tenant)
+        .bind(&order)
+        .fetch_one(&mut *tx)
+        .await
+        .expect("later forward admission check");
+    assert!(
+        !order_valid,
+        "new forward work must retain its original quality evidence"
+    );
+    tx.rollback()
+        .await
+        .expect("restore immutable original decisions");
+    let mut tx = store
+        .pool
+        .begin()
+        .await
+        .expect("isolated forensic transaction");
+    sqlx::query("ALTER TABLE wms_lot_changes DISABLE TRIGGER USER")
+        .execute(&mut *tx)
+        .await
+        .expect("inject privileged rewrite");
+    let version: i64=sqlx::query_scalar("UPDATE wms_lot_changes SET document=document||'{\"expires_at\":\"2100-01-01T00:00:00+00:00\"}'::jsonb WHERE tenant=$1 RETURNING version").bind(&i.tenant).fetch_one(&mut *tx).await.expect("rewrite without touching stock");
+    let valid: bool = sqlx::query_scalar("SELECT wms_lot_change_valid($1,'wh-main',$2,0)")
+        .bind(&i.tenant)
+        .bind(version)
+        .fetch_one(&mut *tx)
+        .await
+        .expect("independent original source proof");
+    assert!(
+        !valid,
+        "a cached label cannot replace its immutable original command/event"
+    );
+    tx.rollback()
+        .await
+        .expect("restore immutable original label");
+    let mut tx = store
+        .pool
+        .begin()
+        .await
+        .expect("isolated original-coordinate corruption");
+    sqlx::query("ALTER TABLE wms_events DISABLE TRIGGER USER")
+        .execute(&mut *tx)
+        .await
+        .expect("inject privileged source rewrite");
+    let version: i64=sqlx::query_scalar("UPDATE wms_events SET payload=payload||'{\"id\":\"forged-other-original\"}'::jsonb WHERE tenant=$1 AND payload#>>'{command,type}'='allocate' RETURNING version").bind(&i.tenant).fetch_one(&mut *tx).await.expect("rewrite source id without moving stock");
+    let valid: bool = sqlx::query_scalar(
+        "SELECT wms_lot_decision_valid($1,'wh-main',$2,'allocation','SKU','LOT')",
+    )
+    .bind(&i.tenant)
+    .bind(version)
+    .fetch_one(&mut *tx)
+    .await
+    .expect("independent original-coordinate proof");
+    assert!(
+        !valid,
+        "matching quantities cannot replace the original source event identity"
+    );
+    tx.rollback().await.expect("restore original source event");
+    assert_eq!(
+        store
+            .reconciliation(&i.tenant, "wh-main")
+            .await
+            .expect("original reconciliation")["ok"],
+        true
+    );
+}
+
+#[tokio::test]
+#[ignore = "requires isolated Postgres; scripts/check.sh --postgres"]
+async fn lot_original_eligibility_rejects_a_forged_event_type_with_unchanged_command_and_custody() {
+    let (store, i, _) = setup().await;
+    let order = execute(&store, &i, create_order("LOT-EVENT-KIND", 2)).await["entity_id"]
+        .as_str()
+        .expect("original order")
+        .to_string();
+    execute(&store, &i, Command::Allocate { order_id: order }).await;
+    let mut tx = store
+        .pool
+        .begin()
+        .await
+        .expect("owned forensic transaction");
+    sqlx::query("ALTER TABLE wms_events DISABLE TRIGGER USER")
+        .execute(&mut *tx)
+        .await
+        .expect("explicit privileged corruption inside rollback");
+    let version: i64=sqlx::query_scalar("UPDATE wms_events SET payload=payload||'{\"type\":\"fulfillment.shipped\"}'::jsonb WHERE tenant=$1 AND payload#>>'{command,type}'='allocate' RETURNING version").bind(&i.tenant).fetch_one(&mut *tx).await.expect("rewrite event kind without changing quantities or original command");
+    let valid: bool = sqlx::query_scalar(
+        "SELECT wms_lot_decision_valid($1,'wh-main',$2,'allocation','SKU','LOT')",
+    )
+    .bind(&i.tenant)
+    .bind(version)
+    .fetch_one(&mut *tx)
+    .await
+    .expect("independent original semantic event proof");
+    tx.rollback()
+        .await
+        .expect("restore original event and all trigger guards before assertion");
+    assert!(!valid,"eligibility evidence must bind its original semantic event type, not just its command and unchanged balances");
 }

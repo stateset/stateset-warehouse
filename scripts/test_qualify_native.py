@@ -277,7 +277,7 @@ class QualificationTests(unittest.TestCase):
 
     def facility(self, evidence):
         path, signature = self.sign(evidence, "facility")
-        return QUALIFY.facility(Namespace(evidence=path, signature=signature, trust_key=self.public, artifact_root=self.root,
+        return QUALIFY.facility(Namespace(profile="legacy-v1", evidence=path, signature=signature, trust_key=self.public, artifact_root=self.root,
                                          expected_facility="TEST-ONLY", expected_tenant="wms-a", expected_warehouse="wh-main", expected_release_sha="a" * 40))
 
     def test_signed_evidence_validation_never_claims_physical_observation_or_production_grade(self):
@@ -308,7 +308,7 @@ class QualificationTests(unittest.TestCase):
         path, signature = self.sign(self.physical(), "tampered")
         path.write_text(path.read_text() + " ")
         for sig in (None, signature):
-            result = QUALIFY.facility(Namespace(evidence=path, signature=sig, trust_key=self.public, artifact_root=self.root,
+            result = QUALIFY.facility(Namespace(profile="legacy-v1", evidence=path, signature=sig, trust_key=self.public, artifact_root=self.root,
                                                expected_facility="TEST-ONLY", expected_tenant="wms-a", expected_warehouse="wh-main", expected_release_sha="a" * 40))
             self.assertEqual(result["result"], "unqualified")
 

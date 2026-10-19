@@ -1,0 +1,1591 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "production_qualified": false,
+  "original_failed_traffic_report": {
+    "path": "serial-traffic-attempt-20261019.json",
+    "sha256": "82ada0740d9bfa5193a934d0fc053943626cf25109f63787a235ffa417815d28"
+  },
+  "intermediate_resolved_only_same_history_samples": [
+    {
+      "proof": {
+        "ok": true,
+        "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+        "batches": 4673,
+        "source_ok": true,
+        "unit_steps": 4793,
+        "physical_ok": true,
+        "sku_reviews": 8,
+        "observations": 4673,
+        "warehouse_id": "wh-main",
+        "identity_scope": "tenant",
+        "controlled_skus": 8,
+        "registered_units": 128
+      },
+      "round": 1,
+      "variant": "original",
+      "milliseconds": 13782.047
+    },
+    {
+      "proof": {
+        "ok": true,
+        "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+        "batches": 4673,
+        "source_ok": true,
+        "unit_steps": 4793,
+        "physical_ok": true,
+        "sku_reviews": 8,
+        "observations": 4673,
+        "warehouse_id": "wh-main",
+        "identity_scope": "tenant",
+        "controlled_skus": 8,
+        "registered_units": 128
+      },
+      "round": 1,
+      "variant": "resolved",
+      "milliseconds": 5551.564
+    },
+    {
+      "proof": {
+        "ok": true,
+        "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+        "batches": 4673,
+        "source_ok": true,
+        "unit_steps": 4793,
+        "physical_ok": true,
+        "sku_reviews": 8,
+        "observations": 4673,
+        "warehouse_id": "wh-main",
+        "identity_scope": "tenant",
+        "controlled_skus": 8,
+        "registered_units": 128
+      },
+      "round": 2,
+      "variant": "original",
+      "milliseconds": 13543.997
+    },
+    {
+      "proof": {
+        "ok": true,
+        "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+        "batches": 4673,
+        "source_ok": true,
+        "unit_steps": 4793,
+        "physical_ok": true,
+        "sku_reviews": 8,
+        "observations": 4673,
+        "warehouse_id": "wh-main",
+        "identity_scope": "tenant",
+        "controlled_skus": 8,
+        "registered_units": 128
+      },
+      "round": 2,
+      "variant": "resolved",
+      "milliseconds": 6044.9929999999995
+    },
+    {
+      "proof": {
+        "ok": true,
+        "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+        "batches": 4673,
+        "source_ok": true,
+        "unit_steps": 4793,
+        "physical_ok": true,
+        "sku_reviews": 8,
+        "observations": 4673,
+        "warehouse_id": "wh-main",
+        "identity_scope": "tenant",
+        "controlled_skus": 8,
+        "registered_units": 128
+      },
+      "round": 3,
+      "variant": "original",
+      "milliseconds": 14626.374
+    },
+    {
+      "proof": {
+        "ok": true,
+        "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+        "batches": 4673,
+        "source_ok": true,
+        "unit_steps": 4793,
+        "physical_ok": true,
+        "sku_reviews": 8,
+        "observations": 4673,
+        "warehouse_id": "wh-main",
+        "identity_scope": "tenant",
+        "controlled_skus": 8,
+        "registered_units": 128
+      },
+      "round": 3,
+      "variant": "resolved",
+      "milliseconds": 6041.069
+    }
+  ],
+  "not_selected_nine_argument_component_experiment": {
+    "samples": [
+      {
+        "proof": {
+          "ok": true,
+          "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+          "batches": 4673,
+          "source_ok": true,
+          "unit_steps": 4793,
+          "physical_ok": true,
+          "sku_reviews": 8,
+          "observations": 4673,
+          "warehouse_id": "wh-main",
+          "identity_scope": "tenant",
+          "controlled_skus": 8,
+          "registered_units": 128
+        },
+        "round": 1,
+        "variant": "bulk_sources",
+        "milliseconds": 4012.684
+      },
+      {
+        "proof": {
+          "ok": true,
+          "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+          "batches": 4673,
+          "source_ok": true,
+          "unit_steps": 4793,
+          "physical_ok": true,
+          "sku_reviews": 8,
+          "observations": 4673,
+          "warehouse_id": "wh-main",
+          "identity_scope": "tenant",
+          "controlled_skus": 8,
+          "registered_units": 128
+        },
+        "round": 1,
+        "variant": "resolved_existing",
+        "milliseconds": 6020.1
+      },
+      {
+        "proof": {
+          "ok": true,
+          "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+          "batches": 4673,
+          "source_ok": true,
+          "unit_steps": 4793,
+          "physical_ok": true,
+          "sku_reviews": 8,
+          "observations": 4673,
+          "warehouse_id": "wh-main",
+          "identity_scope": "tenant",
+          "controlled_skus": 8,
+          "registered_units": 128
+        },
+        "round": 2,
+        "variant": "bulk_sources",
+        "milliseconds": 3964.029
+      },
+      {
+        "proof": {
+          "ok": true,
+          "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+          "batches": 4673,
+          "source_ok": true,
+          "unit_steps": 4793,
+          "physical_ok": true,
+          "sku_reviews": 8,
+          "observations": 4673,
+          "warehouse_id": "wh-main",
+          "identity_scope": "tenant",
+          "controlled_skus": 8,
+          "registered_units": 128
+        },
+        "round": 2,
+        "variant": "resolved_existing",
+        "milliseconds": 6058.374
+      },
+      {
+        "proof": {
+          "ok": true,
+          "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+          "batches": 4673,
+          "source_ok": true,
+          "unit_steps": 4793,
+          "physical_ok": true,
+          "sku_reviews": 8,
+          "observations": 4673,
+          "warehouse_id": "wh-main",
+          "identity_scope": "tenant",
+          "controlled_skus": 8,
+          "registered_units": 128
+        },
+        "round": 3,
+        "variant": "bulk_sources",
+        "milliseconds": 3989.847
+      },
+      {
+        "proof": {
+          "ok": true,
+          "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+          "batches": 4673,
+          "source_ok": true,
+          "unit_steps": 4793,
+          "physical_ok": true,
+          "sku_reviews": 8,
+          "observations": 4673,
+          "warehouse_id": "wh-main",
+          "identity_scope": "tenant",
+          "controlled_skus": 8,
+          "registered_units": 128
+        },
+        "round": 3,
+        "variant": "resolved_existing",
+        "milliseconds": 6682.418000000001
+      }
+    ],
+    "functions": [
+      {
+        "calls": 18812,
+        "self_ms": 12859.906872,
+        "function": "wms_serial_event_valid_resolved(text,text,text,text[],boolean)",
+        "total_ms": 24193.426313
+      },
+      {
+        "calls": 38344,
+        "self_ms": 8329.772691,
+        "function": "wms_serial_step_source_for_event(wms_serial_steps,boolean,boolean)",
+        "total_ms": 12801.189878
+      },
+      {
+        "calls": 150624,
+        "self_ms": 6452.305172,
+        "function": "wms_serial_batch_original(wms_serial_batches)",
+        "total_ms": 6452.305172
+      },
+      {
+        "calls": 38344,
+        "self_ms": 632.094671,
+        "function": "wms_serial_step_effect_valid(wms_serial_steps,jsonb,boolean,boolean)",
+        "total_ms": 2517.196684
+      },
+      {
+        "calls": 18812,
+        "self_ms": 658.406279,
+        "function": "wms_serial_event_valid_resolved(text,text,text,text[],boolean,bigint,boolean,bigint,boolean)",
+        "total_ms": 1640.184181
+      },
+      {
+        "calls": 76538,
+        "self_ms": 987.646797,
+        "function": "wms_serial_on_hand(text,text)",
+        "total_ms": 987.646797
+      },
+      {
+        "calls": 77712,
+        "self_ms": 920.601874,
+        "function": "wms_serial_place_valid(jsonb)",
+        "total_ms": 920.601874
+      },
+      {
+        "calls": 1024,
+        "self_ms": 379.037636,
+        "function": "wms_serial_at_version(text,text,text,bigint)",
+        "total_ms": 379.037636
+      },
+      {
+        "calls": 368,
+        "self_ms": 190.227041,
+        "function": "wms_serial_inputs_match_command(text,text,jsonb,jsonb)",
+        "total_ms": 190.227041
+      },
+      {
+        "calls": 16,
+        "self_ms": 29.198725,
+        "function": "wms_serial_scope_current_valid(text,text)",
+        "total_ms": 88.9039
+      },
+      {
+        "calls": 128,
+        "self_ms": 67.230798,
+        "function": "wms_serial_head_bound(wms_serial_heads)",
+        "total_ms": 76.410301
+      },
+      {
+        "calls": 2048,
+        "self_ms": 40.263021,
+        "function": "wms_serial_place_references_valid(text,text,text,jsonb)",
+        "total_ms": 59.705175
+      },
+      {
+        "calls": 16,
+        "self_ms": 14.914519,
+        "function": "wms_serial_scope_transit_valid(text,text)",
+        "total_ms": 14.914519
+      },
+      {
+        "calls": 144,
+        "self_ms": 10.15557,
+        "function": "wms_serial_mode_original(wms_serial_modes)",
+        "total_ms": 10.15557
+      }
+    ]
+  },
+  "selected_event_index_and_set_bindings_experiment": [
+    {
+      "proof": {
+        "ok": true,
+        "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+        "batches": 4673,
+        "source_ok": true,
+        "unit_steps": 4793,
+        "physical_ok": true,
+        "sku_reviews": 8,
+        "observations": 4673,
+        "warehouse_id": "wh-main",
+        "identity_scope": "tenant",
+        "controlled_skus": 8,
+        "registered_units": 128
+      },
+      "round": 1,
+      "variant": "index_direct",
+      "milliseconds": 2124.875
+    },
+    {
+      "proof": {
+        "ok": true,
+        "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+        "batches": 4673,
+        "source_ok": true,
+        "unit_steps": 4793,
+        "physical_ok": true,
+        "sku_reviews": 8,
+        "observations": 4673,
+        "warehouse_id": "wh-main",
+        "identity_scope": "tenant",
+        "controlled_skus": 8,
+        "registered_units": 128
+      },
+      "round": 1,
+      "variant": "index_resolved",
+      "milliseconds": 4981.0470000000005
+    },
+    {
+      "proof": {
+        "ok": true,
+        "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+        "batches": 4673,
+        "source_ok": true,
+        "unit_steps": 4793,
+        "physical_ok": true,
+        "sku_reviews": 8,
+        "observations": 4673,
+        "warehouse_id": "wh-main",
+        "identity_scope": "tenant",
+        "controlled_skus": 8,
+        "registered_units": 128
+      },
+      "round": 1,
+      "variant": "no_index",
+      "milliseconds": 8076.786
+    },
+    {
+      "proof": {
+        "ok": true,
+        "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+        "batches": 4673,
+        "source_ok": true,
+        "unit_steps": 4793,
+        "physical_ok": true,
+        "sku_reviews": 8,
+        "observations": 4673,
+        "warehouse_id": "wh-main",
+        "identity_scope": "tenant",
+        "controlled_skus": 8,
+        "registered_units": 128
+      },
+      "round": 2,
+      "variant": "index_direct",
+      "milliseconds": 1914.186
+    },
+    {
+      "proof": {
+        "ok": true,
+        "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+        "batches": 4673,
+        "source_ok": true,
+        "unit_steps": 4793,
+        "physical_ok": true,
+        "sku_reviews": 8,
+        "observations": 4673,
+        "warehouse_id": "wh-main",
+        "identity_scope": "tenant",
+        "controlled_skus": 8,
+        "registered_units": 128
+      },
+      "round": 2,
+      "variant": "index_resolved",
+      "milliseconds": 4368.119
+    },
+    {
+      "proof": {
+        "ok": true,
+        "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+        "batches": 4673,
+        "source_ok": true,
+        "unit_steps": 4793,
+        "physical_ok": true,
+        "sku_reviews": 8,
+        "observations": 4673,
+        "warehouse_id": "wh-main",
+        "identity_scope": "tenant",
+        "controlled_skus": 8,
+        "registered_units": 128
+      },
+      "round": 2,
+      "variant": "no_index",
+      "milliseconds": 7813.431
+    },
+    {
+      "proof": {
+        "ok": true,
+        "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+        "batches": 4673,
+        "source_ok": true,
+        "unit_steps": 4793,
+        "physical_ok": true,
+        "sku_reviews": 8,
+        "observations": 4673,
+        "warehouse_id": "wh-main",
+        "identity_scope": "tenant",
+        "controlled_skus": 8,
+        "registered_units": 128
+      },
+      "round": 3,
+      "variant": "index_direct",
+      "milliseconds": 1793.399
+    },
+    {
+      "proof": {
+        "ok": true,
+        "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+        "batches": 4673,
+        "source_ok": true,
+        "unit_steps": 4793,
+        "physical_ok": true,
+        "sku_reviews": 8,
+        "observations": 4673,
+        "warehouse_id": "wh-main",
+        "identity_scope": "tenant",
+        "controlled_skus": 8,
+        "registered_units": 128
+      },
+      "round": 3,
+      "variant": "index_resolved",
+      "milliseconds": 4597.768
+    },
+    {
+      "proof": {
+        "ok": true,
+        "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+        "batches": 4673,
+        "source_ok": true,
+        "unit_steps": 4793,
+        "physical_ok": true,
+        "sku_reviews": 8,
+        "observations": 4673,
+        "warehouse_id": "wh-main",
+        "identity_scope": "tenant",
+        "controlled_skus": 8,
+        "registered_units": 128
+      },
+      "round": 3,
+      "variant": "no_index",
+      "milliseconds": 7821.862999999999
+    }
+  ],
+  "selected_variant_medians_ms": {
+    "no_index": 7821.862999999999,
+    "index_resolved": 4597.768,
+    "index_direct": 1914.186
+  },
+  "repaired_original_history": {
+    "ok": true,
+    "synthetic": true,
+    "production_qualified": false,
+    "original_failed_history_repaired": true,
+    "original_events": 4703,
+    "original_physical_moves": 4665,
+    "all48nonledger_tables_unchanged_by_upgrade": true,
+    "all25original_ledger_rows_unchanged": true,
+    "all_original_function_bodies_unchanged": true,
+    "new_read_only_function_components": 0,
+    "new_event_leading_batch_indexes": 1,
+    "migrations": 26,
+    "original_cross_replica_replays": 4703,
+    "replays_and_full_proofs_changed_no_tables": true,
+    "api_complete_proofs": [
+      {
+        "milliseconds": 1641.3046889938414,
+        "proof": {
+          "lot_controls": {
+            "baseline_version": 0,
+            "eligibility_decisions": 4,
+            "ok": true,
+            "policy_changes": 0
+          },
+          "method": "full_append_only_ledger_and_order_line_allocations",
+          "ok": true,
+          "packages": [],
+          "receipt_cancellations": [
+            {
+              "cancelled": 0,
+              "ok": true,
+              "receipt_id": "3a78bda7-1c68-4bec-831b-d3367011cf7d",
+              "status": "expected"
+            }
+          ],
+          "receipts": [
+            {
+              "evidence": 0,
+              "line_id": "same-sku-first",
+              "ok": true,
+              "receipt_id": "3a78bda7-1c68-4bec-831b-d3367011cf7d",
+              "received": 0
+            },
+            {
+              "evidence": 0,
+              "line_id": "same-sku-second",
+              "ok": true,
+              "receipt_id": "3a78bda7-1c68-4bec-831b-d3367011cf7d",
+              "received": 0
+            }
+          ],
+          "returns": [],
+          "rows": [
+            {
+              "allocation_reserved": 1,
+              "difference": 0,
+              "ledger": 16,
+              "location": "BIN-00000",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 16,
+              "reserved": 1,
+              "reserved_difference": 0,
+              "sku": "LOAD-00000"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 0,
+              "location": "BIN-00001",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 0,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "LOAD-00000"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 0,
+              "location": "STAGE-01",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 0,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "LOAD-00000"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 15,
+              "location": "BIN-00001",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 15,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "LOAD-00001"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 1,
+              "location": "BIN-00002",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 1,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "LOAD-00001"
+            },
+            {
+              "allocation_reserved": 1,
+              "difference": 0,
+              "ledger": 16,
+              "location": "BIN-00002",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 16,
+              "reserved": 1,
+              "reserved_difference": 0,
+              "sku": "LOAD-00002"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 0,
+              "location": "BIN-00003",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 0,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "LOAD-00002"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 0,
+              "location": "STAGE-01",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 0,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "LOAD-00002"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 16,
+              "location": "BIN-00003",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 16,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "LOAD-00003"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 0,
+              "location": "BIN-00004",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 0,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "LOAD-00003"
+            },
+            {
+              "allocation_reserved": 1,
+              "difference": 0,
+              "ledger": 16,
+              "location": "BIN-00004",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 16,
+              "reserved": 1,
+              "reserved_difference": 0,
+              "sku": "LOAD-00004"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 0,
+              "location": "STAGE-01",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 0,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "LOAD-00004"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 16,
+              "location": "BIN-00005",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 16,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "LOAD-00005"
+            },
+            {
+              "allocation_reserved": 1,
+              "difference": 0,
+              "ledger": 16,
+              "location": "BIN-00006",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 16,
+              "reserved": 1,
+              "reserved_difference": 0,
+              "sku": "LOAD-00006"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 0,
+              "location": "STAGE-01",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 0,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "LOAD-00006"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 16,
+              "location": "BIN-00007",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 16,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "LOAD-00007"
+            }
+          ],
+          "serials": {
+            "batches": 4673,
+            "controlled_skus": 8,
+            "identity_scope": "tenant",
+            "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+            "observations": 4673,
+            "ok": true,
+            "physical_ok": true,
+            "registered_units": 128,
+            "sku_reviews": 8,
+            "source_ok": true,
+            "unit_steps": 4793,
+            "warehouse_id": "wh-main"
+          },
+          "shipments": [],
+          "transfers": [],
+          "units": {
+            "definition_changes": 0,
+            "method": "immutable_definition_and_original_command_each_conversion",
+            "ok": true,
+            "quantity_observations": 0
+          },
+          "version": 4703
+        }
+      },
+      {
+        "milliseconds": 1491.6266439831816,
+        "proof": {
+          "lot_controls": {
+            "baseline_version": 0,
+            "eligibility_decisions": 4,
+            "ok": true,
+            "policy_changes": 0
+          },
+          "method": "full_append_only_ledger_and_order_line_allocations",
+          "ok": true,
+          "packages": [],
+          "receipt_cancellations": [
+            {
+              "cancelled": 0,
+              "ok": true,
+              "receipt_id": "3a78bda7-1c68-4bec-831b-d3367011cf7d",
+              "status": "expected"
+            }
+          ],
+          "receipts": [
+            {
+              "evidence": 0,
+              "line_id": "same-sku-first",
+              "ok": true,
+              "receipt_id": "3a78bda7-1c68-4bec-831b-d3367011cf7d",
+              "received": 0
+            },
+            {
+              "evidence": 0,
+              "line_id": "same-sku-second",
+              "ok": true,
+              "receipt_id": "3a78bda7-1c68-4bec-831b-d3367011cf7d",
+              "received": 0
+            }
+          ],
+          "returns": [],
+          "rows": [
+            {
+              "allocation_reserved": 1,
+              "difference": 0,
+              "ledger": 16,
+              "location": "BIN-00000",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 16,
+              "reserved": 1,
+              "reserved_difference": 0,
+              "sku": "LOAD-00000"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 0,
+              "location": "BIN-00001",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 0,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "LOAD-00000"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 0,
+              "location": "STAGE-01",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 0,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "LOAD-00000"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 15,
+              "location": "BIN-00001",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 15,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "LOAD-00001"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 1,
+              "location": "BIN-00002",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 1,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "LOAD-00001"
+            },
+            {
+              "allocation_reserved": 1,
+              "difference": 0,
+              "ledger": 16,
+              "location": "BIN-00002",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 16,
+              "reserved": 1,
+              "reserved_difference": 0,
+              "sku": "LOAD-00002"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 0,
+              "location": "BIN-00003",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 0,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "LOAD-00002"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 0,
+              "location": "STAGE-01",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 0,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "LOAD-00002"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 16,
+              "location": "BIN-00003",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 16,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "LOAD-00003"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 0,
+              "location": "BIN-00004",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 0,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "LOAD-00003"
+            },
+            {
+              "allocation_reserved": 1,
+              "difference": 0,
+              "ledger": 16,
+              "location": "BIN-00004",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 16,
+              "reserved": 1,
+              "reserved_difference": 0,
+              "sku": "LOAD-00004"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 0,
+              "location": "STAGE-01",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 0,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "LOAD-00004"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 16,
+              "location": "BIN-00005",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 16,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "LOAD-00005"
+            },
+            {
+              "allocation_reserved": 1,
+              "difference": 0,
+              "ledger": 16,
+              "location": "BIN-00006",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 16,
+              "reserved": 1,
+              "reserved_difference": 0,
+              "sku": "LOAD-00006"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 0,
+              "location": "STAGE-01",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 0,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "LOAD-00006"
+            },
+            {
+              "allocation_reserved": 0,
+              "difference": 0,
+              "ledger": 16,
+              "location": "BIN-00007",
+              "lot": "LOT-000",
+              "ok": true,
+              "on_hand": 16,
+              "reserved": 0,
+              "reserved_difference": 0,
+              "sku": "LOAD-00007"
+            }
+          ],
+          "serials": {
+            "batches": 4673,
+            "controlled_skus": 8,
+            "identity_scope": "tenant",
+            "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+            "observations": 4673,
+            "ok": true,
+            "physical_ok": true,
+            "registered_units": 128,
+            "sku_reviews": 8,
+            "source_ok": true,
+            "unit_steps": 4793,
+            "warehouse_id": "wh-main"
+          },
+          "shipments": [],
+          "transfers": [],
+          "units": {
+            "definition_changes": 0,
+            "method": "immutable_definition_and_original_command_each_conversion",
+            "ok": true,
+            "quantity_observations": 0
+          },
+          "version": 4703
+        }
+      }
+    ],
+    "binary_sha256": "04ee9d81723f38be48f5da71eb6be00dc08a428f1957b7343102e989b93e5bb4",
+    "table_fingerprints_after_upgrade_and_replays": {
+      "wms_activity": {
+        "rows": 4703,
+        "sha256": "5aa205676b1b4a1e0bc05beda9b5404f272da3fec8f4e5f8dff833d943a2b530"
+      },
+      "wms_admin_audit": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_allocations": {
+        "rows": 4,
+        "sha256": "00c4a8641879fd37374add96891ad9c94aef06c21c4445352a60724355059274"
+      },
+      "wms_commands": {
+        "rows": 4703,
+        "sha256": "78fb78cae807ef24aa283bef2def8e8018c9631d03ae660e673433a26d05de8f"
+      },
+      "wms_delivery_attempts": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_events": {
+        "rows": 4703,
+        "sha256": "9d2814265ea9eb14b20bde7b36dd1ea45c4254385a0ae3ae17a9a400ac6420eb"
+      },
+      "wms_exceptions": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_locations": {
+        "rows": 12,
+        "sha256": "1c6b2d5d0af3b69b1f473b88d74cf9d94c971c74f7bc901396d2511cc423bfd3"
+      },
+      "wms_lot_changes": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_lot_decisions": {
+        "rows": 4,
+        "sha256": "e81d4a2582e71b7a1c1315cc3b80bf629d08df34c5c5374d3d791a36055c03d8"
+      },
+      "wms_lot_enforcement": {
+        "rows": 2,
+        "sha256": "93913cea8505cc1e249446971f145ffb2faa290f250977b7c09f997daae0ce73"
+      },
+      "wms_movements": {
+        "rows": 4673,
+        "sha256": "d0c038e92d214e9ad9bed838c45b7fa7409db029305dd8ab47e6e1e903cfbad5"
+      },
+      "wms_native_attempts": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_native_requests": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_order_cancellations": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_order_cancelled_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_order_lines": {
+        "rows": 8,
+        "sha256": "e43fdba7c813ab65850992ff03859750024a49ee1ef5aa002ecc340ef560c2ee"
+      },
+      "wms_orders": {
+        "rows": 8,
+        "sha256": "ba404bb7e506380302644d88504842bd29ec4384f54c66481844aa6777281ebe"
+      },
+      "wms_outbox": {
+        "rows": 4703,
+        "sha256": "09d4ba2c8fe3b6926b25664a02e104ba01b84086f2441a07a115c4305e36cbbc"
+      },
+      "wms_package_closures": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_package_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_packages": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_products": {
+        "rows": 9,
+        "sha256": "3db070d69f511ba64d7cf9b53ec64d66aa37ed41dbb360fee23434e6dd01818d"
+      },
+      "wms_receipt_cancellations": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_receipt_cancelled_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_receipt_evidence": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_receipt_lines": {
+        "rows": 2,
+        "sha256": "1a8f505c963f00ad6574a0b35d6629b50c5dc72182f4cd485da743e61c8bbc12"
+      },
+      "wms_receipts": {
+        "rows": 1,
+        "sha256": "7bf94cec6fe68485ba7ad28d73031496d49f6bb212a6492f7f58d20171de10db"
+      },
+      "wms_resource_versions": {
+        "rows": 50,
+        "sha256": "1806e2815f1ae463ed647cdf2f170592309c9998e7fc93ec34e396889e223ec4"
+      },
+      "wms_return_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_schema_migrations": {
+        "rows": 26,
+        "sha256": "91dfbd2c844027ea26794f8c84ef2a8fc4c1a132181a0e37a0239a2cbed0e3c7"
+      },
+      "wms_serial_batches": {
+        "rows": 4673,
+        "sha256": "486b635928cf666cf066c40f84bcc2cdad07a2d15bffca19599f81af1ff6c10c"
+      },
+      "wms_serial_heads": {
+        "rows": 8,
+        "sha256": "a80c16975523f0d604451f13606fd791f3f5e65f0a12462d3a6b97d4f822c88f"
+      },
+      "wms_serial_modes": {
+        "rows": 9,
+        "sha256": "2ba64a5cfdd57459466d687ba0fd5b268dbb25d7e7f6700ef8ad380e705e116a"
+      },
+      "wms_serial_observations": {
+        "rows": 4673,
+        "sha256": "694b3402c1bd1e51ce6678c4c472c0fe37df9ef75dbf832de4704dc8e871b2d4"
+      },
+      "wms_serial_steps": {
+        "rows": 4793,
+        "sha256": "27764d2f11910a4db02d4282f9e88f0e534de5202dcbdc5a446368bb97b17982"
+      },
+      "wms_serial_units": {
+        "rows": 128,
+        "sha256": "b03c2fc0224945b5f0e3e99c590acfd8c8d185bd3c1183dec9afce3cfb5f7309"
+      },
+      "wms_shipment_evidence": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_split_orders": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_stock": {
+        "rows": 12,
+        "sha256": "a24f47ca784d6de1746136412a620ef03582106a345e691a51cd3dc875c807a2"
+      },
+      "wms_stock_ledger": {
+        "rows": 12,
+        "sha256": "82b119bab6e86647f3290d79a72026f3d09b7470f1f7a03b8b65dae11d898302"
+      },
+      "wms_stock_reserved": {
+        "rows": 8,
+        "sha256": "b2ab93518aa6f0d671935e027e36b90959c1e1c54c96d7936c7913d4a0cad2e7"
+      },
+      "wms_transfer_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_transfer_loss_records": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_transfers": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_unit_observations": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_unit_pack_changes": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_warehouses": {
+        "rows": 2,
+        "sha256": "522373a4c28f724f51efaf01613ae49a20463b35f2174faeaf356e99bc1b3e85"
+      },
+      "wms_workspaces": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      }
+    },
+    "limits": [
+      "Native debug loopback API and owned PG12 database. Original full API10secondstatementlimit unchanged. Not a new image or full release/facility qualification."
+    ]
+  },
+  "current_native_serial_traffic": {
+    "ok": true,
+    "synthetic": true,
+    "production_qualified": false,
+    "qualification": "development native serial HTTP traffic",
+    "binary_sha256": "04ee9d81723f38be48f5da71eb6be00dc08a428f1957b7343102e989b93e5bb4",
+    "script_sha256": {
+      "scripts/resilience_probe.py": "521accb82fa2bf94036257dc17df049ad50d4f4fc496d49437f5585a3a14f014",
+      "scripts/serial_traffic.py": "ae0e9c2c61cbb7581f1907c5e64d1c6b75ca55b7e2ff6d6479b8c5f248e76ea1",
+      "scripts/serial_traffic_proof.py": "6413d70e5ab9abdd3300148730f1636536a559baad227ae28feef1a2d1b34d3f",
+      "scripts/serial-traffic-native.sh": "bda40ed788700931dd885b1d90d45d22426372b5e26d7a99ed234629f987eee8"
+    },
+    "cycle_samples": {
+      "path": "cycle-samples.jsonl",
+      "sha256": "d80c5b27689916f385e32ce41bb2257fc0fda1c8c428483c90a5455f4e34dbe9"
+    },
+    "postgres_version": "12.22 (Ubuntu 12.22-0ubuntu0.20.04.4)",
+    "phases": {
+      "seed": {
+        "method": "authenticated actual HTTP commands only; opening counts are disclosed synthetic fixtures",
+        "seconds": 1.651,
+        "operational_products": 8,
+        "additional_recovery_product": 1,
+        "storage_bins": 8,
+        "lots_per_product": 1,
+        "opening_bin_lot_balances": 8,
+        "opening_each_per_balance": 16,
+        "serial_units_per_bin_lot": 16,
+        "open_orders": 8,
+        "allocated_orders": 4,
+        "commands_before_recovery_lifecycle": 38,
+        "expected_setup_commands": 38,
+        "observed_setup_commands": 38,
+        "independent_setup_command_count_matches": true,
+        "excluded_from_sustained_timing": true
+      },
+      "sustained_http": {
+        "requested_seconds": 300,
+        "review_mode": "resources",
+        "traffic_model": "independent-operators",
+        "client_schedule": "independent continuous client loops without think time or an operator barrier",
+        "serial_units_per_bin_lot": 16,
+        "serial_current_source_reads": 5434,
+        "serial_current_source_latency": {
+          "samples": 5434,
+          "p50_ms": 14.003,
+          "p95_ms": 21.346,
+          "p99_ms": 25.212,
+          "max_ms": 37.408
+        },
+        "measurement_limit": "Authenticated loopback HTTP and JSON processing; Python clients open HTTP connections per request; browser rendering, human timing and physical scanner input are excluded",
+        "elapsed_seconds": 300.222,
+        "replicas": 2,
+        "distinct_operator_identities": 4,
+        "rounds": null,
+        "committed_moves": 5434,
+        "exact_cross_replica_replays": 5434,
+        "definite_stale_conflicts": 0,
+        "unexpected_errors": 0,
+        "committed_moves_per_second": 18.1,
+        "action_latency": {
+          "samples": 5434,
+          "p50_ms": 217.365,
+          "p95_ms": 252.626,
+          "p99_ms": 281.383,
+          "max_ms": 464.749
+        },
+        "action_latency_scope": "command submission from the client's cached review through committed write and its own validated post-commit full warehouse refresh and, when enabled, exact literal serial source/custody review; initial review and subsequent exact replay excluded",
+        "throughput_scope": "all completed client cycles, including initial reviews, physical commands, post-commit refreshes when enabled, conflicts and exact cross-replica replays; replay is not another physical move",
+        "http_write_attempt_latency": {
+          "samples": 5434,
+          "p50_ms": 184.988,
+          "p95_ms": 216.524,
+          "p99_ms": 242.757,
+          "max_ms": 423.503
+        },
+        "frozen_replay_latency": {
+          "samples": 5434,
+          "p50_ms": 2.316,
+          "p95_ms": 2.905,
+          "p99_ms": 3.168,
+          "max_ms": 12.954
+        },
+        "operational_snapshot_latency": {
+          "samples": 5438,
+          "p50_ms": 19.164,
+          "p95_ms": 25.248,
+          "p99_ms": 28.013,
+          "max_ms": 48.649
+        },
+        "shared_round_snapshot_reads": 0,
+        "independent_post_commit_stock_visibility_verified": true,
+        "snapshot_coverage": "exact configured catalog SKU set and every seeded order ID/state, with completed history permitted",
+        "operators": [
+          {
+            "actor": "operator:serial-0",
+            "commits": 1359,
+            "stale_conflicts": 0,
+            "exact_replays": 1359,
+            "initial_snapshot_reads": 1,
+            "post_commit_refreshes": 1359,
+            "snapshot_reads": 1360
+          },
+          {
+            "actor": "operator:serial-1",
+            "commits": 1357,
+            "stale_conflicts": 0,
+            "exact_replays": 1357,
+            "initial_snapshot_reads": 1,
+            "post_commit_refreshes": 1357,
+            "snapshot_reads": 1358
+          },
+          {
+            "actor": "operator:serial-2",
+            "commits": 1359,
+            "stale_conflicts": 0,
+            "exact_replays": 1359,
+            "initial_snapshot_reads": 1,
+            "post_commit_refreshes": 1359,
+            "snapshot_reads": 1360
+          },
+          {
+            "actor": "operator:serial-3",
+            "commits": 1359,
+            "stale_conflicts": 0,
+            "exact_replays": 1359,
+            "initial_snapshot_reads": 1,
+            "post_commit_refreshes": 1359,
+            "snapshot_reads": 1360
+          }
+        ]
+      }
+    },
+    "independent_proof": {
+      "ok": true,
+      "commands": 5472,
+      "physical_and_reserved_equations_recomputed": true,
+      "atomic_original_actors_results_commands_verified": true,
+      "cross_actor_and_tenant_isolation": true,
+      "complete_serial_proof": {
+        "ok": true,
+        "literal_units": 128,
+        "steps": 5562,
+        "observations": 5442,
+        "batches": 5442,
+        "global_heads": 8,
+        "all_literal_custody_revisions_original_steps_observations_and_heads_match": true
+      },
+      "final_table_fingerprints": {
+        "wms_activity": {
+          "rows": 5472,
+          "sha256": "5bc943f712022dd5365bd162c10462702bc39b9deea3d23ee5b04fe869ecbb58"
+        },
+        "wms_admin_audit": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_allocations": {
+          "rows": 4,
+          "sha256": "529230a8b940c56cac8580cffe6c97df1f11a4fb30eb00fb7b5f22ca0eb9551b"
+        },
+        "wms_commands": {
+          "rows": 5472,
+          "sha256": "c554dcaa9a450dbf3b669bc78d8b16b193c6c9e88651da8953fe89531433822f"
+        },
+        "wms_delivery_attempts": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_events": {
+          "rows": 5472,
+          "sha256": "7fe307fc21eb684c735aa5c69412994fcabf83b2c51140a1e79e3e14976c666e"
+        },
+        "wms_exceptions": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_locations": {
+          "rows": 12,
+          "sha256": "1c6b2d5d0af3b69b1f473b88d74cf9d94c971c74f7bc901396d2511cc423bfd3"
+        },
+        "wms_lot_changes": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_lot_decisions": {
+          "rows": 4,
+          "sha256": "bc34e6206d5acd5691352def252af221e116e0585973c8fec36f07bd4ec6f954"
+        },
+        "wms_lot_enforcement": {
+          "rows": 2,
+          "sha256": "93913cea8505cc1e249446971f145ffb2faa290f250977b7c09f997daae0ce73"
+        },
+        "wms_movements": {
+          "rows": 5442,
+          "sha256": "1e9b56619ce984f72819c611ab37b68c0be266743be0eae428440ed5368c4830"
+        },
+        "wms_native_attempts": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_native_requests": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_order_cancellations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_order_cancelled_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_order_lines": {
+          "rows": 8,
+          "sha256": "eba13569b0123d0100653f9dd16a38f43daef67a34ace70e8071d1d500eac978"
+        },
+        "wms_orders": {
+          "rows": 8,
+          "sha256": "ebf1459e2759366a132eee3f60e05e9d91d78ced2eb0cd14959c586ef86c4156"
+        },
+        "wms_outbox": {
+          "rows": 5472,
+          "sha256": "c80ff93ede18645d07d56d7eb3232509b1c586f3e7043903058808cadb99cdf9"
+        },
+        "wms_package_closures": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_package_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_packages": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_products": {
+          "rows": 9,
+          "sha256": "3db070d69f511ba64d7cf9b53ec64d66aa37ed41dbb360fee23434e6dd01818d"
+        },
+        "wms_receipt_cancellations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_receipt_cancelled_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_receipt_evidence": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_receipt_lines": {
+          "rows": 2,
+          "sha256": "2cf566bb931097a7973e400e016fdd50265072286109c4e8331651369caa2a3d"
+        },
+        "wms_receipts": {
+          "rows": 1,
+          "sha256": "abb35844d38ebda84fd5858a21f17f203ed5ca719982f74e20f63471806e24e8"
+        },
+        "wms_resource_versions": {
+          "rows": 50,
+          "sha256": "9a0e62a0c77f0c1f7d7431e939bf2ac9d023bc57083edd15078fa3a75781f273"
+        },
+        "wms_return_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_schema_migrations": {
+          "rows": 26,
+          "sha256": "0141fc2f97c9049bcd65ac991421875a05480b84299e7ba6d3086522c1edaa6b"
+        },
+        "wms_serial_batches": {
+          "rows": 5442,
+          "sha256": "25aeb65759ea33218787d441231e0229b64ada736247188a9fc74c804d9f023a"
+        },
+        "wms_serial_heads": {
+          "rows": 8,
+          "sha256": "3b52775e79627d0424e38fce033ab0bb1cdd9f84822dfa218de3bfd3d41b229d"
+        },
+        "wms_serial_modes": {
+          "rows": 9,
+          "sha256": "64d0db6edc1095aa0f09aefd4df44c7cd0638667c57dad4f6e780cca93cf9074"
+        },
+        "wms_serial_observations": {
+          "rows": 5442,
+          "sha256": "9c207725f932535c0a8f295c67c46d61d06004597efd8d1e5285285171cd136e"
+        },
+        "wms_serial_steps": {
+          "rows": 5562,
+          "sha256": "a232a24475347ee7a7f1b24359c17d8a910e0525675c662613752fffc49eeff9"
+        },
+        "wms_serial_units": {
+          "rows": 128,
+          "sha256": "8a36e58d5602d91aff253072cc25e49ecb1620da7930b10469f3b7feee862a8a"
+        },
+        "wms_shipment_evidence": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_split_orders": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_stock": {
+          "rows": 12,
+          "sha256": "df33bf9a3990880c596f322b50274445e775317a410a255b8854156df043f81b"
+        },
+        "wms_stock_ledger": {
+          "rows": 12,
+          "sha256": "62e5021ea70b55fc174502ea65353c2d54efe1c28b0a59e9c09647c0e9191267"
+        },
+        "wms_stock_reserved": {
+          "rows": 8,
+          "sha256": "b2ab93518aa6f0d671935e027e36b90959c1e1c54c96d7936c7913d4a0cad2e7"
+        },
+        "wms_transfer_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_transfer_loss_records": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_transfers": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_unit_observations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_unit_pack_changes": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_warehouses": {
+          "rows": 2,
+          "sha256": "944e024f2f05879e70131625baaf07e1c6c12b407a24b85cada41935d1574d6e"
+        },
+        "wms_workspaces": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      }
+    },
+    "limits": [
+      "Debug native binary, shared development host, loopback HTTP, one PostgreSQL primary; not production image, crash/failover, deployed, scanner-device, native receiver or facility qualification.",
+      "Opening counts are disclosed synthetic complete observed sets; traffic moves one fixed literal identity per independent operator/SKU."
+    ]
+  }
+}

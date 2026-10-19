@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "production_qualified": false,
+  "report": "http-500-8-operators-snapshot-after.json",
+  "sha256": "3e631a5e8ca0ae195b9ac35af82256dcbd003fcca61b6a40864b7b589b93cab2",
+  "image_id": "sha256:f6d5db89e96c1d7d66bd52912714641040ab5f25ad7d4a646d52612c4b4d9f53",
+  "image_source_inputs_sha256": "01facb61f069f6220e36a9178be4889a8004c8d1b482a4a3a30fd3a99cf5689e",
+  "software_source_inputs_sha256": "f68af5137a29aac0f63ce1b40a8e7cdbfd5c5f500c3ad7f8fb3380db432bd031",
+  "release_provenance": "../qualification/release-20261018-snapshot-reads/provenance.json",
+  "traffic_model": "independent-operators",
+  "qualifier_sha256": {
+    "scripts/resilience-rehearsal.sh": "5fa42466238d4be5b260021da30541441d2c7d779b74b0594c8ac59099408227",
+    "scripts/resilience_probe.py": "67c2ceab339b0d21a5daa25af0b518f3cb476b4d856cedd914ed316cf27526ac"
+  },
+  "comparison_before": "http-500-8-operators-snapshot-before.json",
+  "limits": [
+    "Same qualifier scripts, configured fixture, actor/read/replay accounting and measurement interval as the retained before window",
+    "Application changed from the multi-facility image to typed snapshot/proof construction and indexed structural validation",
+    "Sequential local synthetic windows share a development host; observed differences do not establish deployed capacity or a facility SLO"
+  ],
+  "host_observation": {
+    "path": "http-500-8-operators-snapshot-after-host-observation.json",
+    "sha256": "5d1472ad8edc45aeb7df42b3b552abe5cf1f73c03467991a828d026ea5df459c",
+    "scope": "diagnostic context, not a correctness artifact or causal estimate"
+  }
+}

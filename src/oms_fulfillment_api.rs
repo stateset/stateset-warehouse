@@ -2,7 +2,7 @@
 //! Remote requests are always preceded by a committed intent and delivery lease.
 use crate::{
     api::App,
-    domain::{self, Allocation, Order, OrderLine},
+    domain::{self, Order},
     native::NativeIntegrations,
     native_store::{self, Claim, Freeze, NativeRecord},
     oms_client::{validate_acknowledgement, Acknowledgement, PreparedFulfillment},
@@ -15,9 +15,8 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::{PgConnection, Row};
-use std::collections::BTreeMap;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct FulfillmentRequest {
     pub request_id: String,
@@ -40,58 +39,6 @@ fn record(row: sqlx::postgres::PgRow) -> Result<NativeRecord, Error> {
         lease_active: row.try_get("lease_active")?,
     })
 }
-fn canonical(mut order: Order) -> Order {
-    order.lines.sort_by(|a, b| a.id.cmp(&b.id));
-    order
-        .allocations
-        .sort_by(|a, b| (&a.line_id, &a.location, &a.lot).cmp(&(&b.line_id, &b.location, &b.lot)));
-    order
-}
-fn shipped(order: &Order) -> Result<(), Error> {
-    if order.status != "shipped"
-        || order.lines.is_empty()
-        || order.carrier.trim().is_empty()
-        || order.handoff_reference.trim().is_empty()
-        || order.shipped_at.as_ref().is_none_or(|s| s.is_empty())
-    {
-        return Err(Error::new(
-            409,
-            "OMS fulfillment requires a complete physical carrier handoff",
-        ));
-    }
-    let mut quantities = BTreeMap::<&str, i64>::new();
-    for allocation in &order.allocations {
-        if allocation.released != 0
-            || allocation.quantity <= 0
-            || allocation.picked != allocation.quantity
-            || allocation.shipped != allocation.quantity
-            || !order
-                .lines
-                .iter()
-                .any(|line| line.id == allocation.line_id && line.sku == allocation.sku)
-        {
-            return Err(Error::new(
-                409,
-                "Physical shipment allocations do not match the complete order",
-            ));
-        }
-        let quantity = quantities.entry(&allocation.line_id).or_default();
-        *quantity = quantity
-            .checked_add(allocation.shipped)
-            .ok_or_else(|| Error::new(409, "Physical shipment quantity overflow"))?;
-    }
-    if order
-        .lines
-        .iter()
-        .any(|line| line.quantity <= 0 || quantities.get(line.id.as_str()) != Some(&line.quantity))
-    {
-        return Err(Error::new(
-            409,
-            "Every order line must be completely shipped before OMS fulfillment",
-        ));
-    }
-    Ok(())
-}
 async fn committed_shipment(
     c: &mut PgConnection,
     i: &Identity,
@@ -99,39 +46,37 @@ async fn committed_shipment(
     order_id: &str,
     event_id: Option<&str>,
 ) -> Result<(String, Order), Error> {
-    let data: Value = sqlx::query_scalar(
-        "SELECT data FROM wms_orders WHERE tenant=$1 AND warehouse_id=$2 AND id=$3",
-    )
-    .bind(&i.tenant)
-    .bind(warehouse)
-    .bind(order_id)
-    .fetch_optional(&mut *c)
-    .await?
-    .ok_or_else(|| Error::new(404, "Warehouse order not found"))?;
-    let mut order: Order = serde_json::from_value(data)
-        .map_err(|_| Error::new(503, "Stored order requires repair"))?;
-    order.lines = sqlx::query("SELECT id,sku,quantity FROM wms_order_lines WHERE tenant=$1 AND warehouse_id=$2 AND order_id=$3 ORDER BY id")
-        .bind(&i.tenant).bind(warehouse).bind(order_id).fetch_all(&mut *c).await?.into_iter().map(|r|Ok(OrderLine{id:r.try_get("id")?,sku:r.try_get("sku")?,quantity:r.try_get("quantity")?})).collect::<Result<_,Error>>()?;
-    order.allocations = sqlx::query("SELECT line_id,sku,lot,location,quantity,picked,shipped,released FROM wms_allocations WHERE tenant=$1 AND warehouse_id=$2 AND order_id=$3 ORDER BY line_id,location,lot")
-        .bind(&i.tenant).bind(warehouse).bind(order_id).fetch_all(&mut *c).await?.into_iter().map(|r|Ok(Allocation{line_id:r.try_get("line_id")?,sku:r.try_get("sku")?,lot:r.try_get("lot")?,location:r.try_get("location")?,quantity:r.try_get("quantity")?,picked:r.try_get("picked")?,shipped:r.try_get("shipped")?,released:r.try_get("released")?})).collect::<Result<_,Error>>()?;
-    shipped(&order)?;
-    let event = sqlx::query("SELECT id,payload FROM wms_events WHERE tenant=$1 AND warehouse_id=$2 AND payload->>'type'='fulfillment.shipped' AND payload->'order'->>'id'=$3 AND ($4::text IS NULL OR id=$4) ORDER BY version DESC LIMIT 1")
-        .bind(&i.tenant).bind(warehouse).bind(order_id).bind(event_id).fetch_optional(&mut *c).await?.ok_or_else(||Error::new(409,"A committed physical handoff event is required for OMS fulfillment"))?;
-    let id: String = event.try_get("id")?;
-    let payload: Value = event.try_get("payload")?;
-    let event_order: Order = serde_json::from_value(payload["order"].clone())
-        .map_err(|_| Error::new(503, "Stored handoff event requires repair"))?;
-    if payload["id"] != id
-        || payload["tenant"] != i.tenant
-        || payload["warehouse_id"] != warehouse
-        || canonical(event_order) != canonical(order.clone())
-    {
+    let (order, provenance) = crate::shipments::source(c, &i.tenant, warehouse, order_id)
+        .await
+        .map_err(|error| {
+            if error.status == 422 {
+                Error::new(
+                    409,
+                    "Conditional OMS fulfillment requires a completed physical handoff",
+                )
+            } else {
+                error
+            }
+        })?;
+    if order.status != "shipped" {
+        return Err(Error::new(409,"Conditional OMS fulfillment requires every original order line to be physically handed off"));
+    }
+    let id = provenance["event_id"]
+        .as_str()
+        .filter(|_| provenance["kind"] == "event")
+        .ok_or_else(|| {
+            Error::new(
+                409,
+                "The current OMS receiver requires one complete original handoff; multiple shipment handoffs require a separately qualified receiver contract",
+            )
+        })?;
+    if event_id.is_some_and(|expected| expected != id) {
         return Err(Error::new(
             409,
-            "Committed handoff evidence does not match the canonical warehouse order",
+            "Retained OMS handoff references another physical shipment",
         ));
     }
-    Ok((id, order))
+    Ok((id.into(), order))
 }
 /// Claim the exact retained intent. Callers must finish the lease with the CAS
 /// journal operation; no database transaction is held across remote HTTP.

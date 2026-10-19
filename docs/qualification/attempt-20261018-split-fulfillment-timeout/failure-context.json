@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "scope": "failed_software_release_attempt",
+  "result": "failed",
+  "synthetic": true,
+  "production_qualified": false,
+  "image_id": "sha256:cbf62efc5eaa53ec24fd51758707eb5d900e995a76d63cd9df5ce75e69dbfc55",
+  "software_source_inputs_sha256": "360819eda499580ca67647edbaf9c24efe186ce44b3eac85120a10654c2a6020",
+  "failed_stage": "image_resilience",
+  "stable_source_stage": "not_run",
+  "last_logged_progress": {
+    "elapsed_seconds": 110.2,
+    "committed_moves": 2699,
+    "definite_stale_conflicts": 0,
+    "exact_replays_match_logged_moves": true,
+    "complete_final_total": false
+  },
+  "observed_failure": "Two requests returned 503 after PostgreSQL canceled SELECT version FROM wms_warehouses ... FOR UPDATE at the 10-second statement timeout",
+  "root_cause": "Unconfirmed; failed helper cleaned up its isolated database before lock-holder snapshots existed",
+  "inventory_proof_after_failed_interval": "not_run; no consistency assertion is inferred",
+  "evidence": [
+    {
+      "path": "postgres-runtime.log",
+      "sha256": "bce22d9316779e5aedc3f8d317b82ebc3c5541b35e8b44ee9d67eb702219e39f"
+    },
+    {
+      "path": "image_resilience.log",
+      "sha256": "74901346be745afb5288cb63426a407ce156d6fadb6b7829dbfcc3d980bb13eb"
+    }
+  ],
+  "subsequent_diagnostic_replay": {
+    "report": "../../performance/http-500-8-operators-split-diagnostic.json",
+    "same_image": true,
+    "application_and_qualifier_inputs_unchanged": true,
+    "read_only_pg_activity_and_host_pressure_sampler_added": true,
+    "result": "passed",
+    "scope": "standalone diagnostic replay; not a complete release gate"
+  },
+  "limits": [
+    "This failed result remains retained even if a later full run passes",
+    "No timeout increase, skipped assertion, or automatic retry concealed the failure",
+    "Shared-host observations do not establish a cause, controlled capacity, availability target or facility SLO"
+  ]
+}

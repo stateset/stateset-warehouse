@@ -1,0 +1,11 @@
+{
+  "recorded_at": "2026-10-19T14:07:02.471455+00:00",
+  "scope": "Retained failed source37 release attempt; accepted source35 image remains unchanged.",
+  "source_revision": 37,
+  "source_inputs_sha256": "36b8fd7e225575b858f3017567791d554997ba31e1341042bcb90b341b0a7cb7",
+  "failure": "Software gate:61 Python tests ran with one error. Current accepted source manifest uses deterministic Path-object order; facility verifier expected string order. Rejected before database/browser/image stages.120 default Rust cases and Clippy passed.",
+  "actual_exit_code": 1,
+  "controlled_mode_source36_fixture_failure_separately_retained": true,
+  "correction": "Source38 facility verifier uses the actual release producer Path ordering. Added recomputed-digest reorder/duplicate rejection regressions.",
+  "production_qualified": false
+}

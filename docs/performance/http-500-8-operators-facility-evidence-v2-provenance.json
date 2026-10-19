@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "production_qualified": false,
+  "report": "http-500-8-operators-facility-evidence-v2.json",
+  "sha256": "50549f85ac8c4cdb661d7140e651ff9eab08f5d29ac5cedcea8365b84644f1fa",
+  "release_provenance": "../qualification/release-20261018-facility-evidence-v2/provenance.json",
+  "image_id": "sha256:5740c4e4fd3a89c47fba21f6770f4c17a18f2a4afa8d6c38e904fbf3efec74aa",
+  "image_source_inputs_sha256": "5b8eb56b2d1a5e4b18977dec050cbd86f5a25619b4a742aec875cfe73312cd41",
+  "software_source_inputs_sha256": "4014e191ac8cb4e2fbb1bfe3ddc432981c0e483faa0b0dff0f5d36f21625475c",
+  "release_binding": {
+    "source_inputs_sha256": "4014e191ac8cb4e2fbb1bfe3ddc432981c0e483faa0b0dff0f5d36f21625475c",
+    "image_source_inputs_sha256": "5b8eb56b2d1a5e4b18977dec050cbd86f5a25619b4a742aec875cfe73312cd41",
+    "image_digest": "sha256:5740c4e4fd3a89c47fba21f6770f4c17a18f2a4afa8d6c38e904fbf3efec74aa",
+    "release_summary_sha256": "dbcf15adb24a9854a71d4205eddb834b797262dcff1c0bb63377147d734ab758",
+    "qualified_at": "2026-10-19T04:23:35.722416+00:00",
+    "schema_tables_sha256": "4b0e825b5cbeda3279f6a1b3dad7c3afd9bcbfa54d1cc41c172c45fbe358ca1e",
+    "migrations_sha256": "81e5963cbe25d892345a72844884e112bea254dd154eb545170f68ea38cf9640"
+  },
+  "traffic_model": "independent-operators",
+  "mcp": {
+    "unauthenticated_status": 401,
+    "authenticated_session_matches_rest": true,
+    "catalog_tools": 65,
+    "catalog_bytes": 96006,
+    "partial_fulfillment_tools_present": true
+  },
+  "private_restore_manifest_sha256": "09ba9262428b4d4c8610d9dd5fdb2f835312054254511fc464a9299b7b6ab632",
+  "private_source_archive_sha256": "4a0086c80033063b949121fca00020c32ea52c84e77759fdec147fc1e0d4c20f",
+  "focused_development_manifest_sha256": "19967b13b9a68359b33f357c148c01598f47a5937378d4f7e9dc35a90c9b5129",
+  "physical_acceptance_performed": false,
+  "preceding_time_ordering_gate_context": "../qualification/attempt-20261018-facility-time-ordering/failure-context.json",
+  "preceding_interrupted_gate_context": "../qualification/attempt-20261018-facility-template-scope/failure-context.json",
+  "limits": [
+    "This release strengthens an offline evidence validator; the synthetic complete trial invents hardware, performance, signing and native-completion claims and is never facility acceptance.",
+    "Measured image traffic remains REST each-unit bin moves, full post-save snapshots and original replays; no physical evidence workflow, archive-streaming, pack, trace, transfer, package or MCP throughput is established.",
+    "APIs,clients and PostgreSQL share an uncontrolled development host. No causal speedup, deployed capacity, managed failover or facility SLO is inferred.",
+    "Earlier split lock timeout, diagnostics and every accepted/failed release remain retained; original lock holder/root cause remains unconfirmed.",
+    "No actual deployment, physical count, scanner, WorkOS/native/MCP-client acceptance, tenant-wide recall, refund, serial/fractional support or multiple-shipment receiver qualification is claimed."
+  ]
+}

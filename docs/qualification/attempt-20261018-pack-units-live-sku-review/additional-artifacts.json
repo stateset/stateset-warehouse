@@ -1,0 +1,6 @@
+{
+  "original_gate_summary_sha256": "a72b678a851053b91634df6aa7fcd51ea7baf0c8c13e06d478298ff96fc6da7a",
+  "additional_artifacts_sha256": {
+    "failure-context.json": "e5559e4173eec31782cb2ea6fd6cb85df0e4d55b5b537190db216c91f6de9373"
+  }
+}

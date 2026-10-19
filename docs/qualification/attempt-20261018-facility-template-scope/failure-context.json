@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "classification": "intentionally interrupted first full gate for independently reproduced invalid-scope template CLI traceback",
+  "result": "failed",
+  "production_qualified": false,
+  "synthetic": true,
+  "terminal_exit_code": 130,
+  "passed_stages": [
+    "prerequisites"
+  ],
+  "software_source_inputs_sha256": "f7945baf6a35a5267099a85b447a3185d88ca3ab827f07a41f3ec1b8a67a13f5",
+  "source_archive": "revision-2/source.tar.gz",
+  "source_archive_complete": true,
+  "before_fix_proof": {
+    "exit_code": 1,
+    "traceback": true,
+    "destination_created": false,
+    "expected_clean_exit_code": 2
+  },
+  "observations": "257Rust49Python checks passed; browser contracts were still in progress. Template CLI invalid scope returned1/traceback rather than clean2; no destination was created. Interrupted owned gate terminal130 before source mutation, fixed exception translation and added actual CLI regression. New source must pass a fresh complete gate. No software or physical qualification inferred from this attempt.",
+  "recorded_at": "2026-10-19T03:56:29.786012+00:00"
+}

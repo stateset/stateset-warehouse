@@ -1,0 +1,319 @@
+{
+  "recorded_at": "2026-10-19T13:08:59.884445+00:00",
+  "ok": true,
+  "source_revision": 35,
+  "source_inputs": 213,
+  "source_inputs_sha256": "27c872741ee4e584432f1a279c1965d266a079b95bf5dcc2b7aca3b9c20ff549",
+  "source_archive_sha256": "1db959bbd32382cfc3407e129c78d4e9a1a2d7867b8522b705908e1c14e7edef",
+  "image_id": "sha256:d4daf2909aeff0d0846477f1ff0641637a6bef6eb5f0ad6ec668d5e87b45b5f6",
+  "image_source_inputs": 132,
+  "image_source_inputs_sha256": "587e3e161c66266734a6343287cdf52dfc18849914a23e16f2be366ab47beef4",
+  "image_inputs_subset_matches_full_release": true,
+  "release_elapsed_seconds": 2267,
+  "ten_stages_passed": true,
+  "rust_passed": 318,
+  "python_passed": 61,
+  "offline_browser_passed": 149,
+  "actual_browser_passed": 21,
+  "all13prior_live_cases_preserved_plus8serial": true,
+  "migrations": 28,
+  "populated_archive_tables": 49,
+  "archive_warehouse_proofs": 10,
+  "mcp_admin_tools": 68,
+  "untracked_sustained": {
+    "requested_seconds": 300,
+    "review_mode": "resources",
+    "traffic_model": "independent-operators",
+    "client_schedule": "independent continuous client loops without think time or an operator barrier",
+    "serial_units_per_bin_lot": 0,
+    "serial_current_source_reads": 0,
+    "serial_current_source_latency": {
+      "samples": 0
+    },
+    "measurement_limit": "Authenticated loopback HTTP and JSON processing; Python clients open HTTP connections per request; browser rendering, human timing and physical scanner input are excluded",
+    "elapsed_seconds": 300.166,
+    "replicas": 2,
+    "distinct_operator_identities": 8,
+    "rounds": null,
+    "committed_moves": 11268,
+    "exact_cross_replica_replays": 11268,
+    "definite_stale_conflicts": 0,
+    "unexpected_errors": 0,
+    "committed_moves_per_second": 37.539,
+    "action_latency": {
+      "samples": 11268,
+      "p50_ms": 180.121,
+      "p95_ms": 241.709,
+      "p99_ms": 271.824,
+      "max_ms": 453.627
+    },
+    "action_latency_scope": "command submission from the client's cached review through committed write and its own validated post-commit full warehouse refresh and, when enabled, exact literal serial source/custody review; initial review and subsequent exact replay excluded",
+    "throughput_scope": "all completed client cycles, including initial reviews, physical commands, post-commit refreshes when enabled, conflicts and exact cross-replica replays; replay is not another physical move",
+    "http_write_attempt_latency": {
+      "samples": 11268,
+      "p50_ms": 47.835,
+      "p95_ms": 91.797,
+      "p99_ms": 116.869,
+      "max_ms": 274.03
+    },
+    "frozen_replay_latency": {
+      "samples": 11268,
+      "p50_ms": 24.291,
+      "p95_ms": 67.737,
+      "p99_ms": 90.261,
+      "max_ms": 146.603
+    },
+    "operational_snapshot_latency": {
+      "samples": 11276,
+      "p50_ms": 128.146,
+      "p95_ms": 179.189,
+      "p99_ms": 207.149,
+      "max_ms": 344.143
+    },
+    "shared_round_snapshot_reads": 0,
+    "independent_post_commit_stock_visibility_verified": true,
+    "snapshot_coverage": "exact configured catalog SKU set and every seeded order ID/state, with completed history permitted",
+    "operators": [
+      {
+        "actor": "operator:resilience-0",
+        "commits": 1398,
+        "stale_conflicts": 0,
+        "exact_replays": 1398,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 1398,
+        "snapshot_reads": 1399
+      },
+      {
+        "actor": "operator:resilience-1",
+        "commits": 1415,
+        "stale_conflicts": 0,
+        "exact_replays": 1415,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 1415,
+        "snapshot_reads": 1416
+      },
+      {
+        "actor": "operator:resilience-2",
+        "commits": 1417,
+        "stale_conflicts": 0,
+        "exact_replays": 1417,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 1417,
+        "snapshot_reads": 1418
+      },
+      {
+        "actor": "operator:resilience-3",
+        "commits": 1408,
+        "stale_conflicts": 0,
+        "exact_replays": 1408,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 1408,
+        "snapshot_reads": 1409
+      },
+      {
+        "actor": "operator:resilience-4",
+        "commits": 1412,
+        "stale_conflicts": 0,
+        "exact_replays": 1412,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 1412,
+        "snapshot_reads": 1413
+      },
+      {
+        "actor": "operator:resilience-5",
+        "commits": 1413,
+        "stale_conflicts": 0,
+        "exact_replays": 1413,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 1413,
+        "snapshot_reads": 1414
+      },
+      {
+        "actor": "operator:resilience-6",
+        "commits": 1403,
+        "stale_conflicts": 0,
+        "exact_replays": 1403,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 1403,
+        "snapshot_reads": 1404
+      },
+      {
+        "actor": "operator:resilience-7",
+        "commits": 1402,
+        "stale_conflicts": 0,
+        "exact_replays": 1402,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 1402,
+        "snapshot_reads": 1403
+      }
+    ]
+  },
+  "serial_sustained": {
+    "requested_seconds": 300,
+    "review_mode": "resources",
+    "traffic_model": "independent-operators",
+    "client_schedule": "independent continuous client loops without think time or an operator barrier",
+    "serial_units_per_bin_lot": 16,
+    "serial_current_source_reads": 664,
+    "serial_current_source_latency": {
+      "samples": 664,
+      "p50_ms": 13.439,
+      "p95_ms": 17.999,
+      "p99_ms": 21.457,
+      "max_ms": 27.827
+    },
+    "measurement_limit": "Authenticated loopback HTTP and JSON processing; Python clients open HTTP connections per request; browser rendering, human timing and physical scanner input are excluded",
+    "elapsed_seconds": 303.642,
+    "replicas": 2,
+    "distinct_operator_identities": 8,
+    "rounds": null,
+    "committed_moves": 664,
+    "exact_cross_replica_replays": 664,
+    "definite_stale_conflicts": 0,
+    "unexpected_errors": 0,
+    "committed_moves_per_second": 2.187,
+    "action_latency": {
+      "samples": 664,
+      "p50_ms": 3610.828,
+      "p95_ms": 3954.229,
+      "p99_ms": 4193.867,
+      "max_ms": 5323.588
+    },
+    "action_latency_scope": "command submission from the client's cached review through committed write and its own validated post-commit full warehouse refresh and, when enabled, exact literal serial source/custody review; initial review and subsequent exact replay excluded",
+    "throughput_scope": "all completed client cycles, including initial reviews, physical commands, post-commit refreshes when enabled, conflicts and exact cross-replica replays; replay is not another physical move",
+    "http_write_attempt_latency": {
+      "samples": 664,
+      "p50_ms": 3526.918,
+      "p95_ms": 3860.684,
+      "p99_ms": 4116.112,
+      "max_ms": 5224.576
+    },
+    "frozen_replay_latency": {
+      "samples": 664,
+      "p50_ms": 1.311,
+      "p95_ms": 1.728,
+      "p99_ms": 1.999,
+      "max_ms": 5.86
+    },
+    "operational_snapshot_latency": {
+      "samples": 672,
+      "p50_ms": 70.772,
+      "p95_ms": 88.515,
+      "p99_ms": 122.222,
+      "max_ms": 188.926
+    },
+    "shared_round_snapshot_reads": 0,
+    "independent_post_commit_stock_visibility_verified": true,
+    "snapshot_coverage": "exact configured catalog SKU set and every seeded order ID/state, with completed history permitted",
+    "operators": [
+      {
+        "actor": "operator:resilience-0",
+        "commits": 83,
+        "stale_conflicts": 0,
+        "exact_replays": 83,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 83,
+        "snapshot_reads": 84
+      },
+      {
+        "actor": "operator:resilience-1",
+        "commits": 83,
+        "stale_conflicts": 0,
+        "exact_replays": 83,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 83,
+        "snapshot_reads": 84
+      },
+      {
+        "actor": "operator:resilience-2",
+        "commits": 84,
+        "stale_conflicts": 0,
+        "exact_replays": 84,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 84,
+        "snapshot_reads": 85
+      },
+      {
+        "actor": "operator:resilience-3",
+        "commits": 83,
+        "stale_conflicts": 0,
+        "exact_replays": 83,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 83,
+        "snapshot_reads": 84
+      },
+      {
+        "actor": "operator:resilience-4",
+        "commits": 83,
+        "stale_conflicts": 0,
+        "exact_replays": 83,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 83,
+        "snapshot_reads": 84
+      },
+      {
+        "actor": "operator:resilience-5",
+        "commits": 83,
+        "stale_conflicts": 0,
+        "exact_replays": 83,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 83,
+        "snapshot_reads": 84
+      },
+      {
+        "actor": "operator:resilience-6",
+        "commits": 83,
+        "stale_conflicts": 0,
+        "exact_replays": 83,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 83,
+        "snapshot_reads": 84
+      },
+      {
+        "actor": "operator:resilience-7",
+        "commits": 82,
+        "stale_conflicts": 0,
+        "exact_replays": 82,
+        "initial_snapshot_reads": 1,
+        "post_commit_refreshes": 82,
+        "snapshot_reads": 83
+      }
+    ]
+  },
+  "serial_independent_proof": {
+    "ok": true,
+    "literal_units": 16000,
+    "steps": 16664,
+    "observations": 1664,
+    "batches": 1664,
+    "global_heads": 500,
+    "all_literal_custody_revisions_original_steps_observations_and_heads_match": true
+  },
+  "retained_resources": {
+    "container": {
+      "resources": 4,
+      "stopped_containers": 2,
+      "all_exit_zero": true
+    },
+    "resilience": {
+      "resources": 5,
+      "stopped_containers": 3,
+      "all_exit_zero": true
+    },
+    "serial-resilience": {
+      "resources": 5,
+      "stopped_containers": 3,
+      "all_exit_zero": true
+    }
+  },
+  "published_artifact_hashes": 22,
+  "historical_public_bundles_verified": 26,
+  "historical_artifact_hashes_verified": 481,
+  "prior_accepted_release_unchanged_before_promotion": true,
+  "production_qualified": false,
+  "limits": [
+    "Crash/lost-response recovery commands are the untracked PROBE SKU in both profiles. Committed serial data survive the crashes and subsequent serial traffic passes; pending serial-write crash recovery is unqualified.",
+    "Each profile uses500products/100bins/two lots/500orders/eight operators/two replicas/300seconds. Serial mode has16000literal IDs but timed traffic moves eight fixed labels; broad random-label contention and managed failover are unqualified.",
+    "Image reports have aggregate distributions, not native raw cycle journals. Shared-host conditions are uncontrolled. No causal speedup, deployed/native/MCP-client/device/facility acceptance or A+ claimed."
+  ]
+}

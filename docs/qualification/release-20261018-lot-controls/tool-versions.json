@@ -1,0 +1,9 @@
+{
+  "rustc": "rustc 1.90.0 (1159e78c4 2025-09-14)",
+  "cargo": "cargo 1.90.0 (840b83a10 2025-07-30)",
+  "node": "v22.18.0",
+  "npm": "10.9.3",
+  "python": "Python 3.8.10",
+  "postgres_client": "pg_dump (PostgreSQL) 12.22 (Ubuntu 12.22-0ubuntu0.20.04.4)",
+  "docker_server": "27.4.0"
+}

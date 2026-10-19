@@ -1,0 +1,111 @@
+{
+  "concurrent_work": {
+    "action_including_refresh_and_retries": {
+      "max_ms": 606.6108529999999,
+      "p50_ms": 98.308085,
+      "p95_ms": 288.568632,
+      "p99_ms": 606.6108529999999,
+      "samples": 40
+    },
+    "actions_per_second": 27.934569999214755,
+    "command_attempt": {
+      "max_ms": 50.362286,
+      "p50_ms": 13.438189999999999,
+      "p95_ms": 37.439114000000004,
+      "p99_ms": 42.242227,
+      "samples": 142
+    },
+    "frozen_replay": {
+      "max_ms": 33.851168,
+      "p50_ms": 1.652382,
+      "p95_ms": 12.553094000000002,
+      "p99_ms": 33.851168,
+      "samples": 40
+    },
+    "physical_actions": 40,
+    "seconds": 1.431917513,
+    "stale_version_rejections": 102,
+    "state_refresh": {
+      "max_ms": 99.693092,
+      "p50_ms": 19.045782,
+      "p95_ms": 40.75843,
+      "p99_ms": 49.427049000000004,
+      "samples": 142
+    },
+    "successful_frozen_replays": 40,
+    "transient_503_attempts": 0,
+    "unexpected_errors": 0
+  },
+  "config": {
+    "actions_per_client": 10,
+    "clients": 4,
+    "lots_per_product": 2,
+    "max_action_p95_ms": null,
+    "min_actions_per_second": null,
+    "open_orders": 100,
+    "products": 100,
+    "storage_bins": 20
+  },
+  "configured_thresholds_passed": true,
+  "environment": {
+    "available_parallelism": 8,
+    "build": "use cargo run --release for capacity comparison",
+    "postgres_version": "12.22 (Ubuntu 12.22-0ubuntu0.20.04.4)",
+    "store_pool_connections": 8
+  },
+  "kind": "local_synthetic_store_workload",
+  "limits": [
+    "local synthetic Store test, not deployed HTTP/scanner or facility acceptance",
+    "one warehouse serializes writes and clients explicitly re-review stale versions",
+    "all current catalog/bin-lots/open orders load for each command; bounded history does not bound live-work memory",
+    "synthetic opening counts are fixtures, not measured facility inventory",
+    "PostgreSQL and harness may share CPU; no production throughput or HA claim"
+  ],
+  "memory": {
+    "process_peak_after_clients_kib": 12948,
+    "process_peak_before_clients_kib": 7296,
+    "scope": "Rust workload process high-water mark; excludes PostgreSQL and is not a constant-memory proof"
+  },
+  "proof": {
+    "activity": 517,
+    "commands": 517,
+    "display_activity": 100,
+    "display_movements": 100,
+    "events": 517,
+    "exactly_once_totals": true,
+    "history_page_sizes": [
+      25,
+      25
+    ],
+    "history_pages_disjoint": true,
+    "independent_reconciliation": true,
+    "isolation": {
+      "second_warehouse_provisioning_fixture": "empty header and standard locations only",
+      "tenant_isolation": true,
+      "warehouse_isolation": true
+    },
+    "last_unit": {
+      "business_rejections": 1,
+      "frozen_replays": 1,
+      "physical_actions": 1,
+      "stale_version_rejections": 1
+    },
+    "physical_custody_total": 20000008,
+    "physical_movements": 244,
+    "receipt_movement_quantity": 7,
+    "received": 7,
+    "reserved_total": 50
+  },
+  "recorded_at": "2026-10-17T19:11:48.130998217+00:00",
+  "schema_version": 1,
+  "seed": {
+    "allocated_orders": 50,
+    "bin_lot_balances": 207,
+    "commands": 476,
+    "open_orders": 100,
+    "products": 101,
+    "seconds": 34.204502005,
+    "storage_bins": 21
+  },
+  "tenant": "capacity-4d702080-9875-4e2a-8bb0-e7a9b3a2274a"
+}

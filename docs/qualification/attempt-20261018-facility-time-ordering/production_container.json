@@ -1,0 +1,144 @@
+{
+  "ok": true,
+  "synthetic": true,
+  "image_id": "sha256:dbf0a840006a0816bd5293d210826dc48c6d9720cfe9ff83509a54582aa9db0b",
+  "source_inputs_sha256": "5b8eb56b2d1a5e4b18977dec050cbd86f5a25619b4a742aec875cfe73312cd41",
+  "release_revision": "facility-evidence-v2-6887fd02015f0c2efde9989c1c7e546b98c7df6656ab1ca1b4ae3593547aa6f0",
+  "os": "linux",
+  "architecture": "amd64",
+  "docker_server_version": "27.4.0",
+  "postgres_server_version": "16.15",
+  "postgres_image_id": "sha256:81bd698b4594e751a3269e4dcd3e03a4a0ec0daf7b72e7aa1abd43cce9887542",
+  "postgres_repo_digests": [
+    "postgres@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea"
+  ],
+  "qualifier_script_sha256": "9d127568bdf34ffdebf3b5bfc3bb171d9b95f64dc9c53274ad61b95eeab3af6e",
+  "elapsed_build_and_runtime_seconds": 12,
+  "runtime": {
+    "uid": 10001,
+    "read_only_rootfs": true,
+    "effective_capabilities": 0,
+    "no_new_privileges": true,
+    "health": "healthy",
+    "random_loopback_host_port": true,
+    "unauthenticated_api_status": 401,
+    "real_mode_authenticated_session": true,
+    "mcp": {
+      "unauthenticated_status": 401,
+      "authenticated_session_matches_rest": true,
+      "catalog_tools": 65,
+      "catalog_bytes": 96006,
+      "partial_fulfillment_tools_present": true
+    },
+    "immutable_image_id_bound_to_running_container": true,
+    "graceful_sigterm_exit_code": 0,
+    "compiled_dashboard_served": true,
+    "independent_reconciliation": {
+      "lot_controls": {
+        "baseline_version": 0,
+        "eligibility_decisions": 0,
+        "ok": true,
+        "policy_changes": 0
+      },
+      "method": "full_append_only_ledger_and_order_line_allocations",
+      "ok": true,
+      "packages": [],
+      "receipt_cancellations": [],
+      "receipts": [],
+      "returns": [],
+      "rows": [],
+      "shipments": [],
+      "transfers": [],
+      "units": {
+        "definition_changes": 0,
+        "method": "immutable_definition_and_original_command_each_conversion",
+        "ok": true,
+        "quantity_observations": 0
+      },
+      "version": 0
+    }
+  },
+  "migrations": [
+    {
+      "name": "001_initial",
+      "sha256": "8e5c3fa5f0065b63076c33b8bd3c337b8490d4b7a88f3e774ec17e2290e1f4d4"
+    },
+    {
+      "name": "002_relational_execution",
+      "sha256": "660cd0fdbc7205644c7c3d7ac3da43cbaf1c6d9f80c4d0f2ea4d0c0986e6ff90"
+    },
+    {
+      "name": "003_native_operations",
+      "sha256": "f9a5cfa4a1e4f7830613febe6b37f11a8485beef46d6b96791c78435fe784108"
+    },
+    {
+      "name": "004_native_source_ownership",
+      "sha256": "366979c9630c4c62cb7d71beb5c89cd917764558b4e05267c4eb4aac486a6cb9"
+    },
+    {
+      "name": "005_conditional_oms_fulfillment",
+      "sha256": "b8892cbaa4a1b26c6e1732616ec30503d3698f44e363240386078398e29e9a41"
+    },
+    {
+      "name": "006_oms_rejections",
+      "sha256": "567e061943a1602ff25b5d5c988be810808b8c6e1638885ee6ef9b71a9ba4ed4"
+    },
+    {
+      "name": "007_operations_indexes",
+      "sha256": "b0b9b422f570ed77ca1252df42c96b29544849621ed748cadd1f068b708576b5"
+    },
+    {
+      "name": "008_delivery_recipient",
+      "sha256": "050f40c80b9e73a3edc8a19545ab08cfe41051616b84d9445dfdea9a30de9d19"
+    },
+    {
+      "name": "009_resource_versions",
+      "sha256": "b702a003a1d74210fdfc06cef1fbfb6e737146a25314642094a2f8383dc2e209"
+    },
+    {
+      "name": "010_customer_returns",
+      "sha256": "dfafb0547d0af2ba11f86dfa31f7facebe89adf582d6b215d02b734e1413fb71"
+    },
+    {
+      "name": "011_immutable_command_receipts",
+      "sha256": "0a7c69928f38527f542a55e795de9b62c65f4907d7d05cba2d47f7eeebdf8a73"
+    },
+    {
+      "name": "012_receipt_cancellation",
+      "sha256": "5a36bc5c39f49fe9fdf9e6cd292d71ed50c85daffea2777fda890d9b2d68a676"
+    },
+    {
+      "name": "013_shipment_evidence",
+      "sha256": "e867e6b35c3cbcb10ea5f4a952c916f10e7b5d16b53c80aad656a9fba286334e"
+    },
+    {
+      "name": "014_facility_transfers",
+      "sha256": "b98005fca14a6aa180c09e77d998105662b3f11147a3284d6a145147de3182b1"
+    },
+    {
+      "name": "015_split_fulfillment",
+      "sha256": "dd2e0b0625cec5d9cd1a6209e094f924fc4cb503a0b82ed3fcc2253109fe393a"
+    },
+    {
+      "name": "016_order_remainder_cancellation",
+      "sha256": "c79180323838e6353c3c32f77564aa3ae37eae6b523bf405e12311496f0f3f43"
+    },
+    {
+      "name": "017_lot_controls",
+      "sha256": "cbca465647b18f84e9d74deeabbe011a7572957b90c4046de9f2f0e9738360bf"
+    },
+    {
+      "name": "018_lot_trace",
+      "sha256": "c4d000be8cc2bae0097c629f98556177b97225cc6ba753cb29731e5464a85d4c"
+    },
+    {
+      "name": "019_transfer_loss",
+      "sha256": "30822c5f49905f192d4eff2de3b90e885ed800d26d1bc97e6b383b1fef47eae1"
+    },
+    {
+      "name": "020_pack_units",
+      "sha256": "7ba3eefed9e4386fc2f11002540bd703d0e6c584780ca3a378e308831c4bccf1"
+    }
+  ],
+  "qualification_limit": "Production image build and isolated synthetic PostgreSQL runtime; no facility or deployed integration acceptance claimed"
+}

@@ -1,0 +1,201 @@
+
+Running 10 tests using 1 worker
+
+(node:634018) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [live-postgres] › tests/cancellation-live.spec.ts:7:1 › partial RMA cancellation preserves physical stock and reauthorizes only its unreceived line (2.0s)
+  ✘   2 [live-postgres] › tests/facilities-live.spec.ts:8:1 › multiple facilities keep physical stock, selected context and original creation receipts isolated (1.4s)
+(node:634255) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   3 [live-postgres] › tests/live.spec.ts:3:1 › real browser and Postgres recover a same-SKU short pick through physical handoff (7.2s)
+  ✓   4 [live-postgres] › tests/lot-controls-live.spec.ts:7:1 › lot controls preserve real custody and original recovery through expiry, quarantine, package unpack and scanner return (6.1s)
+  ✓   5 [live-postgres] › tests/operations-live.spec.ts:10:1 › real operational snapshot, metrics, and CSP-protected export agree with committed exception recovery (727ms)
+  ✓   6 [live-postgres] › tests/scanner-live.spec.ts:10:1 › scanner receiving and exact-line picking survive a concurrent operator count through physical handoff (4.1s)
+  ✓   7 [live-postgres] › tests/scanner-live.spec.ts:394:1 › replenishment moves and customer returns retain exact physical and source evidence (2.2s)
+  ✘   8 [live-postgres] › tests/split-live.spec.ts:8:1 › partial shipments allocate real backorders and preserve each handoff, early return and original request (2.0m)
+(node:637604) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   9 [live-postgres] › tests/split-live.spec.ts:256:1 › partly shipped remainder closure requires physical recovery and retains original demand, handoff, return allowance and replay (2.8s)
+(node:637803) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  10 [live-postgres] › tests/transfers-live.spec.ts:8:1 › facility handoff remains in transit until exact partial destination arrivals and original replays (1.8s)
+
+
+  1) [live-postgres] › tests/facilities-live.spec.ts:8:1 › multiple facilities keep physical stock, selected context and original creation receipts isolated 
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+    @@ -1,8 +1,8 @@
+      Object {
+        "activity": Array [],
+    -   "availability_checked_at": "2026-10-18T23:59:14.416555Z",
+    +   "availability_checked_at": "2026-10-18T23:59:15.614975Z",
+        "exceptions": Array [],
+        "inventory_baseline": Array [],
+        "locations": Array [
+          Object {
+            "code": "RECV-01",
+
+      138 |   state = await get(`/v1/warehouses/${warehouse}`);
+      139 |   expect(state.stocks.find((s: any) => s.sku === sku).on_hand).toBe(7);
+    > 140 |   expect(await get("/v1/warehouses/wh-main")).toEqual(before);
+          |                                               ^
+      141 |   await page
+      142 |     .getByRole("button", { name: "Change warehouse", exact: true })
+      143 |     .click();
+        at /home/dom/stateset-warehouse/dashboard/tests/facilities-live.spec.ts:140:47
+
+    Error Context: ../../../../tmp/wms-lot-release.BWc8icxC/live-browser-results/facilities-live-multiple-f-0f57c--creation-receipts-isolated-live-postgres/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../tmp/wms-lot-release.BWc8icxC/live-browser-results/facilities-live-multiple-f-0f57c--creation-receipts-isolated-live-postgres/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../tmp/wms-lot-release.BWc8icxC/live-browser-results/facilities-live-multiple-f-0f57c--creation-receipts-isolated-live-postgres/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [live-postgres] › tests/split-live.spec.ts:8:1 › partial shipments allocate real backorders and preserve each handoff, early return and original request 
+
+    Test timeout of 120000ms exceeded.
+
+    Error: page.waitForRequest: Test timeout of 120000ms exceeded.
+
+      92 |   };
+      93 |   const clickCommand = async (type: string, name: string) => {
+    > 94 |     const sent = page.waitForRequest(
+         |                       ^
+      95 |       (r) =>
+      96 |         r.method() === "POST" &&
+      97 |         r.url().endsWith("/commands") &&
+        at clickCommand (/home/dom/stateset-warehouse/dashboard/tests/split-live.spec.ts:94:23)
+        at /home/dom/stateset-warehouse/dashboard/tests/split-live.spec.ts:185:9
+
+    Error: locator.click: Test timeout of 120000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: 'Allocate available stock', exact: true })
+        - locator resolved to <button disabled class="btn" type="button">Allocate available stock</button>
+      - attempting click action
+        2 × waiting for element to be visible, enabled and stable
+          - element is not enabled
+        - retrying click action
+        - waiting 20ms
+        2 × waiting for element to be visible, enabled and stable
+          - element is not enabled
+        - retrying click action
+          - waiting 100ms
+        228 × waiting for element to be visible, enabled and stable
+            - element is not enabled
+          - retrying click action
+            - waiting 500ms
+
+
+       98 |         r.postDataJSON()?.command?.type === type,
+       99 |     );
+    > 100 |     await page.getByRole("button", { name, exact: true }).click();
+          |                                                           ^
+      101 |     const request = await sent;
+      102 |     const response = await request.response();
+      103 |     expect(response?.ok(), await response?.text()).toBe(true);
+        at clickCommand (/home/dom/stateset-warehouse/dashboard/tests/split-live.spec.ts:100:59)
+        at /home/dom/stateset-warehouse/dashboard/tests/split-live.spec.ts:185:9
+
+    Error Context: ../../../../tmp/wms-lot-release.BWc8icxC/live-browser-results/split-live-partial-shipmen-bfbb3-return-and-original-request-live-postgres/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../tmp/wms-lot-release.BWc8icxC/live-browser-results/split-live-partial-shipmen-bfbb3-return-and-original-request-live-postgres/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../tmp/wms-lot-release.BWc8icxC/live-browser-results/split-live-partial-shipmen-bfbb3-return-and-original-request-live-postgres/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [live-postgres] › tests/split-live.spec.ts:256:1 › partly shipped remainder closure requires physical recovery and retains original demand, handoff, return allowance and replay 
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+    @@ -575,11 +575,11 @@
+            "id": "d9e3928e-2d5f-41fa-9219-d2bd95013f0d",
+            "kind": "return.authorized",
+            "reference": "fdf5cdc7-c278-41f0-a3c5-38754a9987a3",
+          },
+        ],
+    -   "availability_checked_at": "2026-10-19T00:01:40.775859Z",
+    +   "availability_checked_at": "2026-10-19T00:01:40.804227Z",
+        "exceptions": Array [
+          Object {
+            "actor": "qualification:operator",
+            "category": "Operational qualification",
+            "created_at": "2026-10-18T23:59:30.213587877+00:00",
+
+      493 |     result: cancelled.result.result,
+      494 |   });
+    > 495 |   expect(await state()).toEqual(before);
+          |                         ^
+      496 |   const proof = await get("/v1/warehouses/wh-main/reconciliation");
+      497 |   expect(proof.ok).toBe(true);
+      498 |   const held = await page.request.post(
+        at /home/dom/stateset-warehouse/dashboard/tests/split-live.spec.ts:495:25
+
+    Error Context: ../../../../tmp/wms-lot-release.BWc8icxC/live-browser-results/split-live-partly-shipped--a9d07-return-allowance-and-replay-live-postgres/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../tmp/wms-lot-release.BWc8icxC/live-browser-results/split-live-partly-shipped--a9d07-return-allowance-and-replay-live-postgres/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../tmp/wms-lot-release.BWc8icxC/live-browser-results/split-live-partly-shipped--a9d07-return-allowance-and-replay-live-postgres/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [live-postgres] › tests/transfers-live.spec.ts:8:1 › facility handoff remains in transit until exact partial destination arrivals and original replays 
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+    @@ -23,11 +23,11 @@
+            "id": "6a1054a2-0fa5-44cf-86ad-c0f3c4fe764e",
+            "kind": "transfer.received",
+            "reference": "c402f092-b773-4965-b5e3-6cf33955d38b",
+          },
+        ],
+    -   "availability_checked_at": "2026-10-19T00:01:43.523212Z",
+    +   "availability_checked_at": "2026-10-19T00:01:43.591687Z",
+        "exceptions": Array [],
+        "inventory_baseline": Array [
+          Object {
+            "location": "RECV-01",
+            "lot": "ORIGINAL-LOT",
+
+      206 |     });
+      207 |   }
+    > 208 |   expect(await get(`/v1/warehouses/${destination}`)).toEqual(after);
+          |                                                      ^
+      209 |   const over = await page.request.post(
+      210 |     `/v1/warehouses/${destination}/commands`,
+      211 |     {
+        at /home/dom/stateset-warehouse/dashboard/tests/transfers-live.spec.ts:208:54
+
+    Error Context: ../../../../tmp/wms-lot-release.BWc8icxC/live-browser-results/transfers-live-facility-ha-b1663-rivals-and-original-replays-live-postgres/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../tmp/wms-lot-release.BWc8icxC/live-browser-results/transfers-live-facility-ha-b1663-rivals-and-original-replays-live-postgres/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../tmp/wms-lot-release.BWc8icxC/live-browser-results/transfers-live-facility-ha-b1663-rivals-and-original-replays-live-postgres/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4 failed
+    [live-postgres] › tests/facilities-live.spec.ts:8:1 › multiple facilities keep physical stock, selected context and original creation receipts isolated 
+    [live-postgres] › tests/split-live.spec.ts:8:1 › partial shipments allocate real backorders and preserve each handoff, early return and original request 
+    [live-postgres] › tests/split-live.spec.ts:256:1 › partly shipped remainder closure requires physical recovery and retains original demand, handoff, return allowance and replay 
+    [live-postgres] › tests/transfers-live.spec.ts:8:1 › facility handoff remains in transit until exact partial destination arrivals and original replays 
+  6 passed (2.5m)

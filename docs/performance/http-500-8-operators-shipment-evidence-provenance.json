@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "production_qualified": false,
+  "report": "http-500-8-operators-shipment-evidence.json",
+  "sha256": "0abfd2d4622c0421e28aa6061073a238d180696c43799e9c39a956f8d733b8fc",
+  "image_id": "sha256:a684bb0dd7b00c961325c23b0b652938637f0fe4c3476fdb5b7ff80ee056cca0",
+  "image_source_inputs_sha256": "e288d3b16e0fc1edc3f1878ba2e34600dd72850c82a34f02890eee7ddb7638fa",
+  "software_source_inputs_sha256": "134b09cd78d65d50b36c378837cf78cadd70a750d171ab96275de2be6464f800",
+  "release_provenance": "../qualification/release-20261018-shipment-evidence/provenance.json",
+  "traffic_model": "independent-operators",
+  "qualifier_sha256": {
+    "scripts/resilience-rehearsal.sh": "5fa42466238d4be5b260021da30541441d2c7d779b74b0594c8ac59099408227",
+    "scripts/resilience_probe.py": "67c2ceab339b0d21a5daa25af0b518f3cb476b4d856cedd914ed316cf27526ac"
+  },
+  "limits": [
+    "Same immutable image as all ten current software release stages",
+    "Original shipment evidence is exercised by actual SQL guard/race/upgrade/import tests, live browser provenance and a nonempty archive restore retaining exact original event identity",
+    "Sustained actions are bin moves and original-request replays; this is not repeated shipping or RMA authorization throughput",
+    "Client, two API replicas and PostgreSQL share a development host; no deployed capacity, causal speedup or facility SLO is inferred",
+    "Concurrent Cargo/Rust compiler processes were observed late in the sustained window; a private process sample is retained, with no causal attribution",
+    "All earlier performance windows and dated qualification bundles remain retained"
+  ]
+}

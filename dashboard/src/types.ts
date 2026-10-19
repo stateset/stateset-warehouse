@@ -1,4 +1,6 @@
 export type Product = {
+  serial_controlled?: boolean;
+  expiry_required?: boolean;
   sku: string;
   name: string;
   category: string;
@@ -25,6 +27,26 @@ export type Receipt = {
     received: number;
   }[];
   created_at: string;
+  return_source?: {
+    order_id: string;
+    reason: string;
+    line_ids: Record<string, string>;
+  };
+  cancellation?: {
+    reason: string;
+    actor: string;
+    cancelled_at: string;
+    lines: Record<
+      string,
+      {
+        sku: string;
+        lot: string;
+        quantity: number;
+        received: number;
+        cancelled: number;
+      }
+    >;
+  };
 };
 export type Allocation = {
   line_id: string;
@@ -37,6 +59,16 @@ export type Allocation = {
   released: number;
 };
 export type Order = {
+  remainder_cancellation?: {
+    reason: string;
+    actor: string;
+    cancelled_at: string;
+    lines: Record<
+      string,
+      { sku: string; ordered: number; shipped: number; cancelled: number }
+    >;
+  };
+  shipment_mode?: "packages";
   id: string;
   reference: string;
   source_order_id: string | null;
@@ -62,6 +94,13 @@ export type Movement = {
   reference: string;
   receipt_id?: string | null;
   receipt_line_id?: string | null;
+  transfer_id?: string | null;
+  transfer_line_id?: string | null;
+  transfer_event_id?: string | null;
+  package_id?: string | null;
+  order_line_id?: string | null;
+  allocation_location?: string | null;
+  shipment_event_id?: string | null;
   reason: string;
   actor: string;
   at: string;
@@ -85,6 +124,33 @@ export type Activity = {
   actor: string;
   at: string;
 };
+export type LotControl = {
+  sku: string;
+  lot: string;
+  expiry_recorded: boolean;
+  expires_at: string | null;
+  holds: {
+    id: string;
+    reason: string;
+    actor: string;
+    quarantined_at: string;
+  }[];
+};
+export type UnitPack = {
+  id: string;
+  sku: string;
+  code: string;
+  label: string;
+  each_per_pack: number;
+};
+export type UnitInput = {
+  target: string[];
+  sku: string;
+  pack_code: string;
+  definition_id: string;
+  pack_quantity: number;
+  each_per_pack: number;
+};
 export type WarehouseState = {
   warehouse: {
     id: string;
@@ -94,6 +160,10 @@ export type WarehouseState = {
     timezone: string;
   };
   version: number;
+  resource_versions?: Record<string, number>;
+  availability_checked_at?: string;
+  lot_controls?: LotControl[];
+  unit_packs?: UnitPack[];
   products: Product[];
   locations: Location[];
   stocks: Stock[];
@@ -120,6 +190,7 @@ export type HistoryPage<T> = {
 export type Session = {
   identity: { tenant: string; actor: string; role: string };
   demo: boolean;
+  default_warehouse_id?: string;
   native_integrations?: {
     oms: { configured: boolean; shipment_writeback?: string };
     tms: { configured: boolean };
@@ -142,9 +213,17 @@ export type Outbox = {
   occurred_at: string;
 };
 export type Command = { type: string; [key: string]: unknown };
+export type SerialInput = { target: string[]; sku: string; serials: string[] };
 export type Journal = {
   tenant: string;
   actor: string;
   warehouse: string;
-  request: { request_id: string; expected_version: number; command: Command };
+  request: {
+    request_id: string;
+    expected_version: number;
+    command: Command;
+    resource_versions?: Record<string, number>;
+    unit_inputs?: UnitInput[];
+    serial_inputs?: SerialInput[];
+  };
 };

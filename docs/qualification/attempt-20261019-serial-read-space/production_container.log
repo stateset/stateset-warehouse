@@ -1,0 +1,3 @@
+Building production image; evidence: /tmp/wms-serial-reference-release.oKB7do9s/container
+Container qualification evidence: /tmp/wms-serial-reference-release.oKB7do9s/container
+Container qualification failed; inspect the retained build/runtime evidence.

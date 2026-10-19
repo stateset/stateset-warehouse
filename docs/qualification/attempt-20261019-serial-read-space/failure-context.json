@@ -1,0 +1,29 @@
+{
+  "recorded_at": "2026-10-19T12:30:16.732184+00:00",
+  "result": "intentionally_interrupted_after_filesystem_exhaustion_not_qualified",
+  "reason": "The shared host filesystem reached ENOSPC during production image compilation. A shell heredoc and a new sandbox startup failed. Ctrl-C was explicitly sent to the owned gate, which terminated130 and canceled its Docker build. This was not an observation timeout or a source35 API reconciliation failure.",
+  "source_revision": 35,
+  "source_inputs": 213,
+  "source_inputs_sha256": "27c872741ee4e584432f1a279c1965d266a079b95bf5dcc2b7aca3b9c20ff549",
+  "source_archive_sha256": "1db959bbd32382cfc3407e129c78d4e9a1a2d7867b8522b705908e1c14e7edef",
+  "successful_stages": 7,
+  "failed_stage": "production_container",
+  "terminal_exit": 130,
+  "rust_passed": 318,
+  "python_passed": 61,
+  "offline_browser_passed": 149,
+  "actual_browser_passed": 23,
+  "migrations": 28,
+  "image_id": null,
+  "image_resilience_not_run": true,
+  "stable_source_inputs_stage_not_run": true,
+  "independent_post_attempt_source35_exact_match": true,
+  "accepted_release_unchanged": true,
+  "production_qualified": false,
+  "limits": [
+    "Seven completed stages do not qualify an image or a complete release.",
+    "Private compiler/cache metadata paths changed only after final host builds; five linked executable hashes remained identical. Source archives, actual executables, database data, images and evidence files were preserved.",
+    "Two rebuildable .d dependency-metadata files were removed to allow sandbox startup. The failed direct .rlib replacement left the original archive unchanged, as its later archive signature and original SHA256 were verified before cache-only removal.",
+    "Filesystem exhaustion is observed; this report does not attribute all shared-host disk consumption to this gate."
+  ]
+}

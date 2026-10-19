@@ -20,6 +20,7 @@ struct Config {
     open_orders: usize,
     clients: usize,
     actions_per_client: usize,
+    scoped_reviews: bool,
     max_action_p95_ms: Option<f64>,
     min_actions_per_second: Option<f64>,
 }
@@ -49,6 +50,11 @@ fn threshold(name: &str) -> Result<Option<f64>> {
 impl Config {
     fn read() -> Result<Self> {
         let clients = setting("WMS_WORKLOAD_CLIENTS", 4, 1, 32)?;
+        let scoped_reviews = match std::env::var("WMS_WORKLOAD_REVIEW_MODE").as_deref() {
+            Ok("warehouse") => false,
+            Ok("resources") | Err(_) => true,
+            _ => return Err("WMS_WORKLOAD_REVIEW_MODE must be resources or warehouse".into()),
+        };
         Ok(Self {
             products: setting("WMS_WORKLOAD_PRODUCTS", 100, clients, 20_000)?,
             storage_bins: setting("WMS_WORKLOAD_BINS", 20, 2, 10_000)?,
@@ -56,6 +62,7 @@ impl Config {
             open_orders: setting("WMS_WORKLOAD_OPEN_ORDERS", 100, 0, 20_000)?,
             clients,
             actions_per_client: setting("WMS_WORKLOAD_ACTIONS", 10, 1, 10_000)?,
+            scoped_reviews,
             max_action_p95_ms: threshold("WMS_WORKLOAD_MAX_P95_MS")?,
             min_actions_per_second: threshold("WMS_WORKLOAD_MIN_ACTIONS_PER_SECOND")?,
         })
@@ -138,8 +145,11 @@ async fn submit(
             identity,
             warehouse,
             &Request {
+                serial_inputs: Vec::new(),
+                unit_inputs: Vec::new(),
                 request_id: id(),
                 expected_version: *version,
+                resource_versions: None,
                 command,
             },
         )
@@ -160,6 +170,7 @@ async fn seed(store: &Store, identity: &Identity, c: &Config) -> Result<i64> {
             "wh-main",
             &mut version,
             Command::CreateProduct {
+                serial_controlled: false,
                 sku: sku(n),
                 name: format!("Capacity qualification product {n}"),
                 category: "Qualification".into(),
@@ -269,8 +280,11 @@ async fn seed(store: &Store, identity: &Identity, c: &Config) -> Result<i64> {
     )
     .await?;
     let receive = Request {
+        serial_inputs: Vec::new(),
+        unit_inputs: Vec::new(),
         request_id: id(),
         expected_version: version,
+        resource_versions: None,
         command: Command::Receive {
             receipt_id: receipt["entity_id"]
                 .as_str()
@@ -343,15 +357,21 @@ async fn client(
         for _ in 0..1_000 {
             // This is the operator's refresh, included in end-to-end action latency.
             let refresh_start = Instant::now();
-            let version = store
+            let state = store
                 .state(&identity.tenant, "wh-main")
                 .await
-                .map_err(describe)?
-                .version;
+                .map_err(describe)?;
             stats.refresh_latency.record(refresh_start);
             let request = Request {
+                serial_inputs: Vec::new(),
+                unit_inputs: Vec::new(),
                 request_id: id(),
-                expected_version: version,
+                expected_version: state.version,
+                resource_versions: if c.scoped_reviews {
+                    stateset_warehouse::concurrency::reviewed_versions(&state, &command)?
+                } else {
+                    None
+                },
                 command: command.clone(),
             };
             let mut transient_retries = 0;
@@ -415,8 +435,11 @@ async fn last_unit(store: &Store, identity: &Identity, c: &Config) -> Result<Val
         .map_err(describe)?
         .version;
     let request = |to| Request {
+        serial_inputs: Vec::new(),
+        unit_inputs: Vec::new(),
         request_id: id(),
         expected_version: version,
+        resource_versions: None,
         command: Command::MoveStock {
             sku: sku(c.products),
             lot: "LAST-UNIT".into(),
@@ -480,8 +503,6 @@ async fn isolation(store: &Store, identity: &Identity) -> Result<Value> {
         .provision(&outside.tenant, false)
         .await
         .map_err(describe)?;
-    // Provisioning currently exposes only wh-main. This fixture creates only an
-    // empty second warehouse header; all catalog/stock changes still use Store.
     let metadata = Warehouse {
         id: "wh-isolation".into(),
         code: "ISOLATION".into(),
@@ -489,28 +510,6 @@ async fn isolation(store: &Store, identity: &Identity) -> Result<Value> {
         city: "Synthetic".into(),
         timezone: "UTC".into(),
     };
-    sqlx::query(
-        "INSERT INTO wms_warehouses(tenant,warehouse_id,version,metadata) VALUES($1,$2,0,$3)",
-    )
-    .bind(&identity.tenant)
-    .bind(&metadata.id)
-    .bind(json!(metadata))
-    .execute(&store.pool)
-    .await
-    .map_err(|e| e.to_string())?;
-    // An empty warehouse also requires system locations; add them as provisioning
-    // fixtures, matching State::empty exactly, without balances or execution rows.
-    for (code, kind) in [("RECV-01", "receiving"), ("STAGE-01", "staging")] {
-        sqlx::query("INSERT INTO wms_locations VALUES($1,$2,$3,$4,$5)")
-            .bind(&identity.tenant)
-            .bind(&metadata.id)
-            .bind(code)
-            .bind(kind)
-            .bind(json!({"code":code,"zone":if kind=="staging" {"Outbound"} else {"Receiving"},"kind":kind}))
-            .execute(&store.pool)
-            .await
-            .map_err(|e| e.to_string())?;
-    }
     let before = store
         .state(&identity.tenant, "wh-main")
         .await
@@ -521,7 +520,21 @@ async fn isolation(store: &Store, identity: &Identity) -> Result<Value> {
         identity,
         &metadata.id,
         &mut version,
+        Command::CreateWarehouse {
+            code: metadata.code.clone(),
+            name: metadata.name.clone(),
+            city: metadata.city.clone(),
+            timezone: metadata.timezone.clone(),
+        },
+    )
+    .await?;
+    submit(
+        store,
+        identity,
+        &metadata.id,
+        &mut version,
         Command::CreateProduct {
+            serial_controlled: false,
             sku: "ISOLATED-PRODUCT".into(),
             name: "Isolated product".into(),
             category: "Qualification".into(),
@@ -576,8 +589,11 @@ async fn isolation(store: &Store, identity: &Identity) -> Result<Value> {
             role: "admin".into(),
         };
         let request = Request {
+            serial_inputs: Vec::new(),
+            unit_inputs: Vec::new(),
             request_id: id(),
             expected_version: if warehouse == "wh-main" { 0 } else { version },
+            resource_versions: None,
             command: Command::CountStock {
                 sku: sku(0),
                 lot: lot(0),
@@ -691,6 +707,12 @@ async fn run() -> Result<()> {
     let mut result = ClientResult::default();
     for handle in handles {
         result.merge(handle.await.map_err(|e| e.to_string())??);
+    }
+    if c.scoped_reviews {
+        check(
+            result.stale_versions == 0,
+            "Independent resource reviews produced spurious conflicts",
+        )?;
     }
     let seconds = start.elapsed().as_secs_f64();
     let state = store

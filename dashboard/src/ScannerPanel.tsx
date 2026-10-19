@@ -6,26 +6,38 @@ import type {
   Order,
   Receipt,
   WarehouseState,
+  UnitInput,
 } from "./types";
 import "./ScannerPanel.css";
+import UnitQuantityInput from "./UnitQuantityInput";
+import { reviewedVersions, sameVersions } from "./concurrency";
+import { availability, availabilityLabel } from "./lotAvailability";
 
 type Props = {
+  at: bigint | undefined;
   state: WarehouseState;
   canWork: boolean;
   disabled: boolean;
   active: boolean;
   request: (path: string) => Promise<any>;
   /** Uses the shared durable command journal. True means the save was confirmed. */
-  onSubmit: (command: Command, expectedVersion: number) => Promise<boolean>;
+  onSubmit: (
+    command: Command,
+    expectedVersion: number,
+    versions?: Record<string, number>,
+    unitInputs?: UnitInput[],
+  ) => Promise<boolean>;
 };
-type Selection =
+type Selection = (
   | { kind: "receive"; record: Receipt; version: number; warehouse: string }
-  | { kind: "pick"; record: Order; version: number; warehouse: string };
+  | { kind: "pick"; record: Order; version: number; warehouse: string }
+) & { resourceVersions?: Record<string, number> };
 const allocationKey = (allocation: Allocation) =>
   JSON.stringify([allocation.line_id, allocation.location, allocation.lot]);
 const steps = ["location", "SKU", "lot"] as const;
 
 export default function ScannerPanel({
+  at,
   state,
   canWork,
   disabled,
@@ -41,6 +53,7 @@ export default function ScannerPanel({
   const [verified, setVerified] = useState<string[]>([]);
   const [scan, setScan] = useState("");
   const [quantity, setQuantity] = useState("1");
+  const [unitInput, setUnitInput] = useState<UnitInput>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -51,9 +64,6 @@ export default function ScannerPanel({
   const verification = useRef<string[]>([]);
   const loadSequence = useRef(0);
   const warehouse = state.warehouse.id;
-  const stale =
-    !!selection &&
-    (selection.version !== state.version || selection.warehouse !== warehouse);
   const blocked = disabled || busy || !canWork;
   const receivingLocations = state.locations.filter(
     (bin) => bin.kind === "receiving",
@@ -93,12 +103,64 @@ export default function ScannerPanel({
         exception.status === "open" &&
         exception.order_id === selection.record.id,
     );
+  const reviewCommand: Command | null =
+    selection && target
+      ? selection.kind === "receive"
+        ? {
+            type: "receive",
+            receipt_id: selection.record.id,
+            line_id: target.line,
+            location: target.location,
+            quantity: 1,
+          }
+        : {
+            type: "pick",
+            order_id: selection.record.id,
+            line_id: target.line,
+            location: target.location,
+            lot: target.lot,
+            quantity: 1,
+          }
+      : null;
+  const capturedVersions =
+    selection && reviewCommand
+      ? reviewedVersions(
+          {
+            ...state,
+            resource_versions: selection.resourceVersions,
+            ...(selection.kind === "receive"
+              ? { receipts: [selection.record] }
+              : { orders: [selection.record] }),
+          },
+          reviewCommand,
+        )
+      : undefined;
+  const currentVersions =
+    capturedVersions && state.resource_versions
+      ? Object.fromEntries(
+          Object.keys(capturedVersions).map((k) => [
+            k,
+            state.resource_versions![k] ?? 0,
+          ]),
+        )
+      : undefined;
+  const stale =
+    !!selection &&
+    (selection.warehouse !== warehouse ||
+      (capturedVersions
+        ? !sameVersions(capturedVersions, currentVersions)
+        : selection.version !== state.version));
+  const lotStatus = target
+    ? availability(state, target.sku, target.lot, at)
+    : undefined;
+  const lotHeld = selection?.kind === "pick" && lotStatus !== "available";
   const readyToScan =
     !!target &&
     !!target.location &&
     target.remaining > 0 &&
     !stale &&
-    !orderBlocked;
+    !orderBlocked &&
+    !lotHeld;
   const validQuantity =
     /^[1-9]\d*$/.test(quantity) &&
     Number.isSafeInteger(Number(quantity)) &&
@@ -117,6 +179,7 @@ export default function ScannerPanel({
     setVerified([]);
     setScan("");
     setQuantity("1");
+    setUnitInput(undefined);
     setError("");
     setNotice("");
     setFocusSequence((value) => value + 1);
@@ -186,19 +249,31 @@ export default function ScannerPanel({
         );
       if (mode === "receive") {
         const receipt = record as Receipt;
+        if (receipt.cancellation || receipt.status === "cancelled")
+          throw new Error(
+            "This receipt remainder was cancelled. Select open receiving work.",
+          );
         const line = receipt.lines.find(
           (item) => item.received < item.quantity,
         );
         if (!line)
           throw new Error("This receipt has no remaining quantity to receive.");
-        setSelection({ kind: "receive", record: receipt, version, warehouse });
+        setSelection({
+          kind: "receive",
+          record: receipt,
+          version,
+          warehouse,
+          resourceVersions: state.resource_versions,
+        });
         setLineKey(line.id);
         setReceivingBin(
           receivingLocations.length === 1 ? receivingLocations[0].code : "",
         );
       } else {
         const order = record as Order;
-        if (!["allocated", "picking"].includes(order.status))
+        if (
+          !["allocated", "picking", "partially_shipped"].includes(order.status)
+        )
           throw new Error(
             "This order must have an active allocation before scanning picks.",
           );
@@ -207,7 +282,13 @@ export default function ScannerPanel({
         );
         if (!line)
           throw new Error("This order has no remaining allocation to pick.");
-        setSelection({ kind: "pick", record: order, version, warehouse });
+        setSelection({
+          kind: "pick",
+          record: order,
+          version,
+          warehouse,
+          resourceVersions: state.resource_versions,
+        });
         setLineKey(allocationKey(line));
       }
     } catch (failure) {
@@ -274,7 +355,12 @@ export default function ScannerPanel({
             quantity: Number(quantity),
           };
     try {
-      const confirmed = await onSubmit(command, selection.version);
+      const confirmed = await onSubmit(
+        command,
+        selection.version,
+        capturedVersions,
+        unitInput ? [unitInput] : undefined,
+      );
       if (confirmed) {
         setSelection(null);
         setLineKey("");
@@ -371,11 +457,16 @@ export default function ScannerPanel({
         </label>
         <datalist id="scanner-work-list">
           {(mode === "receive"
-            ? state.receipts.filter((receipt) =>
-                receipt.lines.some((line) => line.received < line.quantity),
+            ? state.receipts.filter(
+                (receipt) =>
+                  ["expected", "partial"].includes(receipt.status) &&
+                  !receipt.cancellation &&
+                  receipt.lines.some((line) => line.received < line.quantity),
               )
             : state.orders.filter((order) =>
-                ["allocated", "picking"].includes(order.status),
+                ["allocated", "picking", "partially_shipped"].includes(
+                  order.status,
+                ),
               )
           ).map((record) => (
             <option key={record.id} value={record.reference} />
@@ -484,6 +575,16 @@ export default function ScannerPanel({
                   <dd>{target.remaining} each</dd>
                 </div>
               </dl>
+              {lotStatus && (
+                <p role={lotHeld ? "alert" : "status"}>
+                  Lot: {availabilityLabel[lotStatus]}.
+                  {lotHeld
+                    ? " Picking is held. Review Inventory → Lot expiry and quarantine; existing reservations are retained."
+                    : selection.kind === "receive" && lotStatus !== "available"
+                      ? " Receiving actual custody is still allowed; the lot stays unavailable for fulfillment."
+                      : " Expiry is checked again when saving."}
+                </p>
+              )}
               <ol className="scanner-steps" aria-label="Label verification">
                 {steps.map((step, index) => (
                   <li
@@ -548,21 +649,27 @@ export default function ScannerPanel({
                   <p className="scanner-verified" role="status">
                     All three labels verified. No inventory has been saved yet.
                   </p>
-                  <label htmlFor="scanner-quantity">
-                    Physical quantity (each)
-                    <input
-                      id="scanner-quantity"
-                      ref={quantityInput}
-                      type="number"
-                      inputMode="numeric"
-                      min={1}
-                      max={target.remaining}
-                      step={1}
-                      value={quantity}
-                      disabled={blocked || stale || !!orderBlocked}
-                      onChange={(event) => setQuantity(event.target.value)}
-                    />
-                  </label>
+                  <UnitQuantityInput
+                    key={JSON.stringify([
+                      selection.record.id,
+                      lineKey,
+                      target.sku,
+                      target.location,
+                      target.lot,
+                    ])}
+                    packs={state.unit_packs}
+                    sku={target.sku}
+                    target={[]}
+                    value={quantity}
+                    onChange={(each, input) => {
+                      setQuantity(each);
+                      setUnitInput(input);
+                    }}
+                    label="Physical quantity (each)"
+                    max={target.remaining}
+                    inputRef={quantityInput}
+                    disabled={blocked || stale || !!orderBlocked || lotHeld}
+                  />
                   {!validQuantity && (
                     <p className="scanner-error">
                       Enter a whole quantity from 1 to {target.remaining}.

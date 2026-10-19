@@ -1,0 +1,15 @@
+{
+  "recorded_at": "2026-10-19T14:14:22.750414+00:00",
+  "scope": "Retained failed source38 gate; accepted source35 image unchanged.",
+  "source_revision": 38,
+  "source_inputs_sha256": "2e147a22984fe0ccd5555acc40c8619a998c725fa5930ea45026bb9e7a13f904",
+  "actual_exit_code": 1,
+  "rust_passed": 319,
+  "python_passed": 62,
+  "offline_browser_passed": 148,
+  "offline_browser_failed": 1,
+  "failure": "Chromium Target crashed while filling a visible/enabled quantity input in existing changed-pack scanner regression.30000ms timeout. All other148 cases pass. Full release gate failed.",
+  "resource_context": "Shared filesystem free space fell below30MB during browser phase and later recovered above200MB. This is context, not a proven root cause. Sparse-zero compiler operations preserved every file hash and reclaimed7.4MB; no executable/evidence/data deleted.",
+  "failed_case": "scanner.spec.ts:519 a changed pack definition invalidates scanner work until an explicit fresh review",
+  "production_qualified": false
+}

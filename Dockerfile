@@ -11,12 +11,17 @@ ARG CARGO_BUILD_JOBS=4
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src
 COPY migrations ./migrations
-RUN cargo build --locked --release --jobs "$CARGO_BUILD_JOBS"
+# Keep downloaded crates and compiler intermediates out of persistent layers.
+# Copy the linked executable before these bounded temporary mounts disappear.
+RUN --mount=type=tmpfs,target=/build/target,size=2147483648 \
+    --mount=type=tmpfs,target=/usr/local/cargo/registry,size=1073741824 \
+    cargo build --locked --release --jobs "$CARGO_BUILD_JOBS" \
+    && install -m 0755 target/release/stateset-warehouse /build/stateset-warehouse
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/* && useradd --system --uid 10001 warehouse
 WORKDIR /app
-COPY --from=api /build/target/release/stateset-warehouse /usr/local/bin/stateset-warehouse
+COPY --from=api /build/stateset-warehouse /usr/local/bin/stateset-warehouse
 COPY --from=web /build/dashboard/dist ./dashboard/dist
 USER 10001
 ENV WMS_BIND=0.0.0.0:8088 WMS_DEMO=false

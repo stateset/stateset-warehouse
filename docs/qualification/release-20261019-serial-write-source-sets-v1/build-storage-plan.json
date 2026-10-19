@@ -1,0 +1,15 @@
+{
+  "recorded_at": "2026-10-19T14:23:14.095579+00:00",
+  "scope": "Build resource plan; not a measured memory peak or capacity guarantee.",
+  "source_revision": 39,
+  "Dockerfile_sha256": "838909c3251bd4b20928462530177261a9d1d8503fa8e838b377ea7b578d2b5e",
+  "compiler_tmpfs_limit_bytes": 2147483648,
+  "registry_tmpfs_limit_bytes": 1073741824,
+  "only_linked_executable_persisted_in_builder": true,
+  "observed_available_host_memory_GiB_before_run": 21,
+  "all_immutable_images_retained": true,
+  "all_databases_and_source_capsules_retained": true,
+  "obsolete_test_executables_losslessly_preserved": 14,
+  "obsolete_test_binary_archives": "/home/dom/stateset-warehouse/.local/qualification/serial-tracking-development-20261018/obsolete-host-test-binaries",
+  "production_qualified": false
+}

@@ -1,0 +1,18 @@
+{
+  "synthetic": true,
+  "production_qualified": false,
+  "result": "failed",
+  "elapsed_seconds": 416,
+  "terminal_exit": 1,
+  "source_inputs_sha256": "fdc2f97cf7da39f66aeadcdb76fb3ec42020e5281b22e09aaf3e0bfca6a9d951",
+  "observations": [
+    "6 live browser workflows passed, including new lot control flow; 4 failed",
+    "Facility, remainder and transfer full-snapshot equality failed because availability_checked_at is a fresh observation, with all compared persisted fields identical",
+    "Partial shipment browser case reached external replenishment count then correctly held mismatching warehouse/shipment review versions; Refresh shipment review lacked a parent policy-snapshot refresh path",
+    "Container, image resilience and stable final source stages did not run; no complete lot release qualification claimed"
+  ],
+  "next": "Validate observation timestamps independently while comparing every persisted snapshot field; make explicit shipment-review refresh reload canonical warehouse policy; rerun actual workflows then full frozen gate",
+  "private_retention": ".local/qualification/lot-controls-integrity-development-20261018/first-release-attempt",
+  "private_exact_source_archive_sha256": "a524b5ae7c3090eb3eeb446f273970dbeb0a73affe81e5539ac25b2f712a019c",
+  "private_browser_traces_retained": true
+}

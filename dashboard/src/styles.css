@@ -2844,3 +2844,61 @@ tbody tr:hover {
     grid-template-columns: 1fr;
   }
 }
+
+.unit-quantity {
+  min-width: 0;
+}
+.unit-quantity label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.unit-quantity select,
+.unit-quantity input {
+  width: 100%;
+  min-width: 0;
+}
+.unit-quantity small {
+  display: block;
+  margin-top: 0.4rem;
+  overflow-wrap: anywhere;
+}
+
+.unit-packs-panel,
+.unit-packs-panel section {
+  min-width: 0;
+}
+.unit-packs-panel section > label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+.unit-packs-panel select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 40px;
+}
+
+.unit-packs-panel p,
+.unit-packs-panel li {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.unit-packs-panel p {
+  margin: 12px 0;
+}
+.unit-packs-panel li {
+  margin: 8px 0;
+}
+.unit-packs-panel .workflow-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+.unit-packs-panel section > label {
+  font-size: 12px;
+  font-weight: 600;
+}

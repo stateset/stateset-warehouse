@@ -21,7 +21,10 @@ ROOT = Path(__file__).resolve().parent.parent
 BIN_DIR = Path(os.environ.get("WMS_PG_BIN", "/usr/lib/postgresql/12/bin"))
 FAILURE = re.compile(r"\b(?:ERROR|FATAL|PANIC):")
 QUERY_CALL = re.compile(r"sqlx::query(?:_scalar|_as)?(?:\s*::<[^>]+>)?\(\s*")
-RUST_STRING = re.compile(r'"((?:\\.|[^"\\])*)"', re.DOTALL)
+RUST_STRING = re.compile(
+    r'\br(?P<hashes>\#{0,255})"(?P<raw>.*?)"(?P=hashes)|"(?P<ordinary>(?:\\.|[^"\\])*)"',
+    re.DOTALL,
+)
 INCLUDE_SQL = re.compile(r'include_str!\(\s*"([^"\n]+)"\s*\)')
 PREPARABLE = re.compile(r"^(?:SELECT|INSERT|UPDATE|DELETE|WITH)\b", re.IGNORECASE)
 
@@ -32,6 +35,23 @@ def decode_rust_string(raw: str) -> str:
     return json.loads('"' + continued + '"', strict=False)
 
 
+def string_value(match: re.Match) -> str:
+    raw = match.group("raw")
+    return raw if raw is not None else decode_rust_string(match.group("ordinary"))
+
+
+def sql_body(query: str) -> str:
+    """Remove leading comments for classification without rewriting SQL literals."""
+    while True:
+        query = query.lstrip()
+        if query.startswith("--"):
+            query = query.partition("\n")[2]
+        elif query.startswith("/*") and "*/" in query:
+            query = query.partition("*/")[2]
+        else:
+            return query
+
+
 def runtime_queries() -> list[tuple[str, str]]:
     queries = []
     for path in sorted((ROOT / "src").rglob("*.rs")):
@@ -40,12 +60,12 @@ def runtime_queries() -> list[tuple[str, str]]:
             literal = RUST_STRING.match(source, call.end())
             included = INCLUDE_SQL.match(source, call.end())
             if literal:
-                query = decode_rust_string(literal.group(1)).strip()
+                query = sql_body(string_value(literal))
             elif included:
                 sql_path = (path.parent / included.group(1)).resolve()
                 if ROOT not in sql_path.parents:
                     raise SystemExit(f"SQL include escapes repository: {sql_path}")
-                query = sql_path.read_text().strip()
+                query = sql_body(sql_path.read_text())
             else:
                 # Dynamic history SQL expands only whitelisted table names.
                 continue
@@ -55,9 +75,14 @@ def runtime_queries() -> list[tuple[str, str]]:
         # Also cover statements selected through a local match expression.
         # PREPARE cannot parameterize an identifier, so expand history tables.
         for literal in RUST_STRING.finditer(source):
-            if not PREPARABLE.match(literal.group(1).lstrip()):
+            candidate = literal.group("raw")
+            if candidate is None:
+                candidate = literal.group("ordinary")
+            if not PREPARABLE.match(sql_body(candidate)):
                 continue
-            query = decode_rust_string(literal.group(1)).strip()
+            query = sql_body(string_value(literal))
+            if not PREPARABLE.match(query):
+                continue
             if "{table}" not in query:
                 queries.append((str(path.relative_to(ROOT)), query.rstrip(";")))
                 continue
