@@ -5,10 +5,11 @@ import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { Client, originUrl, parseJson, safeText, tokenFromEnv } from './lib/client.mjs';
 import { Journal, boundSession, sendOriginal } from './lib/journal.mjs';
-import { commandForm, visibleCommands, needsSerialPlan } from './lib/commands.mjs';
+import { commandForm, visibleCommands } from './lib/commands.mjs';
 import { Terminal } from './lib/terminal.mjs';
-import { inspectJson, inspectRows, overviewLines } from './lib/views.mjs';
+import { inspectJson, inspectRows, overviewLines, scanProgress } from './lib/views.mjs';
 import { rowWork, selectedWork, selectionFor } from './lib/workflows.mjs';
+import { observationSession } from './lib/scanning.mjs';
 
 export function argumentsFor(argv) {
   const result = {};
@@ -47,31 +48,7 @@ async function selectWarehouse(client, ui) {
     return choice;
   }
 }
-export async function collectSerials(client, warehouse, snapshot, command, ask) {
-  if (!needsSerialPlan.has(command.type)) return [];
-  const planId = randomUUID();
-  const reply = await client.call('POST', client.warehousePath(warehouse, '/serial-observation-plan'), { plan_id: planId, command });
-  if (!reply.ok) throw new Error(`Observation plan held: HTTP ${reply.status}; ${safeText(reply.data.error ?? 'unknown error')}`);
-  const plan = reply.data;
-  if (plan.plan_id !== planId || plan.warehouse_id !== warehouse || plan.command_type !== command.type || plan.observed_warehouse_version !== snapshot.version || !Array.isArray(plan.targets) || plan.targets.length > 100 || !Number.isSafeInteger(plan.required_labels) || plan.required_labels > 10000) throw new Error('Observation plan changed or does not match this reviewed work; review again');
-  const inputs = []; const seen = new Set(); let total = 0;
-  for (const target of plan.targets) {
-    if (!Number.isSafeInteger(target.each_quantity) || target.each_quantity < 0 || total + target.each_quantity > 10000 || !Array.isArray(target.target) || target.target.length > 3 || !target.target.every(v => typeof v === 'string') || typeof target.sku !== 'string') throw new Error('Malformed observation target');
-    total += target.each_quantity;
-    const serials = [];
-    if (!target.each_quantity && await ask(`Confirm physically observed zero labels for ${safeText(target.sku)} ${safeText(JSON.stringify(target.target))} (yes/no): `) !== 'yes') throw new Error('Empty count was not physically confirmed');
-    for (let i = 0; i < target.each_quantity; i++) {
-      const label = await ask(`Scan actual ${safeText(target.sku)} ${safeText(JSON.stringify(target.target))} label ${i + 1}/${target.each_quantity}: `);
-      if (label === null || !label || label.trim() !== label || Buffer.byteLength(label) > 240 || /[\x00-\x1f\x7f-\x9f]/.test(label)) throw new Error('Invalid literal label; no request sent');
-      const id = JSON.stringify([target.sku, label]);
-      if (seen.has(id)) throw new Error('Duplicate literal serial observation; no request sent');
-      seen.add(id); serials.push(label);
-    }
-    inputs.push({ target: target.target, sku: target.sku, serials });
-  }
-  if (total !== plan.required_labels) throw new Error('Observation plan total disagrees');
-  return inputs;
-}
+export { collectSerials } from './lib/scanning.mjs';
 async function perform(client, journal, scope, ui, supplied, selection) {
   if ((await journal.listForIdentity(scope)).some(record => !['committed', 'not_committed'].includes(record.stage))) throw new Error('Resolve your original pending work in Recovery before recording new work');
   const session = await boundSession(client, scope);
@@ -93,9 +70,18 @@ async function perform(client, journal, scope, ui, supplied, selection) {
     snapshot = { version: 0 };
     ui.print(`New facility identity: ${scope.warehouse} | reviewed version 0`);
   }
-  const serial_inputs = await collectSerials(client, scope.warehouse, snapshot, command, prompt => ui.ask(prompt));
-  const request = { request_id: randomUUID(), expected_version: snapshot.version, command, ...(serial_inputs.length ? { serial_inputs } : {}) };
-  if (!await inspectJson(ui, `Review actual work | ${scope.warehouse} | v${snapshot.version}`, { scope, request }, { prompt: '\nn next | p previous | Enter to confirm: ' })) return;
+  const observations = await observationSession(client, scope.warehouse, snapshot, command);
+  const capture = () => observations.capture(prompt => ui.scan(prompt), { retry: true, progress: state => scanProgress(ui, state, scope, snapshot.version, command) });
+  await capture();
+  const requestId = randomUUID(); let request;
+  for (;;) {
+    const serial_inputs = observations.inputs;
+    request = { request_id: requestId, expected_version: snapshot.version, command, ...(serial_inputs.length ? { serial_inputs } : {}) };
+    const review = await inspectJson(ui, `Review actual work | ${scope.warehouse} | v${snapshot.version}`, { scope, request }, { prompt: '\nn next | p previous | Enter to confirm: ', allowUndo: observations.canUndo });
+    if (review === 'undo') { observations.undo(); await capture(); continue; }
+    if (!review) return;
+    break;
+  }
   ui.line(`Original request: ${request.request_id}`);
   if (await ui.ask('Record this observed work? Type yes: ') !== 'yes') return;
   const record = await journal.prepare(scope, request);

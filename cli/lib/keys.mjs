@@ -43,7 +43,7 @@ export class Keys {
     if (this.queue.length) return this.queue.shift();
     return new Promise(resolve => { this.waiter = resolve; });
   }
-  async read(prompt, navigate = false) {
+  async read(prompt, navigate = false, controls = {}) {
     if (this.closed) return null;
     let buffer = ''; let cursor = 0;
     let label;
@@ -84,9 +84,10 @@ export class Keys {
       } else if (key.name === 'return' || key.name === 'enter') {
         this.output.write('\n'); return buffer;
       } else if (key.ctrl && key.name === 'd' && !buffer) { this.close(); return null; }
+      else if (!buffer && Object.hasOwn(controls, key.name)) return { key: controls[key.name] };
       else if (navigate && key.name === 'escape') return { key: 'escape' };
       else if (key.name === 'escape') { const error = new Error('Entry cancelled'); error.code = 'INPUT_CANCELLED'; throw error; }
-      else if (navigate && (key.name === 'resize' || !buffer && ['up', 'down', 'left', 'right', 'pageup', 'pagedown', 'home', 'end', 'tab', 'f1'].includes(key.name))) return { key: key.name === 'tab' ? (key.shift ? 'up' : 'down') : key.name };
+      else if (navigate && (key.name === 'resize' || !buffer && ['up', 'down', 'left', 'right', 'pageup', 'pagedown', 'home', 'end', 'tab', 'f1', 'f2'].includes(key.name))) return { key: key.name === 'tab' ? (key.shift ? 'up' : 'down') : key.name };
       else if (key.name === 'resize') { this.output.write('\n'); showPrompt(); }
       else if (key.name === 'backspace' || key.ctrl && key.name === 'h') {
         const previous = boundary(buffer, cursor, -1); buffer = buffer.slice(0, previous) + buffer.slice(cursor); cursor = previous;

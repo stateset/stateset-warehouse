@@ -30,20 +30,22 @@ export function tableLines(kind, rows, columns, offset = 0) {
     ...rows.map((row, index) => render([fit(offset + index + 1, numberSize, true), ...chosen.map(col => fit(col.value(row), col.size, col.numeric))])),
   ];
 }
-export async function inspectJson(ui, title, value, { prompt = '\nn next | p previous | Enter back: ' } = {}) {
-  return inspectText(ui, title, JSON.stringify(value, null, 2), { prompt });
+export async function inspectJson(ui, title, value, options) {
+  return inspectText(ui, title, JSON.stringify(value, null, 2), options);
 }
-export async function inspectText(ui, title, raw, { prompt = '\nn next | p previous | Enter back: ' } = {}) {
+export async function inspectText(ui, title, raw, { prompt = '\nn next | p previous | Enter back: ', allowUndo = false } = {}) {
   let offset = 0;
   for (;;) {
     const lines = raw.split('\n').flatMap(line => wrap(line, ui.columns));
-    const count = Math.max(1, ui.rows - 5 - wrap(title, ui.columns).length - prompt.split('\n').reduce((total, line) => total + wrap(line, ui.columns).length, 0));
+    const count = Math.max(1, ui.rows - 5 - wrap(title, ui.columns).length - (allowUndo ? wrap('F2 correct last observation before submission', ui.columns).length : 0) - prompt.split('\n').reduce((total, line) => total + wrap(line, ui.columns).length, 0));
     offset = Math.min(offset, Math.max(0, lines.length - 1));
     ui.screen(title); lines.slice(offset, offset + count).forEach(line => ui.print(line));
     ui.line(`Lines ${offset + 1}–${Math.min(offset + count, lines.length)} of ${lines.length}`);
+    if (allowUndo) ui.line('F2 correct last observation before submission', 'muted');
     const answer = await (ui.action ? ui.action(prompt) : ui.ask(prompt));
     if (answer && typeof answer === 'object') {
       if (answer.key === 'escape') return false;
+      if (answer.key === 'f2' && allowUndo) return 'undo';
       if (answer.key === 'up') offset = Math.max(0, offset - 1);
       if (answer.key === 'down') offset = Math.min(Math.max(0, lines.length - count), offset + 1);
       if (['pageup', 'left'].includes(answer.key)) offset = Math.max(0, offset - count);
@@ -83,11 +85,29 @@ Detail views support arrows, Home/End and paging keys.
 
 OBSERVED WORK
 Scan actual literal labels; case and spaces are preserved.
+Duplicate or malformed scans can be retried without losing earlier scans.
+F2 at an empty scan field undoes the previous observation.
+F2 in the unsent request review corrects its last observation.
 Paste one field at a time. Multi-line paste is ignored.
 Review the complete paged request, then explicitly type yes.
 Esc before submission cancels entry; it cannot undo sent work.
 Recover uncertain work using its complete original request.
 Arrow keys never record a physical warehouse action.`);
+}
+export function scanProgress(ui, state, scope, version, command = {}) {
+  ui.screen('Capture actual serial observations');
+  ui.line(`Facility: ${scope.warehouse} | reviewed v${version}`);
+  ui.line(`Captured ${state.observed}/${state.required} labels | group ${state.targetIndex + 1}/${state.targetCount}`, 'accent');
+  if (command.from) ui.line(`Move: ${command.from} → ${command.to} | lot ${command.lot}`);
+  else if (command.location) ui.line(`Bin: ${command.location}${command.lot ? ` | lot ${command.lot}` : ''}`);
+  ui.line(state.target.each_quantity === 0 ? 'Physically confirm this empty target.' : 'Scan each actual label exactly as observed.', 'muted');
+  ui.line('F2 undo previous observation · empty field required', 'muted');
+  ui.line('Esc cancels entry before submission', 'muted');
+  if (state.latest.length) {
+    ui.line('Recent accepted labels:', 'muted');
+    for (const row of state.latest) ui.line(fit(`${row.sku} | ${row.serial}`, ui.columns).trimEnd());
+  }
+  if (state.message) ui.line(state.message, 'warning');
 }
 export async function inspectRows(ui, kind, load, { onAction } = {}) {
   let snapshot = await load(); let query = ''; let page = 0; let message = ''; let selected = null;

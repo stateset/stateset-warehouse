@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "scope": "targeted_terminal_scanning_development",
+  "recorded_at": "2026-10-19T23:19:09.245981+00:00",
+  "result": "passed",
+  "production_qualified": false,
+  "baseline_tag": "v0.2.0",
+  "parent_commit": "ec106b9c2ae099a6ffc0f60f05308bed2970e325",
+  "terminal_checks_passed": 44,
+  "terminal_checks_skipped": 0,
+  "node_version": "22.18.0",
+  "test_command": "WMS_TEST_DATABASE_URL=<isolated-test-db> node --test cli/test/*.test.mjs",
+  "actual_pg_api_and_70_column_44_row_pty_passed": true,
+  "scanning_checks": [
+    "complete original plan validated before observations",
+    "malformed and duplicate scan retries retain earlier actual observations",
+    "case-sensitive exact SKU and literal label uniqueness",
+    "F2 undoes an observation across original target groups",
+    "F2 in unsent review reopens only the last observation",
+    "undo requires reconfirming physical zero observations",
+    "undo-like strings remain literal labels",
+    "EOF never returns a partial completed observation set",
+    "progress retains physical bin and movement context",
+    "only corrected observations enter durable original request bytes",
+    "committed outcome views do not enable correction",
+    "actual receiving duplicate retry and two-label capture",
+    "physical putaway preserves exact serial custody and complete reconciliation",
+    "selected work, lost-success replay, separate-process recovery races and legacy continuation still pass"
+  ],
+  "recovery_journal_module_unchanged_sha256": "c6ba9e83810940cd19ba9675cc25c337cc326d928913dd95483a6a5961c11e7d",
+  "qualified_backend_image_inputs_unchanged": 305,
+  "qualified_backend_image_inputs_sha256": "7d59f80d543801c9237fa9a7dac313f00b31228f81b699a100e34f531343be89",
+  "full_release_gate_rerun": false,
+  "npm_package_dry_run_files": 15,
+  "package_published": false,
+  "source_files": [
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "c1bb4a9709c654c67d37777d2b3a74d46ed867062baad18cae98052ec8f512ab"
+    },
+    {
+      "path": "cli/README.md",
+      "sha256": "7fef6b9a3da6751aa0631db956c12757a181d035421fff9cee42634931538123"
+    },
+    {
+      "path": "cli/warehouse-tui.mjs",
+      "sha256": "3c7b4b986ded6b17f85616b387e9787d0d9d5cbf487a1ef1f4a81b35d933a747"
+    },
+    {
+      "path": "cli/lib/scanning.mjs",
+      "sha256": "1c80efeb7496504b472eef459613db64a508ddab46476c7e2a0f94a77830549c"
+    },
+    {
+      "path": "cli/lib/keys.mjs",
+      "sha256": "5151ed5983a55c5a2552968b9730a6f8cc8dd76b856672f908d49a3ca66e20ce"
+    },
+    {
+      "path": "cli/lib/terminal.mjs",
+      "sha256": "be3a0dc71485ad98d8e9aaf23e2845e33e70a36591dbe2eec648642322e7073f"
+    },
+    {
+      "path": "cli/lib/views.mjs",
+      "sha256": "a9124bbd7e242a97d3ebdba0c71e10e75177d50b4cae47dfaafad212ec9e353a"
+    },
+    {
+      "path": "cli/test/live.test.mjs",
+      "sha256": "061afda2fdfa1cc18a1994d0a985ded37d3809c89812d6697e1b7ddfb0e00b9c"
+    },
+    {
+      "path": "cli/test/keys.test.mjs",
+      "sha256": "551c63f6f8a9c41100978d92625f9e2bc2111f1e8c34ff0fbe0f1686a2f24db3"
+    },
+    {
+      "path": "cli/test/views.test.mjs",
+      "sha256": "d32e895dabbee30eaea0be5890d7a361eb9a9f58b187ab0b37b936ef28e6f767"
+    },
+    {
+      "path": "cli/test/scanning.test.mjs",
+      "sha256": "2d77dba396ed069ad40cc417f4424b5e61db052ab2401658c2529c469444c1e9"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "terminal-checks.log",
+      "sha256": "5906a0ad543a7bab0580a464f6920a3e635d942a6d5a7389af70c442b0cd17c0"
+    }
+  ],
+  "limits": [
+    "Local synthetic software checks do not establish deployed scanner hardware or physical facility acceptance.",
+    "Scan correction is available only before submission; original sent request bytes and recovery checkpoints remain unchanged.",
+    "The full v0.2.0 release gate was not rerun; its original dated evidence remains unchanged.",
+    "The current session denied access to the pane-control socket; the existing pane was not restarted."
+  ]
+}

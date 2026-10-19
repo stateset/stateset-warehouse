@@ -123,8 +123,12 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
   assert.ok(arrowTranscript.includes('"sku": "TUI-PART"'));
   assert.ok(arrowTranscript.includes('\x1b[?1049h') && arrowTranscript.includes('\x1b[?1049l'), 'terminal screen restored');
   assert.equal((await client.read(client.warehousePath('wh-main'))).version, committedVersion);
-  const moveTranscript = await driveTerminal([['Select: ', '1'], ['Select: ', '2'], ['sku: ', 'TUI-PART'], ['lot: ', 'UNTRACKED'], ['from: ', 'A'], ['to: ', 'B'], ['quantity (whole each): ', '1.5'], ['quantity (whole each): ', '1'], ['Scan actual TUI-PART [] label 1/1: ', 'original'], ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'yes'], ['Enter to continue: ', ''], ['Select: ', 'q']], 'terminal.txt');
+  const moveTranscript = await driveTerminal([['Select: ', '1'], ['Select: ', '2'], ['sku: ', 'TUI-PART'], ['lot: ', 'UNTRACKED'], ['from: ', 'A'], ['to: ', 'B'], ['quantity (whole each): ', '1.5'], ['quantity (whole each): ', '1'], ['Scan actual TUI-PART [] label 1/1: ', 'Replace-before-save'], ['Enter to confirm: ', { keys: '\x1bOQ' }], ['Scan actual TUI-PART [] label 1/1: ', 'original'], ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'yes'], ['Enter to continue: ', ''], ['Select: ', 'q']], 'terminal.txt');
   assert.ok(moveTranscript.includes('Enter a whole each quantity from 1 to 1000000.'));
+  assert.ok(moveTranscript.includes('F2 correct last observation before submission'));
+  const correctedMove = (await journal.listForIdentity(scope)).find(row => row.request.serial_inputs?.some(input => input.serials.includes('original')));
+  assert.ok(correctedMove);
+  assert.ok(!correctedMove.original.body.includes('Replace-before-save'), 'only corrected actual observations enter the original durable request');
   const final = await client.read(client.warehousePath('wh-main'));
   assert.equal(final.version, committedVersion + 1);
   assert.equal(final.stocks.find(s => s.location === 'A').on_hand, 1);
@@ -178,21 +182,25 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
     ['Select: ', '6'], ['View: ', { keys: '\x1b[B' }], ['View: ', 'a'], ['Select: ', '1'],
     ['n next | p previous | Enter back: ', ''],
     ['View: ', { keys: '\x1b[B' }], ['View: ', 'a'], ['Select: ', '2'], ['Select: ', '1'],
-    ['quantity (whole each): ', '1'], ['location: ', 'RECV-01'],
-    ['Scan actual TUI-PART [] label 1/1: ', 'Guided-Serial'],
+    ['quantity (whole each): ', '2'], ['location: ', 'RECV-01'],
+    ['Scan actual TUI-PART [] label 1/2: ', 'Guided-Serial'],
+    ['Scan actual TUI-PART [] label 2/2: ', 'Guided-Serial'],
+    ['Scan actual TUI-PART [] label 2/2: ', 'Guided-Spare'],
     ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'yes'],
     ['Enter to continue: ', ''], ['View: ', ''], ['Select: ', 'q'],
   ], 'guided-receiving-terminal.txt');
   assert.ok(receivingTranscript.includes(`Selected receipt_id: ${selectedReceipt.id}`));
   assert.ok(receivingTranscript.includes('Selected line_id: Original-LINE'));
+  assert.ok(receivingTranscript.includes('Duplicate literal serial observation for this SKU'));
+  assert.ok(receivingTranscript.includes('Captured 1/2 labels'));
   const receivingRecord = (await journal.listForIdentity(scope)).find(row => row.request.command.type === 'receive');
   assert.equal(receivingRecord.stage, 'committed');
   assert.equal(receivingRecord.request.expected_version, selectedSnapshot.version);
-  assert.deepEqual(receivingRecord.request.command, { type: 'receive', receipt_id: selectedReceipt.id, line_id: 'Original-LINE', quantity: 1, location: 'RECV-01' });
-  assert.deepEqual(receivingRecord.request.serial_inputs, [{ target: [], sku: 'TUI-PART', serials: ['Guided-Serial'] }]);
+  assert.deepEqual(receivingRecord.request.command, { type: 'receive', receipt_id: selectedReceipt.id, line_id: 'Original-LINE', quantity: 2, location: 'RECV-01' });
+  assert.deepEqual(receivingRecord.request.serial_inputs, [{ target: [], sku: 'TUI-PART', serials: ['Guided-Serial', 'Guided-Spare'] }]);
   const afterReceiving = await client.read(client.warehousePath(scope.warehouse));
   assert.equal(afterReceiving.version, selectedSnapshot.version + 1);
-  assert.equal(afterReceiving.receipts.find(row => row.id === selectedReceipt.id).lines[0].received, 1);
+  assert.equal(afterReceiving.receipts.find(row => row.id === selectedReceipt.id).lines[0].received, 2);
   const selectedMove = await driveTerminal([
     ['Select: ', 'i'], ['View: ', '/RECV-01'], ['View: ', { keys: '\x1b[B' }], ['View: ', 'a'],
     ['Select: ', '2'], ['to: ', 'B'], ['quantity (whole each): ', '1'],
@@ -205,9 +213,10 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
   assert.equal(afterGuided.version, afterReceiving.version + 1);
   assert.equal(afterGuided.stocks.find(row => row.location === 'A').on_hand, 1);
   assert.equal(afterGuided.stocks.find(row => row.location === 'B').on_hand, 3);
-  assert.equal(afterGuided.stocks.find(row => row.location === 'RECV-01').on_hand, 0);
+  assert.equal(afterGuided.stocks.find(row => row.location === 'RECV-01').on_hand, 1);
   const guidedCustody = await client.read('/v1/serials?sku=TUI-PART&warehouse_id=wh-main&limit=100');
   assert.equal(guidedCustody.items.find(row => row.serial === 'Guided-Serial').place.location, 'B');
+  assert.equal(guidedCustody.items.find(row => row.serial === 'Guided-Spare').place.location, 'RECV-01');
   assert.equal(guidedCustody.items.find(row => row.serial === 'Third').place.location, 'A');
   assert.equal((await client.read(client.warehousePath(scope.warehouse, '/reconciliation'))).ok, true);
   t.diagnostic(`Private synthetic TUI evidence retained: ${root}`);

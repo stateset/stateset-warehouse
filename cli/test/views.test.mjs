@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PassThrough, Writable } from 'node:stream';
 import { Terminal, fit, wrap, width } from '../lib/terminal.mjs';
-import { inspectRows, overviewLines, tableLines } from '../lib/views.mjs';
+import { inspectJson, inspectRows, overviewLines, scanProgress, tableLines } from '../lib/views.mjs';
 
 function scripted(answers, columns = 48, rows = 20) {
   const screens = []; let current;
@@ -107,4 +107,16 @@ test('row actions require a highlighted exact record and reload the snapshot aft
   assert.equal(loads, 2);
   assert.ok(ui.screens[1].lines.join(' ').includes('Highlight a row'));
   assert.equal(ui.screens.at(-1).title, 'snapshot v2');
+});
+
+test('correction is enabled only in an unsent review and scanning keeps physical source context visible', async () => {
+  const review = scripted([{ key: 'f2' }]);
+  assert.equal(await inspectJson(review, 'Unsent review', { serials: ['Observed'] }, { allowUndo: true }), 'undo');
+  const outcome = scripted([{ key: 'f2' }, '']);
+  assert.equal(await inspectJson(outcome, 'Committed original outcome', { serials: ['Observed'] }), true);
+  const ui = scripted([]);
+  scanProgress(ui, { observed: 1, required: 2, targetIndex: 0, targetCount: 1, target: { each_quantity: 2 }, latest: [{ sku: 'SKU', serial: 'Original' }], message: 'Duplicate; scan again' }, { warehouse: 'wh' }, 7, { type: 'move_stock', from: 'A', to: 'B', lot: 'Original-Lot' });
+  assert.ok(ui.screens[0].lines.includes('Move: A → B | lot Original-Lot'));
+  assert.ok(ui.screens[0].lines.includes('SKU | Original'));
+  assert.ok(ui.screens[0].lines.includes('Duplicate; scan again'));
 });

@@ -118,3 +118,12 @@ test('resizing a field preserves partially entered literal scanner text', async 
     assert.equal(await waiting, 'Case-preserved-tail');
   } finally { keys.close(); }
 });
+
+test('F2 is a dedicated scan correction key and never a reserved literal label', async () => {
+  const io = device(); const keys = new Keys(io.input, io.output, () => 69);
+  try {
+    io.input.write('/undo\n\x1bOQ');
+    assert.equal(await keys.read('Scan: ', false, { f2: 'undo' }), '/undo');
+    assert.deepEqual(await keys.read('Scan: ', false, { f2: 'undo' }), { key: 'undo' });
+  } finally { keys.close(); }
+});

@@ -45,6 +45,7 @@ export class Terminal {
     return new Promise(resolve => { this.waiter = resolve; });
   }
   async action(prompt) { return this.keys ? this.keys.read(prompt, true) : this.ask(prompt); }
+  async scan(prompt) { return this.keys ? this.keys.read(prompt, false, { f2: 'undo' }) : this.ask(prompt); }
   screen(title) {
     if (this.output.isTTY) this.output.write('\x1b[2J\x1b[H');
     this.line('STATESET / WAREHOUSE', 'accent'); this.line(title, 'title'); this.line('─'.repeat(this.columns), 'muted');
