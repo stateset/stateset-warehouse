@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "scope": "targeted_terminal_ux_development",
+  "recorded_at": "2026-10-19T22:02:49.861750+00:00",
+  "result": "passed",
+  "production_qualified": false,
+  "baseline_tag": "v0.2.0",
+  "parent_commit": "9d590434a0cb600345963cbb20fdcf8425771982",
+  "terminal_checks_passed": 22,
+  "terminal_checks_skipped": 0,
+  "node_version": "22.18.0",
+  "test_command": "WMS_TEST_DATABASE_URL=<isolated-test-db> node --test cli/test/*.test.mjs",
+  "actual_pg_api_and_70_column_44_row_pty_passed": true,
+  "read_only_pty_workflows": [
+    "overview",
+    "inventory shortcut",
+    "case-insensitive search",
+    "full row detail",
+    "no matches",
+    "clear search",
+    "refresh table",
+    "empty orders",
+    "refresh overview"
+  ],
+  "existing_write_and_recovery_checks": [
+    "original bytes lost-success replay",
+    "actor fencing",
+    "separate-process journal race",
+    "legacy journal continuation",
+    "actual literal serial movement",
+    "facility creation and automatic selection"
+  ],
+  "read_only_navigation_did_not_change_warehouse_version": true,
+  "qualified_backend_image_inputs_unchanged": 305,
+  "qualified_backend_image_inputs_sha256": "7d59f80d543801c9237fa9a7dac313f00b31228f81b699a100e34f531343be89",
+  "full_release_gate_rerun": false,
+  "npm_package_dry_run_files": 11,
+  "package_published": false,
+  "source_files": [
+    {
+      "path": "README.md",
+      "sha256": "05008fa0860066253c9f0e5cc3fd9a3ab67506e9dd5eb260f724cec08e345891"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "8f63c72a9d57009a88e639889d77a1f27f0a7c7c76acd95955bfd0b450d08450"
+    },
+    {
+      "path": "cli/README.md",
+      "sha256": "695a3f14259959401e2fce7f443324fdf10b5f7b57cd39d6ce9651e2c2774328"
+    },
+    {
+      "path": "cli/warehouse-tui.mjs",
+      "sha256": "6280aba357070af49f9f8d56f8021e31021cee13cdf42774674f0b4fa96e0792"
+    },
+    {
+      "path": "cli/lib/terminal.mjs",
+      "sha256": "1d7c59f91e0a220092258eacc6281ca9350c4550454bf01561e9aa3cfda587c4"
+    },
+    {
+      "path": "cli/lib/views.mjs",
+      "sha256": "b0e4583bc06a4dbf6547439c57ef9292dd7f8558de9df65d59bddecff031b693"
+    },
+    {
+      "path": "cli/test/views.test.mjs",
+      "sha256": "229716b0a8124b4085b5bae2a4b28ac2d9531fe4740e3e3c6a1c0da9682ea8c0"
+    },
+    {
+      "path": "cli/test/live.test.mjs",
+      "sha256": "fb88b06019a17a395f11684b693309b74a1a2ee158a4007c2353d76429da3289"
+    }
+  ],
+  "limits": [
+    "Local synthetic tests do not establish deployed or physical facility acceptance.",
+    "Overview counts describe the operational snapshot, not all retained history.",
+    "On-hand and reserved quantities do not establish sellable availability.",
+    "The existing version tag and full release evidence remain bound to their original source."
+  ]
+}

@@ -77,8 +77,8 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
 
   // The script utility supplies a real pseudoterminal. Drive actual prompts,
   // including a typed physical move; the server verifies the resulting state.
-  async function driveTerminal(steps, filename) {
-    const terminal = spawn('script', ['-qefc', `${shell(process.execPath)} ${shell(path.join(repo, 'cli/warehouse-tui.mjs'))}`, '/dev/null'], { env: { ...env, WMS_URL: origin, WMS_TOKEN: token, WMS_TUI_STATE_DIR: journal.root, TERM: 'xterm' }, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
+  async function driveTerminal(steps, filename, { expectCommit = true } = {}) {
+    const terminal = spawn('script', ['-qefc', `stty cols 70 rows 44; exec ${shell(process.execPath)} ${shell(path.join(repo, 'cli/warehouse-tui.mjs'))}`, '/dev/null'], { env: { ...env, WMS_URL: origin, WMS_TOKEN: token, WMS_TUI_STATE_DIR: journal.root, TERM: 'xterm' }, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
     let transcript = ''; let position = 0; let handled = 0;
     const drive = chunk => {
       transcript += chunk.toString();
@@ -93,9 +93,21 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
     try { [code] = await once(terminal, 'exit'); } finally { clearTimeout(timer); terminal.stdin.end(); }
     await fs.writeFile(path.join(root, filename), transcript, { mode: 0o600 });
     assert.equal(code, 0, `Terminal failed; evidence: ${root}`); assert.equal(handled, steps.length, `Incomplete PTY interaction; evidence: ${root}`);
-    assert.ok(transcript.includes('Recovery status: committed')); assert.ok(!transcript.includes(token));
+    if (expectCommit) assert.ok(transcript.includes('Recovery status: committed'));
+    assert.ok(!transcript.includes(token));
     return transcript;
   }
+  const readTranscript = await driveTerminal([
+    ['Select: ', 'i'], ['View: ', '/tui-part'], ['View: ', '1'],
+    ['n next | p previous | Enter back: ', ''], ['View: ', '/missing'],
+    ['View: ', '/'], ['View: ', 'r'], ['View: ', ''],
+    ['Select: ', 'o'], ['View: ', ''], ['Select: ', 'r'], ['Select: ', 'q'],
+  ], 'read-only-terminal.txt', { expectCommit: false });
+  assert.ok(readTranscript.includes('On hand 3 ea · Reserved 0 ea'));
+  assert.ok(readTranscript.includes('No matches. Enter / to clear the search.'));
+  assert.ok(readTranscript.includes('"sku": "TUI-PART"'));
+  assert.ok(readTranscript.includes('No records in this snapshot.'));
+  assert.equal((await client.read(client.warehousePath('wh-main'))).version, committedVersion, 'overview, search, detail and refresh are read-only');
   await driveTerminal([['Select: ', '1'], ['Select: ', '2'], ['sku: ', 'TUI-PART'], ['lot: ', 'UNTRACKED'], ['from: ', 'A'], ['to: ', 'B'], ['quantity (whole each): ', '1'], ['Scan actual TUI-PART [] label 1/1: ', 'original'], ['Record this observed work? Type yes: ', 'yes'], ['Enter to continue: ', ''], ['Select: ', 'q']], 'terminal.txt');
   const final = await client.read(client.warehousePath('wh-main'));
   assert.equal(final.version, committedVersion + 1);
@@ -116,7 +128,7 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
   assert.equal(createdRecord.request.expected_version, 0);
   const newId = createdRecord.original.scope.warehouse;
   assert.match(newId, /^wh-[0-9a-f-]{36}$/); assert.notEqual(newId, scope.warehouse);
-  assert.ok(facilityTranscript.includes(`(admin) | ${newId}`), 'successful creation selects its new facility');
+  assert.ok(facilityTranscript.includes(`Facility: ${newId}`), 'successful creation selects its new facility');
   const created = await client.read(client.warehousePath(newId));
   assert.equal(created.version, 1); assert.equal(created.warehouse.id, newId);
   assert.equal(created.warehouse.code, 'TUI-NEW'); assert.equal(created.warehouse.timezone, 'America/Vancouver');

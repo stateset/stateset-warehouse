@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { createInterface } from 'node:readline';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -7,6 +6,8 @@ import { pathToFileURL } from 'node:url';
 import { Client, originUrl, parseJson, safeText, tokenFromEnv } from './lib/client.mjs';
 import { Journal, boundSession, sendOriginal } from './lib/journal.mjs';
 import { commandForm, visibleCommands, needsSerialPlan } from './lib/commands.mjs';
+import { Terminal } from './lib/terminal.mjs';
+import { inspectRows, overviewLines } from './lib/views.mjs';
 
 export function argumentsFor(argv) {
   const result = {};
@@ -28,37 +29,10 @@ Use an individual operator credential. Credentials are never saved in recovery f
 Recovery defaults to $XDG_STATE_HOME/stateset-warehouse or ~/.local/state/stateset-warehouse.
 Commands record whole each units and actually observed serial labels.
 Uncertain work keeps its exact original request until resolved. The repository's
-cli/README.md describes recovery and terminal workflows. q exits menus; Ctrl-C exits safely.`;
-
-class Terminal {
-  constructor(input = process.stdin, output = process.stdout) {
-    this.input = input; this.output = output; this.lines = []; this.waiter = null; this.closed = false;
-    this.rl = createInterface({ input, output, terminal: input.isTTY && output.isTTY });
-    this.rl.on('line', line => { if (this.waiter) { const resolve = this.waiter; this.waiter = null; resolve(line); } else this.lines.push(line); });
-    this.rl.on('close', () => { this.closed = true; this.waiter?.(null); this.waiter = null; });
-    this.rl.on('SIGINT', () => this.rl.close());
-  }
-  print(text = '') { this.output.write(`${text}\n`); }
-  async ask(prompt) {
-    if (this.closed && !this.lines.length) return null;
-    this.output.write(prompt);
-    if (this.lines.length) return this.lines.shift();
-    return new Promise(resolve => { this.waiter = resolve; });
-  }
-  screen(title) { if (this.output.isTTY) this.output.write('\x1b[2J\x1b[H'); this.print(`StateSet Warehouse | ${safeText(title)}\n`); }
-  json(value) { this.print(JSON.stringify(value, (_key, item) => typeof item === 'string' ? safeText(item) : item, 2)); }
-  async menu(title, items) {
-    this.screen(title); items.forEach(([label], index) => this.print(`${index + 1}. ${safeText(label)}`)); this.print('q. Back / exit');
-    for (;;) {
-      const answer = await this.ask('\nSelect: ');
-      if (answer === null || answer === 'q') return null;
-      const index = Number(answer) - 1;
-      if (/^\d+$/.test(answer) && items[index]) return items[index][1];
-    }
-  }
-  async pause() { await this.ask('\nEnter to continue: '); }
-  close() { this.rl.close(); }
-}
+cli/README.md describes recovery and terminal workflows. q exits menus; Ctrl-C exits safely.
+Home: i inventory, o orders, w work, c recovery, r refresh (then Enter).
+Menus: /text searches, / clears, ? shows help. Tables: row number opens full
+details; n/p page, j shows page JSON, r refreshes; Enter returns.`;
 function scopeFor(client, session, warehouse) { return { origin: client.origin, tenant: session.identity.tenant, actor: session.identity.actor, warehouse }; }
 async function selectWarehouse(client, ui) {
   let after = '';
@@ -141,23 +115,14 @@ async function recover(client, journal, scope, ui) {
   }
   await ui.pause();
 }
-async function inspectRows(ui, title, rows) {
-  let offset = 0;
-  for (;;) {
-    ui.screen(`${title} | ${rows.length} rows | ${offset + 1}–${Math.min(offset + 20, rows.length)}`);
-    ui.json(rows.slice(offset, offset + 20));
-    const answer = await ui.ask('\nn next | p previous | /text filter | Enter back: ');
-    if (answer === 'n' && offset + 20 < rows.length) offset += 20;
-    else if (answer === 'p') offset = Math.max(0, offset - 20);
-    else if (answer?.startsWith('/')) { rows = rows.filter(row => JSON.stringify(row).includes(answer.slice(1))); offset = 0; }
-    else return;
-  }
-}
 async function readView(client, scope, ui, kind) {
   const base = client.warehousePath(scope.warehouse);
   if (['stocks', 'products', 'locations', 'orders', 'receipts', 'exceptions', 'activity', 'movements'].includes(kind)) {
-    const snapshot = await client.read(base);
-    await inspectRows(ui, `${kind} | reviewed version ${snapshot.version}`, snapshot[kind]); return;
+    await inspectRows(ui, kind, async () => {
+      const snapshot = await client.read(base);
+      const title = { stocks: 'Inventory', locations: 'Bins', receipts: 'Receiving / returns' }[kind] ?? kind;
+      return { title: `${title} | ${scope.warehouse} | snapshot v${snapshot.version}`, rows: snapshot[kind] };
+    }); return;
   }
   if (kind === 'serials' || kind === 'serial-history') {
     const sku = await ui.ask('Exact SKU: '); const serial = await ui.ask('Exact serial (empty for page): ');
@@ -228,11 +193,22 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
   try {
     for (;;) {
       session = await client.session(); const scope = scopeFor(client, session, warehouse);
-      const action = await ui.menu(`${session.identity.tenant} | ${session.identity.actor} (${session.identity.role}) | ${warehouse}${session.demo ? ' | SYNTHETIC DEMO' : ''}`, [
-        ['Record observed warehouse work', 'work'], ['Inventory', 'stocks'], ['Products', 'products'], ['Bins', 'locations'], ['Orders', 'orders'], ['Receiving / returns', 'receipts'], ['Original order and shipment review', 'order-detail'], ['Original receiving record', 'receipt-detail'], ['Lots and holds', 'lots'], ['Facility transfers', 'transfers'], ['Serial custody', 'serials'], ['Serial history', 'serial-history'], ['Exceptions', 'exceptions'], ['Retained history', 'history'], ['Reconciliation', 'reconciliation'], ['Operations', 'operations'], ['Original request recovery', 'recovery'], ['iCommerce interop', 'interop'], ['Select facility', 'warehouse'],
+      // Read failures must leave Recovery and facility selection accessible.
+      // The overview never supplies authority/version to a subsequent write.
+      const [snapshot, pending] = await Promise.all([
+        client.read(client.warehousePath(warehouse)).then(value => ({ ...value, readAt: new Date().toISOString() })).catch(error => ({ error: error.message })),
+        journal.listForIdentity(scope).then(records => ({ count: records.filter(record => !['committed', 'not_committed'].includes(record.stage)).length })).catch(error => ({ error: error.message })),
       ]);
+      const action = await ui.menu('Warehouse overview', [
+        ['Record observed warehouse work', 'work'], ['Inventory', 'stocks'], ['Products', 'products'], ['Bins', 'locations'], ['Orders', 'orders'], ['Receiving / returns', 'receipts'], ['Original order and shipment review', 'order-detail'], ['Original receiving record', 'receipt-detail'], ['Lots and holds', 'lots'], ['Facility transfers', 'transfers'], ['Serial custody', 'serials'], ['Serial history', 'serial-history'], ['Exceptions', 'exceptions'], ['Retained history', 'history'], ['Reconciliation', 'reconciliation'], ['Operations', 'operations'], ['Original request recovery', 'recovery'], ['iCommerce interop', 'interop'], ['Select facility', 'warehouse'],
+      ], {
+        intro: overviewLines(snapshot, pending, session, warehouse),
+        shortcuts: { i: 'stocks', o: 'orders', w: 'work', c: 'recovery', r: 'refresh' },
+        hint: ['i inventory · o orders · w work · c recovery · r refresh', '/text search · ? help · q exit'],
+      });
       if (!action) break;
       try {
+        if (action === 'refresh') continue;
         if (action === 'work') warehouse = await perform(client, journal, scope, ui) ?? warehouse;
         else if (action === 'recovery') await recover(client, journal, scope, ui);
         else if (action === 'warehouse') warehouse = await selectWarehouse(client, ui) ?? warehouse;

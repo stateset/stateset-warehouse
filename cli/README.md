@@ -14,6 +14,14 @@ Use an existing deployment with an individual operator credential. `WMS_TOKEN` i
 
 The numbered terminal menus provide facility selection, inventory/products/bins, receiving and returns, orders and shipment review, serial custody/history, lots, transfers, exceptions, retained history, reconciliation, operations and iCommerce interoperability. Typed forms cover physical workflows and administration. Inputs use whole each units. Multi-line work collects exact original line identities. Serial forms require actual literal scans; custody reads never prefill observed labels. A complete zero count needs explicit confirmation. Partial shipments, transfer dispatch and returns preserve their original target groups.
 
+## Navigation and views
+
+The development client opens a compact overview with facility, operator, tenant, synthetic-demo status, on-hand/reserved each units, open orders, incoming receipts, open exceptions and pending original requests across your facilities. Counts describe the displayed operational snapshot, not all retained history. On-hand minus reserved is not a sellable-availability calculation: lot holds, expiry and other policies still apply. The timestamp shows when the snapshot was read; `r` refreshes it explicitly. Writes always fetch their own fresh review before collecting work.
+
+Type a shortcut and press Enter: `i` inventory, `o` orders, `w` record observed work, `c` recovery, `r` refresh. Existing menu numbers are unchanged. `/text` searches menu labels, `/` clears the search, `n`/`p` page long menus, `?` explains input and `q` returns or exits.
+
+Inventory, products, bins, orders, receipts, exceptions, movements and activity use tables sized to the current terminal. `/text` searches the complete loaded view without case sensitivity; replacing a search always starts from the complete snapshot. `/` restores all rows. `n`/`p` page, `r` reloads the snapshot, and a displayed row number opens its complete original fields in a paged detail view. `j` shows the current page as JSON. Enter or `q` returns. A refresh retains the search. Tables shorten long values with an ellipsis; use row details for exact IDs and literal labels. Narrow panes show the highest-priority columns first. These navigation and inspection actions are read-only.
+
 Forms capture a warehouse version before collecting work and retain it through submission. Creating a facility generates a new facility identity at version zero; a successful creation selects that facility. Concurrent facility work can cause a safe conflict; review again only after the previous original request is definitively resolved. Pack definitions remain readable through the API/dashboard; terminal forms currently enter whole each quantities directly rather than collecting pack scans. Replenishment planning and native OMS/TMS writeback remain available through the dashboard/API/MCP.
 
 ## Recovery
@@ -36,4 +44,4 @@ Changing credentials to another actor, tenant or origin does not transfer pendin
 npm --prefix cli test
 ```
 
-The suite exercises lost-success replay, identity scope, disk failures before/after transmission, competing processes, legacy journal continuation, final-checkpoint tampering, stale proofs, redirect refusal, numeric precision, terminal control sanitization, typed forms and actual serial collection. API and database acceptance remain separate checks. See the root [verification instructions](https://github.com/stateset/stateset-warehouse#verify).
+The suite exercises lost-success replay, identity scope, disk failures before/after transmission, competing processes, legacy journal continuation, final-checkpoint tampering, stale proofs, redirect refusal, numeric precision, Unicode terminal widths, table search/reset/detail navigation, typed forms and actual serial collection. Set `WMS_TEST_DATABASE_URL` to an isolated PostgreSQL test database to include real API and 70-column terminal acceptance; otherwise that test is skipped. See the root [verification instructions](https://github.com/stateset/stateset-warehouse#verify).
