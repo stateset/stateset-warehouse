@@ -14,7 +14,7 @@
 
 `/home/dom/stateset-app/package.json` establishes React and TypeScript UI conventions; the newer EDI/Sync/engine dashboards establish React/Vite. The WMS uses Rust 1.90, Axum 0.8, Tokio, SQLx/Postgres and React/TypeScript/Vite.
 
-iCommerce's `crates/stateset-core/src/models/warehouse.rs`, `stateset-db/src/postgres/warehouse.rs`, and migrations 080/083/092 establish bin/lot identity, exact quantities, order-line reservation identity and balance protection. Its `postgres_inventory_oversell.rs`, `postgres_move_inventory_concurrency.rs`, and shipment atomicity tests are concrete regression inputs. We reuse these concepts rather than depend on the entire embedded commerce engine, which would introduce a second order/inventory authority and its schema lifecycle.
+iCommerce's `crates/stateset-core/src/models/warehouse.rs` and `crates/stateset-db/src/postgres/warehouse.rs` provide warehouse design references. Its `crates/stateset-migrations/migrations/080_reservation_order_line.sql`, `083_inventory_balance_guards.sql` and `092_inventory_balance_identity.sql` establish reservation ownership and balance identity/protection. The `postgres_inventory_oversell.rs`, `postgres_move_inventory_concurrency.rs` and shipment atomicity cases provide regression inputs. This is design and validation reuse. The WMS implements its own execution logic, schema and physical ledger; its [Rust dependencies](../Cargo.toml) and [dashboard dependencies](../dashboard/package.json) include no iCommerce engine, crate or SDK. Sync and Freight connect through the explicit [HTTP adapters](native-integrations.md).
 
 ## Inventory contract
 
@@ -151,7 +151,7 @@ A checked original pack observation accompanies the durable command request; the
 
 ## Serial identity backend in progress
 
-The [locally qualified serial release](qualification/release-20261019-serial-write-source-sets-v1/summary.json) includes REST/MCP command admission, bounded identity reads and durable operator collection/recovery, with migrations021–029. Its complete gate covers a500-product/16,000-label image workload, original-request recovery and populated49-table archive restore. Device/deployment/facility acceptance and pending serial-write crash recovery remain separate. See the [serial command contract](api.md#serial-command-admission).
+The [locally qualified serial release](qualification/release-20261019-serial-after-write-v1/summary.json) includes REST/MCP command admission, bounded identity reads and durable operator collection/recovery, with migrations 021–029. Its complete gate covers an image workload with 500 products and 16,000 labels, after-mutation API/PostgreSQL serial write recovery and restore of a populated archive with 49 tables. Device/deployment/facility acceptance remains separate. See the [serial command contract](api.md#serial-command-admission).
 
 The identity key is `(tenant, SKU, literal serial)`, with case-sensitive labels and an immutable original lot. Tracking mode is chosen when the tenant/SKU is first introduced and must agree at every facility. Existing products remain untracked; the migration invents no historical IDs. A serial represents one each. Pack conversions require every resulting each identity, retaining the original definition and literal observations in the same request.
 

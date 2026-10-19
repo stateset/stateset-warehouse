@@ -1,5 +1,5 @@
 {
-  "recorded_at": "2026-10-19T14:58:49.890051+00:00",
+  "recorded_at": "2026-10-19T17:03:55.576048+00:00",
   "ok": true,
   "previous_accepted_live_cases": 21,
   "current_live_cases": 21,
@@ -90,9 +90,7 @@
       "reviewed pack definitions retain original form scanner count and recovery quantities"
     ]
   ],
-  "historical_pre_serial_cases": 13,
-  "serial_desktop_mobile_cases": 8,
-  "old_log_sha256": "1af486e6f810fbd4159a5b10dfde8947e8c0b675fee48ebde7b7b0e875d5e955",
-  "new_log_sha256": "71cc5a18cd8d92d868283a6f6311b7a54b2c4db70fe4876a4657e4a288648042",
+  "old_log_sha256": "71cc5a18cd8d92d868283a6f6311b7a54b2c4db70fe4876a4657e4a288648042",
+  "new_log_sha256": "747f6758fb60e51980fc98a7f8b448c6d5c6d8902d41a4cca0cf24cef8dfa3e0",
   "correct_total_browser_checks": 170
 }

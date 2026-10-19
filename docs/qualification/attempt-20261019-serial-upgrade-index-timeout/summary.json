@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "scope": "software_release_gate",
+  "recorded_at": "2026-10-19T15:53:43.136396+00:00",
+  "result": "failed",
+  "production_qualified": false,
+  "synthetic": true,
+  "release_revision": "serial-after-write-source41-from-e64da9f",
+  "elapsed_seconds": 845,
+  "stages": [
+    {
+      "name": "prerequisites",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 3.358
+    },
+    {
+      "name": "software_checks",
+      "status": "failed",
+      "exit_code": 101,
+      "elapsed_seconds": 840.628
+    },
+    {
+      "name": "observability_rules",
+      "status": "not_run"
+    },
+    {
+      "name": "release_builds",
+      "status": "not_run"
+    },
+    {
+      "name": "standard_workload",
+      "status": "not_run"
+    },
+    {
+      "name": "archive_restore",
+      "status": "not_run"
+    },
+    {
+      "name": "live_browsers",
+      "status": "not_run"
+    },
+    {
+      "name": "production_container",
+      "status": "not_run"
+    },
+    {
+      "name": "image_resilience",
+      "status": "not_run"
+    },
+    {
+      "name": "stable_source_inputs",
+      "status": "not_run"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "source-inputs-before.json",
+      "sha256": "7466e136122a782dfe19c23392158ec98a0d627b2fbff6289bc8b18ba9e89404"
+    },
+    {
+      "path": "tool-versions.json",
+      "sha256": "fb353776fcb627064e6ae049b0f4af0fa62007cc594ca9b5063098dd9946e8b5"
+    },
+    {
+      "path": "prerequisites.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "software_checks.log",
+      "sha256": "b6d1f56fd76eeaa5bebd9f9982a241e0012770c59862136c6a6c9b360476924d"
+    }
+  ],
+  "not_performed": [
+    "Deployed WorkOS sign-in and membership lifecycle",
+    "Deployed OMS/Freight qualification",
+    "Physical warehouse and scanner acceptance",
+    "Organization-hosted GitHub execution"
+  ],
+  "limits": [
+    "All inventory and native-service fixtures are synthetic",
+    "Performance results apply to the recorded profiles and host",
+    "Process/database restart is not managed database failover",
+    "Published logs are sanitized; private raw artifacts stay in the fresh evidence directory"
+  ]
+}

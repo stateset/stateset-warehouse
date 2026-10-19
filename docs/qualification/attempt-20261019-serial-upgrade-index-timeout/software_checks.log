@@ -1,0 +1,624 @@
+    Checking stateset-warehouse v0.1.1 (/home/dom/stateset-warehouse)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 56.95s
+   Compiling cfg-if v1.0.5
+   Compiling serde_core v1.0.229
+   Compiling pin-project-lite v0.2.17
+   Compiling futures-core v0.3.34
+   Compiling itoa v1.0.18
+   Compiling once_cell v1.21.4
+   Compiling bytes v1.12.1
+   Compiling zerofrom v0.1.8
+   Compiling stable_deref_trait v1.2.1
+   Compiling scopeguard v1.2.0
+   Compiling serde v1.0.229
+   Compiling yoke v0.8.3
+   Compiling memchr v2.8.3
+   Compiling lock_api v0.4.14
+   Compiling zerovec v0.11.8
+   Compiling errno v0.3.14
+   Compiling smallvec v1.16.2
+   Compiling futures-sink v0.3.34
+   Compiling signal-hook-registry v1.4.8
+   Compiling parking_lot_core v0.9.12
+   Compiling socket2 v0.6.5
+   Compiling mio v1.2.4
+   Compiling futures-channel v0.3.34
+   Compiling parking_lot v0.12.5
+   Compiling tracing-core v0.1.36
+   Compiling futures-io v0.3.34
+   Compiling futures-task v0.3.34
+   Compiling tokio v1.53.2
+   Compiling log v0.4.34
+   Compiling slab v0.4.12
+   Compiling tinystr v0.8.4
+   Compiling litemap v0.8.3
+   Compiling futures-util v0.3.34
+   Compiling writeable v0.6.4
+   Compiling zeroize v1.9.1
+   Compiling icu_locale_core v2.3.0
+   Compiling tracing v0.1.44
+   Compiling potential_utf v0.1.6
+   Compiling zerotrie v0.2.5
+   Compiling utf8_iter v1.0.4
+   Compiling percent-encoding v2.3.2
+   Compiling http v1.5.0
+   Compiling icu_collections v2.3.0
+   Compiling getrandom v0.2.17
+   Compiling icu_provider v2.3.1
+   Compiling subtle v2.6.1
+   Compiling http-body v1.1.0
+   Compiling icu_normalizer_data v2.3.0
+   Compiling icu_properties_data v2.3.0
+   Compiling typenum v1.20.1
+   Compiling icu_normalizer v2.3.0
+   Compiling zmij v1.0.23
+   Compiling icu_properties v2.3.0
+   Compiling form_urlencoded v1.2.2
+   Compiling rustls-pki-types v1.15.1
+   Compiling generic-array v0.14.7
+   Compiling bitflags v2.13.2
+   Compiling serde_json v1.0.151
+   Compiling idna_adapter v1.2.2
+   Compiling untrusted v0.9.0
+   Compiling tower-service v0.3.3
+   Compiling ring v0.17.14
+   Compiling idna v1.1.0
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling num-traits v0.2.19
+   Compiling try-lock v0.2.5
+   Compiling rand_core v0.10.1
+   Compiling httpdate v1.0.3
+   Compiling digest v0.10.7
+   Compiling want v0.3.2
+   Compiling zerocopy v0.8.61
+   Compiling url v2.5.8
+   Compiling httparse v1.10.1
+   Compiling http-body-util v0.1.5
+   Compiling rustls-webpki v0.103.15
+   Compiling sync_wrapper v1.0.2
+   Compiling mime v0.3.17
+   Compiling tower-layer v0.3.3
+   Compiling equivalent v1.0.2
+   Compiling atomic-waker v1.1.2
+   Compiling hyper v1.12.0
+   Compiling rustls v0.23.46
+   Compiling ppv-lite86 v0.2.21
+   Compiling getrandom v0.4.3
+   Compiling webpki-roots v1.0.9
+   Compiling base64 v0.23.1
+   Compiling ipnet v2.12.2
+   Compiling tower v0.5.3
+   Compiling foldhash v0.1.5
+   Compiling hyper-util v0.1.21
+   Compiling allocator-api2 v0.2.21
+   Compiling base64 v0.22.1
+   Compiling hashbrown v0.17.1
+   Compiling hashbrown v0.15.5
+   Compiling thiserror v2.0.21
+   Compiling mime_guess v2.0.5
+   Compiling indexmap v2.14.2
+   Compiling crossbeam-utils v0.8.23
+   Compiling rand_core v0.6.4
+   Compiling tokio-stream v0.1.19
+   Compiling tokio-util v0.7.19
+   Compiling http-range-header v0.4.2
+   Compiling parking v2.2.1
+   Compiling iana-time-zone v0.1.65
+   Compiling regex-syntax v0.8.11
+   Compiling crc-catalog v2.5.0
+   Compiling tinyvec v1.13.3
+   Compiling cpufeatures v0.2.17
+   Compiling tower-http v0.6.11
+   Compiling sha2 v0.10.9
+   Compiling unicode-normalization v0.1.25
+   Compiling crc v3.4.0
+   Compiling chrono v0.4.45
+   Compiling event-listener v5.4.2
+   Compiling crossbeam-queue v0.3.13
+   Compiling rand_chacha v0.3.1
+   Compiling hashlink v0.10.0
+   Compiling getrandom v0.3.4
+   Compiling webpki-roots v0.26.11
+   Compiling hmac v0.12.1
+   Compiling futures-intrusive v0.5.0
+   Compiling either v1.19.0
+   Compiling ryu v1.0.23
+   Compiling unicode-bidi v0.3.18
+   Compiling cpufeatures v0.3.1
+   Compiling unicode-properties v0.1.4
+   Compiling siphasher v1.0.4
+   Compiling serde_urlencoded v0.7.1
+   Compiling phf_shared v0.12.1
+   Compiling stringprep v0.1.5
+   Compiling chacha20 v0.10.2
+   Compiling sqlx-core v0.8.6
+   Compiling hkdf v0.12.4
+   Compiling ref-cast v1.0.27
+   Compiling rand_core v0.9.5
+   Compiling rand v0.8.8
+   Compiling regex-automata v0.4.18
+   Compiling aws-lc-sys v0.46.0
+   Compiling tokio-rustls v0.26.6
+   Compiling atoi v2.0.0
+   Compiling md-5 v0.10.6
+   Compiling futures-executor v0.3.34
+   Compiling linux-raw-sys v0.12.1
+   Compiling home v0.5.12
+   Compiling dotenvy v0.15.7
+   Compiling lazy_static v1.5.1
+   Compiling whoami v1.6.1
+   Compiling dyn-clone v1.0.20
+   Compiling byteorder v1.5.0
+   Compiling untrusted v0.7.1
+   Compiling hex v0.4.3
+   Compiling aws-lc-rs v1.18.2
+   Compiling schemars v1.2.2
+   Compiling sharded-slab v0.1.7
+   Compiling sqlx-postgres v0.8.6
+   Compiling rustix v1.1.5
+   Compiling matchers v0.2.0
+   Compiling futures v0.3.34
+   Compiling hyper-rustls v0.27.10
+   Compiling rand v0.10.3
+   Compiling phf v0.12.1
+   Compiling reqwest v0.13.5
+   Compiling uuid v1.27.0
+   Compiling axum-core v0.5.6
+   Compiling sse-stream v0.2.6
+   Compiling tracing-log v0.2.0
+   Compiling serde_path_to_error v0.1.20
+   Compiling thread_local v1.1.10
+   Compiling nu-ansi-term v0.50.3
+   Compiling fastrand v2.5.0
+   Compiling signature v2.2.0
+   Compiling matchit v0.8.4
+   Compiling tempfile v3.27.0
+   Compiling tracing-subscriber v0.3.23
+   Compiling axum v0.8.9
+   Compiling jsonwebtoken v10.4.0
+   Compiling rmcp v3.5.1
+   Compiling sqlx v0.8.6
+   Compiling chrono-tz v0.10.4
+   Compiling reqwest v0.12.28
+   Compiling wait-timeout v0.2.1
+   Compiling quick-error v1.2.3
+   Compiling fnv v1.0.7
+   Compiling bit-vec v0.8.0
+   Compiling rand v0.9.5
+   Compiling rusty-fork v0.3.1
+   Compiling rand_chacha v0.9.0
+   Compiling bit-set v0.8.0
+   Compiling rand_xorshift v0.4.0
+   Compiling unarray v0.1.4
+   Compiling stateset-warehouse v0.1.1 (/home/dom/stateset-warehouse)
+   Compiling proptest v1.11.0
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 7m 54s
+     Running unittests src/lib.rs (target/debug/deps/stateset_warehouse-4f60025b3595f64e)
+
+running 26 tests
+test auth::tests::configuration_rejects_ambiguous_or_unsafe_authority ... ok
+test auth::tests::configured_audience_requires_presence_and_exact_match ... ok
+test auth::tests::mcp_uses_current_verified_workos_membership_for_every_request ... ok
+test auth::tests::http_auth_enforces_roles_hides_mappings_and_preserves_service_keys ... ok
+test auth::tests::signed_identity_owns_persisted_commands_across_refresh_and_tenant_changes ... ignored, requires isolated PostgreSQL; scripts/local-postgres.sh
+test auth::tests::expired_keys_cannot_bypass_an_in_flight_rotation ... ok
+test auth::tests::malformed_oversized_redirected_and_ambiguous_keysets_are_rejected ... ok
+test auth::tests::rotated_keys_replace_old_keys_and_expired_cache_never_bypasses_outage ... ok
+test command_state::tests::selective_snapshot_keeps_foreign_holds_without_loading_unrelated_catalog_or_orders ... ignored, requires isolated PostgreSQL; scripts/local-postgres.sh
+test auth::tests::signed_membership_maps_only_server_approved_identity ... ok
+test serials::tests::serial_classic_handoff_return_authorization_and_partial_rma_cancel_preserve_each_identity ... ok
+test serials::tests::serial_derived_unpack_rejects_partial_lookup_even_when_physical_stock_stays_balanced ... ok
+test serials::tests::serial_count_move_and_same_sku_picks_keep_exact_original_line_owners ... ok
+test serials::tests::serial_counts_mark_missing_and_found_without_teleporting_transit_or_shipped_units ... ok
+test serials::tests::serial_destination_loss_reversal_and_separate_arrival_never_credit_stock_early ... ok
+test serials::tests::serial_dispatch_and_partial_arrival_cannot_exchange_equal_sku_original_lines ... ok
+test serials::tests::serial_observations_reject_duplicates_wrong_targets_unknown_units_and_control_text ... ok
+test serials::tests::serial_receiving_rejects_reused_cross_facility_and_wrong_lot_identity ... ok
+test serials::tests::serial_partial_packages_hold_exact_tuples_then_unpack_unpick_and_cancel_remainder ... ok
+test serials::tests::serial_equations_reject_missing_baselines_and_stock_balanced_owner_forgery ... ok
+test auth::tests::invalid_claims_and_signatures_fail_closed ... ok
+test auth::tests::concurrent_jwks_requests_are_coalesced_and_unknown_kids_are_rate_limited ... ok
+test auth::tests::cached_operator_requests_do_not_wait_for_unknown_key_refresh ... ok
+test serials::tests::serial_repeated_moves_preserve_every_identity_and_exact_bin_quantities ... ok
+test auth::tests::failed_and_cancelled_refreshes_preserve_cooldown_without_poisoning_cache ... ok
+test auth::tests::unresponsive_signing_provider_has_a_bounded_http_failure ... ok
+
+test result: ok. 24 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 3.29s
+
+     Running tests/domain.rs (target/debug/deps/domain-c053d329cb1093d3)
+
+running 38 tests
+test allocation_status_and_unique_ownership_are_validated_independently ... ok
+test empty_pack_observations_preserve_legacy_request_bytes_and_default_on_read ... ok
+test cancelled_demand_read_model_keeps_fully_cancelled_package_orders_closed_without_inventing_handoffs ... ok
+test counts_and_transfers_cannot_consume_reserved_stock ... ok
+test cancellation_releases_only_its_own_order ... ok
+test exceptions_block_execution_and_resolution_does_not_invent_stock ... ok
+test lot_expiry_excludes_unlabelled_required_stock_and_enforces_the_exact_offset_boundary ... ok
+test independent_reconciliation_detects_balance_and_reservation_corruption ... ok
+test lot_quarantine_holds_are_independent_and_release_never_overrides_expiry ... ok
+test legacy_receipt_identity_is_backfilled_only_when_unambiguous ... ok
+test insufficient_second_line_rolls_back_all_reservations ... ok
+test lot_quarantine_blocks_reserved_picks_but_preserves_reservations_and_physical_recovery ... ok
+test lot_allocation_uses_earliest_expiry_before_bin_order_and_leaves_unlabelled_nonperishables_last ... ok
+test opening_physical_balances_reconcile_new_movement_deltas_but_not_reservations ... ok
+test partial_cancellation_requires_unpacking_and_actual_unpick_before_commercial_close ... ok
+test physical_lifecycle_preserves_stock_until_carrier_handoff ... ok
+test partial_cancellation_is_terminal_but_never_relabels_unshipped_demand_as_a_completed_handoff ... ok
+test partial_return_cancellation_releases_only_its_exact_unreceived_line_lot ... ok
+test partial_cancellation_releases_storage_reservations_preserves_handoff_and_retains_returns ... ok
+test receipt_cancellation_closes_only_unreceived_units_and_freezes_evidence ... ok
+test receipt_evidence_rejects_wrong_reference_ownership_and_missing_identity ... ok
+test recovery_preserves_exact_line_and_order_ownership_and_invalidates_packing ... ok
+test receiving_is_partial_bounded_and_not_allocatable_until_putaway ... ok
+test recovery_rejects_completed_work_and_unauthorized_roles ... ok
+test replenishment_protects_reservations_pick_faces_and_shared_source_capacity ... ok
+test replenishment_skips_full_destination_lots_without_hiding_unfilled_target ... ok
+test returns_preserve_exact_shipment_lines_and_enter_receiving_before_resale ... ok
+test receipt_counters_and_duplicate_sku_lines_require_exact_movement_evidence ... ok
+test short_pick_can_be_returned_recounted_replenished_and_reallocated ... ok
+test rejects_fractional_quantities_unknown_fields_and_role_escalation ... ok
+test same_sku_lines_cannot_steal_each_others_reservations ... ok
+test synthetic_fixture_is_a_real_reconciled_workflow ... ok
+test typed_snapshot_keeps_invalid_state_diagnostics ... ok
+test typed_snapshot_preserves_wire_contract_and_trusted_owner_holds ... ok
+test optimized_proof_matches_prior_independent_maps ... ok
+test partial_picks_never_change_physical_warehouse_total ... ok
+test arbitrary_moves_and_counts_preserve_ledger ... ok
+test arbitrary_pick_returns_preserve_stock_and_line_reservations ... ok
+
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.43s
+
+     Running tests/http_auth.rs (target/debug/deps/http_auth-7b1686f4acd8ca0b)
+
+running 8 tests
+test fake_tenant_headers_never_replace_identity ... ok
+test replenishment_planning_denies_viewers_before_database_access ... ok
+test viewer_command_is_rejected_before_database_access ... ok
+test health_is_public_but_warehouse_data_is_not ... ok
+test facility_admission_rejects_nonadministrators_without_database_access ... ok
+test api_errors_and_successes_have_private_caching_and_unforgeable_correlation ... ok
+test warehouse_directory_rejects_bad_or_scope_override_queries_without_database_access ... ok
+test database_unavailability_fails_readiness_within_a_bounded_deadline ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.03s
+
+     Running tests/mcp.rs (target/debug/deps/mcp-6bb3cca78e4e74d1)
+
+running 13 tests
+test mcp_oms_closes_only_source_linked_partial_remainders_through_the_original_journal ... ignored, requires isolated PostgreSQL; scripts/local-postgres.sh
+test mcp_preserves_exact_resource_fences_and_rest_body_limits ... ignored, requires isolated PostgreSQL; scripts/local-postgres.sh
+test configuration_rejects_wildcards_ambiguous_targets_and_insecure_browser_origins ... ok
+test real_http_mcp_partial_fulfillment_and_exact_retry_share_the_canonical_journal ... ignored, requires isolated PostgreSQL; scripts/local-postgres.sh
+test real_mcp_lot_controls_share_actor_bound_recovery_roles_and_current_custody_view ... ignored, requires isolated PostgreSQL; scripts/local-postgres.sh
+test real_mcp_lot_trace_preserves_long_original_cursors_scope_and_read_only_source_reviews ... ignored, requires isolated PostgreSQL; scripts/local-postgres.sh
+test real_mcp_pack_observations_keep_original_definition_replay_and_authority ... ignored, requires isolated PostgreSQL
+test real_mcp_transfer_loss_journal_reversal_and_replay_share_destination_authority_without_stock_credit ... ignored, requires isolated PostgreSQL; scripts/local-postgres.sh
+test modern_stateless_requests_check_protocol_metadata_and_routing_headers ... ok
+test tool_input_never_selects_a_principal_remote_url_or_different_command ... ok
+test transport_rejects_dns_rebinding_untrusted_origins_and_unbounded_bodies ... ok
+test official_sdk_negotiates_legacy_http_and_modern_discovery ... ok
+test discovery_and_every_call_use_current_http_identity ... ok
+
+test result: ok. 6 passed; 0 failed; 7 ignored; 0 measured; 0 filtered out; finished in 0.17s
+
+     Running tests/native_api.rs (target/debug/deps/native_api-299ad13079da866a)
+
+running 12 tests
+test authenticated_native_http_and_postgres_workflow_recovers_remote_acceptance_without_second_load ... ignored, requires isolated Postgres; WMS_TEST_DATABASE_URL
+test competing_warehouses_cannot_import_the_same_complete_native_oms_order ... ignored, requires isolated Postgres; WMS_TEST_DATABASE_URL
+test durable_transport_intents_enforce_one_order_and_one_sender_then_recover_uncertainty ... ignored, requires isolated Postgres; WMS_TEST_DATABASE_URL
+test expired_native_delivery_lease_retains_uncertain_attempt_before_reclaim ... ignored, requires isolated Postgres; WMS_TEST_DATABASE_URL
+test first_transport_send_rechecks_packed_state_and_exception_then_allows_unrelated_inventory ... ignored, requires isolated Postgres; WMS_TEST_DATABASE_URL
+test import_api_recovers_after_command_commit_using_frozen_source_and_actor_bound_receipt ... ignored, requires isolated Postgres; WMS_TEST_DATABASE_URL
+test native_intents_and_finished_attempts_reject_database_evidence_tampering ... ignored, requires isolated Postgres; WMS_TEST_DATABASE_URL
+test blank_native_environment_supports_unconfigured_compose_defaults ... ok
+test native_http_is_disabled_for_synthetic_demo_even_with_admin_role ... ok
+test viewers_cannot_trigger_native_http_or_read_sensitive_native_receipts ... ok
+test native_request_hash_binds_operation_order_path_and_complete_input ... ok
+test malformed_native_input_is_rejected_before_any_database_or_upstream_connection ... ok
+
+test result: ok. 5 passed; 0 failed; 7 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/native_contracts.rs (target/debug/deps/native_contracts-2e0c86a399039698)
+
+running 18 tests
+test freight_plans_require_explicit_native_fields_and_reject_invented_status_commands ... ok
+test integration_configuration_binds_each_tenant_without_secrets_in_summary_or_errors ... ok
+test quantity_decimal_validation_rejects_fractional_each_without_float_rounding ... ok
+test native_import_rejects_missing_sku_duplicate_line_ids_fractions_and_terminal_orders ... ok
+test import_preserves_two_line_owners_for_the_same_sku_and_scopes_source_identity ... ok
+test full_order_import_rejects_partial_or_unknown_fulfillment_in_canonical_and_source_snapshots ... ok
+test source_line_ids_remain_stable_when_upstream_with_line_ids_changes_ordering ... ok
+test raw_source_cancellation_cannot_create_new_full_order_work ... ok
+test readiness_rejects_unpacked_and_foreign_oms_source_orders ... ok
+test oms_handoff_remains_held_because_native_mutation_has_no_atomic_source_guard ... ok
+test native_http_rejects_redirects_bad_envelopes_and_oversized_responses ... ok
+test preparation_freezes_exact_native_transport_body_and_scoped_idempotency_key ... ok
+test wire_oms_requests_use_tenant_paths_api_key_and_actual_response_envelopes ... ok
+test tms_retained_source_mismatch_is_reported_as_uncertain_instead_of_accepted ... ok
+test wire_tms_uses_source_verified_import_and_reuses_frozen_key_on_retry ... ok
+test retained_transport_pins_recipient_authority_and_allows_only_same_tenant_secret_rotation ... ok
+test new_transport_preflight_checks_canonical_oms_lines_and_rejects_cancelled_source ... ok
+test tms_ineligible_retained_source_after_preflight_stays_uncertain_on_exact_retry ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
+
+     Running tests/oms_client.rs (target/debug/deps/oms_client-1284d00a8f0e042e)
+
+running 10 tests
+test retained_handoff_rejects_invalid_provider_fields_even_with_a_recomputed_fingerprint ... ok
+test conditional_fulfillment_is_explicit_opt_in_and_legacy_writeback_stays_held ... ok
+test retained_recipient_cannot_be_rebound_and_same_tenant_secret_rotation_is_allowed ... ok
+test durable_rejection_replays_unchanged_and_fresh_review_gets_a_separate_request_identity ... ok
+test fractional_or_changed_canonical_source_and_terminal_source_cannot_start_an_intent ... ok
+test prepare_preserves_same_sku_line_owners_and_exact_physical_handoff ... ok
+test exact_frozen_retry_does_not_refresh_source_revision_after_later_source_changes ... ok
+test missing_contract_guarantees_or_foreign_tenant_never_receive_a_post ... ok
+test wrong_acknowledgement_scope_fingerprint_status_or_revision_is_uncertain ... ok
+test unscoped_or_malformed_rejection_never_authorizes_a_replacement ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+
+     Running tests/oms_fulfillment_api.rs (target/debug/deps/oms_fulfillment_api-31f0af5df8a0ae98)
+
+running 9 tests
+test authenticated_conditional_oms_handoff_recovers_remote_commit_after_response_loss_without_second_fulfillment ... ignored, requires isolated Postgres and loopback HTTP; WMS_TEST_DATABASE_URL
+test conditional_journal_recovers_expired_lease_without_replacing_frozen_handoff_or_accepting_old_worker ... ignored, requires isolated Postgres; WMS_TEST_DATABASE_URL
+test conditional_journal_requires_actual_committed_event_and_rechecks_normalized_shipment_before_first_send ... ignored, requires isolated Postgres; WMS_TEST_DATABASE_URL
+test journal_completion_revalidates_exact_acknowledgements_and_retains_uncertain_shipment_ownership ... ignored, requires isolated Postgres; WMS_TEST_DATABASE_URL
+test only_durable_oms_rejection_releases_intent_for_a_separately_reviewed_request ... ignored, requires isolated Postgres; WMS_TEST_DATABASE_URL
+test single_package_conditional_oms_recovers_original_handoff_after_remote_response_loss ... ignored, requires isolated PostgreSQL
+test conditional_fulfillment_denies_viewer_and_oms_roles_before_any_database_or_http ... ok
+test conditional_fulfillment_is_disabled_in_demo_even_for_an_administrator ... ok
+test conditional_fulfillment_rejects_spoofed_input_and_invalid_identity_before_connecting ... ok
+
+test result: ok. 3 passed; 0 failed; 6 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/operations.rs (target/debug/deps/operations-79aeefa078fd2f02)
+
+running 7 tests
+test blocked_operational_read_fails_with_bounded_unavailability_instead_of_zero_counts ... ignored, requires isolated WMS_TEST_DATABASE_URL
+test empty_operational_snapshot_is_zero_complete_and_prometheus_has_fixed_cardinality ... ignored, requires isolated WMS_TEST_DATABASE_URL
+test operational_counts_ages_pagination_and_metrics_are_exact_and_tenant_scoped ... ignored, requires isolated WMS_TEST_DATABASE_URL
+test operational_snapshot_keeps_one_database_view_across_concurrent_commits ... ignored, requires isolated WMS_TEST_DATABASE_URL
+test operational_routes_require_authentication_before_database_access ... ok
+test operations_reject_invalid_or_scope_override_queries_without_database ... ok
+test operations_roles_reject_viewers_integrations_and_operator_metrics_without_database ... ok
+
+test result: ok. 3 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+     Running tests/serial_admission.rs (target/debug/deps/serial_admission-e0294c9c8eb0cfda)
+
+running 33 tests
+test equal_quantity_serial_replacement_fences_scoped_reviews_and_preserves_full_observed_sets ... ignored, requires isolated PostgreSQL
+test extended::balanced_projection_corruption_fails_reconciliation_and_is_not_healed_by_a_move ... ignored, requires isolated PostgreSQL
+test extended::http_and_mcp_share_serial_roles_actor_bound_recovery_and_exact_replay ... ignored, requires isolated PostgreSQL
+test extended::long_canonical_count_result_descriptions_do_not_restrict_valid_literal_custody_keys ... ignored, requires isolated PostgreSQL
+test extended::modes_and_literal_identity_are_global_per_tenant_and_keep_original_catalog_source ... ignored, requires isolated PostgreSQL
+test extended::simultaneous_facility_births_wait_for_one_global_head_and_cannot_duplicate_a_uid ... ignored, requires isolated PostgreSQL
+test extended::two_transfer_lines_preserve_exact_serial_loss_reversal_and_arrival_ownership ... ignored, requires isolated PostgreSQL
+test payload_reuse::decoded_payloads_preserve_every_original_source_predicate_with_malformed_and_changed_facts ... ignored, requires isolated PostgreSQL
+test payload_reuse::full_512unit_birth_move_and_unchanged_count_keep_standalone_guards_and_original_replays ... ignored, requires isolated PostgreSQL
+test plan::observation_plans_resolve_original_targets_without_saving_and_enforce_role_scope_and_bounds ... ignored, requires isolated PostgreSQL
+test reads::current_and_lineage_reads_bind_literal_cursors_tenant_roles_and_mcp ... ignored, requires isolated PostgreSQL
+test reads::current_source_damage_stays_visible_and_taints_lineage_without_rewriting_facts ... ignored, requires isolated PostgreSQL
+test reads::destination_changes_expire_global_pages_without_advancing_source_warehouse ... ignored, requires isolated PostgreSQL
+test reads::encoded_utf8_budget_continues_before_a_complete_record_without_losing_identities ... ignored, requires isolated PostgreSQL
+test reads::forged_observation_remains_visible_but_fails_selected_original_event_checks ... ignored, requires isolated PostgreSQL
+test reads::observations_page_inside_original_groups_and_retain_noop_and_empty_counts ... ignored, requires isolated PostgreSQL
+test reads::retained_observation_blocks_rebirth_when_current_and_steps_are_missing ... ignored, requires isolated PostgreSQL
+test reads::retained_observation_holds_exact_read_when_current_and_steps_are_missing ... ignored, requires isolated PostgreSQL
+test resolved_sources::count_read_sources_keep_complete_historical_sets_and_original_damaged_event_verdicts ... ignored, requires isolated PostgreSQL
+test resolved_sources::resolved_sources_preserve_empty_untracked_and_zero_identity_head_outcomes ... ignored, requires isolated PostgreSQL
+test resolved_sources::shared_command_classes_keep_each_original_event_group_and_facility_binding_after_damage ... ignored, requires isolated PostgreSQL
+test restore::populated_21_upgrade_to_current_preserves_every_data_table_and_original_serial_replay ... ignored, requires isolated PostgreSQL role permitted to create owned test databases
+test restore::restore_place_checks_resolve_helpers_with_an_empty_session_search_path ... ignored, requires isolated PostgreSQL
+test scoped_references::exact_reference_classes_keep_original_empty_duplicate_and_damaged_source_outcomes ... ignored, requires isolated PostgreSQL
+test scoped_references::scoped_mode_sources_preserve_original_selection_and_actual_commit_rejections ... ignored, requires isolated PostgreSQL
+test serial_final_outbox_failure_rolls_back_every_identity_fact_and_allows_exact_original_retry ... ignored, requires isolated PostgreSQL
+test serial_supplier_pick_package_handoff_and_return_commit_original_case_sensitive_identity ... ignored, requires isolated PostgreSQL
+test shared_sources::shared_full_proof_matches_original_for_projection_orphan_and_original_source_damage ... ignored, requires isolated PostgreSQL
+test shared_sources::shared_selected_sources_keep_scope_false_flags_and_refresh_after_original_repair ... ignored, requires isolated PostgreSQL
+test target_resolution::event_observation_set_matches_original_on_zero_missing_changed_and_extra_rows ... ignored, requires isolated PostgreSQL
+test target_resolution::hundred_original_line_targets_match_original_predicate_and_actual_dispatch ... ignored, requires isolated PostgreSQL
+test target_resolution::resolved_target_set_matches_original_root_group_shape_and_exact_count_rules ... ignored, requires isolated PostgreSQL
+test default_serial_fields_preserve_legacy_canonical_request_and_catalog_bytes ... ok
+
+test result: ok. 1 passed; 0 failed; 32 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/startup.rs (target/debug/deps/startup-17bd5e02aacedaff)
+
+running 6 tests
+test invalid_receiver_configuration_cannot_provision_a_tenant ... ignored, requires isolated PostgreSQL; scripts/local-postgres.sh
+test workos_only_and_mixed_startup_provision_exact_tenants_and_preserve_work_on_restart ... ignored, requires isolated PostgreSQL; scripts/local-postgres.sh
+test occupied_listener_is_rejected_before_database_access ... ok
+test invalid_mcp_authorities_fail_before_database_access ... ok
+test startup_identity_guards_cannot_fall_back_to_another_provider ... ok
+test malformed_receivers_are_rejected_before_database_access ... ok
+
+test result: ok. 4 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.37s
+
+................................................................
+----------------------------------------------------------------------
+Ran 64 tests in 30.625s
+
+OK
+   Compiling stateset-warehouse v0.1.1 (/home/dom/stateset-warehouse)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 21.10s
+     Running unittests src/lib.rs (target/debug/deps/stateset_warehouse-4f60025b3595f64e)
+
+running 2 tests
+test auth::tests::signed_identity_owns_persisted_commands_across_refresh_and_tenant_changes ... ok
+test command_state::tests::selective_snapshot_keeps_foreign_holds_without_loading_unrelated_catalog_or_orders ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 24 filtered out; finished in 2.14s
+
+     Running tests/mcp.rs (target/debug/deps/mcp-6bb3cca78e4e74d1)
+
+running 7 tests
+test mcp_oms_closes_only_source_linked_partial_remainders_through_the_original_journal ... ok
+test mcp_preserves_exact_resource_fences_and_rest_body_limits ... ok
+test real_http_mcp_partial_fulfillment_and_exact_retry_share_the_canonical_journal ... ok
+test real_mcp_lot_controls_share_actor_bound_recovery_roles_and_current_custody_view ... ok
+test real_mcp_lot_trace_preserves_long_original_cursors_scope_and_read_only_source_reviews ... ok
+test real_mcp_pack_observations_keep_original_definition_replay_and_authority ... ok
+test real_mcp_transfer_loss_journal_reversal_and_replay_share_destination_authority_without_stock_credit ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 6.20s
+
+     Running tests/native_api.rs (target/debug/deps/native_api-299ad13079da866a)
+
+running 7 tests
+test authenticated_native_http_and_postgres_workflow_recovers_remote_acceptance_without_second_load ... ok
+test competing_warehouses_cannot_import_the_same_complete_native_oms_order ... ok
+test durable_transport_intents_enforce_one_order_and_one_sender_then_recover_uncertainty ... ok
+test expired_native_delivery_lease_retains_uncertain_attempt_before_reclaim ... ok
+test first_transport_send_rechecks_packed_state_and_exception_then_allows_unrelated_inventory ... ok
+test import_api_recovers_after_command_commit_using_frozen_source_and_actor_bound_receipt ... ok
+test native_intents_and_finished_attempts_reject_database_evidence_tampering ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 5.78s
+
+     Running tests/oms_fulfillment_api.rs (target/debug/deps/oms_fulfillment_api-31f0af5df8a0ae98)
+
+running 6 tests
+test authenticated_conditional_oms_handoff_recovers_remote_commit_after_response_loss_without_second_fulfillment ... ok
+test conditional_journal_recovers_expired_lease_without_replacing_frozen_handoff_or_accepting_old_worker ... ok
+test conditional_journal_requires_actual_committed_event_and_rechecks_normalized_shipment_before_first_send ... ok
+test journal_completion_revalidates_exact_acknowledgements_and_retains_uncertain_shipment_ownership ... ok
+test only_durable_oms_rejection_releases_intent_for_a_separately_reviewed_request ... ok
+test single_package_conditional_oms_recovers_original_handoff_after_remote_response_loss ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 5.21s
+
+     Running tests/oms_receiver.rs (target/debug/deps/oms_receiver-a40a4094afdc16b7)
+
+running 5 tests
+test cancellation_or_revision_commit_first_and_block_stale_fulfillment_with_durable_rejection ... ok
+test concurrent_changed_evidence_under_one_request_key_conflicts_without_a_second_effect ... ok
+test concurrent_exact_handoffs_commit_once_and_replay_the_same_durable_receipt ... ok
+test fulfillment_then_waiting_cancellation_preserves_later_terminal_state_on_exact_replay ... ok
+test late_original_rejection_replays_after_fresh_review_succeeds_without_changing_the_source ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.58s
+
+     Running tests/operations.rs (target/debug/deps/operations-79aeefa078fd2f02)
+
+running 4 tests
+test blocked_operational_read_fails_with_bounded_unavailability_instead_of_zero_counts ... ok
+test empty_operational_snapshot_is_zero_complete_and_prometheus_has_fixed_cardinality ... ok
+test operational_counts_ages_pagination_and_metrics_are_exact_and_tenant_scoped ... ok
+test operational_snapshot_keeps_one_database_view_across_concurrent_commits ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 3.40s
+
+     Running tests/persistence_acceptance.rs (target/debug/deps/persistence_acceptance-50cb231622ae9998)
+
+running 89 tests
+test cancellation_and_concurrent_receive_require_a_new_review_without_hiding_received_units ... ok
+test cancellation_cannot_release_allowance_by_changing_the_original_expected_return_quantity ... ok
+test cancellation_final_delivery_failure_rolls_back_frozen_records_and_exact_retry_succeeds ... ok
+test cancellation_of_partial_return_preserves_physical_stock_and_releases_only_exact_unreceived_allowance ... ok
+test cancellation_released_return_allowance_cannot_be_spent_twice_by_repeatable_read_sql ... ok
+test cancellation_releases_archived_partial_rma_remainder_without_erasing_received_allowance ... ok
+test cancellation_sql_rejects_status_only_and_incomplete_or_wrong_frozen_remainders ... ok
+test command_noncommit_proof_never_overrides_receipts_conflicts_or_future_versions ... ok
+test competing_facility_creations_and_invalid_admission_leave_one_or_no_facility ... ok
+test completed_receipts_outside_dashboard_window_keep_exact_evidence ... ok
+test database_reconnect_preserves_receipts_and_api_authority ... ok
+test facility_transfer_competing_arrivals_and_stale_repeatable_read_cannot_overreceive ... ok
+test facility_transfer_dispatch_partial_arrival_and_original_recovery_preserve_exact_custody ... ok
+test facility_transfer_final_outbox_failure_rolls_back_dispatch_and_arrival_then_exact_retry_once ... ok
+test facility_transfer_opposite_dispatches_lock_facilities_in_one_order_and_reject_reserved_stock ... ok
+test facility_transfer_original_rows_are_immutable_and_closed_history_is_paged ... ok
+test facility_transfer_roles_scope_reservations_and_invalid_dispatch_have_no_side_effects ... ok
+test facility_transfer_sql_rejects_stock_balanced_overarrival_with_a_forged_new_event ... ok
+test final_delivery_failure_rolls_back_facility_header_bins_and_creation_evidence ... ok
+test history_above_previous_aggregate_limit_keeps_commands_operable ... ok
+test http_warehouse_lifecycle_recovers_short_pick_and_reconciles ... ok
+test immutable_committed_receipts_replay_without_waiting_for_physical_writers ... ok
+test lot_arrival_admitted_first_retains_original_policy_and_later_arrival_propagates_new_quarantine ... ok
+test lot_pages_keep_custody_separate_from_usable_storage_and_enforce_tenant_scope_and_original_cursor ... ok
+test lot_quarantine_committed_first_propagates_across_a_real_blocked_arrival_and_absent_policy_row ... ok
+test lot_trace_classic_shipment_source_binds_original_event_type_command_actor_and_receipt_even_with_balanced_custody ... ok
+test lot_trace_page_sources_reject_balanced_original_package_metadata_forgery_without_changing_custody ... ok
+test lot_trace_pages_retain_cross_facility_custody_active_packing_original_handoff_returns_transit_and_policy ... ok
+test lot_trace_rejects_changed_restored_reviews_malformed_cursors_and_new_zero_stock_facility_phantoms ... ok
+test lot_trace_repeatable_read_keeps_one_policy_snapshot_during_a_committed_quarantine_and_fences_the_next_page ... ok
+test lot_trace_return_sources_reject_changed_authorization_expectations_while_physical_custody_stays_balanced ... ok
+test lot_transfer_arrival_keeps_frozen_and_current_expiry_and_adds_independent_restriction_without_losing_custody ... ok
+test lot_transfer_proof_refuses_to_replace_missing_original_dispatch_policy_with_unknown_expiry ... ok
+test lot_upgrade_preserves_actual_preceding16_handoff_returns_and_original_receipts_without_invented_history ... ok
+test lot_upgrade_rejects_unattributed_preexisting_required_policy_in_the_actual16_schema ... ok
+test pack_units_actual19_upgrade_preserves_legacy_receipts_events_and_each_without_inferred_packs ... ok
+test pack_units_changed_definition_and_observation_serialize_at_the_original_review ... ok
+test pack_units_definition_aba_fences_old_scoped_reviews_but_another_sku_definition_does_not ... ok
+test pack_units_definitions_and_observations_roll_back_at_final_delivery_failure_and_retry_once ... ok
+test pack_units_exact_package_tuple_and_return_authorization_line_keep_original_shipped_lot_allowance ... ok
+test pack_units_immutable_sources_detect_stock_balanced_forgery_and_missing_observations ... ok
+test pack_units_preserve_original_receive_move_pick_unpick_count_and_plan_each_quantities_after_factor_changes ... ok
+test pack_units_read_pages_bind_original_scope_review_and_source_with_roles_and_tenant_isolation ... ok
+test pack_units_reject_wrong_targets_factors_skus_duplicates_overflow_and_operator_metadata_without_side_effects ... ok
+test pack_units_sql_cap_rejects_twenty_first_enabled_definition_with_complete_original_source ... ok
+test pack_units_transfer_loss_and_arrival_use_each_facility_original_definition_without_stock_credit ... ok
+test package_ownership_changes_fence_prior_scoped_unpick_reviews_without_stock_deltas ... ok
+test partial_remainder_cancellation_holds_staged_work_and_enforces_roles_while_allowing_blocked_recovery ... ok
+test partial_remainder_cancellation_preserves_original_handoffs_returns_and_exact_recovery ... ok
+test partial_remainder_closure_rolls_back_with_a_final_delivery_failure_and_original_retry_commits_once ... ok
+test partial_remainder_competing_closures_and_old_scoped_pick_cannot_reuse_released_ownership ... ok
+test partial_remainder_source_proof_rejects_stock_balanced_ownership_drift_and_cancellation_metadata_forgery ... ok
+test partial_remainder_upgrade_preserves_preexisting_original_handoff_documents_and_creates_no_cancellation ... ok
+test repeatable_read_sql_returns_cannot_oversubscribe_the_same_shipped_line ... ok
+test return_allowance_cannot_be_inflated_by_mutating_committed_shipped_order_quantities ... ok
+test return_authorizations_are_durable_line_lot_bounded_and_receive_once ... ok
+test scoped_aba_changes_are_permanently_fenced_and_prove_noncommit ... ok
+test scoped_order_reviews_fence_exceptions_and_inventory_phantoms ... ok
+test scoped_reviews_allow_disjoint_operators_and_preserve_exact_replays ... ok
+test scoped_reviews_fence_new_metadata_and_database_revision_resets ... ok
+test selective_physical_commands_match_full_reducer_with_foreign_source_and_staging_owners ... ok
+test shipment_evidence_actual_legacy_store_import_preserves_source_without_synthetic_events ... ok
+test shipment_evidence_aggregates_split_bin_lots_without_lending_another_lines_return_allowance ... ok
+test shipment_evidence_and_physical_handoff_roll_back_on_final_delivery_failure_and_retry_once ... ok
+test shipment_evidence_freezes_lot_ownership_handoff_and_source_but_ignores_untrusted_child_caches ... ok
+test shipment_evidence_original_event_cannot_be_duplicated_or_replaced_with_a_baseline ... ok
+test shipment_evidence_serializes_repeatable_read_edits_started_before_the_handoff ... ok
+test shipment_evidence_upgrade_labels_legacy_and_synthetic_origins_without_inventing_handoff_events ... ok
+test shipment_evidence_upgrade_preserves_original_event_and_rejects_drift_or_missing_provenance ... ok
+test split_fulfillment_backorders_handoff_returns_and_multiple_carriers_preserve_original_quantities ... ok
+test split_fulfillment_competing_pack_reviews_and_stale_repeatable_read_cannot_steal_claims ... ok
+test split_fulfillment_final_delivery_failure_rolls_back_mode_packing_and_physical_handoff ... ok
+test split_fulfillment_packed_claims_require_unpack_before_unpick_and_preserve_reservation_recovery ... ok
+test split_fulfillment_single_complete_package_keeps_actual_carrier_and_one_event_provenance ... ok
+test split_fulfillment_stock_balanced_counter_drift_and_new_order_lines_cannot_replace_handoffs ... ok
+test split_fulfillment_upgrade_preserves_prior_handoff_document_and_rejects_reinterpreting_it ... ok
+test split_original_packing_and_closure_documents_detect_historical_timestamp_drift ... ok
+test split_packages_respect_roles_tenant_scope_and_blocked_physical_recovery ... ok
+test stale_http_command_proves_noncommit_and_fences_a_delayed_original ... ok
+test transfer_loss_and_actual_arrival_compete_for_one_original_in_transit_allowance ... ok
+test transfer_loss_and_reversal_roll_back_at_final_outbox_failure_then_original_retry_commits_once ... ok
+test transfer_loss_journal_pages_bind_destination_changes_even_when_read_from_unchanged_source ... ok
+test transfer_loss_requires_destination_admin_exact_scope_caps_and_actor_bound_original_recovery ... ok
+test transfer_loss_settlement_reversal_and_actual_arrival_keep_each_original_line_and_physical_custody ... ok
+test transfer_loss_source_proof_rejects_stock_balanced_metadata_forgery_missing_originals_and_event_type_changes ... ok
+test transfer_loss_sql_commit_caps_reject_attributed_oversettlement_and_over_reversal_without_physical_mutation ... ok
+test transfer_loss_upgrade_preserves_actual18_transfer_custody_and_rejects_inconsistent_originals ... FAILED
+test warehouse_creation_is_atomic_actor_bound_replayable_and_tenant_scoped ... ok
+test warehouse_directory_pages_all_facilities_without_cross_tenant_or_cursor_overlap ... ok
+
+failures:
+
+---- transfer_loss_upgrade_preserves_actual18_transfer_custody_and_rejects_inconsistent_originals stdout ----
+
+thread 'transfer_loss_upgrade_preserves_actual18_transfer_custody_and_rejects_inconsistent_originals' panicked at tests/persistence_acceptance.rs:4192:18:
+apply actual18 contract: Database(PgDatabaseError { severity: Error, code: "57014", message: "canceling statement due to statement timeout", detail: None, hint: None, position: None, where: None, schema: None, table: None, column: None, data_type: None, constraint: None, file: Some("postgres.c"), line: Some(3130), routine: Some("ProcessInterrupts") })
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    transfer_loss_upgrade_preserves_actual18_transfer_custody_and_rejects_inconsistent_originals
+
+test result: FAILED. 88 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 223.33s
+
+error: test failed, to rerun pass `--test persistence_acceptance`

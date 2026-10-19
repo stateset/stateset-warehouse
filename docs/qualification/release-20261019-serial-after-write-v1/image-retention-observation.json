@@ -1,0 +1,44 @@
+{
+  "recorded_at": "2026-10-19T17:04:30.068477+00:00",
+  "current_image": {
+    "image_id": "sha256:ae3ddcef83357fbb00359fe3868c4c88e75e141bfd7f04ddc6db4038771bd343",
+    "archive_sha256": "a62cf6eac88c44c757bf2b8901f978d52104f05a264dd36b1002a2706ff07793",
+    "archive_bytes": 43089907,
+    "config_sha256_matches_image_id": true,
+    "all_uncompressed_layer_diff_ids_match": true,
+    "layers": 5,
+    "current_archive_reloaded_through_docker": true
+  },
+  "previous_serial_archives": [
+    {
+      "image_id": "sha256:13d687086d48f9c9d6f1123e9646cfde959ad52b9d2fa05832a3864adef28bd0",
+      "archive_sha256": "f948d1f48b4751371efecb0da87dd6185b62836c2d4d038fa429a25b185f33c3",
+      "archive_bytes": 43080468,
+      "config_sha256_matches_image_id": true,
+      "all_uncompressed_layer_diff_ids_match": true,
+      "layers": 5
+    },
+    {
+      "image_id": "sha256:81928d12a38b64c25c22ffd7005508a3908e33bd355741d31b0d59dd16951047",
+      "archive_sha256": "e1f675105e21e9ae8a772a8970ec26041b807f8915af8e1a732c58c1b7903a65",
+      "archive_bytes": 43092557,
+      "config_sha256_matches_image_id": true,
+      "all_uncompressed_layer_diff_ids_match": true,
+      "layers": 5
+    },
+    {
+      "image_id": "sha256:d4daf2909aeff0d0846477f1ff0641637a6bef6eb5f0ad6ec668d5e87b45b5f6",
+      "archive_sha256": "e5ca3508fd0b827b8f2bfe8c46403b9844ea24fd335985fa16995708c06e2d7c",
+      "archive_bytes": 43084360,
+      "config_sha256_matches_image_id": true,
+      "all_uncompressed_layer_diff_ids_match": true,
+      "layers": 5
+    }
+  ],
+  "historical_limit": {
+    "image_id": "sha256:5740c4e4fd3a89c47fba21f6770f4c17a18f2a4afa8d6c38e904fbf3efec74aa",
+    "observation": "This older facility image was already absent during the source39 review. Its original frozen source and public qualification are retained. Removal time and cause remain unknown."
+  },
+  "image_archive_scope": "Current source41 and source39/source35/source32 immutable images have verified private archives. Config digests and every uncompressed layer diffID are checked; the current archive reloads through Docker with its exact image ID.",
+  "production_qualified": false
+}

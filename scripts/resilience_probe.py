@@ -18,6 +18,7 @@ import urllib.request
 import urllib.parse
 
 from serial_traffic_proof import serial_proof
+from serial_crash_barrier import barrier_sql, literal
 import uuid
 
 
@@ -78,6 +79,7 @@ class Probe:
         self.started = time.time()
         self.qualifier_hashes = self.script_hashes()
         self.seeded_orders = []
+        self.serial_recovery_requests = []
         for container in [args.postgres, *args.api]:
             require(
                 re.fullmatch(
@@ -97,6 +99,7 @@ class Probe:
                 "scripts/qualification_resources.sh",
                 "scripts/resilience_probe.py",
                 "scripts/serial_traffic_proof.py",
+                "scripts/serial_crash_barrier.py",
             )
         }
 
@@ -628,8 +631,45 @@ class Probe:
         self.reserved_order = result["entity_id"]
         self.submit({"type": "allocate", "order_id": self.reserved_order}, token)
 
-    def locker(self):
+    def recovery_request(self, returning, token):
+        serial = getattr(self.args, "serial_units", 0)
+        index = self.args.products - 1 if serial else 0
+        request = self.envelope(
+            {"type": "move_stock", "sku": self.sku(index) if serial else "PROBE",
+             "lot": self.lot(0) if serial else "LOT-A",
+             "from": self.bin(index + int(returning)),
+             "to": self.bin(index + int(not returning)), "quantity": 1},
+            token=token,
+        )
+        if serial:
+            request["serial_inputs"] = [{"target": [], "sku": self.sku(index),
+                                         "serials": [self.serial_id(index, 0, serial - 1)]}]
+        return request
+
+    def locker(self, request=None, token=None):
         application = "wms-resilience-locker-" + self.args.run
+        statement = "BEGIN; SELECT version FROM wms_warehouses WHERE tenant='resilience-test' AND warehouse_id='wh-main' FOR UPDATE; SELECT pg_sleep(120); COMMIT;\n"
+        if getattr(self.args, "serial_units", 0):
+            command = request["command"]
+            sku, lot = literal(command["sku"]), literal(command["lot"])
+            label = literal(request["serial_inputs"][0]["serials"][0])
+            baseline = json.loads(self.sql(f"""SELECT jsonb_build_object(
+                'revision',u.revision,'head',h.version,
+                'source_quantity',COALESCE((SELECT on_hand FROM wms_stock WHERE tenant=u.tenant
+                    AND warehouse_id='wh-main' AND sku=u.sku AND lot=u.lot AND location={literal(command['from'])}),0),
+                'destination_quantity',COALESCE((SELECT on_hand FROM wms_stock WHERE tenant=u.tenant
+                    AND warehouse_id='wh-main' AND sku=u.sku AND lot=u.lot AND location={literal(command['to'])}),0))
+                FROM wms_serial_units u JOIN wms_serial_heads h USING(tenant,sku)
+                WHERE u.tenant='resilience-test' AND u.sku={sku} AND u.lot={lot} AND u.serial={label}
+                AND u.place=wms_serial_on_hand('wh-main',{literal(command['from'])});"""))
+            keys = (180121, int(uuid.uuid4().hex[:7], 16) + 1)
+            name = "wms_resilience_serial_" + self.args.run.replace("-", "_")
+            marker = "wms-serial-after-write-" + self.args.run
+            self.sql(barrier_sql(name, marker, request, self.credentials[token]["actor"], baseline, keys))
+            self.serial_barrier = {"name": name, "marker": marker, "keys": keys,
+                                   "original_request": request, "actor": self.credentials[token]["actor"],
+                                   "before": baseline}
+            statement = f"SELECT pg_advisory_lock({keys[0]},{keys[1]}); SELECT pg_sleep(120);\n"
         process = subprocess.Popen(
             [
                 "docker",
@@ -653,9 +693,7 @@ class Probe:
             stderr=subprocess.PIPE,
             text=True,
         )
-        process.stdin.write(
-            "BEGIN; SELECT version FROM wms_warehouses WHERE tenant='resilience-test' AND warehouse_id='wh-main' FOR UPDATE; SELECT pg_sleep(120); COMMIT;\n"
-        )
+        process.stdin.write(statement)
         process.stdin.flush()
         self.wait(
             lambda: self.sql(
@@ -667,6 +705,25 @@ class Probe:
         return application, process
 
     def wait_blocked(self, application):
+        if getattr(self.args, "serial_units", 0):
+            barrier = self.serial_barrier
+            first, second = barrier["keys"]
+            query = f"""SELECT COALESCE(jsonb_agg(jsonb_build_object(
+                'writer_pid',a.pid,'blocker_pid',b.pid,'writer_application',a.application_name,
+                'wait_event',a.wait_event,'lock_classid',l.classid,'lock_objid',l.objid)), '[]')
+                FROM pg_stat_activity a JOIN pg_locks l ON l.pid=a.pid AND NOT l.granted
+                JOIN pg_stat_activity b ON b.pid=ANY(pg_blocking_pids(a.pid))
+                JOIN pg_locks holder ON holder.pid=b.pid AND holder.granted
+                    AND holder.locktype=l.locktype AND holder.database=l.database
+                    AND holder.classid=l.classid AND holder.objid=l.objid AND holder.objsubid=l.objsubid
+                WHERE b.application_name={literal(application)} AND a.application_name={literal(barrier['marker'])}
+                AND a.wait_event_type='Lock' AND a.wait_event='advisory'
+                AND l.locktype='advisory' AND l.classid={first} AND l.objid={second} AND l.objsubid=2;"""
+            evidence = self.wait(lambda: json.loads(self.sql(query)),
+                                 "exact serial HTTP transaction after custody/event/receipt mutations")
+            require(len(evidence) == 1, "More than one writer reached the owned serial barrier")
+            barrier["blocking_evidence"] = evidence[0]
+            return
         self.wait(
             lambda: self.sql(
                 f"SELECT EXISTS(SELECT 1 FROM pg_stat_activity a JOIN pg_stat_activity b ON b.pid=ANY(pg_blocking_pids(a.pid)) WHERE b.application_name='{application}' AND a.query LIKE '%wms_warehouses%' AND a.pid<>b.pid);"
@@ -674,6 +731,20 @@ class Probe:
             == "t",
             "actual HTTP write blocked behind row lock",
         )
+
+    def remove_serial_barrier(self):
+        if getattr(self.args, "serial_units", 0):
+            name = self.serial_barrier["name"]
+            self.sql(f"DROP TRIGGER {name} ON wms_outbox; DROP FUNCTION {name}();")
+            self.serial_barrier["owned_fault_trigger_removed"] = True
+
+    def crash_barrier_evidence(self):
+        if not getattr(self.args, "serial_units", 0):
+            return {"barrier_stage": "before_inventory_mutations_warehouse_row_lock"}
+        require(self.serial_barrier.get("owned_fault_trigger_removed") is True,
+                "Owned serial fault trigger remains installed")
+        return {"barrier_stage": "after_serial_custody_history_event_receipt_before_outbox_commit",
+                "serial_after_write_barrier": self.serial_barrier.copy()}
 
     def fingerprints(self):
         tables = self.sql(
@@ -703,18 +774,9 @@ class Probe:
             flush=True,
         )
         token = self.operators[0][1]
-        request = self.envelope(
-            {
-                "type": "move_stock",
-                "sku": "PROBE",
-                "lot": "LOT-A",
-                "from": self.bin(0),
-                "to": self.bin(1),
-                "quantity": 1,
-            },
-            token=token,
-        )
-        application, locker = self.locker()
+        request = self.recovery_request(False, token)
+        before = self.fingerprints() if getattr(self.args, "serial_units", 0) else None
+        application, locker = self.locker(request, token)
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
             pending = pool.submit(
                 self.http,
@@ -743,6 +805,10 @@ class Probe:
                     f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE application_name='{application}';"
                 )
                 locker.communicate(timeout=10)
+        self.remove_serial_barrier()
+        if before is not None:
+            require(self.fingerprints() == before,
+                    "Serial API crash did not roll back all committed table fingerprints")
         status, receipt = self.http(
             self.bases[1],
             "GET",
@@ -761,6 +827,8 @@ class Probe:
             "Original request did not recover on surviving API",
         )
         self.retain(request, committed["result"], token)
+        if getattr(self.args, "serial_units", 0):
+            self.serial_recovery_requests.append(request["request_id"])
         restart_started = time.monotonic()
         self.docker("start", self.args.api[0])
         # Docker may allocate a different random loopback port on container start.
@@ -769,6 +837,8 @@ class Probe:
         restart_to_readiness = time.monotonic() - restart_started
         self.replay(request, token, self.bases[0])
         self.phase_evidence["api_sigkill"] = {
+            **self.crash_barrier_evidence(),
+            **({"all_table_fingerprints_unchanged": before} if before is not None else {}),
             "database_blocking_pid_barrier": True,
             "exit_code": 137,
             "surviving_replica_ready": True,
@@ -785,19 +855,9 @@ class Probe:
             flush=True,
         )
         token = self.operators[1][1]
-        request = self.envelope(
-            {
-                "type": "move_stock",
-                "sku": "PROBE",
-                "lot": "LOT-A",
-                "from": self.bin(1),
-                "to": self.bin(0),
-                "quantity": 1,
-            },
-            token=token,
-        )
+        request = self.recovery_request(True, token)
         before = self.fingerprints()
-        application, locker = self.locker()
+        application, locker = self.locker(request, token)
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
             pending = pool.submit(
                 self.http,
@@ -840,6 +900,7 @@ class Probe:
             before == after,
             "Previously committed table data changed across database crash recovery",
         )
+        self.remove_serial_barrier()
         status, receipt = self.http(
             self.bases[0],
             "GET",
@@ -858,6 +919,8 @@ class Probe:
             "Original interrupted request could not recover after database restart",
         )
         self.retain(request, committed["result"], token)
+        if getattr(self.args, "serial_units", 0):
+            self.serial_recovery_requests.append(request["request_id"])
         self.replay(request, token, self.bases[1])
         logged = subprocess.run(
             ["docker", "logs", self.args.postgres],
@@ -876,6 +939,7 @@ class Probe:
             "PostgreSQL did not report actual unclean-shutdown recovery",
         )
         self.phase_evidence["postgres_sigkill"] = {
+            **self.crash_barrier_evidence(),
             "database_blocking_pid_barrier": True,
             "exit_code": 137,
             "named_volume_preserved": True,
@@ -1354,7 +1418,8 @@ class Probe:
                 "wms_serial_heads", "wms_serial_batches")}
             tables["wms_events"] = events
             literal_proof = serial_proof(tables, self.accepted, self.args.products,
-                                         self.args.lots, self.args.serial_units, self.moves, self.args.bins)
+                                         self.args.lots, self.args.serial_units, self.moves, self.args.bins,
+                                         self.serial_recovery_requests)
         return {
             "serial_identity_proof": literal_proof,
             "physical_recomputed_from_append_only_movements": True,

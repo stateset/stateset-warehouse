@@ -97,7 +97,7 @@ class SerialSchedulingTests(unittest.TestCase):
                 self.assertEqual(p.replays["token-0"], 0)
 
 
-def history():
+def history(recovery=False):
     tables = {
         name: []
         for name in [
@@ -112,7 +112,7 @@ def history():
     accepted = {}
     current = {}
 
-    def event(sku, version, labels, location):
+    def event(sku, version, labels, location, command=None):
         eid = f"{sku}-{version}"
         steps = []
         for n, label in enumerate(labels, 1):
@@ -158,6 +158,8 @@ def history():
             "serial_steps": steps,
             "serial_heads": {sku: version},
         }
+        if command is not None:
+            payload["command"] = deepcopy(command)
         tables["wms_events"].append(
             {
                 "id": eid,
@@ -185,7 +187,8 @@ def history():
             }
         )
         accepted[eid] = {
-            "request": {"serial_inputs": deepcopy(inputs)},
+            "request": {"request_id": eid, "serial_inputs": deepcopy(inputs),
+                        **({"command": deepcopy(command)} if command is not None else {})},
             "actor": "actor",
         }
 
@@ -197,12 +200,18 @@ def history():
             f"BIN-{i:05}",
         )
     event("LOAD-00000", 2, ["Load-00000-Lot-000-Unit-00000"], "BIN-00001")
+    if recovery:
+        for returning in range(2):
+            event("LOAD-00001", 2 + returning, ["Load-00001-Lot-000-Unit-00001"],
+                  f"BIN-{returning:05}",
+                  {"type": "move_stock", "sku": "LOAD-00001", "lot": "LOT-000",
+                   "from": f"BIN-{1-returning:05}", "to": f"BIN-{returning:05}", "quantity": 1})
     tables["wms_serial_units"] = list(current.values())
     tables["wms_serial_heads"] = [
         {
             "sku": f"LOAD-{i:05}",
-            "version": 2 if i == 0 else 1,
-            "last_event_id": f"LOAD-{i:05}-{2 if i==0 else 1}",
+            "version": 2 if i == 0 else (3 if recovery else 1),
+            "last_event_id": f"LOAD-{i:05}-{2 if i==0 else (3 if recovery else 1)}",
         }
         for i in range(2)
     ]
@@ -210,6 +219,39 @@ def history():
 
 
 class SerialEvidenceTests(unittest.TestCase):
+    def test_recovered_original_serial_moves_are_separate_from_timed_traffic(self):
+        tables, accepted = history(recovery=True)
+        ids = ["LOAD-00001-2", "LOAD-00001-3"]
+        proof = serial_proof(tables, accepted, 2, 1, 2, [1, 0], 2, ids)
+        self.assertEqual(proof["timed_moves"], 1)
+        self.assertEqual(proof["recovered_moves_outside_timed_interval"], 2)
+        self.assertEqual(proof["recovery_request_ids"], ids)
+        self.assertEqual(proof["steps"], 7)
+
+    def test_recovery_requires_exact_original_pair_and_custody_not_only_final_totals(self):
+        for damage in ["omitted", "duplicate", "reversed", "new_label", "original_move", "intermediate_place"]:
+            with self.subTest(damage=damage):
+                tables, accepted = history(recovery=True)
+                ids = ["LOAD-00001-2", "LOAD-00001-3"]
+                if damage == "omitted":
+                    ids = []
+                elif damage == "duplicate":
+                    ids[1] = ids[0]
+                elif damage == "reversed":
+                    ids.reverse()
+                elif damage == "new_label":
+                    accepted[ids[0]]["request"]["serial_inputs"][0]["serials"] = ["Substitute"]
+                elif damage == "original_move":
+                    accepted[ids[0]]["request"]["command"]["quantity"] = 2
+                else:
+                    tables["wms_serial_steps"][-2]["after_place"]["location"] = "BIN-OTHER"
+                    tables["wms_serial_steps"][-1]["before_place"]["location"] = "BIN-OTHER"
+                    for e in tables["wms_events"][-2:]:
+                        step = next(s for s in tables["wms_serial_steps"] if s["event_id"] == e["id"])
+                        e["payload"]["serial_steps"] = [{k: v for k, v in step.items() if k != "tenant"}]
+                with self.assertRaises(AssertionError):
+                    serial_proof(tables, accepted, 2, 1, 2, [1, 0], 2, ids)
+
     def test_complete_literal_chain_and_original_observations_are_verified(self):
         tables, accepted = history()
         r = serial_proof(tables, accepted, 2, 1, 2, [1, 0], 2)

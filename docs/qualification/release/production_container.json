@@ -1,9 +1,9 @@
 {
   "ok": true,
   "synthetic": true,
-  "image_id": "sha256:81928d12a38b64c25c22ffd7005508a3908e33bd355741d31b0d59dd16951047",
-  "source_inputs_sha256": "0eac4b212f136ce1ffd10a22d1ddc6356d17857e497046f9c1fe33d32617fca6",
-  "release_revision": "source39-serial-scope-source-sets",
+  "image_id": "sha256:ae3ddcef83357fbb00359fe3868c4c88e75e141bfd7f04ddc6db4038771bd343",
+  "source_inputs_sha256": "4fe60a9996e2f272752e93f01bb53115ab407482fbdc4f2104419494562f651c",
+  "release_revision": "serial-after-write-source41-from-e64da9f",
   "os": "linux",
   "architecture": "amd64",
   "docker_server_version": "27.4.0",
@@ -14,7 +14,7 @@
   ],
   "qualifier_script_sha256": "dd5eaefa76083e2dfc6d4aaf64e80aab9433dc4f50fa0f1e96a7557267db7df0",
   "resource_helper_sha256": "a32aac9153e80585fd2163c191b3524c8a998d8f677d08e64cfa9b55274fb0b8",
-  "elapsed_build_and_runtime_seconds": 163,
+  "elapsed_build_and_runtime_seconds": 853,
   "runtime": {
     "uid": 10001,
     "read_only_rootfs": true,

@@ -1,2 +1,3 @@
 PASS: custom archive restored into a fresh isolated database and independent proofs/retries passed.
-Restore rehearsal evidence: /tmp/wms-serial-scope-requalified.u6lklli8/restore
+Synthetic rehearsal databases retained: wms_restore_source_test_1792426584_27da32b1 wms_restore_target_test_1792426584_27da32b1
+Restore rehearsal evidence: /tmp/wms-source41-retry.u1eoh93n/restore

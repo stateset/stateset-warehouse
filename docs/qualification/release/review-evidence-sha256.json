@@ -1,22 +1,22 @@
 [
   {
     "path": "independent-audit.json",
-    "sha256": "718b670e7a36ba713c2025d83da5f5fb9b0de8707cfad392711e043afe4bf022"
+    "sha256": "ebb8e0704d19fcdeb91dc33247bcc97f94ee782dee24f4cdfc900c474f156670"
   },
   {
     "path": "live-browser-coverage.json",
-    "sha256": "5a99a131ed3e5cce3d768d1b0c09bd790dafe07f8ccd7b63a4d276cb79a429ec"
+    "sha256": "41de8e6353553778285bc748755f8525d20330f9e55d8c4cc0f67fe5700764cf"
   },
   {
     "path": "qualification-limits.json",
-    "sha256": "0351b902b191c413a8eddd386247b1012c4ceff4ca7bb519fd3b60afc06f11ce"
+    "sha256": "0f3446a0ba0fb542ee7a0e5c60d113281f06d0d40a29d014ff606deca3a3cc26"
   },
   {
     "path": "build-storage-plan.json",
-    "sha256": "91774847aae916b086298a5f7449d115f90675a4f107b26e3cc4c526786c3457"
+    "sha256": "87cebc6b7decf9dd4cb39fd3a9269d45efcaeec547e4f588e281655020a3fe53"
   },
   {
     "path": "image-retention-observation.json",
-    "sha256": "5a547b471b6c3a53ab71fc1e1a7a5831d3a5380837547bfc4988e4b22fa900a7"
+    "sha256": "bcedf236b94e59c521df1e9a35804d9fe66d1b44aab18798ecba036d9d2e47ec"
   }
 ]

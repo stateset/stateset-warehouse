@@ -1,0 +1,96 @@
+{
+  "recorded_at": "2026-10-19T17:03:55.576048+00:00",
+  "ok": true,
+  "previous_accepted_live_cases": 21,
+  "current_live_cases": 21,
+  "all_previous_accepted_case_titles_preserved": true,
+  "case_titles": [
+    [
+      "cancellation-live.spec.ts",
+      "partial RMA cancellation preserves physical stock and reauthorizes only its unreceived line"
+    ],
+    [
+      "facilities-live.spec.ts",
+      "multiple facilities keep physical stock, selected context and original creation receipts isolated"
+    ],
+    [
+      "live.spec.ts",
+      "real browser and Postgres recover a same-SKU short pick through physical handoff"
+    ],
+    [
+      "lot-controls-live.spec.ts",
+      "lot controls preserve real custody and original recovery through expiry, quarantine, package unpack and scanner return"
+    ],
+    [
+      "lot-trace-live.spec.ts",
+      "lot trace reviews actual cross-facility restrictions, prior handoff, staged package and remaining transit without changing custody"
+    ],
+    [
+      "operations-live.spec.ts",
+      "real operational snapshot, metrics, and CSP-protected export agree with committed exception recovery"
+    ],
+    [
+      "scanner-live.spec.ts",
+      "replenishment moves and customer returns retain exact physical and source evidence"
+    ],
+    [
+      "scanner-live.spec.ts",
+      "scanner receiving and exact-line picking survive a concurrent operator count through physical handoff"
+    ],
+    [
+      "serial-transfers-live.spec.ts",
+      "serial transfer groups, original loss and recovered arrival retain cross-facility custody (desktop)"
+    ],
+    [
+      "serial-transfers-live.spec.ts",
+      "serial transfer groups, original loss and recovered arrival retain cross-facility custody (mobile)"
+    ],
+    [
+      "serial-workflows-live.spec.ts",
+      "serial picking, multi-line packages and partial RMA preserve exact owners (desktop)"
+    ],
+    [
+      "serial-workflows-live.spec.ts",
+      "serial picking, multi-line packages and partial RMA preserve exact owners (mobile)"
+    ],
+    [
+      "serial-workflows-live.spec.ts",
+      "serial scans cannot survive an equal-quantity identity replacement without review (desktop)"
+    ],
+    [
+      "serial-workflows-live.spec.ts",
+      "serial scans cannot survive an equal-quantity identity replacement without review (mobile)"
+    ],
+    [
+      "serials-live.spec.ts",
+      "serialized receiving and move retain exact labels through lost responses (desktop)"
+    ],
+    [
+      "serials-live.spec.ts",
+      "serialized receiving and move retain exact labels through lost responses (mobile)"
+    ],
+    [
+      "split-live.spec.ts",
+      "partial shipments allocate real backorders and preserve each handoff, early return and original request"
+    ],
+    [
+      "split-live.spec.ts",
+      "partly shipped remainder closure requires physical recovery and retains original demand, handoff, return allowance and replay"
+    ],
+    [
+      "transfer-loss-live.spec.ts",
+      "confirmed transfer loss and exact reversal retain custody until actual recovered arrival"
+    ],
+    [
+      "transfers-live.spec.ts",
+      "facility handoff remains in transit until exact partial destination arrivals and original replays"
+    ],
+    [
+      "units-live.spec.ts",
+      "reviewed pack definitions retain original form scanner count and recovery quantities"
+    ]
+  ],
+  "old_log_sha256": "71cc5a18cd8d92d868283a6f6311b7a54b2c4db70fe4876a4657e4a288648042",
+  "new_log_sha256": "747f6758fb60e51980fc98a7f8b448c6d5c6d8902d41a4cca0cf24cef8dfa3e0",
+  "correct_total_browser_checks": 170
+}

@@ -387,6 +387,13 @@ assert container["ok"] is True and resilience["ok"] is True and restore["ok"] is
 assert serial["ok"] is True and serial["independent_proof"]["serial_identity_proof"]["ok"] is True
 assert serial["phases"]["sustained_http"]["serial_units_per_bin_lot"] >= 2
 assert serial["phases"]["sustained_http"]["serial_current_source_reads"] == serial["phases"]["sustained_http"]["committed_moves"]
+assert serial["independent_proof"]["serial_identity_proof"]["recovered_moves_outside_timed_interval"] == 2
+for phase in ("api_sigkill", "postgres_sigkill"):
+    evidence = serial["phases"][phase]
+    assert evidence["barrier_stage"] == "after_serial_custody_history_event_receipt_before_outbox_commit"
+    assert evidence["serial_after_write_barrier"]["owned_fault_trigger_removed"] is True
+    assert evidence["serial_after_write_barrier"]["blocking_evidence"]["wait_event"] == "advisory"
+    assert len(evidence["all_table_fingerprints_unchanged"]) == 49
 assert workload["configured_thresholds_passed"] is True and workload["proof"]["independent_reconciliation"] is True
 assert container["image_id"] == resilience["image_id"] == (root / "container/image.id").read_text().strip()
 assert container["source_inputs_sha256"] == resilience["image_source_inputs_sha256"], "Image source identities differ across proofs"

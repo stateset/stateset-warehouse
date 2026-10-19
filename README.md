@@ -6,7 +6,7 @@ Warehouse execution and physical inventory authority for StateSet. **Sync is the
 
 Rust 1.90+, Axum, Tokio, SQLx/Postgres, React, TypeScript and Vite, following the existing StateSet services and dashboards.
 
-The [current local software release](docs/qualification/release-20261019-serial-write-source-sets-v1/summary.json) passes the complete ten-stage gate with 319 Rust, 62 Python and 170 browser checks, including serial write/source validation, populated archive recovery and two sustained image workloads. Production, deployed-client and physical facility acceptance remain separate. The linked image qualification is for version `0.1.0`; version `0.1.1` changes package metadata only from that qualified code and passes locked Rust checks and the dashboard build.
+The [current local software release](docs/qualification/release-20261019-serial-after-write-v1/summary.json) passes all ten stages on version `0.1.1`: **319 Rust, 64 Python and 170 browser checks**, including populated archive restore and both full image workloads. Serial API and PostgreSQL crashes interrupt the write after custody/history/event/receipt mutations; all 49 committed table fingerprints remain unchanged, and both original requests recover and replay exactly. Production, deployed-client and physical facility acceptance remain separate.
 
 ## Run
 

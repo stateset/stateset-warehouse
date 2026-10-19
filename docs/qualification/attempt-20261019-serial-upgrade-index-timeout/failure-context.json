@@ -1,0 +1,21 @@
+{
+  "recorded_at": "2026-10-19T15:55:13.173500+00:00",
+  "gate_result": "failed",
+  "software_revision": 41,
+  "software_source_sha256": "396d2a5d23dbdea4711a9549aa440b596bebeedd6f78bc220e656b973b93f5bb",
+  "failure": "The transfer-loss actual18 upgrade fixture timed out while applying migration018 trace indexes.",
+  "sqlstate": "57014",
+  "panic_location": "tests/persistence_acceptance.rs:4192",
+  "cause_of_timeout": "not established",
+  "sql_and_runtime_limits_changed": false,
+  "exact_focused_repeat": {
+    "result": "passed",
+    "cases": 1,
+    "database": "fresh isolated synthetic database",
+    "test_duration_seconds": 4.62,
+    "log": "exact-repeat.log",
+    "log_sha256": "72f498dd7a29a757d424e081a30384b1cad15689d5d7d531e833763c39031727"
+  },
+  "qualification_limit": "The focused repeat and smaller serial crash smoke do not qualify the failed complete gate. A fresh complete unchanged-source gate is required.",
+  "production_qualified": false
+}

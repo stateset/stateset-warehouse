@@ -1,0 +1,22 @@
+[
+  {
+    "path": "independent-audit.json",
+    "sha256": "ebb8e0704d19fcdeb91dc33247bcc97f94ee782dee24f4cdfc900c474f156670"
+  },
+  {
+    "path": "live-browser-coverage.json",
+    "sha256": "41de8e6353553778285bc748755f8525d20330f9e55d8c4cc0f67fe5700764cf"
+  },
+  {
+    "path": "qualification-limits.json",
+    "sha256": "0f3446a0ba0fb542ee7a0e5c60d113281f06d0d40a29d014ff606deca3a3cc26"
+  },
+  {
+    "path": "build-storage-plan.json",
+    "sha256": "87cebc6b7decf9dd4cb39fd3a9269d45efcaeec547e4f588e281655020a3fe53"
+  },
+  {
+    "path": "image-retention-observation.json",
+    "sha256": "bcedf236b94e59c521df1e9a35804d9fe66d1b44aab18798ecba036d9d2e47ec"
+  }
+]

@@ -1,0 +1,59 @@
+Unable to find image 'prom/prometheus@sha256:565ee86501224ebbb98fc10b332fa54440b100469924003359edf49cbce374bd' locally
+docker.io/prom/prometheus@sha256:565ee86501224ebbb98fc10b332fa54440b100469924003359edf49cbce374bd: Pulling from prom/prometheus
+9fa9226be034: Pulling fs layer
+1617e25568b2: Pulling fs layer
+9818abf4f966: Pulling fs layer
+6e463c39e3fe: Pulling fs layer
+a95abf182525: Pulling fs layer
+bd0d00e67847: Pulling fs layer
+1008d9ab3b47: Pulling fs layer
+4a3328469f0b: Pulling fs layer
+33efd2f692f0: Pulling fs layer
+935db57dac66: Pulling fs layer
+bd0d00e67847: Waiting
+6e463c39e3fe: Waiting
+935db57dac66: Waiting
+4a3328469f0b: Waiting
+1008d9ab3b47: Waiting
+33efd2f692f0: Waiting
+a95abf182525: Waiting
+1617e25568b2: Verifying Checksum
+1617e25568b2: Download complete
+9fa9226be034: Download complete
+9fa9226be034: Pull complete
+1617e25568b2: Pull complete
+a95abf182525: Download complete
+9818abf4f966: Verifying Checksum
+9818abf4f966: Download complete
+9818abf4f966: Pull complete
+bd0d00e67847: Verifying Checksum
+bd0d00e67847: Download complete
+1008d9ab3b47: Verifying Checksum
+1008d9ab3b47: Download complete
+6e463c39e3fe: Verifying Checksum
+6e463c39e3fe: Download complete
+33efd2f692f0: Download complete
+4a3328469f0b: Verifying Checksum
+4a3328469f0b: Download complete
+935db57dac66: Verifying Checksum
+935db57dac66: Download complete
+6e463c39e3fe: Pull complete
+a95abf182525: Pull complete
+bd0d00e67847: Pull complete
+1008d9ab3b47: Pull complete
+4a3328469f0b: Pull complete
+33efd2f692f0: Pull complete
+935db57dac66: Pull complete
+Digest: sha256:565ee86501224ebbb98fc10b332fa54440b100469924003359edf49cbce374bd
+Status: Downloaded newer image for prom/prometheus@sha256:565ee86501224ebbb98fc10b332fa54440b100469924003359edf49cbce374bd
+promtool, version 3.0.1 (branch: HEAD, revision: 1f56e8492c31a558ccea833027db4bd7f8b6d0e9)
+  build user:       root@9c13055ffc3c
+  build date:       20241128-17:20:55
+  go version:       go1.23.3
+  platform:         linux/amd64
+  tags:             netgo,builtinassets,stringlabels
+Checking /rules/alerts.yml
+  SUCCESS: 6 rules found
+
+  SUCCESS
+

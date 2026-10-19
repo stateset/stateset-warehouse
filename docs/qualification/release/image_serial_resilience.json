@@ -1,16 +1,17 @@
 {
   "ok": true,
   "synthetic": true,
-  "qualified_at_utc": "2026-10-19T14:55:19Z",
+  "qualified_at_utc": "2026-10-19T17:03:38Z",
   "qualification": "two-replica sustained HTTP and crash recovery",
-  "image_id": "sha256:81928d12a38b64c25c22ffd7005508a3908e33bd355741d31b0d59dd16951047",
-  "image_source_inputs_sha256": "0eac4b212f136ce1ffd10a22d1ddc6356d17857e497046f9c1fe33d32617fca6",
-  "image_release_revision": "source39-serial-scope-source-sets",
+  "image_id": "sha256:ae3ddcef83357fbb00359fe3868c4c88e75e141bfd7f04ddc6db4038771bd343",
+  "image_source_inputs_sha256": "4fe60a9996e2f272752e93f01bb53115ab407482fbdc4f2104419494562f651c",
+  "image_release_revision": "serial-after-write-source41-from-e64da9f",
   "qualifier_sha256": {
     "scripts/resilience-rehearsal.sh": "cbc96d23272be83b27004dab829310dbead97523d45adcd42f7dd02b0ae80b31",
     "scripts/qualification_resources.sh": "a32aac9153e80585fd2163c191b3524c8a998d8f677d08e64cfa9b55274fb0b8",
-    "scripts/resilience_probe.py": "c2c8d9762bbd48901d8cadd3abe83a730047111b24bd52f2d631845aa1551326",
-    "scripts/serial_traffic_proof.py": "6413d70e5ab9abdd3300148730f1636536a559baad227ae28feef1a2d1b34d3f"
+    "scripts/resilience_probe.py": "d86a5b9f8147408d1ee1491adc5eda6446e2de5733f9f1b61548acb7ee472f38",
+    "scripts/serial_traffic_proof.py": "d730ab7fe8029a79224bb99a269eb3c14307bea7fbefd9d8442f87b31f0b9526",
+    "scripts/serial_crash_barrier.py": "9ecae86ec0f80c9a930ccecff02a78e3b4ee2dc4f774db27057305d8cbc305a1"
   },
   "postgres_image_id": "sha256:81bd698b4594e751a3269e4dcd3e03a4a0ec0daf7b72e7aa1abd43cce9887542",
   "postgres_version": "16.15",
@@ -24,11 +25,11 @@
     "random_loopback_api_ports": true,
     "native_and_webhook_connections": 0
   },
-  "elapsed_total_seconds": 764.259,
+  "elapsed_total_seconds": 974.642,
   "phases": {
     "seed": {
       "method": "authenticated actual HTTP commands only; opening counts are disclosed synthetic fixtures",
-      "seconds": 422.783,
+      "seconds": 603.81,
       "operational_products": 500,
       "additional_recovery_product": 1,
       "storage_bins": 100,
@@ -55,35 +56,56 @@
       }
     },
     "api_sigkill": {
-      "database_blocking_pid_barrier": true,
-      "exit_code": 137,
-      "surviving_replica_ready": true,
-      "uncommitted_original_absent": true,
-      "same_original_request_recovered_other_replica": true,
-      "restarted_replica_exact_replay": true,
-      "local_restart_to_readiness_seconds": 0.237,
-      "interrupted_response": {
-        "transport_error": "RemoteDisconnected"
-      }
-    },
-    "postgres_sigkill": {
-      "database_blocking_pid_barrier": true,
-      "exit_code": 137,
-      "named_volume_preserved": true,
-      "readiness_during_outage": [
-        503,
-        503
-      ],
-      "liveness_during_outage": [
-        200,
-        200
-      ],
-      "local_database_restart_to_both_api_readiness_seconds": 0.883,
-      "both_replicas_recovered_without_api_restart": true,
+      "barrier_stage": "after_serial_custody_history_event_receipt_before_outbox_commit",
+      "serial_after_write_barrier": {
+        "name": "wms_resilience_serial_1792428439_04b1aeb3",
+        "marker": "wms-serial-after-write-1792428439-04b1aeb3",
+        "keys": [
+          180121,
+          30002775
+        ],
+        "original_request": {
+          "request_id": "1fbd9eda-bf5a-47f5-aeaa-af31cf9a0416",
+          "expected_version": 2363,
+          "command": {
+            "type": "move_stock",
+            "sku": "LOAD-00499",
+            "lot": "LOT-000",
+            "from": "BIN-00099",
+            "to": "BIN-00000",
+            "quantity": 1
+          },
+          "serial_inputs": [
+            {
+              "target": [],
+              "sku": "LOAD-00499",
+              "serials": [
+                "Load-00499-Lot-000-Unit-00015"
+              ]
+            }
+          ]
+        },
+        "actor": "operator:resilience-0",
+        "before": {
+          "head": 2,
+          "revision": 1,
+          "source_quantity": 16,
+          "destination_quantity": 0
+        },
+        "blocking_evidence": {
+          "lock_objid": "30002775",
+          "wait_event": "advisory",
+          "writer_pid": 89,
+          "blocker_pid": 4605,
+          "lock_classid": "180121",
+          "writer_application": "wms-serial-after-write-1792428439-04b1aeb3"
+        },
+        "owned_fault_trigger_removed": true
+      },
       "all_table_fingerprints_unchanged": {
         "wms_activity": {
-          "rows": 2364,
-          "sha256": "a19e864ca74eb8ea8866225b7fbb0abfa14d963d1b11033d26f901db99e95dcb"
+          "rows": 2363,
+          "sha256": "5bae9b107f74eca152be4ce2fb1d4cc6cef2391e37465e6a0cbb738ac77b877c"
         },
         "wms_admin_audit": {
           "rows": 0,
@@ -91,19 +113,19 @@
         },
         "wms_allocations": {
           "rows": 253,
-          "sha256": "e9f7b3d635fedd770e77741304579e57c10519715532554b808931aa12ba3633"
+          "sha256": "a646849c862d35fa9b48390e38394d307a82a9471c60d04ee102d487d2edc8ec"
         },
         "wms_commands": {
-          "rows": 2364,
-          "sha256": "b3ab7df6d6113643cae5ca17eac45bb0c0ab1fdf89919da0a1cf0d8527909501"
+          "rows": 2363,
+          "sha256": "1ad850333c2c27f4248648d9f7675f1b30a93ea10419fe01080a6be2185c951c"
         },
         "wms_delivery_attempts": {
           "rows": 0,
           "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
         },
         "wms_events": {
-          "rows": 2364,
-          "sha256": "57ef20f65c50ae96ade98fa17e7f680b7339cdb8c7eb716e97639de66f342614"
+          "rows": 2363,
+          "sha256": "2bf6e115fb502df4a7c2800e0bd53308ca00071d88feddb43a5aa4a8aa65682e"
         },
         "wms_exceptions": {
           "rows": 0,
@@ -119,15 +141,15 @@
         },
         "wms_lot_decisions": {
           "rows": 256,
-          "sha256": "bc34feb18d351f1b98203fc73b064f4aa66c0672f7e4ec39199fd449f17596ee"
+          "sha256": "e00ca5941f0877b1af4e54299846b17668c5fb7526c0d88bc738ebae98a93251"
         },
         "wms_lot_enforcement": {
           "rows": 2,
           "sha256": "93913cea8505cc1e249446971f145ffb2faa290f250977b7c09f997daae0ce73"
         },
         "wms_movements": {
-          "rows": 1008,
-          "sha256": "9abb478bc3eb2bf63923e4f1660fe683daf792eb847076f205759f4bad6e5961"
+          "rows": 1007,
+          "sha256": "9322a7369862ad643ff1708f94a5fa97e9a6ec0d08080872f43efffb070fb9d2"
         },
         "wms_native_attempts": {
           "rows": 0,
@@ -147,15 +169,15 @@
         },
         "wms_order_lines": {
           "rows": 503,
-          "sha256": "20d71eb6d6268d737b8b718a1d6267703c3141b52c2e7542716862086f578720"
+          "sha256": "b4140e9905e824e4abc534bbed1f549e8f902a6f2f28e2953e2ec33ffcf62e17"
         },
         "wms_orders": {
           "rows": 502,
-          "sha256": "85aa17e286364a3f3c467aa80cc8b6a2d7bb7ba63202cd6e197c21c108554e44"
+          "sha256": "2b4d9ad3155bca0927ce30e4c5cfc4ecd7ac01a8bcac9dd73a78876fecc7f29e"
         },
         "wms_outbox": {
-          "rows": 2366,
-          "sha256": "f4dc8773f633e9e1dd4a0b2216585b1046db980260f87524ea8003d0d8a5c776"
+          "rows": 2365,
+          "sha256": "60c7dd854ec68140c38f89029ffb0cf6a2fa6011a2f80c93e00b0e995feaa3c6"
         },
         "wms_package_closures": {
           "rows": 0,
@@ -183,19 +205,19 @@
         },
         "wms_receipt_evidence": {
           "rows": 2,
-          "sha256": "c79b558d8c9439cc165db304e52d1f28bf82e4391ebecb26e53c910f60823ce9"
+          "sha256": "b297e2fd0d7dc0c0149cf0a1435b39eb7374a1319eae329610e7c2c7c3f30249"
         },
         "wms_receipt_lines": {
           "rows": 2,
-          "sha256": "c2ce610d4241ecbbd2652c86bfcb8376e7b6d64de2dfb445ae067ed032e71c1d"
+          "sha256": "e3f472417e80a3fab51109b4c45e1cf0012767f12123d68daa245ff9c471fdda"
         },
         "wms_receipts": {
           "rows": 1,
-          "sha256": "3eb7b1f4387ca6be6c2efcfb030ea40aafbb9ba7b306fb383560069e7dade869"
+          "sha256": "533c4a58e9a3efddc079d36e82e54a8da0650578a3872db6bcc7df1d412bd24d"
         },
         "wms_resource_versions": {
-          "rows": 2613,
-          "sha256": "2048b91ebbf916977864bc3e06b93e920e571ba63ab05b4992f8bab19e22e031"
+          "rows": 2612,
+          "sha256": "c284f13152f9d5041f040304991cc07fece31e09993ba4fe51768584b9be6175"
         },
         "wms_return_lines": {
           "rows": 0,
@@ -203,35 +225,304 @@
         },
         "wms_schema_migrations": {
           "rows": 29,
-          "sha256": "2e114cb71db55665bfc1dc58a90e4ca64ce40c14206d11c9714e54fe033fec80"
+          "sha256": "af6ac8404365d57865f7fc66861d753fe234c78f7cd73bcd64f69db478047ed5"
         },
         "wms_serial_batches": {
           "rows": 1000,
-          "sha256": "4ecee2a89170abe799184200bc95bb5c3570bac61582ce00e08b878c96db48d5"
+          "sha256": "242b8f14e8882661e76a59ae2c3094581a693d9ad8421a19d39ec8c374273798"
         },
         "wms_serial_heads": {
           "rows": 500,
-          "sha256": "28f270fd8af18740716ca91c658a834f6013ebd26e2d82d223e878753c6e9fa2"
+          "sha256": "958f6e51cd66cd7b681887bb7f5e6ada505a4bf1587f5d64b0087ab0f3fe760c"
         },
         "wms_serial_modes": {
           "rows": 501,
-          "sha256": "1476e81e6c22a284482137b3d6a408329282f958fe89428d259ff4f1c9e689b3"
+          "sha256": "2c4ff8093cafea814a243c84dbf56d3bf4430bcee503824e631bd7ab5588425b"
         },
         "wms_serial_observations": {
           "rows": 1000,
-          "sha256": "42b2a9d513d24e2c55d2d936d3c031ed097dac4b8bfadf5ebeecb84619d26f84"
+          "sha256": "c9da5222bdd2d7f4763e5bef76178987052bf15347acb20c054e140ca8de6337"
         },
         "wms_serial_steps": {
           "rows": 16000,
-          "sha256": "74fb02e0e2aadfb019aa2feff96fd8d950e2aed624a50eedac4e6dd34da0619e"
+          "sha256": "2df875f79d6d46f2d64dc50e635229aaada55035f2d78e4d092b910febeccbc6"
         },
         "wms_serial_units": {
           "rows": 16000,
-          "sha256": "88a7f3c75b2f0b9e8c64ab3a5e21375e194645032912057fb31ee1eff96c5d74"
+          "sha256": "5b0ddf6d249b532c9841644d0a06157f39c0e1c8db99369eda5b4a1f4cd61b78"
         },
         "wms_shipment_evidence": {
           "rows": 1,
-          "sha256": "23e656765ed1f578572ed0770d337fa78f51883cbc47fc507855def0fa7c9e9d"
+          "sha256": "57e49e1b1d21b6e27526fa0b1c4e42a5104b7136b2a4b48935608c35bb2eb9bb"
+        },
+        "wms_split_orders": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_stock": {
+          "rows": 1003,
+          "sha256": "39cb34eea0a205504cfa11fb985f7d3329c74c6ca80663c8bc3c7441b02c9f38"
+        },
+        "wms_stock_ledger": {
+          "rows": 1003,
+          "sha256": "0448ce29d59e69ca1c36f16b94c2b8aba214ff88162ba9b3d96a5e415e3cab65"
+        },
+        "wms_stock_reserved": {
+          "rows": 502,
+          "sha256": "56585020520e40cf9e772081d0c3ec226342698781108d04bdbcd868ad663634"
+        },
+        "wms_transfer_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_transfer_loss_records": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_transfers": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_unit_observations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_unit_pack_changes": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_warehouses": {
+          "rows": 2,
+          "sha256": "cd738c45059bc5dd7bd1e3e8ff992a49235f172c53b14ec6c3da89e23e886cdf"
+        },
+        "wms_workspaces": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      },
+      "database_blocking_pid_barrier": true,
+      "exit_code": 137,
+      "surviving_replica_ready": true,
+      "uncommitted_original_absent": true,
+      "same_original_request_recovered_other_replica": true,
+      "restarted_replica_exact_replay": true,
+      "local_restart_to_readiness_seconds": 0.348,
+      "interrupted_response": {
+        "transport_error": "RemoteDisconnected"
+      }
+    },
+    "postgres_sigkill": {
+      "barrier_stage": "after_serial_custody_history_event_receipt_before_outbox_commit",
+      "serial_after_write_barrier": {
+        "name": "wms_resilience_serial_1792428439_04b1aeb3",
+        "marker": "wms-serial-after-write-1792428439-04b1aeb3",
+        "keys": [
+          180121,
+          59528217
+        ],
+        "original_request": {
+          "request_id": "87f95b27-0519-41d5-8dd6-b4ba9de43618",
+          "expected_version": 2364,
+          "command": {
+            "type": "move_stock",
+            "sku": "LOAD-00499",
+            "lot": "LOT-000",
+            "from": "BIN-00000",
+            "to": "BIN-00099",
+            "quantity": 1
+          },
+          "serial_inputs": [
+            {
+              "target": [],
+              "sku": "LOAD-00499",
+              "serials": [
+                "Load-00499-Lot-000-Unit-00015"
+              ]
+            }
+          ]
+        },
+        "actor": "operator:resilience-1",
+        "before": {
+          "head": 3,
+          "revision": 2,
+          "source_quantity": 1,
+          "destination_quantity": 15
+        },
+        "blocking_evidence": {
+          "lock_objid": "59528217",
+          "wait_event": "advisory",
+          "writer_pid": 90,
+          "blocker_pid": 5463,
+          "lock_classid": "180121",
+          "writer_application": "wms-serial-after-write-1792428439-04b1aeb3"
+        },
+        "owned_fault_trigger_removed": true
+      },
+      "database_blocking_pid_barrier": true,
+      "exit_code": 137,
+      "named_volume_preserved": true,
+      "readiness_during_outage": [
+        503,
+        503
+      ],
+      "liveness_during_outage": [
+        200,
+        200
+      ],
+      "local_database_restart_to_both_api_readiness_seconds": 0.98,
+      "both_replicas_recovered_without_api_restart": true,
+      "all_table_fingerprints_unchanged": {
+        "wms_activity": {
+          "rows": 2364,
+          "sha256": "ff62e2b93c4a921a6dcb8d6dfd4d00a283a373984b0d4710d42777604996f881"
+        },
+        "wms_admin_audit": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_allocations": {
+          "rows": 253,
+          "sha256": "a646849c862d35fa9b48390e38394d307a82a9471c60d04ee102d487d2edc8ec"
+        },
+        "wms_commands": {
+          "rows": 2364,
+          "sha256": "e0eca7494d800c20a7dd3643164f489a82390b31bcb244705fbd287b1a6354d6"
+        },
+        "wms_delivery_attempts": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_events": {
+          "rows": 2364,
+          "sha256": "750c102fd652c74239dd58c9cb60013daa10897547f7ca196c0f76dcf990dc7c"
+        },
+        "wms_exceptions": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_locations": {
+          "rows": 104,
+          "sha256": "552a6c243e5d598af02d0dc98f3b477adf61df9cc65ef2cbe57c0604a1ce205e"
+        },
+        "wms_lot_changes": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_lot_decisions": {
+          "rows": 256,
+          "sha256": "e00ca5941f0877b1af4e54299846b17668c5fb7526c0d88bc738ebae98a93251"
+        },
+        "wms_lot_enforcement": {
+          "rows": 2,
+          "sha256": "93913cea8505cc1e249446971f145ffb2faa290f250977b7c09f997daae0ce73"
+        },
+        "wms_movements": {
+          "rows": 1008,
+          "sha256": "e1e57f4b60ae44313c46d14ff2176c9d7f2a8ff026396bbe7af9ce232cc1937d"
+        },
+        "wms_native_attempts": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_native_requests": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_order_cancellations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_order_cancelled_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_order_lines": {
+          "rows": 503,
+          "sha256": "b4140e9905e824e4abc534bbed1f549e8f902a6f2f28e2953e2ec33ffcf62e17"
+        },
+        "wms_orders": {
+          "rows": 502,
+          "sha256": "2b4d9ad3155bca0927ce30e4c5cfc4ecd7ac01a8bcac9dd73a78876fecc7f29e"
+        },
+        "wms_outbox": {
+          "rows": 2366,
+          "sha256": "71932d08c9abe1b444d746e1b2b9a9dbe31049edee25d6a889b7cdea2baac5ec"
+        },
+        "wms_package_closures": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_package_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_packages": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_products": {
+          "rows": 501,
+          "sha256": "e7b6065c569c90ce78b7b3afc3e9891bd3fc36ab733c4464da399783f0838415"
+        },
+        "wms_receipt_cancellations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_receipt_cancelled_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_receipt_evidence": {
+          "rows": 2,
+          "sha256": "b297e2fd0d7dc0c0149cf0a1435b39eb7374a1319eae329610e7c2c7c3f30249"
+        },
+        "wms_receipt_lines": {
+          "rows": 2,
+          "sha256": "e3f472417e80a3fab51109b4c45e1cf0012767f12123d68daa245ff9c471fdda"
+        },
+        "wms_receipts": {
+          "rows": 1,
+          "sha256": "533c4a58e9a3efddc079d36e82e54a8da0650578a3872db6bcc7df1d412bd24d"
+        },
+        "wms_resource_versions": {
+          "rows": 2613,
+          "sha256": "1675d2360a48eb6ace8e712254250a2ec3442965cc876d172384170e78bc8877"
+        },
+        "wms_return_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_schema_migrations": {
+          "rows": 29,
+          "sha256": "af6ac8404365d57865f7fc66861d753fe234c78f7cd73bcd64f69db478047ed5"
+        },
+        "wms_serial_batches": {
+          "rows": 1001,
+          "sha256": "731d1916b0fe5dfd361045c49b5e15bea9468739722c2c775afe446b45c949dc"
+        },
+        "wms_serial_heads": {
+          "rows": 500,
+          "sha256": "487e14167ef5bf17cea0ba417dd64810d910d6f7399798e562a2d152b0ad7095"
+        },
+        "wms_serial_modes": {
+          "rows": 501,
+          "sha256": "2c4ff8093cafea814a243c84dbf56d3bf4430bcee503824e631bd7ab5588425b"
+        },
+        "wms_serial_observations": {
+          "rows": 1001,
+          "sha256": "c69caf0288c750fa7a849d64f2ee61956235c7d77ca126628d6723ec970fd070"
+        },
+        "wms_serial_steps": {
+          "rows": 16001,
+          "sha256": "7ea38d4216ba064e2092d040d3d5060fad4df96b6262941ab4eecc011d8a44de"
+        },
+        "wms_serial_units": {
+          "rows": 16000,
+          "sha256": "8f6cfc9dd409cd9690ca4d529661a61a872a9578df113d0201af0b88de541351"
+        },
+        "wms_shipment_evidence": {
+          "rows": 1,
+          "sha256": "57e49e1b1d21b6e27526fa0b1c4e42a5104b7136b2a4b48935608c35bb2eb9bb"
         },
         "wms_split_orders": {
           "rows": 0,
@@ -239,11 +530,11 @@
         },
         "wms_stock": {
           "rows": 1004,
-          "sha256": "a0ffb03bd6b741230de88fc4131bca8eca117f5db408167aa3374482a0fc37d5"
+          "sha256": "c274749f73ce36781e98555d29b57bebbeca9711c4135df26562f143c6e77e9d"
         },
         "wms_stock_ledger": {
           "rows": 1004,
-          "sha256": "de3e2b9a128a95050aeaf47c1f4ce8479ce9ba099f0ccf330fa80150e668290f"
+          "sha256": "55fca9325292b462de1875e651baac3464eb001f4b7be2691e5c881ed44b12fd"
         },
         "wms_stock_reserved": {
           "rows": 502,
@@ -286,8 +577,8 @@
       }
     },
     "snapshot_fixture": {
-      "sha256": "ee39314a5e0c1854f6a5d96d074e85140237d597d03418c163d2e386c482eeac",
-      "bytes": 913271,
+      "sha256": "4a2a8f26f314506dea02ffd81bca48173dc8fb858b7cb8c4851988eb6a1ad03a",
+      "bytes": 913322,
       "version": 2365,
       "outside_sustained_interval": true
     },
@@ -297,53 +588,53 @@
       "traffic_model": "independent-operators",
       "client_schedule": "independent continuous client loops without think time or an operator barrier",
       "serial_units_per_bin_lot": 16,
-      "serial_current_source_reads": 1374,
+      "serial_current_source_reads": 1045,
       "serial_current_source_latency": {
-        "samples": 1374,
-        "p50_ms": 13.501,
-        "p95_ms": 17.928,
-        "p99_ms": 20.276,
-        "max_ms": 40.297
+        "samples": 1045,
+        "p50_ms": 15.559,
+        "p95_ms": 19.968,
+        "p99_ms": 22.842,
+        "max_ms": 35.673
       },
       "measurement_limit": "Authenticated loopback HTTP and JSON processing; Python clients open HTTP connections per request; browser rendering, human timing and physical scanner input are excluded",
-      "elapsed_seconds": 301.737,
+      "elapsed_seconds": 302.232,
       "replicas": 2,
       "distinct_operator_identities": 8,
       "rounds": null,
-      "committed_moves": 1374,
-      "exact_cross_replica_replays": 1374,
+      "committed_moves": 1045,
+      "exact_cross_replica_replays": 1045,
       "definite_stale_conflicts": 0,
       "unexpected_errors": 0,
-      "committed_moves_per_second": 4.554,
+      "committed_moves_per_second": 3.458,
       "action_latency": {
-        "samples": 1374,
-        "p50_ms": 1733.168,
-        "p95_ms": 1908.038,
-        "p99_ms": 2162.475,
-        "max_ms": 2348.527
+        "samples": 1045,
+        "p50_ms": 2297.013,
+        "p95_ms": 2404.496,
+        "p99_ms": 2583.601,
+        "max_ms": 2852.496
       },
       "action_latency_scope": "command submission from the client's cached review through committed write and its own validated post-commit full warehouse refresh and, when enabled, exact literal serial source/custody review; initial review and subsequent exact replay excluded",
       "throughput_scope": "all completed client cycles, including initial reviews, physical commands, post-commit refreshes when enabled, conflicts and exact cross-replica replays; replay is not another physical move",
       "http_write_attempt_latency": {
-        "samples": 1374,
-        "p50_ms": 1649.07,
-        "p95_ms": 1821.468,
-        "p99_ms": 2063.328,
-        "max_ms": 2246.063
+        "samples": 1045,
+        "p50_ms": 2193.369,
+        "p95_ms": 2303.012,
+        "p99_ms": 2471.786,
+        "max_ms": 2752.543
       },
       "frozen_replay_latency": {
-        "samples": 1374,
-        "p50_ms": 1.332,
-        "p95_ms": 1.721,
-        "p99_ms": 1.928,
-        "max_ms": 6.165
+        "samples": 1045,
+        "p50_ms": 1.597,
+        "p95_ms": 1.987,
+        "p99_ms": 2.733,
+        "max_ms": 6.56
       },
       "operational_snapshot_latency": {
-        "samples": 1382,
-        "p50_ms": 70.055,
-        "p95_ms": 87.9,
-        "p99_ms": 102.602,
-        "max_ms": 244.774
+        "samples": 1053,
+        "p50_ms": 85.6,
+        "p95_ms": 105.193,
+        "p99_ms": 123.812,
+        "max_ms": 231.382
       },
       "shared_round_snapshot_reads": 0,
       "independent_post_commit_stock_visibility_verified": true,
@@ -351,75 +642,75 @@
       "operators": [
         {
           "actor": "operator:resilience-0",
-          "commits": 172,
+          "commits": 131,
           "stale_conflicts": 0,
-          "exact_replays": 172,
+          "exact_replays": 131,
           "initial_snapshot_reads": 1,
-          "post_commit_refreshes": 172,
-          "snapshot_reads": 173
+          "post_commit_refreshes": 131,
+          "snapshot_reads": 132
         },
         {
           "actor": "operator:resilience-1",
-          "commits": 172,
+          "commits": 130,
           "stale_conflicts": 0,
-          "exact_replays": 172,
+          "exact_replays": 130,
           "initial_snapshot_reads": 1,
-          "post_commit_refreshes": 172,
-          "snapshot_reads": 173
+          "post_commit_refreshes": 130,
+          "snapshot_reads": 131
         },
         {
           "actor": "operator:resilience-2",
-          "commits": 172,
+          "commits": 131,
           "stale_conflicts": 0,
-          "exact_replays": 172,
+          "exact_replays": 131,
           "initial_snapshot_reads": 1,
-          "post_commit_refreshes": 172,
-          "snapshot_reads": 173
+          "post_commit_refreshes": 131,
+          "snapshot_reads": 132
         },
         {
           "actor": "operator:resilience-3",
-          "commits": 172,
+          "commits": 131,
           "stale_conflicts": 0,
-          "exact_replays": 172,
+          "exact_replays": 131,
           "initial_snapshot_reads": 1,
-          "post_commit_refreshes": 172,
-          "snapshot_reads": 173
+          "post_commit_refreshes": 131,
+          "snapshot_reads": 132
         },
         {
           "actor": "operator:resilience-4",
-          "commits": 172,
+          "commits": 131,
           "stale_conflicts": 0,
-          "exact_replays": 172,
+          "exact_replays": 131,
           "initial_snapshot_reads": 1,
-          "post_commit_refreshes": 172,
-          "snapshot_reads": 173
+          "post_commit_refreshes": 131,
+          "snapshot_reads": 132
         },
         {
           "actor": "operator:resilience-5",
-          "commits": 171,
+          "commits": 131,
           "stale_conflicts": 0,
-          "exact_replays": 171,
+          "exact_replays": 131,
           "initial_snapshot_reads": 1,
-          "post_commit_refreshes": 171,
-          "snapshot_reads": 172
+          "post_commit_refreshes": 131,
+          "snapshot_reads": 132
         },
         {
           "actor": "operator:resilience-6",
-          "commits": 172,
+          "commits": 130,
           "stale_conflicts": 0,
-          "exact_replays": 172,
+          "exact_replays": 130,
           "initial_snapshot_reads": 1,
-          "post_commit_refreshes": 172,
-          "snapshot_reads": 173
+          "post_commit_refreshes": 130,
+          "snapshot_reads": 131
         },
         {
           "actor": "operator:resilience-7",
-          "commits": 171,
+          "commits": 130,
           "stale_conflicts": 0,
-          "exact_replays": 171,
+          "exact_replays": 130,
           "initial_snapshot_reads": 1,
-          "post_commit_refreshes": 171,
-          "snapshot_reads": 172
+          "post_commit_refreshes": 130,
+          "snapshot_reads": 131
         }
       ]
     }
@@ -428,10 +719,16 @@
     "serial_identity_proof": {
       "ok": true,
       "literal_units": 16000,
-      "steps": 17374,
-      "observations": 2374,
-      "batches": 2374,
+      "steps": 17047,
+      "observations": 2047,
+      "batches": 2047,
       "global_heads": 500,
+      "timed_moves": 1045,
+      "recovered_moves_outside_timed_interval": 2,
+      "recovery_request_ids": [
+        "1fbd9eda-bf5a-47f5-aeaa-af31cf9a0416",
+        "87f95b27-0519-41d5-8dd6-b4ba9de43618"
+      ],
       "all_literal_custody_revisions_original_steps_observations_and_heads_match": true
     },
     "physical_recomputed_from_append_only_movements": true,
@@ -442,31 +739,31 @@
     "expected_reserved": 253,
     "all_seeded_open_order_states_retained": true,
     "per_operator_bin_totals_match_committed_move_parity": true,
-    "commands": 3739,
-    "events": 3739,
-    "activity": 3739,
-    "movements": 2383,
-    "outbox": 3741,
+    "commands": 3410,
+    "events": 3410,
+    "activity": 3410,
+    "movements": 2054,
+    "outbox": 3412,
     "independent_execution_counts": {
       "expected": {
         "setup_commands": 2352,
         "recovery_commands": 13,
-        "sustained_physical_commands": 1374,
-        "commands": 3739,
-        "events": 3739,
-        "activity": 3739,
-        "movements": 2383,
-        "outbox": 3741
+        "sustained_physical_commands": 1045,
+        "commands": 3410,
+        "events": 3410,
+        "activity": 3410,
+        "movements": 2054,
+        "outbox": 3412
       },
       "observed": {
         "setup_commands": 2352,
         "recovery_commands": 13,
-        "sustained_physical_commands": 1374,
-        "commands": 3739,
-        "events": 3739,
-        "activity": 3739,
-        "movements": 2383,
-        "outbox": 3741
+        "sustained_physical_commands": 1045,
+        "commands": 3410,
+        "events": 3410,
+        "activity": 3410,
+        "movements": 2054,
+        "outbox": 3412
       },
       "all_match": true
     },
@@ -477,19 +774,19 @@
     "replica_reconciliations": [
       {
         "ok": true,
-        "version": 3739,
+        "version": 3410,
         "method": "full_append_only_ledger_and_order_line_allocations"
       },
       {
         "ok": true,
-        "version": 3739,
+        "version": 3410,
         "method": "full_append_only_ledger_and_order_line_allocations"
       }
     ],
     "final_table_fingerprints": {
       "wms_activity": {
-        "rows": 3739,
-        "sha256": "bb88dfd41a23b6080ea0c998a4d9620f8bac06ff5dcf5e939e9b055dc105741a"
+        "rows": 3410,
+        "sha256": "dbbc3e9ff503101340d964524aba5feb393acf2760a639cf5ba47650363f35ca"
       },
       "wms_admin_audit": {
         "rows": 0,
@@ -497,19 +794,19 @@
       },
       "wms_allocations": {
         "rows": 253,
-        "sha256": "e9f7b3d635fedd770e77741304579e57c10519715532554b808931aa12ba3633"
+        "sha256": "a646849c862d35fa9b48390e38394d307a82a9471c60d04ee102d487d2edc8ec"
       },
       "wms_commands": {
-        "rows": 3739,
-        "sha256": "a76e7c2b6b531fd217cf00dd791ad2a2e14124f25625666a0361e608fe944eb5"
+        "rows": 3410,
+        "sha256": "f0875fdc025473604084283f05cf4ced886dc7c6fef76f45da13bd2dc941c2db"
       },
       "wms_delivery_attempts": {
         "rows": 0,
         "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
       },
       "wms_events": {
-        "rows": 3739,
-        "sha256": "d62dcfc5d9b75c4badf0c762bcf8ad69b5e2e180ebe8fce31e8b4b2fc7361aec"
+        "rows": 3410,
+        "sha256": "a79826b49175270f449eac64f6f525daa9b2cb5893f3f1739853f22a64fb2ebf"
       },
       "wms_exceptions": {
         "rows": 0,
@@ -525,15 +822,15 @@
       },
       "wms_lot_decisions": {
         "rows": 256,
-        "sha256": "bc34feb18d351f1b98203fc73b064f4aa66c0672f7e4ec39199fd449f17596ee"
+        "sha256": "e00ca5941f0877b1af4e54299846b17668c5fb7526c0d88bc738ebae98a93251"
       },
       "wms_lot_enforcement": {
         "rows": 2,
         "sha256": "93913cea8505cc1e249446971f145ffb2faa290f250977b7c09f997daae0ce73"
       },
       "wms_movements": {
-        "rows": 2383,
-        "sha256": "bd7da542d7c893c9bd9b04df82828ad592e51a8d72cb469cbef383c8c946d3cc"
+        "rows": 2054,
+        "sha256": "fd57bcf5a25d14c5970d4542bf49a654b8ca1e618e321d82702f19c105645aa0"
       },
       "wms_native_attempts": {
         "rows": 0,
@@ -553,15 +850,15 @@
       },
       "wms_order_lines": {
         "rows": 503,
-        "sha256": "20d71eb6d6268d737b8b718a1d6267703c3141b52c2e7542716862086f578720"
+        "sha256": "b4140e9905e824e4abc534bbed1f549e8f902a6f2f28e2953e2ec33ffcf62e17"
       },
       "wms_orders": {
         "rows": 502,
-        "sha256": "85aa17e286364a3f3c467aa80cc8b6a2d7bb7ba63202cd6e197c21c108554e44"
+        "sha256": "2b4d9ad3155bca0927ce30e4c5cfc4ecd7ac01a8bcac9dd73a78876fecc7f29e"
       },
       "wms_outbox": {
-        "rows": 3741,
-        "sha256": "782166a39c21765448e44acd459f712ed350b52db524dd1bf224777b5a59b059"
+        "rows": 3412,
+        "sha256": "da1b8b86594b41f6aa6557afd21262782b34294c8809d91f6d090f56be19ddf4"
       },
       "wms_package_closures": {
         "rows": 0,
@@ -589,19 +886,19 @@
       },
       "wms_receipt_evidence": {
         "rows": 2,
-        "sha256": "c79b558d8c9439cc165db304e52d1f28bf82e4391ebecb26e53c910f60823ce9"
+        "sha256": "b297e2fd0d7dc0c0149cf0a1435b39eb7374a1319eae329610e7c2c7c3f30249"
       },
       "wms_receipt_lines": {
         "rows": 2,
-        "sha256": "c2ce610d4241ecbbd2652c86bfcb8376e7b6d64de2dfb445ae067ed032e71c1d"
+        "sha256": "e3f472417e80a3fab51109b4c45e1cf0012767f12123d68daa245ff9c471fdda"
       },
       "wms_receipts": {
         "rows": 1,
-        "sha256": "3eb7b1f4387ca6be6c2efcfb030ea40aafbb9ba7b306fb383560069e7dade869"
+        "sha256": "533c4a58e9a3efddc079d36e82e54a8da0650578a3872db6bcc7df1d412bd24d"
       },
       "wms_resource_versions": {
         "rows": 2621,
-        "sha256": "e0f8bda22b4609488d2166c9aaaadf57b07d783132d3d4719bfc8b99dc3e6a27"
+        "sha256": "ad624e95c957cf2009087329a07f88eaff59a1b4b89727f6435ebbf7e72d4cd0"
       },
       "wms_return_lines": {
         "rows": 0,
@@ -609,35 +906,35 @@
       },
       "wms_schema_migrations": {
         "rows": 29,
-        "sha256": "2e114cb71db55665bfc1dc58a90e4ca64ce40c14206d11c9714e54fe033fec80"
+        "sha256": "af6ac8404365d57865f7fc66861d753fe234c78f7cd73bcd64f69db478047ed5"
       },
       "wms_serial_batches": {
-        "rows": 2374,
-        "sha256": "4cc214d040fbf13964507055401a918a71cda96622bb6b328ffadeb7e379fbfa"
+        "rows": 2047,
+        "sha256": "b06f0425284c684bd122f9be84cf63f238086a256fbe9e17c5c8578ee9417a1d"
       },
       "wms_serial_heads": {
         "rows": 500,
-        "sha256": "53e609bea9fb4e194dbb20c8d377d63c4f5c05d53e9fb5c17b5dd665ddda7860"
+        "sha256": "fdbb52ded8d7a70c2670eaea9baaf962b2a683624d0a16485d67220a635cc73f"
       },
       "wms_serial_modes": {
         "rows": 501,
-        "sha256": "1476e81e6c22a284482137b3d6a408329282f958fe89428d259ff4f1c9e689b3"
+        "sha256": "2c4ff8093cafea814a243c84dbf56d3bf4430bcee503824e631bd7ab5588425b"
       },
       "wms_serial_observations": {
-        "rows": 2374,
-        "sha256": "3ce651f5d7e5d55e1a4ca7cd0a49d17a5e614c0eea6e27c1eef62f014c492c7d"
+        "rows": 2047,
+        "sha256": "7fbcb9f864b5ef321253e8e9e1e0fcd225b8a04a5d70cfc39c33c39479481569"
       },
       "wms_serial_steps": {
-        "rows": 17374,
-        "sha256": "76a95dd0959a77aa489d9a30c47d894272fcac5a8a1a85e2dc13fba8096a8ce6"
+        "rows": 17047,
+        "sha256": "1120e05438f9fdc8fad4af8592d29033bcdcc67e8a192f7171190e5655fc26c3"
       },
       "wms_serial_units": {
         "rows": 16000,
-        "sha256": "bec2eaee5c33d66c476e8355821cb724ba4e1c729dd446dacb99e50eca8ed71d"
+        "sha256": "4908731d20e60b8a8055babe5556097f7e6aa4224122159f74235fbace86659b"
       },
       "wms_shipment_evidence": {
         "rows": 1,
-        "sha256": "23e656765ed1f578572ed0770d337fa78f51883cbc47fc507855def0fa7c9e9d"
+        "sha256": "57e49e1b1d21b6e27526fa0b1c4e42a5104b7136b2a4b48935608c35bb2eb9bb"
       },
       "wms_split_orders": {
         "rows": 0,
@@ -645,11 +942,11 @@
       },
       "wms_stock": {
         "rows": 1012,
-        "sha256": "847f7668d1cf4bda2a40c2fe844c28f4a70c0084da3389caf3a50dbb4d307a14"
+        "sha256": "95b7afb1a810a2eac64cdd6f47402c9db221df4071a7b79e92c10dbab97dad1d"
       },
       "wms_stock_ledger": {
         "rows": 1012,
-        "sha256": "a8a63a4741e63329fee578897bdb3323bc56e0e86a3f6d1d675fb3f8b4b831e0"
+        "sha256": "7d78c164a78465428c834b906b97f4386c4da626fee2ca4def3a14e18b5192bb"
       },
       "wms_stock_reserved": {
         "rows": 502,
@@ -677,7 +974,7 @@
       },
       "wms_warehouses": {
         "rows": 2,
-        "sha256": "27c151f846ff8396494b8a159b150b4c0b282d2963e5147abe3578110afc7626"
+        "sha256": "abf88e872fce3e255b24064d279ffe30ffdb91460d6040d97205590132323f0e"
       },
       "wms_workspaces": {
         "rows": 0,

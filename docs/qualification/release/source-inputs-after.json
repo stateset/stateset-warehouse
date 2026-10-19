@@ -1,5 +1,5 @@
 {
-  "sha256": "73248e448b868b50ebb8d9ae727392940609328678f3f81831dd59bd3135d275",
+  "sha256": "396d2a5d23dbdea4711a9549aa440b596bebeedd6f78bc220e656b973b93f5bb",
   "inputs": [
     {
       "path": ".dockerignore",
@@ -15,11 +15,11 @@
     },
     {
       "path": "Cargo.lock",
-      "sha256": "1ea91fe9d96f04bd532f108e08a484a9efae2b90609c3cbc570366d722896313"
+      "sha256": "8cbc52aedc9e9ca0546e08a4ede9350e3053995a4bc24e6200b1356dd6dece65"
     },
     {
       "path": "Cargo.toml",
-      "sha256": "ae6e475cc95353d8d7d48dc66b30b829d8e38e1947941443fe70987e64ffe64e"
+      "sha256": "e4ac8eadabdee9f2f10798074900e30022cb30e9a193f5d5ddecccfd43e70374"
     },
     {
       "path": "Dockerfile",
@@ -31,11 +31,11 @@
     },
     {
       "path": "dashboard/package-lock.json",
-      "sha256": "5e66b38ba8027d4971d68a64567f63fe64e64e31ee1eca609d99241354e55c17"
+      "sha256": "fe229b218e4066aa0b4a186b5a663b448eea457e7357dd8738bfb6733165cad4"
     },
     {
       "path": "dashboard/package.json",
-      "sha256": "bbf9fa6f859caee284c048a8e82541e00b6d749ef14549dbc634e193cff164f8"
+      "sha256": "9c8c43bac85481d80626fe94b9b9ed45a15065b5a607dc516dad5d113712e59e"
     },
     {
       "path": "dashboard/playwright.config.ts",
@@ -507,7 +507,7 @@
     },
     {
       "path": "scripts/qualify-release.sh",
-      "sha256": "1574cb784774f916646c351bd14e34a8de8c38ee2846b4630ed1c9d07046ed81"
+      "sha256": "75b00216ae56be067e4bc371cd5dcd830f464d799435a102fdc9345210d5ca63"
     },
     {
       "path": "scripts/relational-proof.sql",
@@ -519,7 +519,7 @@
     },
     {
       "path": "scripts/resilience_probe.py",
-      "sha256": "c2c8d9762bbd48901d8cadd3abe83a730047111b24bd52f2d631845aa1551326"
+      "sha256": "d86a5b9f8147408d1ee1491adc5eda6446e2de5733f9f1b61548acb7ee472f38"
     },
     {
       "path": "scripts/restore-rehearsal.sh",
@@ -530,12 +530,16 @@
       "sha256": "bda40ed788700931dd885b1d90d45d22426372b5e26d7a99ed234629f987eee8"
     },
     {
+      "path": "scripts/serial_crash_barrier.py",
+      "sha256": "9ecae86ec0f80c9a930ccecff02a78e3b4ee2dc4f774db27057305d8cbc305a1"
+    },
+    {
       "path": "scripts/serial_traffic.py",
       "sha256": "ae0e9c2c61cbb7581f1907c5e64d1c6b75ca55b7e2ff6d6479b8c5f248e76ea1"
     },
     {
       "path": "scripts/serial_traffic_proof.py",
-      "sha256": "6413d70e5ab9abdd3300148730f1636536a559baad227ae28feef1a2d1b34d3f"
+      "sha256": "d730ab7fe8029a79224bb99a269eb3c14307bea7fbefd9d8442f87b31f0b9526"
     },
     {
       "path": "scripts/test_check_sql.py",
@@ -559,7 +563,7 @@
     },
     {
       "path": "scripts/test_serial_traffic.py",
-      "sha256": "120f0be45a91456a18b6f19b56c3afcaf9c2bb9be37b7359090f5b638774fa59"
+      "sha256": "f0c6deee05f0dfe4cbe07930b59a9615b40ba71c2e315ef4fd5bf351e38bf4df"
     },
     {
       "path": "src/api.rs",

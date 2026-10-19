@@ -2,7 +2,13 @@
 
 The [workload executable](../examples/workload.rs) measures current operational data and concurrent operators against real PostgreSQL. A historical-audit retention test alone cannot establish warehouse capacity. Scoped physical commands load their SKUs and owning work plus independently derived foreign holds; full operational snapshot reads and global-version commands still load current warehouse data. Writes serialize within each warehouse. This harness makes those costs and version conflicts visible before selecting a facility workload.
 
-## Current serial-enabled image qualification — 2026-10-19
+## Current serial after-write image qualification — 2026-10-19
+
+The [complete gate](qualification/release-20261019-serial-after-write-v1/summary.json) retains both 500-product / 100-bin / two-lot / 500-order / eight-operator / two-replica / 300-second image profiles. [Untracked traffic](qualification/release-20261019-serial-after-write-v1/image_resilience.json) records 8,768 moves/replays, 29.199 moves/s and 340.771ms action p95. [Serial traffic](qualification/release-20261019-serial-after-write-v1/image_serial_resilience.json) records 1,045 timed moves/replays/source reviews, 3.458 moves/s and 2404.496ms action p95 across 16,000 labels. Zero conflicts/errors and both final complete API proofs pass.
+
+Two serial commands recover from API/PostgreSQL crashes after their uncommitted custody/audit mutations. They use an additional fixed label, move it out and back before timed traffic, and are excluded from throughput and source-read sample counts. The timed window still moves eight fixed labels; 15,992 others remain static during that window. Setup takes 603.810s and remains outside timing. See [limits](qualification/release-20261019-serial-after-write-v1/qualification-limits.json). Shared-host variation establishes no causal performance improvement, facility SLO or broad-label contention capacity.
+
+## Previous serial source-set image qualification — 2026-10-19
 
 The [accepted local software gate](qualification/release-20261019-serial-write-source-sets-v1/summary.json) passes both full image profiles at 500 products / 100 bins / two lots / 500 orders / eight independent clients / two replicas / 300 requested seconds. [Untracked traffic](performance/http-500-8-operators-serial-source-sets-untracked-v1.json) completes 11,291 moves/replays in 300.137s at 37.620 moves/s and 239.525ms action p95. [Serial traffic](performance/http-500-8-operators-serial-source-sets-v1.json), with 16,000 literal IDs, completes 1,374 moves/replays/source reviews in 301.737s at 4.554 moves/s and 1908.038ms action p95. Zero errors/conflicts and both final API proofs pass. Shared-host observations establish no controlled capacity comparison or facility SLO.
 

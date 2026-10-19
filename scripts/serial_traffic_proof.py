@@ -8,7 +8,7 @@ def require(condition, message):
         raise AssertionError(message)
 
 
-def serial_proof(tables, accepted, products, lots, units, moves, bins):
+def serial_proof(tables, accepted, products, lots, units, moves, bins, recovery_requests=()):
     """Rebuild exact literal custody independently of stored guard booleans."""
     events = {e["id"]: e for e in tables["wms_events"]}
     by_request = {e["payload"]["request_id"]: e for e in events.values()}
@@ -16,6 +16,23 @@ def serial_proof(tables, accepted, products, lots, units, moves, bins):
         len(by_request) == len(events) == len(accepted),
         "Event/request population differs",
     )
+    # Two deliberately interrupted original requests recover outside the timed
+    # traffic interval. Their exact static label goes out and back, independent
+    # of the first label moved by each sustained operator.
+    require(len(recovery_requests) in (0, 2) and len(set(recovery_requests)) == len(recovery_requests),
+            "Serial recovery requires two distinct original requests")
+    recovery_key = (f"LOAD-{products - 1:05}", f"Load-{products - 1:05}-Lot-000-Unit-{units - 1:05}")
+    recovery_events = []
+    for returning, request_id in enumerate(recovery_requests):
+        saved = accepted[request_id]["request"]
+        expected = {"type": "move_stock", "sku": recovery_key[0], "lot": "LOT-000",
+                    "from": f"BIN-{(products - 1 + returning) % bins:05}",
+                    "to": f"BIN-{(products - returning) % bins:05}", "quantity": 1}
+        require(saved["command"] == expected
+                and saved["serial_inputs"] == [{"target": [], "sku": recovery_key[0], "serials": [recovery_key[1]]}]
+                and by_request[request_id]["payload"]["command"] == expected,
+                "Serial recovery changed its literal label or original physical move")
+        recovery_events.append(by_request[request_id]["id"])
     by_unit = collections.defaultdict(list)
     for step in tables["wms_serial_steps"]:
         by_unit[(step["sku"], step["serial"])].append(step)
@@ -24,7 +41,7 @@ def serial_proof(tables, accepted, products, lots, units, moves, bins):
         len(actual) == len(tables["wms_serial_units"]) == products * lots * units,
         "Literal identity population changed",
     )
-    expected_steps = products * lots * units + sum(moves)
+    expected_steps = products * lots * units + sum(moves) + len(recovery_requests)
     require(
         len(tables["wms_serial_steps"]) == expected_steps,
         "Serial step population changed",
@@ -37,6 +54,8 @@ def serial_proof(tables, accepted, products, lots, units, moves, bins):
                 key = (sku, f"Load-{i:05}-Lot-{lot:03}-Unit-{n:05}")
                 expected_keys.add(key)
                 count = moves[i] if lot == 0 and n == 0 and i < len(moves) else 0
+                if key == recovery_key:
+                    count += len(recovery_requests)
                 place = {
                     "status": "on_hand",
                     "warehouse_id": "wh-main",
@@ -50,6 +69,17 @@ def serial_proof(tables, accepted, products, lots, units, moves, bins):
                     "Literal identity, immutable lot, revision or custody changed",
                 )
                 chain = sorted(by_unit[key], key=lambda s: s["revision"])
+                if key == recovery_key and recovery_requests:
+                    require([s["event_id"] for s in chain[-2:]] == recovery_events,
+                            "Serial recovery steps do not belong to the two original requests")
+                    for returning, step in enumerate(chain[-2:]):
+                        require(step["before_place"] == {
+                            "status": "on_hand", "warehouse_id": "wh-main",
+                            "location": f"BIN-{(i + returning) % bins:05}"}
+                            and step["after_place"] == {
+                            "status": "on_hand", "warehouse_id": "wh-main",
+                            "location": f"BIN-{(i + 1 - returning) % bins:05}"},
+                            "Recovered literal custody does not move out and back")
                 require(
                     [s["revision"] for s in chain] == list(range(1, count + 2)),
                     "Serial revisions have a missing or extra predecessor",
@@ -107,7 +137,7 @@ def serial_proof(tables, accepted, products, lots, units, moves, bins):
                 "Original complete label group or global SKU review changed",
             )
     require(
-        sum(map(len, observations.values())) == products * lots + sum(moves),
+        sum(map(len, observations.values())) == products * lots + sum(moves) + len(recovery_requests),
         "Serial observation population differs from original counts and moves",
     )
     heads = {h["sku"]: h for h in tables["wms_serial_heads"]}
@@ -121,6 +151,8 @@ def serial_proof(tables, accepted, products, lots, units, moves, bins):
     for i in range(products):
         sku = f"LOAD-{i:05}"
         version = lots + (moves[i] if i < len(moves) else 0)
+        if i == products - 1:
+            version += len(recovery_requests)
         chain = sorted(batches[sku], key=lambda b: b["version"])
         require(
             [b["version"] for b in chain] == list(range(1, version + 1))
@@ -143,5 +175,8 @@ def serial_proof(tables, accepted, products, lots, units, moves, bins):
         "observations": sum(map(len, observations.values())),
         "batches": len(tables["wms_serial_batches"]),
         "global_heads": len(heads),
+        "timed_moves": sum(moves),
+        "recovered_moves_outside_timed_interval": len(recovery_requests),
+        "recovery_request_ids": list(recovery_requests),
         "all_literal_custody_revisions_original_steps_observations_and_heads_match": True,
     }
