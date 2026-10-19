@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "scope": "targeted_terminal_recovery_development",
+  "recorded_at": "2026-10-19T21:44:08.556820+00:00",
+  "result": "passed",
+  "production_qualified": false,
+  "baseline_tag": "v0.2.0",
+  "baseline_commit": "840cb9c3fa4f2ef963c966210295ccc4613b7961",
+  "new_journal_schema": 2,
+  "legacy_journal_schema": 1,
+  "original_legacy_files_and_http_body_preserved": true,
+  "terminal_checks_passed": 17,
+  "separate_process_outcome_race_checked": true,
+  "terminal_recovery_after_outcome_race_checked": true,
+  "final_checkpoint_payload_checksum_checked": true,
+  "preexisting_forked_histories_held": true,
+  "actual_pg_api_lost_success_and_pty_workflows_passed": true,
+  "qualified_backend_image_inputs_unchanged": 305,
+  "qualified_backend_image_inputs_sha256": "7d59f80d543801c9237fa9a7dac313f00b31228f81b699a100e34f531343be89",
+  "full_release_gate_rerun": false,
+  "npm_package_dry_run_files": 9,
+  "package_published": false,
+  "source_files": [
+    {
+      "path": "cli/lib/journal.mjs",
+      "sha256": "c6ba9e83810940cd19ba9675cc25c337cc326d928913dd95483a6a5961c11e7d"
+    },
+    {
+      "path": "cli/test/recovery.test.mjs",
+      "sha256": "165a51021e049578612f83bec690ff0e88b51a9b1f8b988c40aeeaf401c3e291"
+    },
+    {
+      "path": "cli/README.md",
+      "sha256": "7f151e4df3014a72c49b252aea91ee228f692eb3615eacb0ccf8523b3513988d"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "regression-before.log",
+      "sha256": "fe302387ad223b27823600ae3491e97e05d33e4715b9abc2c39a8857b4b143f4"
+    },
+    {
+      "path": "terminal-checks.log",
+      "sha256": "25b2fef9a6d0cac4065f1123fc65d0eadcfa525274c546d9867749b5021594c3"
+    }
+  ],
+  "upgrade": "Stop older TUI processes before using the new client; old clients do not understand new checkpoints. Never delete or rewrite original recovery evidence.",
+  "limits": [
+    "Checks are local synthetic software tests, not deployed or physical facility acceptance.",
+    "No mixed-version concurrent-writer guarantee; stop older clients before upgrading.",
+    "Checksums detect accidental changes, not malicious modifications by the local file owner.",
+    "The full 0.2.0 release evidence remains bound to its original frozen source."
+  ]
+}

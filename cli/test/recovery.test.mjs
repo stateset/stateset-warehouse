@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import * as fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
 import { Client, parseJson, originUrl, safeText } from '../lib/client.mjs';
 import { Journal, sendOriginal, rejectionMatches } from '../lib/journal.mjs';
 import { collectSerials, argumentsFor } from '../warehouse-tui.mjs';
@@ -53,14 +55,14 @@ test('changed actor, tenant or server cannot replay original work', async t => {
 
 test('disk failure before send intent prevents transmission; original request remains recoverable', async t => {
   let fail = false;
-  const { root, journal, record } = await fixture(t, { beforePublish: name => { if (fail && name.endsWith('send_intent.json')) throw new Error('Synthetic fsync/publication failure'); } });
+  const { root, journal, record } = await fixture(t, { beforePublish: (_name, event) => { if (fail && event.stage === 'send_intent') throw new Error('Synthetic fsync/publication failure'); } });
   fail = true; let sends = 0;
   await assert.rejects(sendOriginal(clientWith(async () => { sends++; }), journal, record), /Synthetic/);
   assert.equal(sends, 0); assert.equal((await new Journal(root).load(record.dir)).stage, 'original');
 });
 
 test('disk failure after committed HTTP response preserves original request and send intent', async t => {
-  const { root, journal, record } = await fixture(t, { beforePublish: name => { if (name.endsWith('-committed.json')) throw new Error('Synthetic post-response disk failure'); } });
+  const { root, journal, record } = await fixture(t, { beforePublish: (_name, event) => { if (event.stage === 'committed') throw new Error('Synthetic post-response disk failure'); } });
   await assert.rejects(sendOriginal(clientWith(async () => ({ ok: true, status: 200, data: { replayed: false, result: { version: 5 } } })), journal, record), /post-response/);
   const retained = await new Journal(root).load(record.dir); assert.equal(retained.stage, 'send_intent'); assert.equal(retained.original.body, record.original.body);
 });
@@ -81,12 +83,12 @@ test('only a fully bound definitive stale proof resolves rejected work', async t
 test('tampering, incomplete history, unsafe permissions and symlink directories are held', async t => {
   const { root, journal, record } = await fixture(t);
   const next = await journal.append(record, 'send_intent');
-  const filename = path.join(record.dir, '000001-send_intent.json'); const original = await fs.readFile(filename, 'utf8');
+  const filename = path.join(record.dir, '000001-checkpoint.json'); const original = await fs.readFile(filename, 'utf8');
   await fs.writeFile(filename, original.replace('previous_sha256', 'forged_sha256'));
   await assert.rejects(journal.load(record.dir), /changed/);
   await fs.writeFile(filename, original);
   await fs.chmod(filename, 0o644); await assert.rejects(journal.load(record.dir), /Unsafe recovery file/); await fs.chmod(filename, 0o600);
-  await fs.rename(filename, path.join(record.dir, '000002-send_intent.json')); await assert.rejects(journal.load(record.dir), /sequence/);
+  await fs.rename(filename, path.join(record.dir, '000002-checkpoint.json')); await assert.rejects(journal.load(record.dir), /sequence/);
   const linked = path.join(root, 'linked'); await fs.symlink(record.dir, linked);
   await assert.rejects(new Journal(linked).list(scope), /symlinks/);
   assert.equal(next.stage, 'send_intent');
@@ -96,6 +98,100 @@ test('concurrent journal changes prevent a stale process from sending', async t 
   const { journal, record } = await fixture(t);
   await journal.append(record, 'send_intent');
   await assert.rejects(journal.append(record, 'send_intent'), /changed in another process/);
+});
+
+test('different outcomes racing for one journal position cannot fork original recovery', { timeout: 5000 }, async t => {
+  const { root, journal, record } = await fixture(t);
+  const sent = await journal.append(record, 'send_intent');
+  let arrived = 0; let release;
+  const barrier = new Promise(resolve => { release = resolve; });
+  const options = { beforePublish: async () => { if (++arrived === 2) release(); await barrier; } };
+  const outcomes = await Promise.allSettled([
+    new Journal(root, options).append(sent, 'committed', { receipt: 'synthetic-original' }),
+    new Journal(root, options).append(sent, 'uncertain', { reason: 'synthetic lost response' }),
+  ]);
+  assert.equal(arrived, 2);
+  const recovered = await new Journal(root).load(record.dir);
+  assert.equal(outcomes.filter(r => r.status === 'fulfilled').length, 1);
+  assert.equal(outcomes.filter(r => r.status === 'rejected').length, 1);
+  assert.match(outcomes.find(r => r.status === 'rejected').reason.message, /changed in another process/);
+  assert.equal(recovered.events.length, 3);
+  assert.ok(['committed', 'uncertain'].includes(recovered.stage));
+  assert.equal(recovered.original.body, record.original.body);
+  let sends = 0;
+  const done = await sendOriginal(clientWith(async (_method, _path, body) => {
+    sends++; assert.equal(body, record.original.body);
+    return { ok: true, status: 200, data: { replayed: true, result: { version: 5 } } };
+  }), new Journal(root), recovered);
+  assert.equal(done.stage, 'committed');
+  assert.equal(sends, recovered.stage === 'committed' ? 0 : 1);
+});
+
+test('separate terminal processes publish only one outcome at each journal position', { timeout: 15000 }, async t => {
+  const { root, journal, record } = await fixture(t);
+  await journal.append(record, 'send_intent');
+  const worker = `
+    import { once } from 'node:events';
+    const [moduleUrl, root, dir, stage] = process.argv.slice(1);
+    const { Journal } = await import(moduleUrl);
+    try {
+      const journal = new Journal(root, { beforePublish: async () => {
+        const proceed = once(process, 'message'); process.send('ready'); await proceed;
+      } });
+      await journal.append(await journal.load(dir), stage, { synthetic: true });
+      process.send('published');
+    } catch (error) { process.send({ rejected: error.code }); }
+    process.disconnect();
+  `;
+  const children = ['committed', 'uncertain'].map(stage => spawn(process.execPath, ['--input-type=module', '--eval', worker, new URL('../lib/journal.mjs', import.meta.url).href, root, record.dir, stage], { stdio: ['ignore', 'ignore', 'pipe', 'ipc'] }));
+  t.after(() => { for (const child of children) if (child.exitCode === null) child.kill('SIGTERM'); });
+  const exits = children.map(child => once(child, 'exit'));
+  assert.deepEqual(await Promise.all(children.map(child => once(child, 'message').then(([value]) => value))), ['ready', 'ready']);
+  const outcomes = children.map(child => once(child, 'message').then(([value]) => value));
+  for (const child of children) child.send('publish');
+  const results = await Promise.all(outcomes);
+  assert.equal(results.filter(value => value === 'published').length, 1);
+  assert.deepEqual(results.find(value => value !== 'published'), { rejected: 'EEXIST' });
+  assert.ok((await Promise.all(exits)).every(([code]) => code === 0));
+  const recovered = await journal.load(record.dir);
+  assert.equal(recovered.events.length, 3);
+  assert.equal(recovered.original.body, record.original.body);
+});
+
+test('legacy uncertain journals replay unchanged original bytes and keep all old checkpoints', async t => {
+  const { root, record } = await fixture(t);
+  const digest = value => createHash('sha256').update(value).digest('hex');
+  const original = JSON.stringify({ ...record.original, schema: 1 });
+  const intent = JSON.stringify({ stage: 'send_intent', previous_sha256: digest(original), recorded_at: '2026-10-19T00:00:00.000Z', details: {} });
+  const uncertain = JSON.stringify({ stage: 'uncertain', previous_sha256: digest(intent), recorded_at: '2026-10-19T00:00:01.000Z', details: { reason: 'Synthetic legacy lost response' } });
+  const legacyFiles = { '000000-original.json': original, '000001-send_intent.json': intent, '000002-uncertain.json': uncertain };
+  for (const [name, body] of Object.entries(legacyFiles)) await fs.writeFile(path.join(record.dir, name), body, { mode: 0o600 });
+  const upgraded = new Journal(root); const pending = await upgraded.load(record.dir);
+  assert.equal(pending.stage, 'uncertain');
+  let sends = 0;
+  const result = await sendOriginal(clientWith(async (_method, _path, body) => {
+    sends++; assert.equal(body, record.original.body);
+    return { ok: true, status: 200, data: { replayed: true, result: { version: 5 } } };
+  }), upgraded, pending);
+  assert.equal(sends, 1); assert.equal(result.stage, 'committed');
+  for (const [name, body] of Object.entries(legacyFiles)) assert.equal(await fs.readFile(path.join(record.dir, name), 'utf8'), body);
+  assert.ok((await fs.readdir(record.dir)).includes('000003-checkpoint.json'));
+  assert.equal((await new Journal(root).load(record.dir)).stage, 'committed');
+  await fs.writeFile(path.join(record.dir, '000001-uncertain.json'), JSON.stringify({ ...JSON.parse(intent), stage: 'uncertain' }), { mode: 0o600 });
+  await assert.rejects(upgraded.load(record.dir), /sequence/);
+});
+
+test('final checkpoint changes and invalid new-format filenames remain held', async t => {
+  const { root, journal, record } = await fixture(t);
+  const sent = await journal.append(record, 'send_intent');
+  await journal.append(sent, 'committed', { response: { replayed: false, result: { version: 5 } } });
+  const filename = path.join(record.dir, '000002-checkpoint.json');
+  const raw = await fs.readFile(filename, 'utf8');
+  await fs.writeFile(filename, raw.replace('"stage":"committed"', '"stage":"uncertain"'));
+  await assert.rejects(new Journal(root).load(record.dir), /checksum/);
+  await fs.writeFile(filename, raw);
+  await fs.rename(filename, path.join(record.dir, '000002-committed.json'));
+  await assert.rejects(journal.load(record.dir), /does not match/);
 });
 
 test('HTTP transport refuses redirects and never sends credentials to the redirect target', async t => {

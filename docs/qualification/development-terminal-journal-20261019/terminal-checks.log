@@ -1,0 +1,113 @@
+TAP version 13
+# Subtest: real API/PG terminal work, lost-success recovery, actor fencing and PTY navigation
+ok 1 - real API/PG terminal work, lost-success recovery, actor fencing and PTY navigation
+  ---
+  duration_ms: 1801.366896
+  type: 'test'
+  ...
+# Private synthetic TUI evidence retained separately.
+# Subtest: a lost successful response survives process restart and replays exact original bytes once
+ok 2 - a lost successful response survives process restart and replays exact original bytes once
+  ---
+  duration_ms: 129.546706
+  type: 'test'
+  ...
+# Subtest: changed actor, tenant or server cannot replay original work
+ok 3 - changed actor, tenant or server cannot replay original work
+  ---
+  duration_ms: 15.956902
+  type: 'test'
+  ...
+# Subtest: disk failure before send intent prevents transmission; original request remains recoverable
+ok 4 - disk failure before send intent prevents transmission; original request remains recoverable
+  ---
+  duration_ms: 22.636396
+  type: 'test'
+  ...
+# Subtest: disk failure after committed HTTP response preserves original request and send intent
+ok 5 - disk failure after committed HTTP response preserves original request and send intent
+  ---
+  duration_ms: 27.399815
+  type: 'test'
+  ...
+# Subtest: only a fully bound definitive stale proof resolves rejected work
+ok 6 - only a fully bound definitive stale proof resolves rejected work
+  ---
+  duration_ms: 109.80487
+  type: 'test'
+  ...
+# Subtest: tampering, incomplete history, unsafe permissions and symlink directories are held
+ok 7 - tampering, incomplete history, unsafe permissions and symlink directories are held
+  ---
+  duration_ms: 26.611653
+  type: 'test'
+  ...
+# Subtest: concurrent journal changes prevent a stale process from sending
+ok 8 - concurrent journal changes prevent a stale process from sending
+  ---
+  duration_ms: 18.180101
+  type: 'test'
+  ...
+# Subtest: different outcomes racing for one journal position cannot fork original recovery
+ok 9 - different outcomes racing for one journal position cannot fork original recovery
+  ---
+  duration_ms: 29.686707
+  type: 'test'
+  ...
+# Subtest: separate terminal processes publish only one outcome at each journal position
+ok 10 - separate terminal processes publish only one outcome at each journal position
+  ---
+  duration_ms: 118.085363
+  type: 'test'
+  ...
+# Subtest: legacy uncertain journals replay unchanged original bytes and keep all old checkpoints
+ok 11 - legacy uncertain journals replay unchanged original bytes and keep all old checkpoints
+  ---
+  duration_ms: 36.026351
+  type: 'test'
+  ...
+# Subtest: final checkpoint changes and invalid new-format filenames remain held
+ok 12 - final checkpoint changes and invalid new-format filenames remain held
+  ---
+  duration_ms: 24.108062
+  type: 'test'
+  ...
+# Subtest: HTTP transport refuses redirects and never sends credentials to the redirect target
+ok 13 - HTTP transport refuses redirects and never sends credentials to the redirect target
+  ---
+  duration_ms: 33.066987
+  type: 'test'
+  ...
+# Subtest: numeric precision, unsafe origins and terminal controls cannot silently change identities
+ok 14 - numeric precision, unsafe origins and terminal controls cannot silently change identities
+  ---
+  duration_ms: 1.087942
+  type: 'test'
+  ...
+# Subtest: serial collection requires real literal scans, preserves case and never uses custody labels
+ok 15 - serial collection requires real literal scans, preserves case and never uses custody labels
+  ---
+  duration_ms: 1.027215
+  type: 'test'
+  ...
+# Subtest: typed multi-line forms preserve exact labels and whole each values
+ok 16 - typed multi-line forms preserve exact labels and whole each values
+  ---
+  duration_ms: 0.657916
+  type: 'test'
+  ...
+# Subtest: unknown new-facility work is discoverable across facilities and remains bound to its original target
+ok 17 - unknown new-facility work is discoverable across facilities and remains bound to its original target
+  ---
+  duration_ms: 73.355877
+  type: 'test'
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 17
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1894.112187

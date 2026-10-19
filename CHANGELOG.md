@@ -1,5 +1,10 @@
 # Changes
 
+## Unreleased
+
+- Prevent terminal recovery histories from forking when separate processes publish different outcomes at the same sequence position. Checkpoints claim one shared filename regardless of outcome, include a payload checksum, and report a concurrent change without overwriting the winner.
+- Preserve exact original requests and existing checkpoints when continuing 0.2.0 journals. New journals use schema 2; close older terminal clients before upgrading. Previously forked histories remain held for review.
+
 ## 0.2.0 — 2026-10-19
 
 - Compile pinned, portable StateSet iCommerce 1.39.0 core and primitive crates for strict typed product/move previews and read-only inventory projections. Explicit mappings retain original WMS identities. Exact decimal-string validation rejects fractions, overprecision, numeric JSON and unsupported fields before upstream decoding can round them. Canonical WMS commands remain the sole inventory writer.

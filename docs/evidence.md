@@ -1,5 +1,13 @@
 # Implementation evidence
 
+## Development terminal recovery concurrency — 2026-10-19
+
+The [targeted verification](qualification/development-terminal-journal-20261019/verification.json) covers an unreleased recovery fix. Two processes could previously publish different stage filenames at the same journal sequence number, leaving a forked history. Checkpoints now claim one shared filename per sequence position with an exclusive hard link. A competing writer reopens the winner's history instead of adding a conflicting outcome. A payload checksum detects accidental changes to the final checkpoint, which has no later hash-chain entry.
+
+All **17 terminal checks** pass, including a deterministic race, separate Node processes, byte-preserving continuation of legacy uncertain journals, detection of existing forks and final-checkpoint changes, plus actual PostgreSQL/API lost-success recovery, physical serial movement and PTY facility creation. New journals use schema 2; close older terminal clients before upgrading. Existing request bodies, UUIDs, reviewed versions and serial observations remain unchanged. Existing broken histories stay held for review.
+
+The 305 qualified backend/image inputs remain unchanged. The complete release gate was not rerun for this terminal-only follow-up; the accepted 0.2.0 report below remains bound to its original source and tag. Repository visibility, deployed and physical acceptance remain unchanged.
+
 ## iCommerce and terminal software release — 2026-10-19
 
 Version **0.2.0** passes the [complete ten-stage gate](qualification/release-20261019-icommerce-tui-v1/summary.json) and [independent audit](qualification/release-20261019-icommerce-tui-v1/independent-audit.json) on image `sha256:3985d87ba81878be49ed10ffc05d7115c88c91ae67cd4d0f37a9f33a6d8c1ebd`. **331 Rust, 74 Python, 13 terminal, 149 browser contract and 21 live browser cases** pass. All prior live browser case titles remain covered. Restore verifies **49 populated tables**, **29 unchanged migration digests** and ten warehouse proofs; the hardened image exposes **70 administrator MCP tools**.

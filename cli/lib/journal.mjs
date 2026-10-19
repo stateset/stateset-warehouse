@@ -45,8 +45,12 @@ export class Journal {
     const body = JSON.stringify(value); const file = await fs.open(temp, 'wx', 0o600);
     try { await file.writeFile(body); await file.sync(); } finally { await file.close(); }
     try {
-      await this.beforePublish?.(filename);
-      await fs.link(temp, path.join(dir, filename));
+      await this.beforePublish?.(filename, value);
+      try { await fs.link(temp, path.join(dir, filename)); } catch (error) {
+        if (error.code !== 'EEXIST') throw error;
+        const changed = new Error('Recovery journal changed in another process; reopen it', { cause: error });
+        changed.code = 'EEXIST'; throw changed;
+      }
       await syncDirectory(dir);
     } finally { await fs.unlink(temp); }
     return hash(body);
@@ -59,7 +63,7 @@ export class Journal {
     await directory(this.root);
     const parent = path.join(this.root, key(scope)); await directory(parent);
     const dir = path.join(parent, request.request_id); await fs.mkdir(dir, { mode: 0o700 }); await syncDirectory(parent);
-    await this.publish(dir, '000000-original.json', { schema: 1, stage: 'original', scope, body, body_sha256: hash(body), created_at: new Date().toISOString() });
+    await this.publish(dir, '000000-original.json', { schema: 2, stage: 'original', scope, body, body_sha256: hash(body), created_at: new Date().toISOString() });
     return this.load(dir);
   }
   async load(dir) {
@@ -74,12 +78,19 @@ export class Journal {
       const raw = await privateRead(path.join(absolute, name)); const event = parseJson(raw);
       if (index && !['send_intent', 'uncertain', 'committed', 'not_committed'].includes(event.stage)) throw new Error('Unknown recovery history stage');
       if (index && (event.previous_sha256 !== previous || terminal.has(events.at(-1).stage))) throw new Error('Recovery history was changed or extended after completion');
-      if (name !== `${String(index).padStart(6, '0')}-${event.stage}.json`) throw new Error('Recovery stage does not match its original file');
+      const position = String(index).padStart(6, '0');
+      const checkpoint = index && name === `${position}-checkpoint.json`;
+      const legacy = name === `${position}-${event.stage}.json`;
+      if (index ? !checkpoint && !(events[0].schema === 1 && legacy) : !legacy) throw new Error('Recovery stage does not match its original file');
+      if (checkpoint) {
+        const { checkpoint_sha256, ...payload } = event;
+        if (checkpoint_sha256 !== hash(JSON.stringify(payload))) throw new Error('Recovery checkpoint checksum was changed');
+      }
       events.push(event); previous = hash(raw);
     }
     const original = events[0]; validScope(original.scope);
     const request = parseJson(original.body);
-    if (original.schema !== 1 || original.stage !== 'original' || hash(original.body) !== original.body_sha256 || path.basename(absolute) !== request.request_id || path.basename(path.dirname(absolute)) !== key(original.scope)) throw new Error('Original request or identity scope was changed');
+    if (![1, 2].includes(original.schema) || original.stage !== 'original' || hash(original.body) !== original.body_sha256 || path.basename(absolute) !== request.request_id || path.basename(path.dirname(absolute)) !== key(original.scope)) throw new Error('Original request or identity scope was changed');
     return { dir: absolute, original, request, events, previous, stage: events.at(-1).stage };
   }
   async append(record, stage, details = {}) {
@@ -87,8 +98,11 @@ export class Journal {
     const current = await this.load(record.dir);
     if (terminal.has(current.stage)) throw new Error('Original request is already resolved');
     if (current.previous !== record.previous) throw new Error('Recovery journal changed in another process; reopen it');
-    const filename = `${String(current.events.length).padStart(6, '0')}-${stage}.json`;
-    await this.publish(record.dir, filename, { stage, previous_sha256: current.previous, recorded_at: new Date().toISOString(), details });
+    // Every competing outcome must claim the same directory entry. Stage-based
+    // names let different outcomes both publish at one sequence number.
+    const filename = `${String(current.events.length).padStart(6, '0')}-checkpoint.json`;
+    const event = { stage, previous_sha256: current.previous, recorded_at: new Date().toISOString(), details };
+    await this.publish(record.dir, filename, { ...event, checkpoint_sha256: hash(JSON.stringify(event)) });
     return this.load(record.dir);
   }
   async list(scope) {
