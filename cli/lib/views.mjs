@@ -77,6 +77,7 @@ TABLES
 ↑ / ↓ selects a row; Enter opens its complete details.
 A displayed row number also opens details.
 n / p page; j opens page JSON; r refreshes the view.
+a opens actions for a highlighted stock, order or receipt.
 Enter returns when no row is selected; Esc always returns.
 Detail views support arrows, Home/End and paging keys.
 
@@ -88,7 +89,7 @@ Esc before submission cancels entry; it cannot undo sent work.
 Recover uncertain work using its complete original request.
 Arrow keys never record a physical warehouse action.`);
 }
-export async function inspectRows(ui, kind, load) {
+export async function inspectRows(ui, kind, load, { onAction } = {}) {
   let snapshot = await load(); let query = ''; let page = 0; let message = ''; let selected = null;
   for (;;) {
     const all = snapshot.rows;
@@ -96,6 +97,7 @@ export async function inspectRows(ui, kind, load) {
     const range = (start, end) => `${start}–${end} of ${filtered.length} rows${query ? ` · ${all.length} total · /${query}` : ''}`;
     const footer = ['Row # details · /text search · / clear · r refresh', `n next · p previous · j page JSON · ${selected === null ? 'Enter back' : 'Esc back'}`];
     if (ui.keys) footer.push(selected === null ? '↑↓ select · PgUp/PgDn page · Esc back' : '↑↓ select · Enter details · Esc back');
+    if (onAction) footer.push('a actions for selected row · quantities stay explicit');
     const empty = all.length ? 'No matches. Enter / to clear the search.' : 'No records in this snapshot.';
     const reserved = 8 + wrap(snapshot.title, ui.columns).length + wrap(range(filtered.length, filtered.length), ui.columns).length
       + footer.reduce((total, line) => total + wrap(line, ui.columns).length, 0)
@@ -138,6 +140,11 @@ export async function inspectRows(ui, kind, load) {
     else if (answer === 'p') { page = Math.max(0, page - 1); selected = null; }
     else if (answer.startsWith('/')) { query = answer.slice(1); page = 0; selected = null; }
     else if (answer === 'r') { snapshot = await load(); page = 0; selected = null; }
+    else if (answer === 'a' && onAction) {
+      if (selected === null || !filtered[selected]) { message = 'Highlight a row with the arrow keys before opening actions.'; continue; }
+      await onAction(filtered[selected], snapshot.version);
+      snapshot = await load(); selected = null; page = 0;
+    }
     else if (answer === 'j') await inspectJson(ui, `${snapshot.title} | page JSON`, rows);
     else if (/^[1-9]\d*$/.test(answer) && Number(answer) > offset && Number(answer) <= offset + rows.length) {
       await inspectJson(ui, `${snapshot.title} | row ${answer}`, filtered[Number(answer) - 1]);

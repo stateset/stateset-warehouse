@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "scope": "targeted_terminal_selected_work_development",
+  "recorded_at": "2026-10-19T23:09:46.600057+00:00",
+  "result": "passed",
+  "production_qualified": false,
+  "baseline_tag": "v0.2.0",
+  "parent_commit": "afb255f7cdd703fae92c59d0a41c931182235cf7",
+  "terminal_checks_passed": 36,
+  "terminal_checks_skipped": 0,
+  "node_version": "22.18.0",
+  "test_command": "WMS_TEST_DATABASE_URL=<isolated-test-db> node --test cli/test/*.test.mjs",
+  "help_text_smoke_check_after_documentation_update": true,
+  "actual_pg_api_and_70_column_44_row_pty_passed": true,
+  "selected_work_checks": [
+    "actions require a highlighted original row",
+    "row actions reload the table after returning",
+    "original receipt details read by selected ID",
+    "explicit original receipt line selection",
+    "guided physical receiving into receiving dock",
+    "guided stock putaway using a fresh actual serial scan",
+    "selected scope/version/record/role fences",
+    "only exact original source identity fields carried",
+    "quantity/destination/serial field defaults rejected",
+    "original durable requests preserve exact selected source and observed labels",
+    "final physical custody, stock and full reconciliation verified"
+  ],
+  "recovery_journal_module_unchanged_sha256": "c6ba9e83810940cd19ba9675cc25c337cc326d928913dd95483a6a5961c11e7d",
+  "qualified_backend_image_inputs_unchanged": 305,
+  "qualified_backend_image_inputs_sha256": "7d59f80d543801c9237fa9a7dac313f00b31228f81b699a100e34f531343be89",
+  "full_release_gate_rerun": false,
+  "npm_package_dry_run_files": 14,
+  "package_published": false,
+  "source_files": [
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "d102ae7b23e39700f7dc7ab7cc3b4facc4d1f6f5815187e713bceb9069eb9731"
+    },
+    {
+      "path": "cli/README.md",
+      "sha256": "da5b401c75ead114244c0545bc541786b012ab7ab5d395a8d92a0365779c77ca"
+    },
+    {
+      "path": "cli/warehouse-tui.mjs",
+      "sha256": "048eb5660668e6081be3b75b67da94b46a1ae9b50d4a089d694ecdd59643bd56"
+    },
+    {
+      "path": "cli/lib/commands.mjs",
+      "sha256": "2c6a077f3deeecd45c7ec9088f579dce928c3bed7da1a02ae7e5bbb61ee2fba4"
+    },
+    {
+      "path": "cli/lib/views.mjs",
+      "sha256": "47874beae509454f629534c47136090313c435ee4b77141ebfbfc595c939d528"
+    },
+    {
+      "path": "cli/lib/workflows.mjs",
+      "sha256": "21e8dd35d22461165e86f54b8d55743ea637500c3956fe023f7237fbfee25df8"
+    },
+    {
+      "path": "cli/test/live.test.mjs",
+      "sha256": "f0dfccd39f5f8be9e04264d6c6a0cc72b137cc863303495ae0c6b1d5b8c9792c"
+    },
+    {
+      "path": "cli/test/views.test.mjs",
+      "sha256": "cd241771d807cb25f2e6a6f396838d25b6c6543cb49f7be2a628d9d065cc905c"
+    },
+    {
+      "path": "cli/test/workflows.test.mjs",
+      "sha256": "9f2eb0011269d1143a48c765b0e76e1a561df19b9430f6ce46e6671c42a7fd56"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "terminal-checks.log",
+      "sha256": "88dc682be52b7590cebe0db418e6048c2bdd0a5d910875ee4157d4be4ee6ca53"
+    }
+  ],
+  "limits": [
+    "Local synthetic software checks do not establish deployed scanner hardware or physical facility acceptance.",
+    "Action suggestions are not server admission or sellable availability proofs.",
+    "The full v0.2.0 release gate was not rerun; its original dated evidence remains unchanged.",
+    "The current session denied access to the pane-control socket; the existing pane was not restarted."
+  ]
+}

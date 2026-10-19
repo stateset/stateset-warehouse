@@ -97,3 +97,14 @@ test('menu search keeps original command numbers and a short pane keeps its prom
     }
   } finally { ui.close(); }
 });
+
+test('row actions require a highlighted exact record and reload the snapshot after returning', async () => {
+  const original = { sku: 'Original-SKU', location: 'A', lot: 'original', on_hand: 5, reserved: 0 };
+  const ui = scripted(['a', { key: 'down' }, 'a', '']);
+  const calls = []; let loads = 0;
+  await inspectRows(ui, 'stocks', async () => ({ title: `snapshot v${++loads}`, version: loads, rows: [original] }), { onAction: async (row, version) => { calls.push({ row, version }); } });
+  assert.deepEqual(calls, [{ row: original, version: 1 }]);
+  assert.equal(loads, 2);
+  assert.ok(ui.screens[1].lines.join(' ').includes('Highlight a row'));
+  assert.equal(ui.screens.at(-1).title, 'snapshot v2');
+});

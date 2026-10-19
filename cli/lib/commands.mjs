@@ -47,10 +47,15 @@ export function visibleCommands(role) {
   return commands.filter(c => role === 'admin' || role === 'operator' && c.role !== 'admin' || role === 'oms' && ['create_order', 'cancel_order', 'cancel_remainder'].includes(c.type));
 }
 export const needsSerialPlan = new Set(['count_stock', 'move_stock', 'receive', 'pick', 'unpick', 'receive_transfer', 'record_transfer_loss', 'reverse_transfer_loss', 'create_return', 'pack_shipment', 'dispatch_transfer']);
-export async function formFields(spec, ask, notice = () => {}) {
+export async function formFields(spec, ask, notice = () => {}, identities = {}) {
   const result = {};
+  const sourceFields = new Set(['sku', 'lot', 'from', 'location', 'order_id', 'receipt_id', 'line_id']);
+  for (const [name, value] of Object.entries(identities)) {
+    if (!sourceFields.has(name) || !spec.split(' ').includes(name) || typeof value !== 'string' || !value || value.trim() !== value || Buffer.byteLength(value) > 240 || /[\x00-\x1f\x7f-\x9f]/.test(value)) throw new Error('Selected work can carry only valid original reference fields');
+  }
   for (const field of spec.split(' ')) {
     const name = field.replace(/[#!?]$/, '');
+    if (Object.hasOwn(identities, name)) { result[name] = identities[name]; continue; }
     for (;;) {
       const choices = { priority: ['normal', 'high', 'urgent'], kind: ['storage', 'receiving'] }[name];
       const value = await ask(`${name}${choices ? ` (${choices.join('/')})` : field.endsWith('?') ? ' (optional)' : field.endsWith('#') ? ' (whole each)' : field.endsWith('!') ? ' (yes/no)' : ''}: `);
@@ -75,8 +80,15 @@ export async function formFields(spec, ask, notice = () => {}) {
   }
   return result;
 }
-export async function commandForm(spec, ask, notice) {
-  const command = { type: spec.type, ...await formFields(spec.fields, ask, notice) };
+export async function commandForm(spec, ask, notice, identities) {
+  const selectedFields = {
+    move_stock: ['sku', 'lot', 'from'], count_stock: ['sku', 'lot', 'location'],
+    receive: ['receipt_id', 'line_id'], cancel_receipt: ['receipt_id'],
+    allocate_available: ['order_id'], pick: ['order_id', 'line_id'], unpick: ['order_id', 'line_id'],
+    release_unpicked: ['order_id'], cancel_order: ['order_id'], pack: ['order_id'], ship: ['order_id'],
+  }[spec.type] ?? [];
+  if (Object.keys(identities ?? {}).some(name => !selectedFields.includes(name))) throw new Error('Selected work cannot supply quantities, destinations, observations or other form values');
+  const command = { type: spec.type, ...await formFields(spec.fields, ask, notice, identities) };
   if (spec.rows) {
     const [field, rowSpec] = spec.rows; command[field] = [];
     for (let count = 0; count < 100; count++) {

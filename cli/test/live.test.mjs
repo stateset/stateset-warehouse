@@ -164,5 +164,51 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
   const { availability_checked_at: currentCheck, ...afterCreation } = await client.read(client.warehousePath('wh-main'));
   assert.ok(previousCheck && currentCheck);
   assert.deepEqual(afterCreation, beforeCreation, 'original facility unchanged');
+  // Select the original receiving row/line in the terminal. Only identities
+  // carry through; actual received quantity, bin and serial are still observed.
+  const beforeReceiving = await client.read(client.warehousePath(scope.warehouse));
+  const receivingFixture = await client.call('POST', client.warehousePath(scope.warehouse, '/commands'), {
+    request_id: randomUUID(), expected_version: beforeReceiving.version,
+    command: { type: 'create_receipt', reference: 'TUI-GUIDED', supplier: 'Synthetic supplier', lines: [{ id: 'Original-LINE', sku: 'TUI-PART', lot: 'UNTRACKED', quantity: 2 }] },
+  });
+  assert.equal(receivingFixture.status, 200, JSON.stringify(receivingFixture.data));
+  const selectedSnapshot = await client.read(client.warehousePath(scope.warehouse));
+  const selectedReceipt = selectedSnapshot.receipts.find(row => row.reference === 'TUI-GUIDED');
+  const receivingTranscript = await driveTerminal([
+    ['Select: ', '6'], ['View: ', { keys: '\x1b[B' }], ['View: ', 'a'], ['Select: ', '1'],
+    ['n next | p previous | Enter back: ', ''],
+    ['View: ', { keys: '\x1b[B' }], ['View: ', 'a'], ['Select: ', '2'], ['Select: ', '1'],
+    ['quantity (whole each): ', '1'], ['location: ', 'RECV-01'],
+    ['Scan actual TUI-PART [] label 1/1: ', 'Guided-Serial'],
+    ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'yes'],
+    ['Enter to continue: ', ''], ['View: ', ''], ['Select: ', 'q'],
+  ], 'guided-receiving-terminal.txt');
+  assert.ok(receivingTranscript.includes(`Selected receipt_id: ${selectedReceipt.id}`));
+  assert.ok(receivingTranscript.includes('Selected line_id: Original-LINE'));
+  const receivingRecord = (await journal.listForIdentity(scope)).find(row => row.request.command.type === 'receive');
+  assert.equal(receivingRecord.stage, 'committed');
+  assert.equal(receivingRecord.request.expected_version, selectedSnapshot.version);
+  assert.deepEqual(receivingRecord.request.command, { type: 'receive', receipt_id: selectedReceipt.id, line_id: 'Original-LINE', quantity: 1, location: 'RECV-01' });
+  assert.deepEqual(receivingRecord.request.serial_inputs, [{ target: [], sku: 'TUI-PART', serials: ['Guided-Serial'] }]);
+  const afterReceiving = await client.read(client.warehousePath(scope.warehouse));
+  assert.equal(afterReceiving.version, selectedSnapshot.version + 1);
+  assert.equal(afterReceiving.receipts.find(row => row.id === selectedReceipt.id).lines[0].received, 1);
+  const selectedMove = await driveTerminal([
+    ['Select: ', 'i'], ['View: ', '/RECV-01'], ['View: ', { keys: '\x1b[B' }], ['View: ', 'a'],
+    ['Select: ', '2'], ['to: ', 'B'], ['quantity (whole each): ', '1'],
+    ['Scan actual TUI-PART [] label 1/1: ', 'Guided-Serial'],
+    ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'yes'],
+    ['Enter to continue: ', ''], ['View: ', ''], ['Select: ', 'q'],
+  ], 'guided-move-terminal.txt');
+  assert.ok(selectedMove.includes('Selected sku: TUI-PART') && selectedMove.includes('Selected from: RECV-01'));
+  const afterGuided = await client.read(client.warehousePath(scope.warehouse));
+  assert.equal(afterGuided.version, afterReceiving.version + 1);
+  assert.equal(afterGuided.stocks.find(row => row.location === 'A').on_hand, 1);
+  assert.equal(afterGuided.stocks.find(row => row.location === 'B').on_hand, 3);
+  assert.equal(afterGuided.stocks.find(row => row.location === 'RECV-01').on_hand, 0);
+  const guidedCustody = await client.read('/v1/serials?sku=TUI-PART&warehouse_id=wh-main&limit=100');
+  assert.equal(guidedCustody.items.find(row => row.serial === 'Guided-Serial').place.location, 'B');
+  assert.equal(guidedCustody.items.find(row => row.serial === 'Third').place.location, 'A');
+  assert.equal((await client.read(client.warehousePath(scope.warehouse, '/reconciliation'))).ok, true);
   t.diagnostic(`Private synthetic TUI evidence retained: ${root}`);
 });

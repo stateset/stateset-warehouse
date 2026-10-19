@@ -8,6 +8,7 @@ import { Journal, boundSession, sendOriginal } from './lib/journal.mjs';
 import { commandForm, visibleCommands, needsSerialPlan } from './lib/commands.mjs';
 import { Terminal } from './lib/terminal.mjs';
 import { inspectJson, inspectRows, overviewLines } from './lib/views.mjs';
+import { rowWork, selectedWork, selectionFor } from './lib/workflows.mjs';
 
 export function argumentsFor(argv) {
   const result = {};
@@ -32,7 +33,8 @@ Uncertain work keeps its exact original request until resolved. The repository's
 cli/README.md describes recovery and terminal workflows. q exits menus; Ctrl-C exits safely.
 Home: i inventory, o orders, w work, c recovery, r refresh (then Enter).
 Menus: /text searches, / clears, ? shows help. Tables: row number opens full
-details; n/p page, j shows page JSON, r refreshes; Enter returns.`;
+details; a opens highlighted row actions, n/p page, j shows page JSON,
+r refreshes; Enter returns when no row is selected. Esc returns or cancels.`;
 function scopeFor(client, session, warehouse) { return { origin: client.origin, tenant: session.identity.tenant, actor: session.identity.actor, warehouse }; }
 async function selectWarehouse(client, ui) {
   let after = '';
@@ -70,18 +72,20 @@ export async function collectSerials(client, warehouse, snapshot, command, ask) 
   if (total !== plan.required_labels) throw new Error('Observation plan total disagrees');
   return inputs;
 }
-async function perform(client, journal, scope, ui, supplied) {
+async function perform(client, journal, scope, ui, supplied, selection) {
   if ((await journal.listForIdentity(scope)).some(record => !['committed', 'not_committed'].includes(record.stage))) throw new Error('Resolve your original pending work in Recovery before recording new work');
   const session = await boundSession(client, scope);
   let snapshot = await client.read(client.warehousePath(scope.warehouse));
   let command = supplied;
   if (!command) {
-    const spec = await ui.menu('Record warehouse work', visibleCommands(session.identity.role).map(c => [c.label, c]));
+    const chosen = selection ? selectedWork(snapshot, scope, selection, session.identity.role) : null;
+    const spec = chosen?.spec ?? await ui.menu('Record warehouse work', visibleCommands(session.identity.role).map(c => [c.label, c]));
     if (!spec) return;
     ui.screen(spec.label);
     ui.line(`Facility: ${scope.warehouse} | reviewed v${snapshot.version}`);
     ui.line('Enter observed values. Esc cancels; Ctrl-C exits.', 'muted');
-    command = await commandForm(spec, prompt => ui.ask(prompt), message => ui.line(message, 'warning'));
+    for (const [name, value] of Object.entries(chosen?.identities ?? {})) ui.line(`Selected ${name}: ${value}`);
+    command = await commandForm(spec, prompt => ui.ask(prompt), message => ui.line(message, 'warning'), chosen?.identities);
   }
   if (session.identity.role === 'oms' && command.type === 'create_order' && !command.source_order_id) throw new Error('OMS orders require an original source_order_id');
   if (command.type === 'create_warehouse') {
@@ -119,14 +123,42 @@ async function recover(client, journal, scope, ui) {
   }
   await ui.pause();
 }
-async function readView(client, scope, ui, kind) {
+async function inspectOriginal(client, scope, ui, kind, id) {
+  const base = client.warehousePath(scope.warehouse);
+  const record = await client.read(`${base}/${kind}/${encodeURIComponent(id)}`);
+  if (kind === 'orders') {
+    const shipments = await client.read(`${base}/orders/${encodeURIComponent(id)}/shipments`);
+    const returnEligibility = await client.read(`${base}/orders/${encodeURIComponent(id)}/return-eligibility`);
+    await inspectJson(ui, `Original order | ${id}`, { record, shipments, returnEligibility });
+  } else await inspectJson(ui, `Original receiving record | ${id}`, record);
+}
+async function readView(client, scope, ui, kind, journal) {
   const base = client.warehousePath(scope.warehouse);
   if (['stocks', 'products', 'locations', 'orders', 'receipts', 'exceptions', 'activity', 'movements'].includes(kind)) {
     await inspectRows(ui, kind, async () => {
       const snapshot = await client.read(base);
       const title = { stocks: 'Inventory', locations: 'Bins', receipts: 'Receiving / returns' }[kind] ?? kind;
-      return { title: `${title} | ${scope.warehouse} | snapshot v${snapshot.version}`, rows: snapshot[kind] };
-    }); return;
+      return { title: `${title} | ${scope.warehouse} | snapshot v${snapshot.version}`, rows: snapshot[kind], version: snapshot.version };
+    }, { onAction: ['stocks', 'orders', 'receipts'].includes(kind) ? async (row, version) => {
+      const session = await boundSession(client, scope);
+      const work = rowWork(kind, row, session.identity.role);
+      const action = await ui.menu('Selected record actions', [
+        ['Review complete original record', 'review'],
+        ...work.map(spec => [spec.label, spec]),
+      ], { intro: [kind === 'stocks' ? `${row.sku} | ${row.lot} | ${row.location}` : `${row.reference} | ${row.id}`, `Selected facility: ${scope.warehouse} | snapshot v${version}`] });
+      if (!action) return;
+      if (action === 'review') {
+        if (kind === 'stocks') await inspectJson(ui, 'Original selected stock row', row);
+        else await inspectOriginal(client, scope, ui, kind, row.id);
+        return;
+      }
+      let lineId;
+      if (['receive', 'pick', 'unpick'].includes(action.type)) {
+        lineId = await ui.menu('Select original line', row.lines.map(line => [`${line.id} | ${line.sku}${line.lot ? ` | ${line.lot}` : ''} | ordered ${line.quantity} each`, line.id]));
+        if (lineId === null) return;
+      }
+      await perform(client, journal, scope, ui, undefined, selectionFor(scope, kind, row, version, action.type, lineId));
+    } : undefined }); return;
   }
   if (kind === 'serials' || kind === 'serial-history') {
     const sku = await ui.ask('Exact SKU: '); const serial = await ui.ask('Exact serial (empty for page): ');
@@ -142,13 +174,7 @@ async function readView(client, scope, ui, kind) {
     return;
   } else if (kind === 'order-detail' || kind === 'receipt-detail') {
     const id = await ui.ask('Original record ID: '); if (!id) return;
-    const type = kind === 'order-detail' ? 'orders' : 'receipts';
-    const record = await client.read(`${base}/${type}/${encodeURIComponent(id)}`);
-    if (type === 'orders') {
-      const shipments = await client.read(`${base}/orders/${encodeURIComponent(id)}/shipments`);
-      const returnEligibility = await client.read(`${base}/orders/${encodeURIComponent(id)}/return-eligibility`);
-      await inspectJson(ui, `Original order | ${id}`, { record, shipments, returnEligibility });
-    } else await inspectJson(ui, `Original receiving record | ${id}`, record);
+    await inspectOriginal(client, scope, ui, kind === 'order-detail' ? 'orders' : 'receipts', id);
     return;
   } else if (kind === 'history') {
     const section = await ui.menu('Retained history', ['orders', 'receipts', 'movements', 'activity', 'exceptions'].map(s => [s, s])); if (!section) return;
@@ -223,7 +249,7 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
         else if (action === 'recovery') await recover(client, journal, scope, ui);
         else if (action === 'warehouse') warehouse = await selectWarehouse(client, ui) ?? warehouse;
         else if (action === 'interop') await interop(client, journal, scope, ui);
-        else await readView(client, scope, ui, action);
+        else await readView(client, scope, ui, action, journal);
       } catch (error) {
         if (error.code === 'INPUT_CANCELLED') continue;
         ui.print(`\nHeld: ${safeText(error.message)}\nExisting original requests remain in Recovery.`); await ui.pause();
