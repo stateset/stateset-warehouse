@@ -19,3 +19,12 @@ export async function readTablePage(client, warehouse, kind, cursor = null) {
     note: kind === 'lots' ? `Availability checked at ${page.checked_at}. Refresh before acting; expiry can change with time.` : 'Includes open and settled transfers. Each batch is a fresh read.',
   };
 }
+
+export async function readSelectedTransfer(client, warehouse, key, version) {
+  if (typeof key?.id !== 'string' || !key.id || !Number.isSafeInteger(key.seq) || key.seq < 1) throw new Error('Selected original transfer identity is incomplete');
+  const page = await client.read(client.warehousePath(warehouse, `/transfers?limit=1&open_only=false&after=${key.seq - 1}`));
+  if (page?.warehouse_id !== warehouse || page.version !== version) throw new Error('Selected transfer view is stale; refresh and select again. No request sent.');
+  const item = page.items?.[0];
+  if (!Array.isArray(page.items) || page.items.length !== 1 || item?.cursor !== key.seq || item.data?.seq !== key.seq || item.data?.id !== key.id) throw new Error('Selected original transfer is missing; refresh and select again');
+  return item.data;
+}

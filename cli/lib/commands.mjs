@@ -49,7 +49,7 @@ export function visibleCommands(role) {
 export const needsSerialPlan = new Set(['count_stock', 'move_stock', 'receive', 'pick', 'unpick', 'receive_transfer', 'record_transfer_loss', 'reverse_transfer_loss', 'create_return', 'pack_shipment', 'dispatch_transfer']);
 export async function formFields(spec, ask, notice = () => {}, identities = {}) {
   const result = {};
-  const sourceFields = new Set(['sku', 'lot', 'from', 'location', 'order_id', 'receipt_id', 'line_id', 'exception_id']);
+  const sourceFields = new Set(['sku', 'lot', 'from', 'location', 'order_id', 'receipt_id', 'line_id', 'exception_id', 'transfer_id']);
   const names = spec.split(' ').map(field => field.replace(/[#!?]$/, ''));
   for (const [name, value] of Object.entries(identities)) {
     if (!sourceFields.has(name) || !names.includes(name) || typeof value !== 'string' || !value || value.trim() !== value || Buffer.byteLength(value) > 240 || /[\x00-\x1f\x7f-\x9f]/.test(value)) throw new Error('Selected work can carry only valid original reference fields');
@@ -88,6 +88,7 @@ export async function commandForm(spec, ask, notice, identities) {
     allocate_available: ['order_id'], pick: ['order_id', 'line_id'], unpick: ['order_id', 'line_id'],
     release_unpicked: ['order_id'], cancel_order: ['order_id'], pack: ['order_id'], ship: ['order_id'],
     report_exception: ['order_id'], resolve_exception: ['exception_id'],
+    receive_transfer: ['transfer_id', 'line_id'],
   }[spec.type] ?? [];
   if (Object.keys(identities ?? {}).some(name => !selectedFields.includes(name))) throw new Error('Selected work cannot supply quantities, destinations, observations or other form values');
   const command = { type: spec.type, ...await formFields(spec.fields, ask, notice, identities) };

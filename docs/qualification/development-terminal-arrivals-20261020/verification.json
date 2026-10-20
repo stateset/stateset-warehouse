@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "scope": "targeted_terminal_transfer_arrivals_development",
+  "recorded_at": "2026-10-20T11:17:17.944994+00:00",
+  "result": "passed",
+  "production_qualified": false,
+  "baseline_tag": "v0.2.0",
+  "parent_commit": "12c1c925690b558f79e4adcb6b3a9668ea94ed8c",
+  "terminal_checks_passed": 65,
+  "terminal_checks_skipped": 0,
+  "node_version": "22.18.0",
+  "test_command": "WMS_TEST_DATABASE_URL=<isolated-test-db> node --test cli/test/*.test.mjs",
+  "actual_pg_api_and_70_column_44_row_pty_passed": true,
+  "arrival_checks": [
+    "Receive arrived facility transfers from exact selected original rows and lines",
+    "Destination-only role-aware suggestions require verified source evidence and remaining in-transit units",
+    "Re-read the selected original sequence position with exact ID and warehouse/version checks",
+    "Stale views, substituted records, source failures, missing lines, settled lines and unavailable roles hold selected work",
+    "Carry only transfer and line identities; actual quantity, receiving bin, arrival reference and serial observations remain explicit",
+    "Real serial-controlled transfer is physically dispatched and then received through the terminal",
+    "Original durable request retains exact selected destination, version, transfer/line IDs and actual serial input",
+    "Arrival updates destination receiving-bin serial custody without rewriting source physical stock or fulfillment",
+    "Settled and source-side transfers expose original inspection only",
+    "Returning from a paged row action retains the original batch and clears its highlighted selection",
+    "Both fixture facilities pass complete reconciliation",
+    "Original recovery, selected receiving/putaway, sorted queues, 101-lot paging and linked exception workflows still pass"
+  ],
+  "recovery_journal_module_unchanged_sha256": "c6ba9e83810940cd19ba9675cc25c337cc326d928913dd95483a6a5961c11e7d",
+  "qualified_backend_image_inputs_unchanged": 305,
+  "qualified_backend_image_inputs_sha256": "7d59f80d543801c9237fa9a7dac313f00b31228f81b699a100e34f531343be89",
+  "full_release_gate_rerun": false,
+  "npm_package_dry_run_files": 18,
+  "package_published": false,
+  "source_files": [
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "736084dd2fc62ab651e82e90967dd71e3195a5b10876e65c6c2543fb7dd083d1"
+    },
+    {
+      "path": "cli/README.md",
+      "sha256": "505e63c1a05b4e90ecacfa284f28985c868285736b4080f046cd721cf97fd0db"
+    },
+    {
+      "path": "cli/warehouse-tui.mjs",
+      "sha256": "babb85a69fa68f2340517e7c57830fc5987102b0d2c5a603292343fc9006275b"
+    },
+    {
+      "path": "cli/lib/commands.mjs",
+      "sha256": "224d70e7228159024aaccbaa762224bc3267f6ea0364b787dc29f0ecea0b5bae"
+    },
+    {
+      "path": "cli/lib/workflows.mjs",
+      "sha256": "32a13106d5d2d7d1fca9a9bbcfcb7a88a2228baec23999fdc4f1390b3b6f9b67"
+    },
+    {
+      "path": "cli/lib/pages.mjs",
+      "sha256": "55da3adbec29f6f13f2066df85555236e9ad2eb7a556ce879604a968cf22fda8"
+    },
+    {
+      "path": "cli/lib/views.mjs",
+      "sha256": "0e049c558419a8c4d73f24dfb0c976d92e2be9d10fa84ee1b8dd3736eca9a7ac"
+    },
+    {
+      "path": "cli/test/workflows.test.mjs",
+      "sha256": "d0115259143f671496949698301c54d8a9e3134ec4a96902638c23d7133263ef"
+    },
+    {
+      "path": "cli/test/views.test.mjs",
+      "sha256": "5ce463b489d0e64a2712b4cd5a02130205c09cf493eb23ad7baa10037e7849c6"
+    },
+    {
+      "path": "cli/test/live.test.mjs",
+      "sha256": "67234dbb7dddc66916f53d35a5d6c52e367ebcf6fa0110e362c2a72b97df8d2b"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "terminal-checks.log",
+      "sha256": "e347709bf0f3a585c849a3369a3b513c40cac0e9473e23e66704a88deea794a4"
+    }
+  ],
+  "limits": [
+    "Local synthetic software checks do not establish scanner hardware or physical facility acceptance.",
+    "Selected transfer rows supply identities only; canonical observation planning and command admission remain authoritative.",
+    "Transfer loss settlement remains a separate administrator workflow.",
+    "The full v0.2.0 release gate was not rerun; original dated evidence and release tags remain unchanged.",
+    "The existing terminal pane was not restarted."
+  ]
+}

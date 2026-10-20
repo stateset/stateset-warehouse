@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Receive actual facility-transfer arrivals from selected original transfer rows and lines. Re-read the exact server position and check destination scope/version, role, source evidence and remaining in-transit work before collecting explicit quantity, dock, arrival reference and actual serial scans. Preserve the current server batch after row actions; source-side and settled transfer inspection cannot start receiving.
 - Report exceptions from selected orders and investigate/resolve selected open exceptions from their table or queue. Preserve exact original order/exception IDs, require actual issue and resolution details, retain role/scope/version checks, and support linked order/shipment review. Declined confirmation creates no request; resolving an issue does not rewrite physical stock or fulfillment work.
 - Keep original order/shipment reviews available when the server reports no returnable physical handoff. Display the original return-eligibility conflict as unavailable; authentication and service failures remain held.
 - Replace first-page lot/transfer JSON with readable tables and complete server-batch navigation. Preserve exact cursors and original detail records, retain the displayed batch after failed reads, show server lot availability/check times, and include settled transfers with facility-direction filters. Search/filter/sort scope stays explicit per batch; these views remain read-only.

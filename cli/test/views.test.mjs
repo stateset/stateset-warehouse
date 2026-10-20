@@ -185,3 +185,16 @@ test('repeated server cursors cannot silently loop through the same records', as
   assert.equal(loads, 2);
   assert.ok(ui.screens.at(-1).lines.join(' ').includes('Repeated server cursor'));
 });
+
+test('returning from a paged row action reloads the same original batch and clears its highlight', async () => {
+  const cursors = []; const selected = [];
+  const ui = scripted(['n', { key: 'down' }, 'a', 'a', ''], 100, 40);
+  await inspectRows(ui, 'transfers', async cursor => {
+    cursors.push(cursor);
+    return { title: 'Original transfer batch', version: 7, nextCursor: cursor === null ? 17 : null, rows: [{ id: cursor === null ? 'First' : 'Original-Second', reference: 'Reference', lines: [] }] };
+  }, { serverPaged: true, onAction: async row => selected.push(row.id) });
+  assert.deepEqual(cursors, [null, 17, 17]);
+  assert.deepEqual(selected, ['Original-Second']);
+  assert.ok(ui.screens.at(-1).lines.join(' ').includes('Batch 2'));
+  assert.ok(ui.screens.at(-1).lines.join(' ').includes('Highlight a row'));
+});

@@ -8,7 +8,7 @@ import { Journal, boundSession, sendOriginal } from './lib/journal.mjs';
 import { commandForm, visibleCommands } from './lib/commands.mjs';
 import { Terminal } from './lib/terminal.mjs';
 import { inspectJson, inspectRows, overviewLines, scanProgress } from './lib/views.mjs';
-import { rowWork, selectedWork, selectionFor } from './lib/workflows.mjs';
+import { rowWork, reviewSelectedWork, selectionFor, remainingTransferLines } from './lib/workflows.mjs';
 import { observationSession } from './lib/scanning.mjs';
 import { workQueues } from './lib/queues.mjs';
 import { readTablePage } from './lib/pages.mjs';
@@ -59,7 +59,7 @@ async function perform(client, journal, scope, ui, supplied, selection) {
   let snapshot = await client.read(client.warehousePath(scope.warehouse));
   let command = supplied;
   if (!command) {
-    const chosen = selection ? selectedWork(snapshot, scope, selection, session.identity.role) : null;
+    const chosen = selection ? await reviewSelectedWork(client, snapshot, scope, selection, session.identity.role) : null;
     const spec = chosen?.spec ?? await ui.menu('Record warehouse work', visibleCommands(session.identity.role).map(c => [c.label, c]));
     if (!spec) return;
     ui.screen(spec.label);
@@ -118,38 +118,46 @@ async function inspectOriginal(client, scope, ui, kind, id) {
     await inspectJson(ui, `Original order | ${id}`, await readOrderReview(client, scope.warehouse, id));
   } else await inspectJson(ui, `Original receiving record | ${id}`, await client.read(client.warehousePath(scope.warehouse, `/${kind}/${encodeURIComponent(id)}`)));
 }
+async function selectedActions(client, journal, scope, ui, kind, row, version) {
+  const session = await boundSession(client, scope);
+  const work = rowWork(kind, row, session.identity.role, scope.warehouse);
+  const action = await ui.menu('Selected record actions', [
+    ['Review complete original record', 'review'],
+    ...work.map(spec => [spec.label, spec]),
+    ...(kind === 'exceptions' && row.order_id ? [['Review linked order and shipments', 'linked-order']] : []),
+  ], { intro: [kind === 'stocks' ? `${row.sku} | ${row.lot} | ${row.location}` : `${kind === 'exceptions' ? row.category : row.reference} | ${row.id}`, `Selected facility: ${scope.warehouse} | snapshot v${version}`] });
+  if (!action) return;
+  if (action === 'review') {
+    if (['stocks', 'exceptions', 'transfers'].includes(kind)) await inspectJson(ui, `Original selected ${kind === 'stocks' ? 'stock row' : kind === 'exceptions' ? 'exception' : 'transfer'}`, row);
+    else await inspectOriginal(client, scope, ui, kind, row.id);
+    return;
+  }
+  if (action === 'linked-order') { await inspectOriginal(client, scope, ui, 'orders', row.order_id); return; }
+  let lineId;
+  if (['receive', 'pick', 'unpick', 'receive_transfer'].includes(action.type)) {
+    const lines = action.type === 'receive_transfer' ? remainingTransferLines(row) : row.lines;
+    lineId = await ui.menu('Select original line', lines.map(line => [
+      `${line.id} | ${line.sku}${line.lot ? ` | ${line.lot}` : ''} | ${action.type === 'receive_transfer' ? `in transit ${line.quantity - line.received - line.lost}` : `ordered ${line.quantity}`} each`, line.id,
+    ]));
+    if (lineId === null) return;
+  }
+  await perform(client, journal, scope, ui, undefined, selectionFor(scope, kind, row, version, action.type, lineId));
+}
 async function readView(client, scope, ui, kind, journal, settings = {}) {
   const base = client.warehousePath(scope.warehouse);
   if (['lots', 'transfers'].includes(kind)) {
-    await inspectRows(ui, kind, cursor => readTablePage(client, scope.warehouse, kind, cursor), { serverPaged: true }); return;
+    await inspectRows(ui, kind, cursor => readTablePage(client, scope.warehouse, kind, cursor), {
+      serverPaged: true,
+      onAction: kind === 'transfers' ? (row, version) => selectedActions(client, journal, scope, ui, kind, row, version) : undefined,
+    }); return;
   }
   if (['stocks', 'products', 'locations', 'orders', 'receipts', 'exceptions', 'activity', 'movements'].includes(kind)) {
     await inspectRows(ui, kind, async () => {
       const snapshot = await client.read(base);
       const title = { stocks: 'Inventory', locations: 'Bins', receipts: 'Receiving / returns' }[kind] ?? kind;
       return { title: `${title} | ${scope.warehouse} | snapshot v${snapshot.version}`, rows: snapshot[kind], version: snapshot.version, locations: snapshot.locations };
-    }, { filter: settings.filter, sort: settings.sort, onAction: ['stocks', 'orders', 'receipts', 'exceptions'].includes(kind) ? async (row, version) => {
-      const session = await boundSession(client, scope);
-      const work = rowWork(kind, row, session.identity.role);
-      const action = await ui.menu('Selected record actions', [
-        ['Review complete original record', 'review'],
-        ...work.map(spec => [spec.label, spec]),
-        ...(kind === 'exceptions' && row.order_id ? [['Review linked order and shipments', 'linked-order']] : []),
-      ], { intro: [kind === 'stocks' ? `${row.sku} | ${row.lot} | ${row.location}` : `${kind === 'exceptions' ? row.category : row.reference} | ${row.id}`, `Selected facility: ${scope.warehouse} | snapshot v${version}`] });
-      if (!action) return;
-      if (action === 'review') {
-        if (['stocks', 'exceptions'].includes(kind)) await inspectJson(ui, `Original selected ${kind === 'stocks' ? 'stock row' : 'exception'}`, row);
-        else await inspectOriginal(client, scope, ui, kind, row.id);
-        return;
-      }
-      if (action === 'linked-order') { await inspectOriginal(client, scope, ui, 'orders', row.order_id); return; }
-      let lineId;
-      if (['receive', 'pick', 'unpick'].includes(action.type)) {
-        lineId = await ui.menu('Select original line', row.lines.map(line => [`${line.id} | ${line.sku}${line.lot ? ` | ${line.lot}` : ''} | ordered ${line.quantity} each`, line.id]));
-        if (lineId === null) return;
-      }
-      await perform(client, journal, scope, ui, undefined, selectionFor(scope, kind, row, version, action.type, lineId));
-    } : undefined }); return;
+    }, { filter: settings.filter, sort: settings.sort, onAction: ['stocks', 'orders', 'receipts', 'exceptions'].includes(kind)
+      ? (row, version) => selectedActions(client, journal, scope, ui, kind, row, version) : undefined }); return;
   }
   if (kind === 'serials' || kind === 'serial-history') {
     const sku = await ui.ask('Exact SKU: '); const serial = await ui.ask('Exact serial (empty for page): ');

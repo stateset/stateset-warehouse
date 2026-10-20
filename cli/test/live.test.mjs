@@ -270,9 +270,9 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
   assert.equal((await client.read(client.warehousePath(scope.warehouse, '/reconciliation'))).ok, true);
   // Exercise a real cursor boundary containing quotes, non-ASCII and URL
   // delimiters. These fixtures are isolated in the new synthetic facility.
-  async function seed(warehouse, command) {
+  async function seed(warehouse, command, serial_inputs = []) {
     const state = await client.read(client.warehousePath(warehouse));
-    const result = await client.call('POST', client.warehousePath(warehouse, '/commands'), { request_id: randomUUID(), expected_version: state.version, command });
+    const result = await client.call('POST', client.warehousePath(warehouse, '/commands'), { request_id: randomUUID(), expected_version: state.version, command, ...(serial_inputs.length ? { serial_inputs } : {}) });
     assert.equal(result.status, 200, JSON.stringify(result.data));
   }
   const pagedProduct = { type: 'create_product', sku: 'PAGED', name: 'Synthetic paged stock', category: 'Synthetic', reorder_point: 0, serial_controlled: false };
@@ -363,6 +363,59 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
   assert.equal(afterResolution.exceptions.find(row => row.id === issue.id).status, 'resolved');
   assert.deepEqual(afterResolution.stocks, beforeIssue.stocks, 'reporting and resolving do not change physical stock or reservations');
   assert.deepEqual(afterResolution.orders, beforeIssue.orders, 'investigation does not rewrite original fulfillment work');
+  assert.equal((await client.read(client.warehousePath(scope.warehouse, '/reconciliation'))).ok, true);
+  // Receive an actual serial-controlled transfer through its selected original
+  // row/line. Source-side inspection cannot expose destination receiving.
+  await seed(newId, { type: 'create_product', sku: 'TUI-PART', name: 'Synthetic terminal part', category: 'Synthetic', reorder_point: 0, serial_controlled: true });
+  const sourceBeforeDispatch = await client.read(client.warehousePath(scope.warehouse));
+  const sourceBin = sourceBeforeDispatch.stocks.find(row => row.sku === 'TUI-PART' && row.location === 'B');
+  assert.ok(sourceBin.on_hand - sourceBin.reserved >= 1);
+  await seed(scope.warehouse, { type: 'dispatch_transfer', reference: 'TUI-SERIAL-ARRIVAL', destination_warehouse_id: newId, carrier: 'Synthetic carrier', handoff_reference: 'Synthetic actual departure', lines: [{ id: 'Original-ARRIVAL', sku: 'TUI-PART', lot: 'UNTRACKED', location: 'B', quantity: 1 }] }, [{ target: ['Original-ARRIVAL'], sku: 'TUI-PART', serials: ['Guided-Serial'] }]);
+  const arrivalPage = await client.read(client.warehousePath(newId, '/transfers?limit=100&open_only=false'));
+  const arriving = arrivalPage.items.find(row => row.data.reference === 'TUI-SERIAL-ARRIVAL').data;
+  const beforeArrival = await client.read(client.warehousePath(newId));
+  const sourceAfterDispatch = await client.read(client.warehousePath(scope.warehouse));
+  const beforeArrivalRecords = (await journal.listForIdentity(scope)).length;
+  const sourceReview = await driveTerminal([
+    ['Select: ', '10'], ['View: ', '/TUI-SERIAL-ARRIVAL'], ['View: ', { keys: '\x1b[B' }],
+    ['View: ', 'a'], ['Select: ', '1'], ['n next | p previous | Enter back: ', ''],
+    ['View: ', ''], ['Select: ', 'q'],
+  ], 'transfer-source-inspection-terminal.txt', { expectCommit: false });
+  assert.ok(!sourceReview.includes('Receive an arrived facility transfer'), 'source facility offers original inspection only');
+  assert.equal((await client.read(client.warehousePath(newId))).version, beforeArrival.version);
+  assert.equal((await journal.listForIdentity(scope)).length, beforeArrivalRecords);
+  const arrivalTranscript = await driveTerminal([
+    ['Select: ', '10'], ['View: ', '/TUI-SERIAL-ARRIVAL'], ['View: ', { keys: '\x1b[B' }],
+    ['View: ', 'a'], ['Select: ', '2'], ['Select: ', '1'], ['quantity (whole each): ', '1'],
+    ['location: ', 'RECV-01'], ['arrival_reference: ', 'Actual synthetic arrival observation'],
+    ['Scan actual TUI-PART [] label 1/1: ', 'Guided-Serial'],
+    ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'yes'],
+    ['Enter to continue: ', ''], ['View: ', { keys: '\x1b[B' }], ['View: ', 'a'],
+    ['Select: ', '1'], ['n next | p previous | Enter back: ', ''],
+    ['View: ', ''], ['Select: ', 'q'],
+  ], 'selected-transfer-arrival-terminal.txt', { warehouse: newId });
+  assert.ok(arrivalTranscript.includes(`Selected transfer_id: ${arriving.id}`));
+  assert.ok(arrivalTranscript.includes('Selected line_id: Original-ARRIVAL'));
+  assert.ok(arrivalTranscript.includes('in transit 1 each'));
+  const receivedArrival = (await journal.listForIdentity(scope)).find(row => row.request.command.type === 'receive_transfer');
+  assert.equal(receivedArrival.stage, 'committed');
+  assert.equal(receivedArrival.original.scope.warehouse, newId);
+  assert.equal(receivedArrival.request.expected_version, beforeArrival.version);
+  assert.deepEqual(receivedArrival.request.command, { type: 'receive_transfer', transfer_id: arriving.id, line_id: 'Original-ARRIVAL', quantity: 1, location: 'RECV-01', arrival_reference: 'Actual synthetic arrival observation' });
+  assert.deepEqual(receivedArrival.request.serial_inputs, [{ target: [], sku: 'TUI-PART', serials: ['Guided-Serial'] }]);
+  assert.equal((await journal.listForIdentity(scope)).length, beforeArrivalRecords + 1);
+  const afterArrival = await client.read(client.warehousePath(newId));
+  assert.equal(afterArrival.version, beforeArrival.version + 1);
+  assert.equal(afterArrival.stocks.find(row => row.sku === 'TUI-PART' && row.location === 'RECV-01').on_hand, 1);
+  const { availability_checked_at: ignoredSourceTime, ...sourceProof } = sourceAfterDispatch;
+  const { availability_checked_at: newSourceTime, ...sourceAfterArrival } = await client.read(client.warehousePath(scope.warehouse));
+  assert.deepEqual(sourceAfterArrival, sourceProof, 'destination receiving does not rewrite source physical stock or fulfillment');
+  const arrivalCustody = await client.read(`/v1/serials?sku=TUI-PART&warehouse_id=${newId}&limit=100`);
+  assert.equal(arrivalCustody.items.find(row => row.serial === 'Guided-Serial').place.location, 'RECV-01');
+  const settled = (await client.read(client.warehousePath(newId, '/transfers?limit=100&open_only=false'))).items.find(row => row.data.id === arriving.id).data;
+  assert.equal(settled.lines[0].received, 1);
+  assert.deepEqual(rowWork('transfers', settled, 'admin', newId), [], 'settled transfer exposes no further receive action');
+  assert.equal((await client.read(client.warehousePath(newId, '/reconciliation'))).ok, true);
   assert.equal((await client.read(client.warehousePath(scope.warehouse, '/reconciliation'))).ok, true);
   t.diagnostic(`Private synthetic TUI evidence retained: ${root}`);
 });

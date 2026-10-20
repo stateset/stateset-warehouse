@@ -1,0 +1,401 @@
+TAP version 13
+# Subtest: one scanner chunk preserves exact case and CRLF boundaries across prompts
+ok 1 - one scanner chunk preserves exact case and CRLF boundaries across prompts
+  ---
+  duration_ms: 15.759848
+  type: 'test'
+  ...
+# Subtest: keyboard editing preserves Unicode graphemes and literal surrounding spaces
+ok 2 - keyboard editing preserves Unicode graphemes and literal surrounding spaces
+  ---
+  duration_ms: 5.573216
+  type: 'test'
+  ...
+# Subtest: queued navigation and form entry are delivered to the right prompts
+ok 3 - queued navigation and form entry are delivered to the right prompts
+  ---
+  duration_ms: 4.657676
+  type: 'test'
+  ...
+# Subtest: bracketed paste preserves single fields and does not submit pasted lines
+ok 4 - bracketed paste preserves single fields and does not submit pasted lines
+  ---
+  duration_ms: 2.025948
+  type: 'test'
+  ...
+# Subtest: Ctrl-C and EOF restore terminal mode without accepting partial entry
+ok 5 - Ctrl-C and EOF restore terminal mode without accepting partial entry
+  ---
+  duration_ms: 1.077316
+  type: 'test'
+  ...
+# Subtest: Escape cancels a form and oversized paste never accepts a truncated identity
+ok 6 - Escape cancels a form and oversized paste never accepts a truncated identity
+  ---
+  duration_ms: 1.213188
+  type: 'test'
+  ...
+# Subtest: arrow selection, search and Escape work without changing command numbers or leaking ANSI
+ok 7 - arrow selection, search and Escape work without changing command numbers or leaking ANSI
+  ---
+  duration_ms: 7.029753
+  type: 'test'
+  ...
+# Subtest: resize and paging retain numbered actions, help returns, and colours stay optional
+ok 8 - resize and paging retain numbered actions, help returns, and colours stay optional
+  ---
+  duration_ms: 29.367232
+  type: 'test'
+  ...
+# Subtest: resizing a field preserves partially entered literal scanner text
+ok 9 - resizing a field preserves partially entered literal scanner text
+  ---
+  duration_ms: 7.838693
+  type: 'test'
+  ...
+# Subtest: F2 is a dedicated scan correction key and never a reserved literal label
+ok 10 - F2 is a dedicated scan correction key and never a reserved literal label
+  ---
+  duration_ms: 1.126431
+  type: 'test'
+  ...
+# Subtest: F3 and F4 open table controls while their typed names remain literal input
+ok 11 - F3 and F4 open table controls while their typed names remain literal input
+  ---
+  duration_ms: 0.724902
+  type: 'test'
+  ...
+# Subtest: real API/PG terminal work, lost-success recovery, actor fencing and PTY navigation
+ok 12 - real API/PG terminal work, lost-success recovery, actor fencing and PTY navigation
+  ---
+  duration_ms: 19186.012236
+  type: 'test'
+  ...
+# Private synthetic TUI evidence retained: /tmp/wms-tui-live-b5wyff
+# Subtest: lot cursors reach the server unchanged and availability uses the server verdict
+ok 13 - lot cursors reach the server unchanged and availability uses the server verdict
+  ---
+  duration_ms: 3.429632
+  type: 'test'
+  ...
+# Subtest: transfer batches include settled work and retain original records and facility direction
+ok 14 - transfer batches include settled work and retain original records and facility direction
+  ---
+  duration_ms: 2.750844
+  type: 'test'
+  ...
+# Subtest: invalid page shapes, identities and cursors are held instead of dropping records
+ok 15 - invalid page shapes, identities and cursors are held instead of dropping records
+  ---
+  duration_ms: 5.53332
+  type: 'test'
+  ...
+# Subtest: open and attention queues exclude terminal orders and priority sorting preserves exact original records
+ok 16 - open and attention queues exclude terminal orders and priority sorting preserves exact original records
+  ---
+  duration_ms: 3.323629
+  type: 'test'
+  ...
+# Subtest: receiving-bin queues use actual location kind and positive stock without inferring availability
+ok 17 - receiving-bin queues use actual location kind and positive stock without inferring availability
+  ---
+  duration_ms: 2.32331
+  type: 'test'
+  ...
+# Subtest: search intersects filters while numeric sorting keeps exact safe integer order
+ok 18 - search intersects filters while numeric sorting keeps exact safe integer order
+  ---
+  duration_ms: 0.643238
+  type: 'test'
+  ...
+# Subtest: queue preview counts reflect the snapshot and distinguish unavailable data from zero records
+ok 19 - queue preview counts reflect the snapshot and distinguish unavailable data from zero records
+  ---
+  duration_ms: 0.736171
+  type: 'test'
+  ...
+# Subtest: unsupported view modes are held instead of silently changing the chosen filter
+ok 20 - unsupported view modes are held instead of silently changing the chosen filter
+  ---
+  duration_ms: 6.440632
+  type: 'test'
+  ...
+# Subtest: a lost successful response survives process restart and replays exact original bytes once
+ok 21 - a lost successful response survives process restart and replays exact original bytes once
+  ---
+  duration_ms: 86.920573
+  type: 'test'
+  ...
+# Subtest: changed actor, tenant or server cannot replay original work
+ok 22 - changed actor, tenant or server cannot replay original work
+  ---
+  duration_ms: 16.898874
+  type: 'test'
+  ...
+# Subtest: disk failure before send intent prevents transmission; original request remains recoverable
+ok 23 - disk failure before send intent prevents transmission; original request remains recoverable
+  ---
+  duration_ms: 25.417669
+  type: 'test'
+  ...
+# Subtest: disk failure after committed HTTP response preserves original request and send intent
+ok 24 - disk failure after committed HTTP response preserves original request and send intent
+  ---
+  duration_ms: 33.858761
+  type: 'test'
+  ...
+# Subtest: only a fully bound definitive stale proof resolves rejected work
+ok 25 - only a fully bound definitive stale proof resolves rejected work
+  ---
+  duration_ms: 94.769256
+  type: 'test'
+  ...
+# Subtest: tampering, incomplete history, unsafe permissions and symlink directories are held
+ok 26 - tampering, incomplete history, unsafe permissions and symlink directories are held
+  ---
+  duration_ms: 19.094591
+  type: 'test'
+  ...
+# Subtest: concurrent journal changes prevent a stale process from sending
+ok 27 - concurrent journal changes prevent a stale process from sending
+  ---
+  duration_ms: 16.588264
+  type: 'test'
+  ...
+# Subtest: different outcomes racing for one journal position cannot fork original recovery
+ok 28 - different outcomes racing for one journal position cannot fork original recovery
+  ---
+  duration_ms: 34.745366
+  type: 'test'
+  ...
+# Subtest: separate terminal processes publish only one outcome at each journal position
+ok 29 - separate terminal processes publish only one outcome at each journal position
+  ---
+  duration_ms: 104.329229
+  type: 'test'
+  ...
+# Subtest: legacy uncertain journals replay unchanged original bytes and keep all old checkpoints
+ok 30 - legacy uncertain journals replay unchanged original bytes and keep all old checkpoints
+  ---
+  duration_ms: 32.757651
+  type: 'test'
+  ...
+# Subtest: final checkpoint changes and invalid new-format filenames remain held
+ok 31 - final checkpoint changes and invalid new-format filenames remain held
+  ---
+  duration_ms: 31.863576
+  type: 'test'
+  ...
+# Subtest: HTTP transport refuses redirects and never sends credentials to the redirect target
+ok 32 - HTTP transport refuses redirects and never sends credentials to the redirect target
+  ---
+  duration_ms: 35.507935
+  type: 'test'
+  ...
+# Subtest: numeric precision, unsafe origins and terminal controls cannot silently change identities
+ok 33 - numeric precision, unsafe origins and terminal controls cannot silently change identities
+  ---
+  duration_ms: 0.880768
+  type: 'test'
+  ...
+# Subtest: serial collection requires real literal scans, preserves case and never uses custody labels
+ok 34 - serial collection requires real literal scans, preserves case and never uses custody labels
+  ---
+  duration_ms: 1.826802
+  type: 'test'
+  ...
+# Subtest: typed multi-line forms preserve exact labels and whole each values
+ok 35 - typed multi-line forms preserve exact labels and whole each values
+  ---
+  duration_ms: 0.923744
+  type: 'test'
+  ...
+# Subtest: unknown new-facility work is discoverable across facilities and remains bound to its original target
+ok 36 - unknown new-facility work is discoverable across facilities and remains bound to its original target
+  ---
+  duration_ms: 68.481467
+  type: 'test'
+  ...
+# Subtest: duplicate and malformed scans retain earlier observations and exact case until corrected
+ok 37 - duplicate and malformed scans retain earlier observations and exact case until corrected
+  ---
+  duration_ms: 5.124907
+  type: 'test'
+  ...
+# Subtest: undo at a later group returns to the original previous target without losing other observations
+ok 38 - undo at a later group returns to the original previous target without losing other observations
+  ---
+  duration_ms: 1.599574
+  type: 'test'
+  ...
+# Subtest: correction from complete unsent review reopens only the last observation and protects returned copies
+ok 39 - correction from complete unsent review reopens only the last observation and protects returned copies
+  ---
+  duration_ms: 0.829015
+  type: 'test'
+  ...
+# Subtest: literal command-like labels stay literal and duplicate observations are scoped by exact SKU
+ok 40 - literal command-like labels stay literal and duplicate observations are scoped by exact SKU
+  ---
+  duration_ms: 0.677638
+  type: 'test'
+  ...
+# Subtest: zero targets require explicit physical confirmation again after undo and EOF never returns partial capture
+ok 41 - zero targets require explicit physical confirmation again after undo and EOF never returns partial capture
+  ---
+  duration_ms: 1.735963
+  type: 'test'
+  ...
+# Subtest: the complete original plan is validated before asking for any observations
+ok 42 - the complete original plan is validated before asking for any observations
+  ---
+  duration_ms: 2.766687
+  type: 'test'
+  ...
+# Subtest: narrow tables preserve graphemes, align wide labels and escape terminal controls
+ok 43 - narrow tables preserve graphemes, align wide labels and escape terminal controls
+  ---
+  duration_ms: 8.354454
+  type: 'test'
+  ...
+# Subtest: table search always uses the full snapshot, clears, pages, refreshes and opens complete original details
+ok 44 - table search always uses the full snapshot, clears, pages, refreshes and opens complete original details
+  ---
+  duration_ms: 21.153053
+  type: 'test'
+  ...
+# Subtest: empty views stay usable and invalid row choices do not leave the table
+ok 45 - empty views stay usable and invalid row choices do not leave the table
+  ---
+  duration_ms: 4.337836
+  type: 'test'
+  ...
+# Subtest: overview distinguishes quantities, terminal orders, pending recovery and read failures
+ok 46 - overview distinguishes quantities, terminal orders, pending recovery and read failures
+  ---
+  duration_ms: 0.977922
+  type: 'test'
+  ...
+# Subtest: menu search keeps original command numbers and a short pane keeps its prompt visible
+ok 47 - menu search keeps original command numbers and a short pane keeps its prompt visible
+  ---
+  duration_ms: 6.8908
+  type: 'test'
+  ...
+# Subtest: row actions require a highlighted exact record and reload the snapshot after returning
+ok 48 - row actions require a highlighted exact record and reload the snapshot after returning
+  ---
+  duration_ms: 4.922314
+  type: 'test'
+  ...
+# Subtest: correction is enabled only in an unsent review and scanning keeps physical source context visible
+ok 49 - correction is enabled only in an unsent review and scanning keeps physical source context visible
+  ---
+  duration_ms: 5.971102
+  type: 'test'
+  ...
+# Subtest: sort changes clear selection before an action can target a reordered record
+ok 50 - sort changes clear selection before an action can target a reordered record
+  ---
+  duration_ms: 8.993421
+  type: 'test'
+  ...
+# Subtest: filter changes clear selection while refresh retains filter, sort and search
+ok 51 - filter changes clear selection while refresh retains filter, sort and search
+  ---
+  duration_ms: 4.192841
+  type: 'test'
+  ...
+# Subtest: server batches cross both boundaries, preserve search and refresh from the beginning
+ok 52 - server batches cross both boundaries, preserve search and refresh from the beginning
+  ---
+  duration_ms: 7.431771
+  type: 'test'
+  ...
+# Subtest: an empty filtered batch can advance and failed reads retain its original position for retry
+ok 53 - an empty filtered batch can advance and failed reads retain its original position for retry
+  ---
+  duration_ms: 3.657352
+  type: 'test'
+  ...
+# Subtest: repeated server cursors cannot silently loop through the same records
+ok 54 - repeated server cursors cannot silently loop through the same records
+  ---
+  duration_ms: 4.038316
+  type: 'test'
+  ...
+# Subtest: returning from a paged row action reloads the same original batch and clears its highlight
+ok 55 - returning from a paged row action reloads the same original batch and clears its highlight
+  ---
+  duration_ms: 3.905011
+  type: 'test'
+  ...
+# Subtest: selected stock carries only exact source identities; physical destination, quantity and scans stay explicit
+ok 56 - selected stock carries only exact source identities; physical destination, quantity and scans stay explicit
+  ---
+  duration_ms: 4.276702
+  type: 'test'
+  ...
+# Subtest: selected work is fenced by exact scope, reviewed version, original identity and current role
+ok 57 - selected work is fenced by exact scope, reviewed version, original identity and current role
+  ---
+  duration_ms: 0.629593
+  type: 'test'
+  ...
+# Subtest: receiving requires an explicitly selected original line and never assumes observed units or receiving bin
+ok 58 - receiving requires an explicitly selected original line and never assumes observed units or receiving bin
+  ---
+  duration_ms: 0.82428
+  type: 'test'
+  ...
+# Subtest: row action suggestions respect role and terminal states without claiming server admission
+ok 59 - row action suggestions respect role and terminal states without claiming server admission
+  ---
+  duration_ms: 0.567957
+  type: 'test'
+  ...
+# Subtest: exception resolution carries only its exact original identity and requires open status, scope and current role
+ok 60 - exception resolution carries only its exact original identity and requires open status, scope and current role
+  ---
+  duration_ms: 1.110775
+  type: 'test'
+  ...
+# Subtest: reporting an exception from an order preserves its optional source identity and requires actual issue details
+ok 61 - reporting an exception from an order preserves its optional source identity and requires actual issue details
+  ---
+  duration_ms: 0.900229
+  type: 'test'
+  ...
+# Subtest: an order without a returnable physical handoff remains reviewable with the original server reason
+ok 62 - an order without a returnable physical handoff remains reviewable with the original server reason
+  ---
+  duration_ms: 0.591883
+  type: 'test'
+  ...
+# Subtest: order review retains successful eligibility and holds authentication or service failures
+ok 63 - order review retains successful eligibility and holds authentication or service failures
+  ---
+  duration_ms: 0.757268
+  type: 'test'
+  ...
+# Subtest: selected transfer receiving carries original IDs while physical arrival values remain explicit
+ok 64 - selected transfer receiving carries original IDs while physical arrival values remain explicit
+  ---
+  duration_ms: 3.323192
+  type: 'test'
+  ...
+# Subtest: transfer selection re-reads its exact server position and rejects stale or substituted evidence
+ok 65 - transfer selection re-reads its exact server position and rejects stale or substituted evidence
+  ---
+  duration_ms: 1.915069
+  type: 'test'
+  ...
+1..65
+# tests 65
+# suites 0
+# pass 65
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 19300.314993

@@ -82,7 +82,7 @@ TABLES
 ↑ / ↓ selects a row; Enter opens its complete details.
 A displayed row number also opens details.
 n / p page; j opens page JSON; r refreshes the view.
-a opens actions for highlighted stock, orders, receipts or exceptions.
+a opens actions for stock, orders, receipts, exceptions or transfers.
 F3 or f opens filters; F4 or s opens sort choices.
 Changing filters or sorting clears the highlighted row.
 Lots/transfers: n/p crosses server batches at page boundaries.
@@ -212,7 +212,7 @@ export async function inspectRows(ui, kind, load, { onAction, filter: initialFil
     else if (answer === 'a' && onAction) {
       if (selected === null || !filtered[selected]) { message = 'Highlight a row with the arrow keys before opening actions.'; continue; }
       await onAction(filtered[selected], snapshot.version);
-      snapshot = await load(); selected = null; page = 0;
+      snapshot = await load(serverPaged ? cursors[batch] : null); selected = null; page = 0;
     }
     else if (answer === 'j') await inspectJson(ui, `${snapshot.title} | page JSON`, rows);
     else if (/^[1-9]\d*$/.test(answer) && Number(answer) > offset && Number(answer) <= offset + rows.length) {

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { commandForm } from '../lib/commands.mjs';
-import { rowWork, selectedWork, selectionFor } from '../lib/workflows.mjs';
+import { rowWork, selectedWork, selectionFor, reviewSelectedWork } from '../lib/workflows.mjs';
 import { readOrderReview } from '../lib/reviews.mjs';
 
 const scope = { origin: 'https://example.com', tenant: 'tenant', actor: 'operator', warehouse: 'wh-original' };
@@ -109,4 +109,50 @@ test('order review retains successful eligibility and holds authentication or se
   assert.deepEqual((await readOrderReview(client, 'Facility', 'Original')).returnEligibility, { original: 'returnable handoff' });
   for (const status of [401, 403, 500, 503]) await assert.rejects(readOrderReview({ ...client, call: async () => ({ ok: false, status, data: { error: 'Original read failure' } }) }, 'Facility', 'Original'), new RegExp(`HTTP ${status}: Original read failure`));
   await assert.rejects(readOrderReview({ ...client, read: async () => { throw new Error('Original record unavailable'); } }, 'Facility', 'Original'), /Original record unavailable/);
+});
+
+const transfer = {
+  id: 'Original-Transfer', seq: 17, source_warehouse_id: 'Original-Source', destination_warehouse_id: scope.warehouse, ok: true,
+  lines: [{ id: 'Original-LINE', sku: stock.sku, lot: stock.lot, quantity: 5, received: 1, lost: 1 }, { id: 'Closed-LINE', quantity: 2, received: 1, lost: 1 }],
+};
+test('selected transfer receiving carries original IDs while physical arrival values remain explicit', async () => {
+  const selection = selectionFor(scope, 'transfers', transfer, 7, 'receive_transfer', 'Original-LINE');
+  const state = { ...snapshot, transfers: [transfer] };
+  const { spec, identities } = selectedWork(state, scope, selection, 'operator');
+  assert.deepEqual(selection.key, { id: 'Original-Transfer', seq: 17 });
+  assert.deepEqual(identities, { transfer_id: 'Original-Transfer', line_id: 'Original-LINE' });
+  const prompts = []; const values = ['2', 'Observed-Dock', 'Actual-Arrival-Reference'];
+  const command = await commandForm(spec, async prompt => { prompts.push(prompt); return values.shift(); }, undefined, identities);
+  assert.deepEqual(prompts, ['quantity (whole each): ', 'location: ', 'arrival_reference: ']);
+  assert.deepEqual(command, { type: 'receive_transfer', transfer_id: transfer.id, line_id: 'Original-LINE', quantity: 2, location: 'Observed-Dock', arrival_reference: 'Actual-Arrival-Reference' });
+  for (const extra of [{ quantity: 3 }, { location: 'Assumed-Dock' }, { arrival_reference: 'Assumed-Arrival' }]) await assert.rejects(commandForm(spec, async () => assert.fail('must reject before asking'), undefined, { ...identities, ...extra }), /cannot supply/);
+  for (const lineId of [undefined, 'original-line', 'Closed-LINE']) assert.throws(() => selectedWork(state, scope, { ...selection, lineId }, 'operator'), /exact original line/);
+  for (const change of [{ ok: false }, { destination_warehouse_id: 'Other-Facility' }, { lines: [{ id: 'Original-LINE', quantity: 1, received: 1, lost: 0 }] }]) assert.throws(() => selectedWork({ ...state, transfers: [{ ...transfer, ...change }] }, scope, selection, 'operator'), /unavailable/);
+  assert.throws(() => selectedWork(state, scope, selection, 'oms'), /current role/);
+  assert.throws(() => selectedWork({ ...state, version: 8 }, scope, selection, 'admin'), /stale/);
+  assert.throws(() => selectedWork(state, scope, { ...selection, key: { ...selection.key, seq: 18 } }, 'admin'), /identity changed/);
+});
+
+test('transfer selection re-reads its exact server position and rejects stale or substituted evidence', async () => {
+  const selection = selectionFor(scope, 'transfers', transfer, 7, 'receive_transfer', 'Original-LINE');
+  const page = { warehouse_id: scope.warehouse, version: 7, items: [{ cursor: transfer.seq, data: transfer }] };
+  let reads = 0;
+  const client = {
+    warehousePath: (_warehouse, suffix) => `/v1/warehouses/Original${suffix}`,
+    async read(path) {
+      reads++;
+      const query = new URL(path, scope.origin).searchParams;
+      assert.equal(query.get('after'), '16'); assert.equal(query.get('limit'), '1'); assert.equal(query.get('open_only'), 'false');
+      return page;
+    },
+  };
+  assert.equal((await reviewSelectedWork(client, snapshot, scope, selection, 'operator')).identities.transfer_id, transfer.id);
+  for (const change of [{ version: 8 }, { warehouse_id: 'Other' }, { items: [] }, { items: [{ cursor: 18, data: transfer }] }, { items: [{ cursor: 17, data: { ...transfer, id: 'original-transfer' } }] }, { items: [{ cursor: 17, data: { ...transfer, ok: false } }] }]) {
+    await assert.rejects(reviewSelectedWork({ ...client, read: async () => ({ ...page, ...change }) }, snapshot, scope, selection, 'operator'), /stale|missing|unavailable/);
+  }
+  const noRead = { read: async () => assert.fail('scope, version and role are checked before reading'), warehousePath: client.warehousePath };
+  await assert.rejects(reviewSelectedWork(noRead, { ...snapshot, version: 8 }, scope, selection, 'operator'), /stale/);
+  await assert.rejects(reviewSelectedWork(noRead, snapshot, { ...scope, actor: 'other' }, selection, 'operator'), /different/);
+  await assert.rejects(reviewSelectedWork(noRead, snapshot, scope, selection, 'oms'), /current role/);
+  assert.equal(reads, 1);
 });
