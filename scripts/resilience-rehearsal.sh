@@ -40,7 +40,7 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 docker image inspect "$wms_image" > "$wms_root/image-inspect.json"
-docker network create --label "$wms_label=$wms_run" "$wms_network" > "$wms_root/network.id"
+wms_qualification_create_network "$wms_root" "$wms_label" "$wms_run" "$wms_network"
 # A named volume deliberately survives the PostgreSQL container's SIGKILL/start.
 # It is uniquely owned by this run; retention mode keeps it after qualification.
 docker volume create --label "$wms_label=$wms_run" "$wms_volume" > "$wms_root/volume.id"

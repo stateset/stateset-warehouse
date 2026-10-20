@@ -199,6 +199,8 @@ PY
 
 wms_release_prerequisites() {
   : "${WMS_TEST_DATABASE_URL:?Set WMS_TEST_DATABASE_URL to an isolated PostgreSQL database whose name contains test}"
+  wms_qualification_validate_network_subnets "${WMS_RELEASE_CONTAINER_SUBNET:-}" \
+    "${WMS_RELEASE_UNTRACKED_SUBNET:-}" "${WMS_RELEASE_SERIAL_SUBNET:-}"
   for wms_tool in cargo rustc node npm docker curl openssl; do
     command -v "$wms_tool" >/dev/null 2>&1 || { echo "Missing required tool: $wms_tool" >&2; return 1; }
   done
@@ -357,14 +359,17 @@ wms_release_restore() {
 }
 
 wms_release_container() {
-  WMS_CONTAINER_ARTIFACT_DIR="$wms_release_root/container" bash scripts/container-smoke.sh
+  WMS_QUALIFICATION_SUBNET="${WMS_RELEASE_CONTAINER_SUBNET:-}" \
+    WMS_CONTAINER_ARTIFACT_DIR="$wms_release_root/container" bash scripts/container-smoke.sh
 }
 
 wms_release_resilience() {
   WMS_RESILIENCE_IMAGE="$(cat "$wms_release_root/container/image.id")" \
+    WMS_QUALIFICATION_SUBNET="${WMS_RELEASE_UNTRACKED_SUBNET:-}" \
     WMS_RESILIENCE_SERIAL_UNITS=0 \
     WMS_RESILIENCE_ARTIFACT_DIR="$wms_release_root/resilience" bash scripts/resilience-rehearsal.sh
   WMS_RESILIENCE_IMAGE="$(cat "$wms_release_root/container/image.id")" \
+    WMS_QUALIFICATION_SUBNET="${WMS_RELEASE_SERIAL_SUBNET:-}" \
     WMS_RESILIENCE_SERIAL_UNITS="${WMS_RELEASE_SERIAL_UNITS:-16}" \
     WMS_RESILIENCE_ARTIFACT_DIR="$wms_release_root/serial-resilience" bash scripts/resilience-rehearsal.sh
 }

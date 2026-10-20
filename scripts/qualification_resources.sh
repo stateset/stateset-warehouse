@@ -7,6 +7,53 @@ wms_qualification_resource_mode() {
   esac
 }
 
+wms_qualification_validate_network_subnets() {
+  python3 - "$@" <<'PY'
+import ipaddress, sys
+values = sys.argv[1:]
+if len(values) > 1 and any(values) and not all(values):
+    raise SystemExit("Configure a distinct subnet for every image qualification stage, or leave all unset")
+private = [ipaddress.ip_network(value) for value in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")]
+networks = []
+for value in values:
+    if not value:
+        continue
+    try:
+        network = ipaddress.ip_network(value, strict=True)
+        valid = network.version == 4 and 24 <= network.prefixlen <= 28 and str(network) == value
+        valid = valid and any(network.subnet_of(block) for block in private)
+    except ValueError:
+        valid = False
+    if not valid:
+        raise SystemExit("Qualification subnets must be canonical RFC1918 IPv4 ranges from /24 through /28")
+    if any(network.overlaps(other) for other in networks):
+        raise SystemExit("Image qualification stages require nonoverlapping subnets")
+    networks.append(network)
+PY
+}
+
+wms_qualification_create_network() {
+  local root="$1" label="$2" run="$3" network="$4"
+  local subnet="${WMS_QUALIFICATION_SUBNET:-}"
+  local -a options=()
+  wms_qualification_validate_network_subnets "$subnet" || return 1
+  if [[ -n "$subnet" ]]; then options+=(--subnet "$subnet"); fi
+  if ! docker network create --label "$label=$run" "${options[@]}" "$network" > "$root/network.id"; then
+    echo 'Network creation failed. For exhausted default pools, select unused private qualification subnets; retained networks are never pruned or reused.' >&2
+    return 1
+  fi
+  docker network inspect --format '{{json .IPAM.Config}}' "$network" > "$root/network-ipam.json" || return 1
+  python3 - "$root" "$network" "$subnet" <<'PY'
+import json, pathlib, sys
+root, name, requested = pathlib.Path(sys.argv[1]), sys.argv[2], sys.argv[3]
+allocation = json.loads((root / "network-ipam.json").read_text())
+if requested and requested not in [row.get("Subnet") for row in allocation]:
+    raise SystemExit("Docker network allocation did not retain the requested qualification subnet")
+(root / "network-selection.json").write_text(json.dumps({"network": name,
+    "requested_subnet": requested or None, "allocated_ipam": allocation}, indent=2) + "\n")
+PY
+}
+
 wms_qualification_finish_resources() {
   local root="$1" label="$2" run="$3" network="$4" volume="$5"
   shift 5

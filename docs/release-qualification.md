@@ -64,6 +64,21 @@ Setup is measured separately from the sustained window. The image comes from the
 
 The lost-response fixture retains the untracked recovery SKU. Untracked crash commands retain their warehouse-row-lock barrier before inventory mutation. In serial mode, the two crash commands move one otherwise static literal label out and back. An owned `BEFORE INSERT` outbox trigger first verifies the exact uncommitted custody revision, original history/observation/batch/head, event, actor-bound receipt and physical quantities, then waits on an advisory lock. The external qualifier requires the post-assertion session marker, exact advisory-lock identity and actual blocking PID before killing the API or PostgreSQL. All 49 committed table fingerprints must remain unchanged after each interrupted transaction; the same original request then commits once and replays through the other replica. The trigger is removed before recovery. The independent literal proof accounts for both recovered moves separately from timed traffic. Earlier reports retain their original, narrower crash scope. Latency distributions in these image reports are runner aggregates; the earlier native serial diagnostic separately retains raw cycle samples.
 
+## Qualification networks with retained resources
+
+Hosts that retain many rehearsals can exhaust Docker's default address pools. The complete gate accepts three explicit, nonoverlapping RFC1918 IPv4 subnets from `/24` through `/28`. Supply all three or leave all unset; validation runs before the long checks. Choose ranges unused by the host and existing Docker networks, and select new ranges for each retained run. For example:
+
+```bash
+WMS_KEEP_QUALIFICATION_RESOURCES=1 WMS_KEEP_TEST_DB=1 WMS_KEEP_RESTORE_DB=1 \
+WMS_RELEASE_CONTAINER_SUBNET=10.253.240.0/24 \
+WMS_RELEASE_UNTRACKED_SUBNET=10.253.241.0/24 \
+WMS_RELEASE_SERIAL_SUBNET=10.253.242.0/24 \
+WMS_RELEASE_ARTIFACT_DIR=/tmp/warehouse-release-private-subnets \
+  bash scripts/local-postgres.sh bash scripts/qualify-release.sh
+```
+
+Each stage creates a new owned network and records the requested and actual allocation in its private `network-selection.json`. Docker still rejects conflicts with existing networks. Retained networks and data are never pruned or reused. Standalone `container-smoke.sh` and `resilience-rehearsal.sh` accept the same optional range through `WMS_QUALIFICATION_SUBNET`; the complete gate selects it separately for each stage using the three variables above.
+
 ## Current 0.1.1 serial after-write qualification — 2026-10-19
 
 The [version 0.1.1 complete gate](qualification/release-20261019-serial-after-write-v1/summary.json) and [independent audit](qualification/release-20261019-serial-after-write-v1/independent-audit.json) pass both API and PostgreSQL serial after-write crash recovery at the unchanged 500-product / 16,000-label / eight-operator profile. Both interrupted transactions preserve all 49 committed table fingerprints; their exact original requests recover once and replay. Two recovered out-and-back serial moves are excluded from timed traffic and included separately in the literal history proof. The [prior timeout and passing repeat](qualification/attempt-20261019-serial-upgrade-index-timeout/failure-context.json) remain recorded. Production, deployed-client, physical facility and managed failover qualification remain separate.

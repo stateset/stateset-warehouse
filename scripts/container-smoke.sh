@@ -70,7 +70,7 @@ fi
 wms_image_id="$(cat "$wms_container_root/image.id")"
 docker image inspect "$wms_image_id" > "$wms_container_root/image-inspect.json"
 docker version --format '{{json .}}' > "$wms_container_root/docker-version.json"
-docker network create --label "$wms_label=$wms_run" "$wms_network" > "$wms_container_root/network.id"
+wms_qualification_create_network "$wms_container_root" "$wms_label" "$wms_run" "$wms_network"
 wms_pg_storage=(--tmpfs /var/lib/postgresql/data:rw,nosuid,nodev,size=512m)
 if [[ "${WMS_KEEP_QUALIFICATION_RESOURCES:-0}" == 1 ]]; then
   wms_volume="wms-qualification-data-$wms_run"
