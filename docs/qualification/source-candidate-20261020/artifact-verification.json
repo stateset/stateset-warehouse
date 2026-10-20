@@ -1,0 +1,176 @@
+{
+  "candidate_commit": "93490ce2f09471c1b116575b460b77fc004f7e59",
+  "release_gate_result": "failed",
+  "source_archive_sha256": "c943e3f102c27a0c4441a15a768bf6a591cbb5bb2966c4a22b064f63b4acab7a",
+  "public_artifacts": [
+    {
+      "path": "archive_restore.json",
+      "sha256": "5f57081a22593ac4f659074329c2d8a4391b54a36ccb4824f7908792fdcc85aa"
+    },
+    {
+      "path": "archive_restore.log",
+      "sha256": "2c05a81e8b88520ed71b480616fefcda83c95a95811025f241dcf663614dc1a7"
+    },
+    {
+      "path": "audit-tools.json",
+      "sha256": "24fc55c57334859a5884f79aa9033bc298f164d979faae09371d7cee1b1780ae"
+    },
+    {
+      "path": "binary-assets.json",
+      "sha256": "3840f20d66d9db1b2ce7f66788523cee598e43ab60adf7bf3869b7804687db5a"
+    },
+    {
+      "path": "browser-test-review.json",
+      "sha256": "117216ba080c278b1e7ab5ce84520d05ba4942bfc4bfbbf3e9142269b90e52aa"
+    },
+    {
+      "path": "demo-api.log",
+      "sha256": "e5858059be17bfe159445fb3dee84986002188f1c7cb414cbe09e0fb978cf6d5"
+    },
+    {
+      "path": "dependency-licenses.json",
+      "sha256": "02a46dec0cb6cdbb3d12e469b83577769b0556e3375560788db4df82fce161ab"
+    },
+    {
+      "path": "documentation-links.json",
+      "sha256": "174fcbc3a1c18737c5c154be0a894587566c6ab1854e94fbffd23e666daca323"
+    },
+    {
+      "path": "external-fonts.json",
+      "sha256": "a0e11880d10652a4a039f6881a1dc9d3099c7559597dd123a5760fe747cb387c"
+    },
+    {
+      "path": "fresh-setup.json",
+      "sha256": "2f1f2b2666a2a31c5f7004f8ad8deb505a966e33c2026f45e9d4d9311108a709"
+    },
+    {
+      "path": "image-notices.json",
+      "sha256": "965c194970371a231f9add6b8dac2b0e2d9b462944928c32cdf274a3fb0004eb"
+    },
+    {
+      "path": "image_resilience.json",
+      "sha256": "20e4233b6d602d5428a6286a4f7387b241e2229507f3435428486082e913702d"
+    },
+    {
+      "path": "image_resilience.log",
+      "sha256": "fe032a8e5de2d8645003fc75ce5535ed5980a560fc649c191a098a66d6e6b0e1"
+    },
+    {
+      "path": "live_browsers.log",
+      "sha256": "abb25db5e72352d960e975d7b7b359c932ae84cf4f015de6e884b5e819c781a7"
+    },
+    {
+      "path": "network-configuration.json",
+      "sha256": "a4c03162ab8729b24095da95b54473b9763a4cc0157c65cc3c290a2d55e6595f"
+    },
+    {
+      "path": "observability_rules.json",
+      "sha256": "015bba06a3588e04e23976038d0aca504500eb39fce1fbe8b0bf5f43ca7e99ad"
+    },
+    {
+      "path": "observability_rules.log",
+      "sha256": "6ea89889bde1dea45385eded927b4b88c7b45fc33c61084d5897a674a470d9ee"
+    },
+    {
+      "path": "prerequisites.log",
+      "sha256": "9681026f2928584fb0449b32cd4fb412acbad324c2858cd0ecdcd7374c749b1f"
+    },
+    {
+      "path": "prior-attempt-1-summary.json",
+      "sha256": "8ee93b3b470ef2f8ee9f5e39d5c2d8816b4b775e6a80a5c944a57b6834b3fdbb"
+    },
+    {
+      "path": "prior-attempt-2-summary.json",
+      "sha256": "e9f13da32f43cbb75fcd30dde0c81f9857929680994622031cc9b0f8760bb26d"
+    },
+    {
+      "path": "prior-attempt-3-summary.json",
+      "sha256": "17906e2c376dbb31582fa02e8816fa510896624625a28391e8cad4d51093969f"
+    },
+    {
+      "path": "prior-attempt-4-summary.json",
+      "sha256": "3d01f114ca4dea5e9da7f1abfbc16e147e2ba5f37a42aaaf361f1cc1873c7784"
+    },
+    {
+      "path": "prior-attempt-5-summary.json",
+      "sha256": "db45b166a26ac303015073e73afaf6dc9b165347b93e4dcd39a883a6c0f37d40"
+    },
+    {
+      "path": "production_container.json",
+      "sha256": "c4c625243b7b0b430b969aba054f6b0d040255359e0ae783725df543e0dd40ce"
+    },
+    {
+      "path": "production_container.log",
+      "sha256": "89328e95f5926cc536803705c7b235d23b378bb18f3ac05f3e5fef6443cbcac9"
+    },
+    {
+      "path": "qualification-network-review.json",
+      "sha256": "8da03e57a3286fad3079475455417435d8cd7a0c7e5539b04fbc1abcffc83bb1"
+    },
+    {
+      "path": "readiness.json",
+      "sha256": "c27697b2f95e9f4d989cc7cac9c70dd47013ae1e1327a9fd017b5340884952ae"
+    },
+    {
+      "path": "reconciliation-query-review.json",
+      "sha256": "38270038809466e0e02026d2f320f1a963bf50ca132c63e8141beb7ecf2318cc"
+    },
+    {
+      "path": "release_builds.log",
+      "sha256": "358a498bea5e9e6a743ea02bb73c1088d1be15b67cde48c09a489aaa10c1d091"
+    },
+    {
+      "path": "scanner-api.log",
+      "sha256": "6c9ef627167a4468352c635ffb94fd505819653b333fe2a8bfc5e68a608897e1"
+    },
+    {
+      "path": "serial-readiness-review.json",
+      "sha256": "c21ca274f0ddcf1f6d10ebc243783ccbbd47f1c18956efcc8818878de4d23717"
+    },
+    {
+      "path": "serial-write-review.json",
+      "sha256": "f182e9868f5cf773bb9e7cdaadfc441fe9f09e0916fda491580e294143f1dc6d"
+    },
+    {
+      "path": "smoke-fixture-review.json",
+      "sha256": "7a884b57fce7c42f42d46b2953f06ae143fecf97f0140e5d5669cbf8334c1b80"
+    },
+    {
+      "path": "software-input-verification.json",
+      "sha256": "c1e8b490c786a2907931ddecff1d23c1d9a8b4821125f9c10d9e373d21005888"
+    },
+    {
+      "path": "software_checks.log",
+      "sha256": "8ebb31995a4ef5e7a8720fe69cf5e739756b62db42368703f5a6be384dd26566"
+    },
+    {
+      "path": "source-audit.json",
+      "sha256": "8e28f9bf48938782b1d30d7f11e46182e9bd3d911c09412b7b0b62b963b20c9e"
+    },
+    {
+      "path": "source-inputs-before.json",
+      "sha256": "8c7c758723c849c452c73a85e67a71ebde5d5e968d59eb61c64fdc941c7fede8"
+    },
+    {
+      "path": "standard_workload.json",
+      "sha256": "0ba3688717da2cf0e53e87906f52434c212aaefa3608aa041075518a71a51ec2"
+    },
+    {
+      "path": "standard_workload.log",
+      "sha256": "e9eacd23c10c8a19ef8cd571e8cbfcc5e3b227c4e99e5838a825aa32a4f86cb7"
+    },
+    {
+      "path": "summary.json",
+      "sha256": "d7b14d54f4f5d1c56996da41dd737e7636b5d0d216aae8d04f5e9c78ddcb1171"
+    },
+    {
+      "path": "terminal-timer-review.json",
+      "sha256": "81d0daf89cf9f1da843dd748c3a69f8df7e3413e764e1b31e2f26cdc78977e0c"
+    },
+    {
+      "path": "tool-versions.json",
+      "sha256": "fb353776fcb627064e6ae049b0f4af0fa62007cc594ca9b5063098dd9946e8b5"
+    }
+  ],
+  "scope": "Artifact integrity only; not a release approval"
+}

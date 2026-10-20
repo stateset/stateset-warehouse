@@ -1,0 +1,3 @@
+Building production image; evidence: /home/dom/stateset-warehouse/.local/qualification/open-source-readiness-20261020/full-release-recovered/container
+PASS: production image healthy under UID 10001, read-only filesystem, zero effective capabilities, no new privileges, real authentication and independent PostgreSQL reconciliation.
+Container qualification evidence: /home/dom/stateset-warehouse/.local/qualification/open-source-readiness-20261020/full-release-recovered/container

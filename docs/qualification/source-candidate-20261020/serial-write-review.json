@@ -1,0 +1,25 @@
+{
+  "recorded_at": "2026-10-20T20:25:31.546781+00:00",
+  "candidate_commit": "93490ce2f09471c1b116575b460b77fc004f7e59",
+  "failed_gate": "full-release-reviewed",
+  "failure": "Serial sustained HTTP write returned 503 after 395 committed moves were reported at 220.1 seconds. PostgreSQL logged statement and lock timeouts obtaining the warehouse row lock.",
+  "complete_gate_passed": false,
+  "stages_previously_passed": 8,
+  "untracked_profile_passed": true,
+  "all_software_inputs_unchanged": 444,
+  "original_evidence_retained": true,
+  "host_observation": {
+    "recorded_at": "2026-10-20T20:23:47.656184+00:00",
+    "loadavg": "40.92 36.51 25.08 2/2553 722979",
+    "pressure": {
+      "cpu": "some avg10=1.35 avg60=9.51 avg300=38.80 total=61444642740\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0\n",
+      "io": "some avg10=88.10 avg60=89.06 avg300=55.81 total=253920513737\nfull avg10=70.24 avg60=60.41 avg300=24.53 total=199170532800\n",
+      "memory": "some avg10=4.60 avg60=19.85 avg300=14.19 total=2919815948\nfull avg10=3.74 avg60=14.23 avg300=8.41 total=1671329097\n"
+    },
+    "scope": "Host observation after serial write failure; correlation alone does not establish root cause"
+  },
+  "diagnosis_limit": "Severe host I/O and memory pressure was observed after the failure; this is correlation, not a proven root cause or evidence of production capacity.",
+  "response": "Retain the failed gate and repeat the whole gate on identical software with fresh isolated resources. No write guard, journal, migration, statement timeout, retry or test duration was changed.",
+  "repeat_gate": "full-release-recovered",
+  "production_qualified": false
+}

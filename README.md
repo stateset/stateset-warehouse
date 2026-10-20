@@ -12,6 +12,8 @@ Version 0.2.0 includes [iCommerce crate interoperability](docs/icommerce.md), a 
 
 The development terminal adds a Ghostty operations board with idle read-only refresh, snapshot age, stale-read retention and direct work lanes. Compact inventory keeps exact quantities visible, and pane resizing preserves input and reading position. Original-request recovery retains exclusive checkpoint positions and existing 0.2.0 journals. The partial/package lane keeps mixed fulfillment visible after handoff, with exact remaining-work reviews and continued allocation, picking and recovery. The latest [targeted terminal verification](docs/qualification/development-partial-fulfillment-20261020/verification.json) passes 101 checks, including real API/PostgreSQL and terminal workflows. See [terminal navigation](cli/README.md#navigation-and-views) and [upgrade and recovery instructions](cli/README.md#recovery). These follow-ups have separate targeted checks; the dated release report above applies to its original frozen 0.2.0 source.
 
+The [2026-10-20 source-release review](docs/open-source-readiness-20261020.md) records **331 Rust, 90 Python, 101 terminal and 170 browser checks passing**, full-history source auditing, original browser dependency notices, and follow-up fixes. **The complete development release gate remains held:** serial crash recovery failed in the latest repeat. The [dated evidence](docs/qualification/source-candidate-20261020/readiness.json) retains all failures and launch blockers; this candidate does not replace the qualified 0.2.0 release above.
+
 ## Run
 
 Requires Rust 1.90+, Node.js 22.12+, npm and Postgres 12+. Use an isolated development database.

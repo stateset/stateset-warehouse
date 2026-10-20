@@ -1,5 +1,11 @@
 # One reproducible software release gate
 
+## Source-release candidate on hold — 2026-10-20
+
+The [latest development gate](qualification/source-candidate-20261020/summary.json) on `93490ce2f09471c1b116575b460b77fc004f7e59` **failed**. Eight stages passed, including 331 Rust, 90 Python, 101 terminal checks with zero skips, 170 browser checks, populated archive restore and the production container. The untracked image profile passed with 7,868 moves and exact replays. The serial profile failed to regain API database readiness after the deliberate PostgreSQL crash; it did not complete sustained traffic or final independent proof. The final `stable_source_inputs` stage did not run. A [separate post-failure check](qualification/source-candidate-20261020/software-input-verification.json) verifies that all 444 software inputs remain unchanged, without converting the gate into a pass.
+
+The [readiness review](open-source-readiness-20261020.md) records source/history scanning, original dependency notices, fresh-checkout builds and six retained failed attempts. Severe host I/O/memory stalls were observed around the last failures; sole causation has not been established. Repeat the complete gate with sufficient isolated runner resources and obtain actual hosted execution before treating the candidate as qualified. The repository remains private, existing version tags retain their original meanings, and no packages or images have been published.
+
 ## Current 0.2.0 qualification — 2026-10-19
 
 The [0.2.0 complete gate](qualification/release-20261019-icommerce-tui-v1/summary.json) and [independent audit](qualification/release-20261019-icommerce-tui-v1/independent-audit.json) pass on frozen source44, including 331 Rust, 74 Python, 13 terminal and 170 browser checks. Both full 300-second image profiles, final serial reconciliation, populated archive restore and four API/PostgreSQL crash recoveries pass. Durable original-request checkpoints precede each fault. Earlier failed attempts remain retained. Deployed identity/native/MCP-client and physical facility acceptance remain separate.

@@ -1,0 +1,10 @@
+{
+  "candidate_commit": "93490ce2f09471c1b116575b460b77fc004f7e59",
+  "candidate_blobs_verified": 1267,
+  "software_inputs_verified_after_failed_exit": 444,
+  "software_inputs_sha256": "1466448d9b88d0f580458d2f847f515ae3069006821be34c0db223d0a6e580bd",
+  "software_inputs_unchanged": true,
+  "gate_stable_source_inputs_stage": "not_run",
+  "scope": "Separate post-failure byte/mode check; does not convert the failed gate into a pass",
+  "regenerated_screenshots_preserved_before_original_restoration": []
+}

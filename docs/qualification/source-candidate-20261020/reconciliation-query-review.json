@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "candidate_commit": "fb91dd2f82394c70a40c4b66020041e373ca5a57",
+  "earlier_candidate_commit": "834d963c8dd9a8cdfc0b532df97335ac7c127c31",
+  "scope": "Diagnostic comparison on the retained failed synthetic fixture; complete release gate is recorded separately",
+  "original_complete_reconciliation_ok": true,
+  "original_elapsed_seconds": 11.592,
+  "original_diagnostic_timeout_seconds": 120,
+  "qualified_api_statement_timeout_seconds": 10,
+  "same_exact_original_proof_in_all_three_bounded_repeats": true,
+  "bounded_repeats": [
+    {
+      "attempt": 1,
+      "returncode": 0,
+      "elapsed_seconds": 7.169,
+      "exact_proof_equal": true,
+      "statement_timeout_seconds": 10
+    },
+    {
+      "attempt": 2,
+      "returncode": 0,
+      "elapsed_seconds": 6.282,
+      "exact_proof_equal": true,
+      "statement_timeout_seconds": 10
+    },
+    {
+      "attempt": 3,
+      "returncode": 0,
+      "elapsed_seconds": 6.671,
+      "exact_proof_equal": true,
+      "statement_timeout_seconds": 10
+    }
+  ],
+  "targeted_differential_tests_passed": 3,
+  "targeted_execution": "Serial, as in the complete gate; an earlier concurrent invocation hit forensic table-lock contention and is retained",
+  "changed_paths": [
+    "src/serial_reconciliation.sql",
+    "tests/serial_admission/resolved_sources.rs",
+    "CHANGELOG.md"
+  ],
+  "query_sha256": "65dc8953aa3cc0f0dd6417d0a83a26ee93a4f43c6c225a72eb14c31b0548dec6",
+  "write_guards_migrations_and_journals_unchanged": true,
+  "original_database_and_all_failed_attempts_retained": true,
+  "diagnostic_postgres_stopped_after_review": true,
+  "production_qualified": false,
+  "limit": "Runner observations on one existing fixture, not a capacity/SLO benchmark or a substitute for the complete candidate repeat",
+  "complete_gate_candidate": "93490ce2f09471c1b116575b460b77fc004f7e59",
+  "query_bytes_unchanged_in_complete_candidate": true
+}

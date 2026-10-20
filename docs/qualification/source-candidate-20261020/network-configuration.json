@@ -1,0 +1,29 @@
+{
+  "container": {
+    "network": "wms-qualification-1792528906-e823498a",
+    "requested_subnet": "10.253.243.0/24",
+    "allocated_ipam": [
+      {
+        "Subnet": "10.253.243.0/24"
+      }
+    ]
+  },
+  "untracked": {
+    "network": "wms-resilience-1792528920-9ff55af0",
+    "requested_subnet": "10.253.244.0/24",
+    "allocated_ipam": [
+      {
+        "Subnet": "10.253.244.0/24"
+      }
+    ]
+  },
+  "serial": {
+    "network": "wms-resilience-1792529474-e2405182",
+    "requested_subnet": "10.253.245.0/24",
+    "allocated_ipam": [
+      {
+        "Subnet": "10.253.245.0/24"
+      }
+    ]
+  }
+}

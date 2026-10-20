@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "candidate_commit": "02d890792c703fc4bdf7d6af23bb9a4a1f166bef",
+  "earlier_candidate": "fb91dd2f82394c70a40c4b66020041e373ca5a57",
+  "failure": "Playwright strict role selector matched both legitimate loading announcement and retained record-count status during next-page load",
+  "prior_browser_result": {
+    "passed": 148,
+    "failed": 1
+  },
+  "fix": "Target the record-count status precisely; explicitly hold the actual next-page response, assert both loading and retained 25 records, release it, then verify 26 records and original cursor/review/export claims",
+  "focused_file_checks_passed": 8,
+  "test_count_unchanged": true,
+  "application_runtime_changed": false,
+  "timeout_or_retry_budget_changed": false,
+  "artificial_sleep_added": false,
+  "original_trace_snapshot_and_source_retained": true,
+  "complete_gate_required": true
+}

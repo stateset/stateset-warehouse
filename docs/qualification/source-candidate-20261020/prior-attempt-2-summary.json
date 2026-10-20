@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "scope": "software_release_gate",
+  "recorded_at": "2026-10-20T18:25:13.343948+00:00",
+  "result": "failed",
+  "production_qualified": false,
+  "synthetic": true,
+  "release_revision": "fb91dd2f82394c70a40c4b66020041e373ca5a57",
+  "elapsed_seconds": 1106,
+  "stages": [
+    {
+      "name": "prerequisites",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 1.861
+    },
+    {
+      "name": "software_checks",
+      "status": "failed",
+      "exit_code": 1,
+      "elapsed_seconds": 1103.661
+    },
+    {
+      "name": "observability_rules",
+      "status": "not_run"
+    },
+    {
+      "name": "release_builds",
+      "status": "not_run"
+    },
+    {
+      "name": "standard_workload",
+      "status": "not_run"
+    },
+    {
+      "name": "archive_restore",
+      "status": "not_run"
+    },
+    {
+      "name": "live_browsers",
+      "status": "not_run"
+    },
+    {
+      "name": "production_container",
+      "status": "not_run"
+    },
+    {
+      "name": "image_resilience",
+      "status": "not_run"
+    },
+    {
+      "name": "stable_source_inputs",
+      "status": "not_run"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "source-inputs-before.json",
+      "sha256": "219bc2b8c150eae845444eee0c2730ed4705a13ca8044c78832cda9801fff61e"
+    },
+    {
+      "path": "tool-versions.json",
+      "sha256": "fb353776fcb627064e6ae049b0f4af0fa62007cc594ca9b5063098dd9946e8b5"
+    },
+    {
+      "path": "dependency-licenses.json",
+      "sha256": "02a46dec0cb6cdbb3d12e469b83577769b0556e3375560788db4df82fce161ab"
+    },
+    {
+      "path": "prerequisites.log",
+      "sha256": "f921e02f4861f77612997a6c353f9bd33c397f8fbbf97fe61a97002790f21d67"
+    },
+    {
+      "path": "software_checks.log",
+      "sha256": "e2732f48e4d60267719eb30ec7040b78a845be1b3606bdb7a2ea22548dbf0330"
+    }
+  ],
+  "not_performed": [
+    "Deployed WorkOS sign-in and membership lifecycle",
+    "Deployed OMS/Freight qualification",
+    "Physical warehouse and scanner acceptance",
+    "Organization-hosted GitHub execution"
+  ],
+  "limits": [
+    "All inventory and native-service fixtures are synthetic",
+    "Performance results apply to the recorded profiles and host",
+    "Process/database restart is not managed database failover",
+    "Published logs are sanitized; private raw artifacts stay in the fresh evidence directory"
+  ]
+}

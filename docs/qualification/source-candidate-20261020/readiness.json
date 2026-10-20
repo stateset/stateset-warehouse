@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-20T21:09:52.813099+00:00",
+  "scope": "Private source-release preparation; complete software release qualification remains held",
+  "candidate_commit": "93490ce2f09471c1b116575b460b77fc004f7e59",
+  "candidate_tree": "c8e7f0adc9f87316f97a9b7441fc53f27ed87cb7",
+  "checks": {
+    "rust": 331,
+    "python": 90,
+    "terminal": 101,
+    "terminal_skipped": 0,
+    "browser": 170
+  },
+  "local_complete_gate": "failed",
+  "local_release_qualified": false,
+  "passed_stages": 8,
+  "failed_stage": "image_resilience",
+  "stable_source_inputs_stage": "not_run",
+  "qualified_software_inputs": null,
+  "reviewed_software_inputs": 444,
+  "software_inputs_unchanged_after_failure": true,
+  "image_id": "sha256:bfa792fa32c3647221b0ee1a93100a1418c10330100a6a36eea00a78c1802046",
+  "untracked_profile": {
+    "result": "passed",
+    "committed_moves": 7868,
+    "exact_replays": 7868
+  },
+  "serial_profile": {
+    "result": "failed",
+    "failure": "PostgreSQL crash recovery did not return API database readiness within the unchanged test deadline",
+    "sustained_traffic_completed": false,
+    "independent_final_proof_completed": false
+  },
+  "source_history": {
+    "result": "passed",
+    "commits": 33,
+    "current_files": 1267,
+    "unreviewed_findings": 0
+  },
+  "retained_failed_complete_attempts": 6,
+  "diagnosis_limit": "PostgreSQL was still in crash recovery and severe host I/O/memory stalls were observed. These observations do not prove the sole cause or establish a software correction. No timeout, retry, write guard, journal or migration was weakened.",
+  "repository_private": true,
+  "packages_or_images_published": false,
+  "version_tags_changed": false,
+  "source_launch_ready": false,
+  "production_qualified": false,
+  "remaining": [
+    "Obtain a complete passing gate, including serial crash recovery and independent reconciliation, on a runner with sufficient isolated resources",
+    "Obtain an actual hosted CI pass; reviewed historical GitHub jobs were blocked by account billing/spending limits",
+    "Review publication rights and security contact delivery/monitoring",
+    "Receive an explicit public-launch instruction before changing visibility"
+  ],
+  "distribution_limit": "Before official downloadable binaries/images, retain Rust dependency and container system-package notices for the actual targets/options. Current original notice proof covers the eight locked browser runtime packages.",
+  "other_limits": [
+    "Pattern scans and visual reviews do not establish publication rights or guarantee no confidential content",
+    "Fresh locked source builds used existing Rust caches; default-port Compose quickstart was not run against shared services",
+    "Native Ghostty/scanner/facility, live identity/OMS/Freight/MCP and production acceptance remain separate",
+    "Only sanitized reports/transcripts are included; original source archives, raw logs, databases and failed attempts remain private"
+  ]
+}

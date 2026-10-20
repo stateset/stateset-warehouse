@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "candidate_commit": "8175a678921fe9d424e3bb1d1ebe8e611f10cdbd",
+  "earlier_candidate": "02d890792c703fc4bdf7d6af23bb9a4a1f166bef",
+  "failure": "A 25ms test sleep could resume and submit the remaining input before the pending real clock callback ran under event-loop load",
+  "prior_terminal_result": {
+    "passed": 100,
+    "failed": 1,
+    "skipped": 0
+  },
+  "real_api_postgres_pty_case_passed": true,
+  "fix": "Drain actual input processing, advance the Node test timer by 10ms, assert exactly one editing callback, finish the original selection, then advance time after exit and verify no later callbacks",
+  "focused_board_tests_passed": 8,
+  "application_runtime_changed": false,
+  "timeout_or_retry_budget_changed": false,
+  "sleep_replaced_with_controlled_timer": true,
+  "original_source_and_real_terminal_evidence_retained": true,
+  "complete_gate_required": true
+}

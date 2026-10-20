@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "scope": "Qualification infrastructure only; no warehouse application/runtime behavior changed",
+  "earlier_candidate": "8175a678921fe9d424e3bb1d1ebe8e611f10cdbd",
+  "failure": "Docker default pools exhausted after production-container success, before resilience traffic or new resilience services",
+  "prior_passed_stages": 8,
+  "qualified_prior_image": "sha256:a8a346d2f01ccdfdc15e3f3d0ec4e97fcd8712ead282544a69bd3aaff92f165d",
+  "resource_and_network_tests_passed": 11,
+  "real_allocation_smoke_passed": true,
+  "real_allocation_smoke": {
+    "network": "wms-oss-source-20261020-network-proof",
+    "requested_subnet": "10.253.239.0/24",
+    "allocated_ipam": [
+      {
+        "Subnet": "10.253.239.0/24"
+      }
+    ]
+  },
+  "complete_run_subnets": [
+    "10.253.240.0/24",
+    "10.253.241.0/24",
+    "10.253.242.0/24"
+  ],
+  "preflight_no_overlap_with_observed_docker_and_nondefault_host_routes": true,
+  "existing_networks_removed_or_reused": false,
+  "existing_data_changed": false,
+  "original_failed_attempt_retained": true,
+  "complete_gate_required": true,
+  "recorded_at": "2026-10-20T19:21:56.835739+00:00"
+}

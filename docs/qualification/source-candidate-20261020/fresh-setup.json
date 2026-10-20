@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "candidate": "93490ce2f09471c1b116575b460b77fc004f7e59",
+  "tracked_checkout_clean": true,
+  "backend_build": {
+    "passed": true,
+    "locked": true,
+    "offline_registry_cache": true,
+    "target_directory_shared_with_existing_workspace": true,
+    "compiled_from_clean_checkout": true,
+    "limit": "Fresh source compiled with existing local Rust dependency/compiler caches; not a cache-free hosted-runner proof",
+    "exact_clean_checkout_commit": "93490ce2f09471c1b116575b460b77fc004f7e59",
+    "log": "raw/fresh-reviewed-cargo-build.log"
+  },
+  "dashboard_install": {
+    "passed": true,
+    "locked_npm_ci": true,
+    "fresh_task_cache": true,
+    "first_offline_attempt": "failed: dependency archive was not cached; original log retained",
+    "retry": "ordinary npm ci with registry access passed"
+  },
+  "candidate_dashboard_build": {
+    "passed": true,
+    "typescript_check": true,
+    "vite_build": true,
+    "original_runtime_notices_in_dist": true,
+    "notice_sha256": "fadbb7d6ec514cd93fd9ef7ab8bb3ba540acc82c670c96be12b0ec50c32e5aa1",
+    "log": "raw/fresh-reviewed-dashboard-build.log"
+  },
+  "limits": [
+    "Existing shared warehouse demo and its database were not restarted",
+    "Exact default-port Docker Compose quickstart was not run against the shared host; complete gate uses owned isolated services",
+    "No public package/image publication or production acceptance"
+  ],
+  "portable_dependency_resolution": {
+    "local_packages_inside_fresh_checkout": 4,
+    "nonregistry_remote_dependencies": [],
+    "host_target": "x86_64-unknown-linux-gnu"
+  },
+  "recorded_at": "2026-10-20T19:30:33.972902+00:00",
+  "checkout_source_provenance": "Exact API commit/tree objects materialized and SHA-verified in existing full-history clone; direct Git fetch could not resolve github.com"
+}

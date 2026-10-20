@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "image_id": "sha256:bfa792fa32c3647221b0ee1a93100a1418c10330100a6a36eea00a78c1802046",
+  "notice_path": "/app/dashboard/dist/THIRD_PARTY_NOTICES.txt",
+  "notice_sha256": "fadbb7d6ec514cd93fd9ef7ab8bb3ba540acc82c670c96be12b0ec50c32e5aa1",
+  "matches_checked_in_original_notices": true,
+  "read_only_root": true,
+  "network": "none",
+  "exit_code": 0,
+  "observer_container_retained": true,
+  "recorded_at": "2026-10-20T19:51:23.735848+00:00",
+  "scope": "Read exact built image notices without starting the warehouse API or connecting to a database"
+}

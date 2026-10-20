@@ -1,0 +1,25 @@
+{
+  "recorded_at": "2026-10-20T21:09:47.795383+00:00",
+  "candidate_commit": "93490ce2f09471c1b116575b460b77fc004f7e59",
+  "failed_gate": "full-release-recovered",
+  "complete_gate_passed": false,
+  "failure": "API database readiness did not recover within the unchanged deadline after a deliberate PostgreSQL crash. PostgreSQL logs show consistent recovery state had not yet been reached.",
+  "prior_stages_passed": 8,
+  "untracked_profile_passed": true,
+  "serial_sustained_traffic_completed": false,
+  "serial_independent_final_proof_completed": false,
+  "host_observation": {
+    "recorded_at": "2026-10-20T21:07:48.629757+00:00",
+    "pressure": {
+      "cpu": "some avg10=3.68 avg60=16.18 avg300=32.32 total=62130984774\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0\n",
+      "io": "some avg10=94.87 avg60=84.59 avg300=48.37 total=254685430381\nfull avg10=66.38 avg60=42.42 avg300=16.83 total=199433795817\n",
+      "memory": "some avg10=10.67 avg60=8.45 avg300=4.12 total=2951051024\nfull avg10=8.64 avg60=5.55 avg300=2.39 total=1691236394\n"
+    },
+    "scope": "Host observation after failure, not proof of causation"
+  },
+  "diagnosis_limit": "Severe host I/O/memory stalls were observed; this is not proof of the sole cause or a completed software fix.",
+  "next": "Repeat the complete gate with adequate isolated runner resources; retain current failures as failed.",
+  "write_guards_migrations_journals_timeouts_retries_unchanged": true,
+  "repository_private": true,
+  "production_qualified": false
+}

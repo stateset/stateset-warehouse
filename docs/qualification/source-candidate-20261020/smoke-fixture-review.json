@@ -1,0 +1,10 @@
+{
+  "file": "scripts/container-smoke.sh",
+  "previous_sha256": "097372d09d11a7ef450f28ba745af5e818e79218f55e16e8047238f2c13e3e42",
+  "current_sha256": "95ba3b7e7096344fe32c672589077e70bb75dbecf8942ee2cbf02b0eac1ff88b",
+  "only_changed_line": 73,
+  "changed_behavior": "Owned private network creation and allocation recording",
+  "all_credential_assignments_and_reviewed_curl_lines_byte_identical": true,
+  "exact_hash_rule_path_line_reviews_added": 3,
+  "live_credential_exception": false
+}

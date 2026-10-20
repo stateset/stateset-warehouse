@@ -1,0 +1,24 @@
+{
+  "scope": "Externally fetched CSS font families; no font binaries are present in this source candidate",
+  "source": "dashboard/src/styles.css:1",
+  "families": [
+    {
+      "family": "dmsans",
+      "upstream_commit": "47d54ca1ebb14fd864695f1d39dc734f39017c33",
+      "source_url": "https://github.com/google/fonts/blob/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/dmsans/OFL.txt",
+      "license": "OFL-1.1",
+      "license_sha256": "9af36190332437f5ecd09974de43c1f7c77a310a996cdd8ceb25628b458840e1"
+    },
+    {
+      "family": "manrope",
+      "upstream_commit": "47d54ca1ebb14fd864695f1d39dc734f39017c33",
+      "source_url": "https://github.com/google/fonts/blob/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/manrope/OFL.txt",
+      "license": "OFL-1.1",
+      "license_sha256": "58172e0c0fac2cda8a37b348164bb55e44b0e69051e557e92b1d3f6910141f7b"
+    }
+  ],
+  "limits": [
+    "The remote Google Fonts response is not frozen by the WMS lockfiles",
+    "Self-hosted font redistribution would require retaining the original font notices with the actual chosen binaries"
+  ]
+}

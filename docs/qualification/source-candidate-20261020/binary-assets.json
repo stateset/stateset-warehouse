@@ -1,0 +1,141 @@
+{
+  "candidate": "93490ce2f09471c1b116575b460b77fc004f7e59",
+  "binary_assets": [
+    {
+      "path": "docs/screenshots/desktop.png",
+      "sha256": "ad65e5d53f371631ce625d60183be00a67a8fff7ac24c7e3e6451a2a6ffab394",
+      "historical_blob_versions": 5,
+      "review": "Visual inspection shows synthetic demo/qualification records; source fixture provenance remains part of maintainer rights review"
+    },
+    {
+      "path": "docs/screenshots/lot-trace-desktop.png",
+      "sha256": "2664c50d4f5ec13277dcb63976973fe546f1da25642c334dc0e8171da16da38f",
+      "historical_blob_versions": 1,
+      "review": "Visual inspection shows synthetic demo/qualification records; source fixture provenance remains part of maintainer rights review"
+    },
+    {
+      "path": "docs/screenshots/lot-trace-mobile.png",
+      "sha256": "841477d9e34098f40abc34c18171807a7d617eb5cabdb5c0092e6641380e4e58",
+      "historical_blob_versions": 1,
+      "review": "Visual inspection shows synthetic demo/qualification records; source fixture provenance remains part of maintainer rights review"
+    },
+    {
+      "path": "docs/screenshots/mobile.png",
+      "sha256": "8b346e8742af607195efb61745ceb3d241a5d0215c7d11943ca3fcd2e01cdac1",
+      "historical_blob_versions": 4,
+      "review": "Visual inspection shows synthetic demo/qualification records; source fixture provenance remains part of maintainer rights review"
+    },
+    {
+      "path": "docs/screenshots/pack-units-desktop.png",
+      "sha256": "ef0e5a65d97d3394b752e0c20e10d2219689d28f0d03820bc55b85c6da59f00f",
+      "historical_blob_versions": 1,
+      "review": "Visual inspection shows synthetic demo/qualification records; source fixture provenance remains part of maintainer rights review"
+    },
+    {
+      "path": "docs/screenshots/pack-units-mobile.png",
+      "sha256": "93be7b54763de495b43d3dab1a7ec0ff8dc3d3aa6e7cbb831d2c9615124845db",
+      "historical_blob_versions": 1,
+      "review": "Visual inspection shows synthetic demo/qualification records; source fixture provenance remains part of maintainer rights review"
+    },
+    {
+      "path": "docs/screenshots/transfer-loss-desktop.png",
+      "sha256": "90dcb0d5eb863c1706eaa39f984b4395a93c33e2e251526c57acddda770deb59",
+      "historical_blob_versions": 1,
+      "review": "Visual inspection shows synthetic demo/qualification records; source fixture provenance remains part of maintainer rights review"
+    },
+    {
+      "path": "docs/screenshots/transfer-loss-mobile.png",
+      "sha256": "ae4ba62ad9f933be010c2fdead18c8c6d299079a286da9caa4ad7892008da347",
+      "historical_blob_versions": 1,
+      "review": "Visual inspection shows synthetic demo/qualification records; source fixture provenance remains part of maintainer rights review"
+    },
+    {
+      "path": "tests/fixtures/workos-test-key.der",
+      "sha256": "13fcf965425ebaa8f9e7e6b82b6f92d95f0deebed7101626c1f792ae07d2761d",
+      "historical_blob_versions": 1,
+      "review": "Explicit public-only RSA JWT/JWKS test fixture, documented in tests/fixtures/README.md and used only by tests/support/workos.rs"
+    },
+    {
+      "path": "tests/fixtures/workos-test-key2.der",
+      "sha256": "6ce91f87286991dc711a2ffce591d8257435d763a7dd0d9020ca5856e0edff90",
+      "historical_blob_versions": 1,
+      "review": "Explicit public-only RSA JWT/JWKS test fixture, documented in tests/fixtures/README.md and used only by tests/support/workos.rs"
+    }
+  ],
+  "all_historical_versions_equal_current": false,
+  "limits": [
+    "Visual inspection does not prove intellectual-property ownership",
+    "Public RSA fixture keys must never be trusted by any deployed identity provider"
+  ],
+  "historical_screenshot_versions_reviewed": [
+    {
+      "source": "docs/screenshots/desktop.png",
+      "blob": "25e2f53c22a62eb05d544c931a41b706880de6b9",
+      "commit": "86be37412a0061726c3868a99336ef6f420d63a6",
+      "retained_path": ".local/qualification/open-source-readiness-20261020/historical-screenshots/desktop-25e2f53c22a62eb05d544c931a41b706880de6b9.png",
+      "sha256": "c95bbde47064983db86e8ccc0c252969986f1179f323ef210cc82ac8f6da871b",
+      "review": "Visually inspected original retained PNG: explicitly labeled synthetic demo workspace, matching original offline fixtures; no credentials or customer operational records observed"
+    },
+    {
+      "source": "docs/screenshots/desktop.png",
+      "blob": "4eadff61aa2247e8567911e4389bfc6a9a46e950",
+      "commit": "6e7b564c68b54f44441ba8302fb79e4bdcf512ba",
+      "retained_path": ".local/qualification/open-source-readiness-20261020/historical-screenshots/desktop-4eadff61aa2247e8567911e4389bfc6a9a46e950.png",
+      "sha256": "98baaee10134d4ff4a89a526fb452872ba54ea7ed6b7b09f9ee37ac0096470be",
+      "review": "Visually inspected original retained PNG: explicitly labeled synthetic demo workspace, matching original offline fixtures; no credentials or customer operational records observed"
+    },
+    {
+      "source": "docs/screenshots/desktop.png",
+      "blob": "8d3cd5e5000b7a9e6a7f4e09317cea9af73132e2",
+      "commit": "52d0c85e8cf7010778fc641f7efe2d0b70b90166",
+      "retained_path": ".local/qualification/open-source-readiness-20261020/historical-screenshots/desktop-8d3cd5e5000b7a9e6a7f4e09317cea9af73132e2.png",
+      "sha256": "f5b36e21198d44a58a2f2fa5876b1a5a160a8d906e0037163410b8e89eca2680",
+      "review": "Visually inspected original retained PNG: explicitly labeled synthetic demo workspace, matching original offline fixtures; no credentials or customer operational records observed"
+    },
+    {
+      "source": "docs/screenshots/desktop.png",
+      "blob": "f767465b7f0741d41202d2db15423dde38b14e37",
+      "commit": "321b3745f2d86409a5ff27574274696ca0a40b13",
+      "retained_path": ".local/qualification/open-source-readiness-20261020/historical-screenshots/desktop-f767465b7f0741d41202d2db15423dde38b14e37.png",
+      "sha256": "ce251b0970ee0bba6d1e20a8c563dba24843ee6a197ae5c484a6a19aa105849d",
+      "review": "Visually inspected original retained PNG: explicitly labeled synthetic demo workspace, matching original offline fixtures; no credentials or customer operational records observed"
+    },
+    {
+      "source": "docs/screenshots/mobile.png",
+      "blob": "3cd86649c956eb14271ba17c38c8fdb80aaa0152",
+      "commit": "321b3745f2d86409a5ff27574274696ca0a40b13",
+      "retained_path": ".local/qualification/open-source-readiness-20261020/historical-screenshots/mobile-3cd86649c956eb14271ba17c38c8fdb80aaa0152.png",
+      "sha256": "8539206e05962dc76a3c52fdd0ab7b2ca0838c1baefe6f9d80c5ace3cb32cf4a",
+      "review": "Visually inspected original retained PNG: explicitly labeled synthetic demo workspace, matching original offline fixtures; no credentials or customer operational records observed"
+    },
+    {
+      "source": "docs/screenshots/mobile.png",
+      "blob": "72ef96d4acf892531785d83c556a0dd7e099e001",
+      "commit": "52d0c85e8cf7010778fc641f7efe2d0b70b90166",
+      "retained_path": ".local/qualification/open-source-readiness-20261020/historical-screenshots/mobile-72ef96d4acf892531785d83c556a0dd7e099e001.png",
+      "sha256": "418c6ea297463d71f93503b64c2891a1f23c011c4e9855e43a1f2204780fa403",
+      "review": "Visually inspected original retained PNG: explicitly labeled synthetic demo workspace, matching original offline fixtures; no credentials or customer operational records observed"
+    },
+    {
+      "source": "docs/screenshots/mobile.png",
+      "blob": "8d002d5ad2a4942c4627410837104db299a4f10b",
+      "commit": "6e7b564c68b54f44441ba8302fb79e4bdcf512ba",
+      "retained_path": ".local/qualification/open-source-readiness-20261020/historical-screenshots/mobile-8d002d5ad2a4942c4627410837104db299a4f10b.png",
+      "sha256": "57a8ca120d3fed08f8827ebb821f767a5dff9d92f7e923d371a86bfaa796c0ef",
+      "review": "Visually inspected original retained PNG: explicitly labeled synthetic demo workspace, matching original offline fixtures; no credentials or customer operational records observed"
+    }
+  ],
+  "all_recorded_binary_versions_reviewed": true,
+  "source_provenance": {
+    "original_demo_screenshots": "dashboard/tests/offline.spec.ts",
+    "lot_trace": "dashboard/tests/lot-trace-live.spec.ts",
+    "pack_units": "dashboard/tests/units-live.spec.ts",
+    "transfer_loss": "dashboard/tests/transfer-loss-live.spec.ts",
+    "public_RSA_test_keys": "tests/fixtures/README.md; tests/support/workos.rs"
+  },
+  "previously_reviewed_candidate": "834d963c8dd9a8cdfc0b532df97335ac7c127c31",
+  "all_binary_source_blobs_unchanged_after_query_fix": true,
+  "all_binary_source_blobs_unchanged_after_browser_test_fix": true,
+  "all_binary_source_blobs_unchanged_after_terminal_test_fix": true,
+  "all_binary_source_blobs_unchanged_after_network_harness_changes": true
+}
