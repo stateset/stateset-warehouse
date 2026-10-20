@@ -1,4 +1,4 @@
-import { fit, wrap } from './format.mjs';
+import { fit, wrap, width } from './format.mjs';
 import { safeText } from './client.mjs';
 import { filtersFor, sortsFor, tableView } from './queues.mjs';
 
@@ -18,8 +18,40 @@ const schemas = {
   movements: [column('SKU', 'sku', 20), column('Kind', 'kind', 16), column('Each', 'quantity', 9, true), column('From', 'from', 14), column('To', 'to', 14), column('Reference', 'reference', 20)],
   activity: [column('Kind', 'kind', 24), column('Reference', 'reference', 24), column('Detail', 'detail', 32), column('Actor', 'actor', 24)],
 };
-export function tableLines(kind, rows, columns, offset = 0) {
+function tableLayout(kind, rows, columns, offset = 0) {
   const numberSize = Math.max(2, String(offset + rows.length).length);
+  const render = values => values.join('  ').trimEnd();
+  if (kind === 'stocks') {
+    const hand = rows.reduce((n, row) => Math.max(n, String(row.on_hand).length), 7);
+    const reserved = rows.reduce((n, row) => Math.max(n, String(row.reserved).length), 8);
+    const identity = columns - numberSize - 8 - hand - reserved;
+    if (identity >= 10) {
+      const bin = Math.min(14, Math.max(4, Math.floor(identity / 3)));
+      const sku = Math.min(20, identity - bin); const lot = identity - bin - sku - 2;
+      const values = (number, skuValue, binValue, handValue, reservedValue, lotValue) => render([fit(number, numberSize, true), fit(skuValue, sku), fit(binValue, bin), fit(handValue, hand, true), fit(reservedValue, reserved, true), ...(lot >= 8 ? [fit(lotValue, lot)] : [])]);
+      return { rowHeight: 1, header: [values('#', 'SKU', 'Bin', 'On hand', 'Reserved', 'Lot'), '─'.repeat(columns)], row: (row, index) => [values(index + 1, row.sku, row.location, row.on_hand, row.reserved, row.lot)] };
+    }
+    const separate = rows.some(row => String(row.on_hand).length + String(row.reserved).length + 3 > columns);
+    return {
+      rowHeight: separate ? 3 : 2,
+      header: [fit('# SKU / bin', columns).trimEnd(), ...wrap(separate ? 'H on hand · R reserved (each)' : 'On hand / Reserved (each)', columns), '─'.repeat(columns)],
+      row: (row, index) => [fit(`${index + 1} ${row.sku} @ ${row.location}`, columns).trimEnd(), ...(separate ? [`H ${row.on_hand}`, `R ${row.reserved}`] : [`${row.on_hand} / ${row.reserved}`])],
+    };
+  }
+  if (kind === 'lots' && (columns < 100 || rows.some(row => ['physical', 'reserved', 'usable'].some(key => String(row[key]).length > 9)))) {
+    return {
+      header: [fit('# SKU / lot', columns).trimEnd(), ...wrap('H physical · R reserved · U usable (each)', columns), '─'.repeat(columns)],
+      row: (row, index) => {
+        const facts = []; let line = '';
+        for (const field of [row.availability ?? '?', `H ${row.physical}`, `R ${row.reserved}`, `U ${row.usable}`]) {
+          if (line && width(`${line} · ${field}`) > columns) { facts.push(...wrap(line, columns)); line = ''; }
+          line = line ? `${line} · ${field}` : field;
+        }
+        facts.push(...wrap(line, columns));
+        return [fit(`${index + 1} ${row.sku} | ${row.lot}`, columns).trimEnd(), ...facts];
+      },
+    };
+  }
   const available = columns - numberSize - 2;
   let chosen = []; let used = 0;
   for (const col of schemas[kind] ?? [column('Record', row => JSON.stringify(row), 60)]) {
@@ -27,12 +59,11 @@ export function tableLines(kind, rows, columns, offset = 0) {
     if (used + size > available) break;
     chosen.push({ ...col, size }); used += size + 2;
   }
-  const render = values => values.join('  ').trimEnd();
-  return [
-    render([fit('#', numberSize, true), ...chosen.map(col => fit(col.label, col.size, col.numeric))]),
-    '─'.repeat(columns),
-    ...rows.map((row, index) => render([fit(offset + index + 1, numberSize, true), ...chosen.map(col => fit(col.value(row), col.size, col.numeric))])),
-  ];
+  return { rowHeight: 1, header: [render([fit('#', numberSize, true), ...chosen.map(col => fit(col.label, col.size, col.numeric))]), '─'.repeat(columns)], row: (row, index) => [render([fit(index + 1, numberSize, true), ...chosen.map(col => fit(col.value(row), col.size, col.numeric))])] };
+}
+export function tableLines(kind, rows, columns, offset = 0) {
+  const layout = tableLayout(kind, rows, columns, offset);
+  return [...layout.header, ...rows.flatMap((row, index) => layout.row(row, offset + index))];
 }
 export async function inspectJson(ui, title, value, options) {
   return inspectText(ui, title, JSON.stringify(value, null, 2), options);
@@ -91,6 +122,10 @@ Ctrl-C                   Exit, preserving original requests
 HOME SHORTCUTS (then Enter)
 i inventory · o orders · w observed work · c recovery
 t work queues · r refresh · q exit · F1 or ? help
+a allocate · k pick · f pack · g ship · d inbound
+b putaway · e issues · u priority · z pause/resume auto reads
+Home reads refresh every 15s while idle. Typing pauses reads.
+Task/review views have no automatic reads. Writes require a fresh review.
 v shows complete context when a compact screen shortens it.
 Pane resizing retains unfinished input and your reading position.
 
@@ -172,7 +207,10 @@ export async function inspectRows(ui, kind, load, { onAction, filter: initialFil
       + (message ? wrap(message, ui.columns).length : 0) + (settings ? wrap(settings, ui.columns).length : 0) + (!filtered.length ? wrap(empty, ui.columns).length : 0)
       + (readStatus ? wrap(readStatus, ui.columns).length : 0)
       + (batchInfo ? wrap(batchInfo, ui.columns).length : 0) + (snapshot.note ? wrap(snapshot.note, ui.columns).length : 0);
-    const count = Math.max(1, ui.rows - reserved);
+    const cursorPrefix = ui.keys ? '  ' : '';
+    const layout = tableLayout(kind, filtered, ui.columns - cursorPrefix.length);
+    const rowHeight = layout.rowHeight ?? filtered.reduce((height, row, index) => Math.max(height, layout.row(row, index).length), 1);
+    const count = Math.max(1, Math.floor((ui.rows - reserved - layout.header.length + 2) / rowHeight));
     if (viewport && selected === null && (viewport.columns !== ui.columns || viewport.rows !== ui.rows)) page = Math.floor(viewport.offset / count);
     if (selected !== null) page = Math.floor(selected / count);
     page = Math.min(page, Math.max(0, Math.ceil(filtered.length / count) - 1));
@@ -187,12 +225,15 @@ export async function inspectRows(ui, kind, load, { onAction, filter: initialFil
       if (snapshot.note) ui.line(snapshot.note, 'muted');
       if (settings) ui.line(settings, 'muted');
     }
-    tableLines(kind, rows, ui.columns, offset).forEach((line, index) => {
-      const row = rows[index - 2];
-      const tone = index === 0 ? 'accent' : index === 1 ? 'muted' : selected === offset + index - 2 ? 'selected'
+    layout.header.forEach(line => ui.print(ui.style ? ui.style(cursorPrefix + line, 'accent') : cursorPrefix + line));
+    rows.forEach((row, index) => {
+      const tone = selected === offset + index ? 'selected'
         : row?.priority === 'urgent' || row?.availability === 'expired' || row?.ok === false ? 'danger'
           : row?.status === 'open' || ['quarantined', 'expiry_missing', 'invalid'].includes(row?.availability) ? 'warning' : ['shipped', 'received'].includes(row?.status) ? 'success' : '';
-      ui.print(ui.style ? ui.style(line, tone) : line);
+      layout.row(row, offset + index).forEach((line, part) => {
+        const value = (ui.keys && selected === offset + index && part === 0 ? '› ' : cursorPrefix) + line;
+        ui.print(ui.style ? ui.style(value, tone) : value);
+      });
     });
     if (!rows.length) ui.line(compact ? fit(empty, ui.columns).trimEnd() : empty);
     footer.forEach(line => ui.line(line, 'muted'));

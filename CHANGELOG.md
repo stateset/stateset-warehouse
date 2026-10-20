@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add a home operations board with timed read-only refresh, visible snapshot age, pause/resume, retained stale snapshots, source-timestamp attention items and direct work-lane shortcuts. Preserve unfinished menu input and selection across clock updates; suspend reads while typing or inside task/review views. Recheck the original live identity before refreshing and hold automatic reads after session failures.
+- Keep exact on-hand/reserved quantities visible in compact stock tables and availability/physical/reserved/usable figures in compact lot views. Adapt identity widths first and use multiple lines for values that cannot fit; never abbreviate operational quantities. Show an explicit selected-row marker even with colors disabled.
 - Preserve unfinished menu/table input and its Unicode editing cursor across Ghostty pane resizing. Keep selected records and the previously visible row in view, and anchor long reviews to their source text when wrapping changes. Resizing remains local, without extra reads, automatic choices or changes to original requests.
 - Keep the operations console open through startup/session outages with explicit reconnect, original-identity fencing and local-only request inspection. Retain table data and search/filter/sort context after failed reads or actions, mark it stale, and hold row work until a successful refresh. Never automatically retry physical commands or modify recovery checkpoints during local inspection.
 - Shape the Ghostty terminal into a WMS operations center with stage counts, priority/quality work, compact command bars and full scope context on demand. Bound menus and tables to compact panes; retain critical recovery alerts and literal input behavior.

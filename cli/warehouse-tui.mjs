@@ -7,7 +7,7 @@ import { Client, originUrl, parseJson, safeText, tokenFromEnv } from './lib/clie
 import { Journal, boundSession, sendOriginal } from './lib/journal.mjs';
 import { visibleCommands } from './lib/commands.mjs';
 import { Terminal } from './lib/terminal.mjs';
-import { inspectJson, inspectText, inspectRows, overviewLines, scanProgress } from './lib/views.mjs';
+import { inspectJson, inspectText, inspectRows, scanProgress } from './lib/views.mjs';
 import { rowWork, reviewSelectedWork, selectionFor, remainingTransferLines, shipmentReview } from './lib/workflows.mjs';
 import { observationSession } from './lib/scanning.mjs';
 import { workQueues } from './lib/queues.mjs';
@@ -16,6 +16,7 @@ import { readOrderReview } from './lib/reviews.mjs';
 import { workSummary, outcomeSummary } from './lib/summaries.mjs';
 import { collectWork } from './lib/entry.mjs';
 import { connectSession } from './lib/connection.mjs';
+import { OperationsBoard, refreshInterval, laneShortcuts, laneFor } from './lib/board.mjs';
 
 export function argumentsFor(argv) {
   const result = {};
@@ -41,6 +42,10 @@ cli/README.md describes recovery and terminal workflows. q exits menus; Ctrl-C e
 Home: i inventory, o orders, w work, c recovery, r refresh (then Enter).
       t work queues. Tables: F3/f filters; F4/s sorting.
 Compact panes: v shows full context. Reviews: j shows original JSON.
+Home auto-refreshes every 15s; z pauses/resumes. WMS_TUI_REFRESH_SECONDS
+sets 5..300 seconds, or 0 to start paused. Typing and task views pause reads.
+Home lanes: a allocate, k pick, f pack, g ship, d inbound, b putaway,
+e issues, u priority. Shortcuts open fresh read-only queue views.
 Quantity fields: pack scans an actual reviewed packaging code and count.
 Menus: /text searches, / clears, ? shows help. Tables: row number opens full
 details; a opens highlighted row actions, n/p page, j shows page JSON,
@@ -251,6 +256,7 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
     console.log(JSON.stringify(data, null, 2)); return;
   }
   if (!process.stdin.isTTY || !process.stdout.isTTY) throw new Error('Interactive mode requires a terminal; use --once for read-only automation');
+  const refreshMs = refreshInterval(env.WMS_TUI_REFRESH_SECONDS); let boardPaused = refreshMs === 0;
   const ui = new Terminal(process.stdin, process.stdout, env);
   try {
     for (;;) {
@@ -263,37 +269,34 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
       warehouse ??= session.default_warehouse_id;
       if (!warehouse) throw new Error('Select an explicit warehouse');
       const scope = scopeFor(client, session, warehouse);
-      // Read failures must leave Recovery and facility selection accessible.
-      // The overview never supplies authority/version to a subsequent write.
-      const [snapshot, pending] = await Promise.all([
-        client.read(client.warehousePath(warehouse)).then(value => ({ ...value, readAt: new Date().toISOString() })).catch(error => ({ error: error.message })),
-        journal.listForIdentity(scope).then(records => ({ count: records.filter(record => !['committed', 'not_committed'].includes(record.stage)).length })).catch(error => ({ error: error.message })),
-      ]);
-      const overview = overviewLines(snapshot, pending, session, warehouse);
+      const board = new OperationsBoard(client, journal, scope, session, { intervalMs: refreshMs }); board.paused = boardPaused;
+      await board.refresh({ verifySession: false });
       const action = await ui.menu('WMS operations center', [
         ['Record observed warehouse work', 'work'], ['Inventory', 'stocks'], ['Products', 'products'], ['Bins', 'locations'], ['Orders', 'orders'], ['Receiving / returns', 'receipts'], ['Original order and shipment review', 'order-detail'], ['Original receiving record', 'receipt-detail'], ['Lots and holds', 'lots'], ['Facility transfers', 'transfers'], ['Serial custody', 'serials'], ['Serial history', 'serial-history'], ['Exceptions', 'exceptions'], ['Retained history', 'history'], ['Reconciliation', 'reconciliation'], ['Operations', 'operations'], ['Original request recovery', 'recovery'], ['iCommerce interop', 'interop'], ['Select facility', 'warehouse'], ['Work queues', 'queues'],
       ], {
-        intro: overview,
-        compactIntro: [
-          snapshot.error ? `Facility: ${warehouse}` : `${snapshot.warehouse.code} | v${snapshot.version} | ${snapshot.readAt.slice(11, 19)} UTC${session.demo ? ' | DEMO' : ''}`,
-          ...overview.filter(line => line.startsWith('Open orders') || line.startsWith('Allocate') || line.startsWith('Priority work')),
-        ],
-        compactHint: ['t queues · i stock · o orders · w work', '↑↓ Enter · / find · r refresh · v info · q'],
+        context: () => board.context({ columns: ui.columns }), tickMs: 5000, onTick: state => board.tick(state),
+        localActions: { r: () => board.refresh(), z: () => { board.togglePause(); boardPaused = board.paused; } },
+        compactHint: ['i stock · o orders · w work · t queues', 'r refresh · z auto on/off · v info · ? · q'],
         sections: { 1: 'WORK & INVENTORY', 9: 'TRACEABILITY & CONTROL', 16: 'OPERATIONS & RECOVERY' },
-        shortcuts: { i: 'stocks', o: 'orders', w: 'work', c: 'recovery', r: 'refresh', t: 'queues' },
-        hint: ['t queues · i inventory · o orders · w work', 'c recovery · r refresh · /text search · ? help · q exit'],
+        shortcuts: { i: 'stocks', o: 'orders', w: 'work', c: 'recovery', t: 'queues', ...Object.fromEntries(Object.keys(laneShortcuts).map(key => [key, `lane:${key}`])) },
+        hint: ['i inventory · o orders · w work · t queues · c recovery', 'r refresh · z pause/resume · / search · v context · ? help · q exit'],
       });
       if (!action) break;
+      session = board.session; const snapshot = board.queueSnapshot;
       try {
-        if (action === 'refresh') continue;
+        if (action === 'recovery') { await recover(client, journal, scope, ui, { localOnly: Boolean(board.sessionError) }); continue; }
+        if (board.sessionError) throw new Error('Live identity verification is held. Retry the connection before opening server work.');
         if (action === 'work') warehouse = await perform(client, journal, scope, ui) ?? warehouse;
-        else if (action === 'recovery') await recover(client, journal, scope, ui);
         else if (action === 'warehouse') warehouse = await selectWarehouse(client, ui) ?? warehouse;
         else if (action === 'interop') await interop(client, journal, scope, ui);
         else if (action === 'queues') {
           const queue = await ui.menu('Work queues', workQueues(snapshot).map(queue => [`${queue.label} | ${queue.count ?? '?'} records`, queue]), {
             intro: [`Facility: ${warehouse}`, snapshot.error ? 'Counts unavailable. Choose a queue to retry its view.' : `Counts from snapshot v${snapshot.version}. Opens a fresh view.`],
           });
+          if (queue) await readView(client, scope, ui, queue.kind, journal, queue);
+        }
+        else if (action.startsWith('lane:')) {
+          const queue = laneFor(action.slice(5), snapshot);
           if (queue) await readView(client, scope, ui, queue.kind, journal, queue);
         }
         else await readView(client, scope, ui, action, journal);

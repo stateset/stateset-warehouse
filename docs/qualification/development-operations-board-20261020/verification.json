@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "scope": "targeted_ghostty_operations_board_development",
+  "recorded_at": "2026-10-20T16:13:26.651600+00:00",
+  "result": "passed",
+  "production_qualified": false,
+  "baseline_tag": "v0.2.0",
+  "parent_commit": "e55971a8c7ef87804950bf06a4e6c41e4330b913",
+  "terminal_checks_passed": 95,
+  "terminal_checks_skipped": 0,
+  "node_version": "22.18.0",
+  "test_command": "WMS_TEST_DATABASE_URL=<isolated-test-db> npm --prefix cli run test:acceptance",
+  "actual_pg_api_and_pty_passed": true,
+  "operations_checks": [
+    "Home-only sequential read refresh, default 15 seconds with explicit 5..300 second interval or paused start",
+    "Visible age and pause/stale state; retained original snapshot version/read time after failures",
+    "Unknown lane counts after failed reads; actual source timestamps for issue and priority-order attention age",
+    "Direct allocation, pick, pack, ship, inbound, putaway, issue and priority queue shortcuts preserve original menu numbers",
+    "Original live actor/tenant verified before refresh; identity failures stop automatic reads and retain local original-request inspection",
+    "Refresh suspension during unfinished input, inspection and physical task/review views; no background refresh survives navigation",
+    "Timer updates preserve literal input, editing cursor, menu search and selection",
+    "Compact stock on-hand/reserved and lot availability/physical/reserved/usable stay visible without numeric ellipsis",
+    "Maximum safe integer quantities remain exact in narrow table layouts",
+    "Selected-row marker remains visible with NO_COLOR and preserves three-digit original row numbers",
+    "Real 49x20 PTY timed read failure, automatic recovery, unfinished-input hold, explicit pause and task-view hold",
+    "Read-only monitor proxy observes exactly four session reads and five warehouse reads; no commands or receipt lookups",
+    "Warehouse state and durable original requests/checkpoints unchanged by monitoring and navigation",
+    "Existing observed physical workflows, original recovery, exact role/scope/version/source checks, scanner input and resizing pass"
+  ],
+  "software_layout_profiles": [
+    "49x20",
+    "70x24",
+    "70x44",
+    "120x32"
+  ],
+  "recovery_journal_module_unchanged_sha256": "c6ba9e83810940cd19ba9675cc25c337cc326d928913dd95483a6a5961c11e7d",
+  "qualified_backend_image_inputs_unchanged": 305,
+  "qualified_backend_image_inputs_sha256": "7d59f80d543801c9237fa9a7dac313f00b31228f81b699a100e34f531343be89",
+  "full_release_gate_rerun": false,
+  "npm_package_dry_run_files": 22,
+  "package_published": false,
+  "owned_test_postgres_stopped": true,
+  "source_files": [
+    {
+      "path": "README.md",
+      "sha256": "258bbdb17bd9d79cd61280f72ea489c3a713e339e537d955bb154524dc9a9289"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "abef7477be0ee6823337c6ce4889feac49b76a3ef0555a039e53e4ba15442f53"
+    },
+    {
+      "path": "cli/README.md",
+      "sha256": "9351d10f560fb693585708e965dd512a10f2cf43ab179d522382ae15f3395bba"
+    },
+    {
+      "path": "cli/lib/board.mjs",
+      "sha256": "d7e08716d3e2cc45051c8e86ec2190f4a4b303665b9c956574084c92e4d1fa9d"
+    },
+    {
+      "path": "cli/lib/keys.mjs",
+      "sha256": "4c846485202bf3799923e7b7f97f474970130d08b487bc24f7f4c88692d966c0"
+    },
+    {
+      "path": "cli/lib/terminal.mjs",
+      "sha256": "45083e63c7628ab509b50aad968a7c0d163174bb3146dd252083b35a4029cc2f"
+    },
+    {
+      "path": "cli/lib/views.mjs",
+      "sha256": "b64f8d8b340c999368f2bd4a2dc8963ef86946ce734159dee3c185c9c2d3bba1"
+    },
+    {
+      "path": "cli/test/board.test.mjs",
+      "sha256": "be951f2892b28c3f96be739a1d55a67d5fca5554880273ea75b74cdad574286f"
+    },
+    {
+      "path": "cli/test/live.test.mjs",
+      "sha256": "82f9812dcfc98f83d9ca90ffe9ffecd2a118bb42dc475eea16393bf301779c2c"
+    },
+    {
+      "path": "cli/warehouse-tui.mjs",
+      "sha256": "6ea6cb5ee5c935b382dd415953b5614d7d090b8ecadea74ce4caae73453a2c8c"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "operations-board.svg",
+      "sha256": "cd5430b51a7de9fbbb0a2587b87e3fa2095bcddb734342e93d64218dfeaa2894"
+    },
+    {
+      "path": "terminal-checks.log",
+      "sha256": "211c5e20e381014429ca99fec78c05d6ce70aeb68871bc4094efa9df190ef1c2"
+    }
+  ],
+  "limits": [
+    "PTY and renderer checks do not establish native Ghostty GPU/compositor, actual scanner hardware or physical facility acceptance.",
+    "The board polls read-only snapshots while home is idle; it is not a streaming service and never automatically records or retries physical work.",
+    "Input, reading position and refresh settings toggled in the console stay in memory rather than surviving process restarts.",
+    "No hosted CI or deployed acceptance is implied by local checks.",
+    "The full release gate, original dated reports and version tags remain unchanged.",
+    "Existing interactive console processes are not restarted by this source update."
+  ]
+}

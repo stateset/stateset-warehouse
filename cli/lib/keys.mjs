@@ -38,14 +38,19 @@ export class Keys {
     if (this.waiter) { const waiter = this.waiter; this.waiter = null; waiter(event); }
     else this.queue.push(event);
   }
-  async next() {
+  async next(timeoutMs) {
     if (this.closed) return null;
     if (this.queue.length) return this.queue.shift();
-    return new Promise(resolve => { this.waiter = resolve; });
+    return new Promise(resolve => {
+      let timer;
+      this.waiter = event => { clearTimeout(timer); this.waiter = null; resolve(event); };
+      if (timeoutMs !== undefined) timer = setTimeout(() => this.waiter?.({ key: { name: 'tick' } }), Math.max(0, timeoutMs));
+    });
   }
-  async read(prompt, navigate = false, controls = {}, draft) {
+  async read(prompt, navigate = false, controls = {}, draft, { timeoutMs } = {}) {
     if (this.closed) return null;
     let buffer = draft?.buffer ?? ''; let cursor = draft?.cursor ?? 0;
+    const deadline = timeoutMs === undefined ? undefined : performance.now() + timeoutMs;
     let label;
     const showPrompt = () => {
       const prompts = prompt.split('\n').flatMap(line => wrap(line, this.columns()));
@@ -70,7 +75,7 @@ export class Keys {
     };
     render();
     for (;;) {
-      const event = await this.next();
+      const event = await this.next(deadline === undefined ? undefined : deadline - performance.now());
       if (!event) return null;
       const { key = {}, text } = event;
       if (Object.hasOwn(event, 'paste')) {
@@ -87,7 +92,7 @@ export class Keys {
       else if (!buffer && Object.hasOwn(controls, key.name)) return { key: controls[key.name] };
       else if (navigate && key.name === 'escape') return { key: 'escape' };
       else if (key.name === 'escape') { const error = new Error('Entry cancelled'); error.code = 'INPUT_CANCELLED'; throw error; }
-      else if (navigate && key.name === 'resize') return { key: 'resize', draft: { buffer, cursor } };
+      else if (navigate && ['resize', 'tick'].includes(key.name)) return { key: key.name, draft: { buffer, cursor } };
       else if (navigate && !buffer && ['up', 'down', 'left', 'right', 'pageup', 'pagedown', 'home', 'end', 'tab', 'f1', 'f2', 'f3', 'f4'].includes(key.name)) return { key: key.name === 'tab' ? (key.shift ? 'up' : 'down') : key.name };
       else if (key.name === 'resize') { this.output.write('\n'); showPrompt(); }
       else if (key.name === 'backspace' || key.ctrl && key.name === 'h') {

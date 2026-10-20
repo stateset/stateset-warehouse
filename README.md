@@ -10,7 +10,7 @@ The [current local software release](docs/qualification/release-20261019-icommer
 
 Version 0.2.0 includes [iCommerce crate interoperability](docs/icommerce.md), a [warehouse terminal](cli/README.md), and [open-source release preparation](docs/open-source-release.md). The repository remains private; packages and images have not been published.
 
-The development terminal adds a responsive overview, searchable tables, full record details and keyboard shortcuts, and hardens concurrent recovery with exclusive checkpoint positions while preserving existing 0.2.0 journals. See [terminal navigation](cli/README.md#navigation-and-views) and [upgrade and recovery instructions](cli/README.md#recovery). These follow-ups have separate targeted checks; the dated release report above applies to its original frozen 0.2.0 source.
+The development terminal adds a Ghostty operations board with idle read-only refresh, snapshot age, stale-read retention and direct work lanes. Compact inventory keeps exact quantities visible, and pane resizing preserves input and reading position. Original-request recovery retains exclusive checkpoint positions and existing 0.2.0 journals. The latest [targeted terminal verification](docs/qualification/development-operations-board-20261020/verification.json) passes 95 checks, including real API/PostgreSQL and terminal workflows. See [terminal navigation](cli/README.md#navigation-and-views) and [upgrade and recovery instructions](cli/README.md#recovery). These follow-ups have separate targeted checks; the dated release report above applies to its original frozen 0.2.0 source.
 
 ## Run
 

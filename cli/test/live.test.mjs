@@ -80,16 +80,19 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
 
   // The script utility supplies a real pseudoterminal. Drive actual prompts,
   // including a typed physical move; the server verifies the resulting state.
-  async function driveTerminal(steps, filename, { expectCommit = true, warehouse = scope.warehouse, columns = 70, rows = 44, url = origin, resizable = false } = {}) {
+  async function driveTerminal(steps, filename, { expectCommit = true, warehouse = scope.warehouse, columns = 70, rows = 44, url = origin, resizable = false, refreshSeconds = 15, timeoutMs = 30000 } = {}) {
     assert.ok(Number.isSafeInteger(columns) && Number.isSafeInteger(rows));
     const ttyFile = path.join(root, `${filename}.tty`);
-    const terminal = spawn('script', ['-qefc', `stty cols ${columns} rows ${rows}; ${resizable ? `tty > ${shell(ttyFile)}; ` : ''}exec ${shell(process.execPath)} ${shell(path.join(repo, 'cli/warehouse-tui.mjs'))}`, '/dev/null'], { env: { ...env, WMS_URL: url, WMS_TOKEN: token, WMS_WAREHOUSE: warehouse, WMS_TUI_STATE_DIR: journal.root, TERM: 'xterm-ghostty', TERM_PROGRAM: 'ghostty' }, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
+    const terminal = spawn('script', ['-qefc', `stty cols ${columns} rows ${rows}; ${resizable ? `tty > ${shell(ttyFile)}; ` : ''}exec ${shell(process.execPath)} ${shell(path.join(repo, 'cli/warehouse-tui.mjs'))}`, '/dev/null'], { env: { ...env, WMS_URL: url, WMS_TOKEN: token, WMS_WAREHOUSE: warehouse, WMS_TUI_REFRESH_SECONDS: String(refreshSeconds), WMS_TUI_STATE_DIR: journal.root, TERM: 'xterm-ghostty', TERM_PROGRAM: 'ghostty' }, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
     let transcript = ''; let position = 0; let handled = 0; let driveError;
+    const delays = [];
     const drive = chunk => {
       transcript += chunk.toString();
       while (handled < steps.length) {
         const [prompt, answer] = steps[handled]; const index = transcript.indexOf(prompt, position); if (index < 0) break;
         position = index + prompt.length; handled++;
+        if (typeof answer === 'object' && answer.wait) continue;
+        if (typeof answer === 'object' && answer.delayMs) { delays.push(setTimeout(() => terminal.stdin.write(answer.keys), answer.delayMs)); continue; }
         if (typeof answer === 'object' && answer.resize) {
           try {
             assert.ok(resizable); const tty = readFileSync(ttyFile, 'utf8').trim();
@@ -102,9 +105,9 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
       }
     };
     terminal.stdout.on('data', drive); terminal.stderr.on('data', drive);
-    const timer = setTimeout(() => { try { process.kill(-terminal.pid, 'SIGTERM'); } catch {} }, 30000);
+    const timer = setTimeout(() => { try { process.kill(-terminal.pid, 'SIGTERM'); } catch {} }, timeoutMs);
     let code;
-    try { [code] = await once(terminal, 'exit'); } finally { clearTimeout(timer); terminal.stdin.end(); }
+    try { [code] = await once(terminal, 'exit'); } finally { clearTimeout(timer); delays.forEach(clearTimeout); terminal.stdin.end(); }
     await fs.writeFile(path.join(root, filename), transcript, { mode: 0o600 });
     if (driveError) throw driveError;
     assert.equal(code, 0, `Terminal failed; evidence: ${root}`); assert.equal(handled, steps.length, `Incomplete PTY interaction; evidence: ${root}`);
@@ -634,5 +637,37 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
   const { availability_checked_at: originalCheck, ...resizeState } = beforeResize;
   assert.ok(resizeCheck && originalCheck); assert.deepEqual(afterResize, resizeState);
   assert.deepEqual(await journal.listForIdentity(scope), requestsBeforeResize, 'pane resizing and read-only navigation never prepare or change original requests');
+  let boardSessions = 0; let boardReads = 0; const boardRequests = [];
+  const monitor = createServer(async (request, response) => {
+    boardRequests.push({ method: request.method, path: request.url, at: new Date().toISOString() });
+    if (request.method !== 'GET' || request.url.includes('/commands/')) { response.writeHead(405); response.end('{}'); return; }
+    if (request.url === '/v1/session') boardSessions++;
+    if (request.url === client.warehousePath(scope.warehouse) && ++boardReads === 2) {
+      response.writeHead(503, { 'content-type': 'application/json' }); response.end(JSON.stringify({ error: 'Synthetic board interruption' })); return;
+    }
+    try {
+      const upstream = await fetch(new URL(request.url, origin), { headers: { authorization: request.headers.authorization }, redirect: 'error' });
+      response.writeHead(upstream.status, { 'content-type': 'application/json' }); response.end(await upstream.text());
+    } catch { response.writeHead(502); response.end(JSON.stringify({ error: 'Synthetic monitor unavailable' })); }
+  });
+  await new Promise(resolve => monitor.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise(resolve => { monitor.close(resolve); monitor.closeAllConnections(); }));
+  const boardTranscript = await driveTerminal([
+    ['Select: ', { keys: '/Holding' }], ['/Holding', { wait: true }], ['Select: ', { keys: '\x15' }],
+    ['STALE:', { wait: true }], ['age 0s', { keys: 'z\n' }],
+    ['PAUSED', { keys: '/Inven' }], ['/Inven', { wait: true }],
+    ['Select: ', { keys: 'tory\n' }], ['Select: ', ''],
+    ['View: ', { keys: 'q\n', delayMs: 5500 }], ['Select: ', 'q'],
+  ], 'automatic-operations-board-terminal.txt', { expectCommit: false, columns: 49, rows: 20, url: `http://127.0.0.1:${monitor.address().port}`, refreshSeconds: 5, timeoutMs: 60000 });
+  assert.ok(boardTranscript.includes('Search: Inventory') && boardTranscript.includes('On hand') && boardTranscript.includes('Reserved'));
+  assert.equal(boardSessions, 4); assert.equal(boardReads, 5, 'no automatic refresh during paused input or the inventory task view');
+  assert.ok(boardRequests.every(request => request.method === 'GET' && !request.path.includes('/commands/')));
+  const { availability_checked_at: boardCheck, ...afterBoard } = await client.read(client.warehousePath(scope.warehouse));
+  assert.ok(boardCheck); assert.deepEqual(afterBoard, resizeState);
+  assert.deepEqual(await journal.listForIdentity(scope), requestsBeforeResize);
+  await fs.writeFile(path.join(root, 'automatic-operations-board-requests.json'), JSON.stringify(boardRequests, null, 2), { mode: 0o600 });
+  await driveTerminal([
+    ['Select: ', 'a'], ['View: ', 'q'], ['Select: ', 'b'], ['View: ', 'q'], ['Select: ', 'e'], ['View: ', 'q'], ['Select: ', 'q'],
+  ], 'operations-board-direct-lanes-terminal.txt', { expectCommit: false, columns: 49, rows: 20 });
   t.diagnostic(`Private synthetic TUI evidence retained: ${root}`);
 });

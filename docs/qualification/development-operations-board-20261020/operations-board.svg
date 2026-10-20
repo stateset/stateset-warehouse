@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="610" viewBox="0 0 1120 610" role="img" aria-labelledby="title description">
+<title id="title">Ghostty WMS operations board and compact quantities</title>
+<desc id="description">Recorded synthetic 49 by 20 PTY text rendered as SVG. The idle operations board refreshes read-only data and compact inventory retains exact quantities. This is not a native Ghostty screenshot.</desc>
+<rect width="1120" height="610" fill="#0c1420"/>
+<text x="28" y="36" fill="#e5edf5" font-family="sans-serif" font-size="21">Warehouse operations center</text>
+<text x="28" y="61" fill="#93a7b9" font-family="sans-serif" font-size="13">Recorded 49×20 PTY text · Synthetic API / PostgreSQL · SVG rendering, not a native Ghostty screenshot</text>
+<rect x="28" y="86" width="518" height="468" rx="10" fill="#111e2c" stroke="#32465b"/>
+<text x="46" y="112" fill="#93a7b9" font-family="sans-serif" font-size="13">Read-only refresh · visible age · direct lanes</text>
+<text x="46" y="144" fill="#6cd5e5" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">STATESET / WAREHOUSE</text>
+<text x="46" y="162" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">WMS operations center</text>
+<text x="46" y="180" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">────────────────────────────────────────────────</text>
+<text x="46" y="198" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">AUTO 5s · age 0s | MAIN v29</text>
+<text x="46" y="216" fill="#6cd5e5" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">a Alloc 2 · k Pick 1 · f Pack 0 · g Ship 0</text>
+<text x="46" y="234" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">d In 1 · b Put 2 · e Issues 0 · u Prio 2</text>
+<text x="46" y="252" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">›  1. Record observed warehouse work</text>
+<text x="46" y="270" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">   2. Inventory</text>
+<text x="46" y="288" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">   3. Products</text>
+<text x="46" y="306" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">   4. Bins</text>
+<text x="46" y="324" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">   5. Orders</text>
+<text x="46" y="342" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">   6. Receiving / returns</text>
+<text x="46" y="360" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">   7. Original order and shipment review</text>
+<text x="46" y="378" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">   8. Original receiving record</text>
+<text x="46" y="396" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">   9. Lots and holds</text>
+<text x="46" y="414" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Page 1/3 · n next · p previous</text>
+<text x="46" y="432" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">i stock · o orders · w work · t queues</text>
+<text x="46" y="450" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">r refresh · z auto on/off · v info · ? · q</text>
+<text x="46" y="468" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve"></text>
+<text x="46" y="486" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Select: </text>
+<rect x="574" y="86" width="518" height="468" rx="10" fill="#111e2c" stroke="#32465b"/>
+<text x="592" y="112" fill="#93a7b9" font-family="sans-serif" font-size="13">Compact stock · exact each quantities</text>
+<text x="592" y="144" fill="#6cd5e5" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">STATESET / WAREHOUSE</text>
+<text x="592" y="162" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">stocks | v29 | wh-main</text>
+<text x="592" y="180" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">────────────────────────────────────────────────</text>
+<text x="592" y="198" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">1–7 of 7 rows</text>
+<text x="592" y="216" fill="#6cd5e5" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">   #  SKU             Bin      On hand  Reserved</text>
+<text x="592" y="234" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">  ──────────────────────────────────────────────</text>
+<text x="592" y="252" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">   1  OPS             A              4         0</text>
+<text x="592" y="270" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">   2  OPS             B             12         0</text>
+<text x="592" y="288" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">   3  OPS             STAGE-…        3         3</text>
+<text x="592" y="306" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">   4  PAGED           RECV-01        1         0</text>
+<text x="592" y="324" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">   5  TUI-PART        A              1         1</text>
+<text x="592" y="342" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">   6  TUI-PART        B              2         0</text>
+<text x="592" y="360" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">   7  TUI-PART        RECV-01        1         0</text>
+<text x="592" y="378" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">↑↓ Enter details · a work · Esc back</text>
+<text x="592" y="396" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">/ find · f filter · s sort · n/p · r · v info</text>
+<text x="592" y="414" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve"></text>
+<text x="592" y="432" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">View: </text>
+<text x="28" y="585" fill="#93a7b9" font-family="sans-serif" font-size="14">Refresh pauses during typing and task views · Original requests stay immutable · No automatic physical actions</text></svg>
