@@ -38,18 +38,28 @@ export async function inspectJson(ui, title, value, options) {
   return inspectText(ui, title, JSON.stringify(value, null, 2), options);
 }
 export async function inspectText(ui, title, raw, { prompt = '\nn next | p previous | Enter back: ', allowUndo = false, details } = {}) {
-  let offset = 0;
+  let offset = 0; let draft; let viewport;
   for (;;) {
     const shownTitle = ui.rows < 28 ? fit(title, ui.columns).trimEnd() : title;
-    const lines = raw.split('\n').flatMap(line => wrap(line, ui.columns));
+    // Track source positions, rather than wrapped-line numbers, across reflow.
+    // The anchor is display text only; original request values stay untouched.
+    let position = 0; const positions = [];
+    const lines = raw.split('\n').flatMap(line => {
+      const wrapped = wrap(line, ui.columns);
+      for (const part of wrapped) { positions.push(position); position += part.length; }
+      position++; return wrapped;
+    });
+    if (viewport && viewport.columns !== ui.columns) offset = positions.findLastIndex(start => start <= viewport.position);
     const count = Math.max(1, ui.rows - 5 - wrap(shownTitle, ui.columns).length - (allowUndo ? wrap('F2 correct last observation before submission', ui.columns).length : 0) - (details ? 1 : 0) - prompt.split('\n').reduce((total, line) => total + wrap(line, ui.columns).length, 0));
     offset = Math.min(offset, Math.max(0, lines.length - 1));
+    viewport = { columns: ui.columns, position: positions[offset] };
     ui.screen(shownTitle); lines.slice(offset, offset + count).forEach(line => ui.print(line));
     ui.line(`Lines ${offset + 1}–${Math.min(offset + count, lines.length)} of ${lines.length}`);
     if (allowUndo) ui.line('F2 correct last observation before submission', 'muted');
     if (details) ui.line('j complete original JSON', 'muted');
-    const answer = await (ui.action ? ui.action(prompt) : ui.ask(prompt));
+    const answer = await (ui.action ? ui.action(prompt, draft) : ui.ask(prompt)); draft = undefined;
     if (answer && typeof answer === 'object') {
+      if (answer.key === 'resize') { draft = answer.draft; continue; }
       if (answer.key === 'escape') return false;
       if (answer.key === 'f2' && allowUndo) return 'undo';
       if (answer.key === 'up') offset = Math.max(0, offset - 1);
@@ -82,6 +92,7 @@ HOME SHORTCUTS (then Enter)
 i inventory · o orders · w observed work · c recovery
 t work queues · r refresh · q exit · F1 or ? help
 v shows complete context when a compact screen shortens it.
+Pane resizing retains unfinished input and your reading position.
 
 TABLES
 ↑ / ↓ selects a row; Enter opens its complete details.
@@ -127,6 +138,7 @@ export function scanProgress(ui, state, scope, version, command = {}) {
 }
 export async function inspectRows(ui, kind, load, { onAction, filter: initialFilter = 'all', sort: initialSort = 'source', serverPaged = false } = {}) {
   let snapshot = await load(null); let query = ''; let page = 0; let message = ''; let selected = null;
+  let draft; let viewport;
   let readError = ''; let readAt = new Date().toISOString();
   let cursors = [null]; let batch = 0;
   let filterId = initialFilter; let sortId = initialSort;
@@ -161,9 +173,11 @@ export async function inspectRows(ui, kind, load, { onAction, filter: initialFil
       + (readStatus ? wrap(readStatus, ui.columns).length : 0)
       + (batchInfo ? wrap(batchInfo, ui.columns).length : 0) + (snapshot.note ? wrap(snapshot.note, ui.columns).length : 0);
     const count = Math.max(1, ui.rows - reserved);
+    if (viewport && selected === null && (viewport.columns !== ui.columns || viewport.rows !== ui.rows)) page = Math.floor(viewport.offset / count);
     if (selected !== null) page = Math.floor(selected / count);
     page = Math.min(page, Math.max(0, Math.ceil(filtered.length / count) - 1));
     const offset = page * count; const rows = filtered.slice(offset, offset + count);
+    viewport = { columns: ui.columns, rows: ui.rows, offset };
     ui.screen(compact ? fit(`${kind} | v${snapshot.version ?? '?'} | ${snapshot.warehouseId ?? snapshot.title}`, ui.columns).trimEnd() : snapshot.title);
     ui.line(compact ? fit(range(filtered.length ? offset + 1 : 0, offset + rows.length), ui.columns).trimEnd() : range(filtered.length ? offset + 1 : 0, offset + rows.length));
     if (compact) compactMeta.forEach(line => ui.line(line, 'muted'));
@@ -186,7 +200,7 @@ export async function inspectRows(ui, kind, load, { onAction, filter: initialFil
     const movePage = async direction => {
       selected = null; message = '';
       const lastPage = Math.max(0, Math.ceil(filtered.length / count) - 1);
-      if (direction > 0 && page < lastPage || direction < 0 && page > 0) { page += direction; return; }
+      if (direction > 0 && page < lastPage || direction < 0 && page > 0) { page += direction; viewport = undefined; return; }
       if (!serverPaged || direction > 0 && snapshot.nextCursor === null || direction < 0 && batch === 0) return;
       try {
         const cursor = direction > 0 ? snapshot.nextCursor : cursors[batch - 1];
@@ -194,11 +208,12 @@ export async function inspectRows(ui, kind, load, { onAction, filter: initialFil
         const next = await read(cursor);
         if (direction > 0) { cursors = [...cursors.slice(0, batch + 1), cursor]; batch++; }
         else batch--;
-        snapshot = next; page = direction > 0 ? 0 : Number.MAX_SAFE_INTEGER;
+        snapshot = next; page = direction > 0 ? 0 : Number.MAX_SAFE_INTEGER; viewport = undefined;
       } catch (error) { held(error); }
     };
-    let answer = await (ui.action ? ui.action('\nView: ') : ui.ask('\nView: '));
+    let answer = await (ui.action ? ui.action('\nView: ', draft) : ui.ask('\nView: ')); draft = undefined;
     if (answer && typeof answer === 'object') {
+      if (answer.key === 'resize') { draft = answer.draft; continue; }
       if (answer.key === 'escape') return;
       if (answer.key === 'f1') { await keyboardHelp(ui); continue; }
       if (answer.key === 'f3' || answer.key === 'f4') answer = answer.key === 'f3' ? 'f' : 's';
@@ -220,10 +235,10 @@ export async function inspectRows(ui, kind, load, { onAction, filter: initialFil
     message = '';
     if (answer === 'n') await movePage(1);
     else if (answer === 'p') await movePage(-1);
-    else if (answer.startsWith('/')) { query = answer.slice(1); page = 0; selected = null; }
+    else if (answer.startsWith('/')) { query = answer.slice(1); page = 0; selected = null; viewport = undefined; }
     else if (answer === 'r') {
       selected = null;
-      try { snapshot = await read(null); cursors = [null]; batch = 0; page = 0; }
+      try { snapshot = await read(null); cursors = [null]; batch = 0; page = 0; viewport = undefined; }
       catch (error) { held(error); }
     }
     else if (answer === 'f' || answer === 's') {
@@ -231,7 +246,7 @@ export async function inspectRows(ui, kind, load, { onAction, filter: initialFil
       const chosen = await ui.menu(answer === 'f' ? 'Filter records' : 'Sort records', choices.map(choice => [choice.label, choice.id]));
       if (chosen !== null) {
         if (answer === 'f') filterId = chosen; else sortId = chosen;
-        selected = null; page = 0;
+        selected = null; page = 0; viewport = undefined;
       }
     }
     else if (answer === 'a' && onAction) {
@@ -240,7 +255,7 @@ export async function inspectRows(ui, kind, load, { onAction, filter: initialFil
       const row = filtered[selected]; selected = null;
       try {
         await onAction(row, snapshot.version);
-        snapshot = await read(serverPaged ? cursors[batch] : null); page = 0;
+        snapshot = await read(serverPaged ? cursors[batch] : null); page = 0; viewport = undefined;
       } catch (error) { held(error); }
     }
     else if (answer === 'j') await inspectJson(ui, `${snapshot.title} | page JSON`, rows);

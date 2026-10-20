@@ -44,7 +44,7 @@ export class Terminal {
     if (this.lines.length) return this.lines.shift();
     return new Promise(resolve => { this.waiter = resolve; });
   }
-  async action(prompt) { return this.keys ? this.keys.read(prompt, true) : this.ask(prompt); }
+  async action(prompt, draft) { return this.keys ? this.keys.read(prompt, true, {}, draft) : this.ask(prompt); }
   async scan(prompt) { return this.keys ? this.keys.read(prompt, false, { f2: 'undo' }) : this.ask(prompt); }
   screen(title) {
     if (this.output.isTTY) this.output.write('\x1b[2J\x1b[H');
@@ -52,7 +52,7 @@ export class Terminal {
   }
   json(value) { this.print(JSON.stringify(value, (_key, item) => typeof item === 'string' ? safeText(item) : item, 2)); }
   async menu(title, items, { intro = [], compactIntro, compactHint, shortcuts = {}, hint = '', sections = {} } = {}) {
-    let query = ''; let page = 0; let message = ''; let selected = 1;
+    let query = ''; let page = 0; let message = ''; let selected = 1; let draft;
     for (;;) {
       const filtered = items.map(([label, value], index) => ({ label, value, number: index + 1 }))
         .filter(item => item.label.toLowerCase().includes(query.toLowerCase()));
@@ -99,8 +99,9 @@ export class Terminal {
       if (query) this.line(compact ? fit(`Search: ${query}`, this.columns).trimEnd() : `Search: ${query}`);
       footer.forEach(line => this.line(line, 'muted'));
       if (message) this.line(compact ? fit(message, this.columns).trimEnd() : message, 'warning');
-      const raw = await this.action('\nSelect: ');
+      const raw = await this.action('\nSelect: ', draft); draft = undefined;
       if (raw && typeof raw === 'object') {
+        if (raw.key === 'resize') { draft = raw.draft; continue; }
         if (raw.key === 'escape') return null;
         if (raw.key === 'f1') { await keyboardHelp(this); continue; }
         let index = Math.max(0, filtered.findIndex(item => item.number === selected));

@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "scope": "targeted_terminal_pane_resize_development",
+  "recorded_at": "2026-10-20T15:55:07.190481+00:00",
+  "result": "passed",
+  "production_qualified": false,
+  "baseline_tag": "v0.2.0",
+  "parent_commit": "edaa2b1aee1b932886942290af6b88e47ce2c68c",
+  "terminal_checks_passed": 87,
+  "terminal_checks_skipped": 0,
+  "node_version": "22.18.0",
+  "test_command": "WMS_TEST_DATABASE_URL=<isolated-test-db> npm --prefix cli run test:acceptance",
+  "actual_pg_api_and_pty_passed": true,
+  "resize_profiles": [
+    "120x40 to 49x20 and 70x24 with repeated menu resizing",
+    "49x20 to 120x40 long-text reflow",
+    "70x44 to 49x20 to 70x24 real API/PTY search navigation"
+  ],
+  "operations_checks": [
+    "Unfinished menu searches and numbered choices retain literal input through repeated resizing",
+    "Unicode grapheme editing retains its cursor position; Escape discards only the current view draft",
+    "Unfinished table search survives pane reflow without extra reads or work",
+    "Selected exact original row and version remain bound after resize; selecting an action remains explicit",
+    "Unselected tables retain the previously visible original row after a nested detail view changes size",
+    "Long original reviews retain their source passage across wrapping changes",
+    "A partially typed navigation command survives reflow and executes only on Enter",
+    "Actual owned PTY changes kernel window size during unfinished menu and table search",
+    "Original inventory record opens after the complete search; warehouse state and request journals remain unchanged",
+    "Existing connection outages, recovery, physical workflows, scanner behavior, paging and compact layouts pass"
+  ],
+  "recovery_journal_module_unchanged_sha256": "c6ba9e83810940cd19ba9675cc25c337cc326d928913dd95483a6a5961c11e7d",
+  "qualified_backend_image_inputs_unchanged": 305,
+  "qualified_backend_image_inputs_sha256": "7d59f80d543801c9237fa9a7dac313f00b31228f81b699a100e34f531343be89",
+  "full_release_gate_rerun": false,
+  "npm_package_dry_run_files": 21,
+  "package_published": false,
+  "owned_test_postgres_stopped": true,
+  "source_files": [
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "0b2e1e986e897edfbbc6ce6ef9040c7652f6edd86c74b4046f33d495f381dbce"
+    },
+    {
+      "path": "cli/README.md",
+      "sha256": "93b39fb2029e15bdcc998748154d8844d0965a94389ed8b82ffd94b84a50401a"
+    },
+    {
+      "path": "cli/lib/keys.mjs",
+      "sha256": "d111263aa17dbfd6a3dfb7a56ebff21989ed1f23367fe6c814568a641dfa6538"
+    },
+    {
+      "path": "cli/lib/terminal.mjs",
+      "sha256": "bf841144d63940014fa1d58639d5620e48c5aa2d471a3f41d02b82dc4d92f40c"
+    },
+    {
+      "path": "cli/lib/views.mjs",
+      "sha256": "87cd1041a5bdd0f42cb271a0b8e819664c84a5fe7c349ead8248d5fed5311e03"
+    },
+    {
+      "path": "cli/test/live.test.mjs",
+      "sha256": "f69e0729a55c9d551de049415043602412340fb424feb4a4fdb270c72f7e3f64"
+    },
+    {
+      "path": "cli/test/resize.test.mjs",
+      "sha256": "99c35c8eb5a1527cd760fed94fac6da6d2ec01da7befc45e9c5f7a2b8d514453"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "terminal-checks.log",
+      "sha256": "fabf32d6859f1d292fd136869b6d8dc616f2b5d3a94ea6b636871ce9c61edd6d"
+    }
+  ],
+  "limits": [
+    "Software terminal checks do not establish native Ghostty GPU/compositor, physical scanner or facility acceptance.",
+    "Input drafts and reading positions stay in memory within the current view; they are not persisted across process restarts.",
+    "No hosted CI or deployed acceptance is implied by local checks.",
+    "The full release gate, original dated evidence and release tags are unchanged.",
+    "Existing interactive console processes are not restarted by this source update."
+  ]
+}

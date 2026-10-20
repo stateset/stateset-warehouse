@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { spawn, execFileSync } from 'node:child_process';
 import { once } from 'node:events';
 import * as fs from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -79,15 +80,25 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
 
   // The script utility supplies a real pseudoterminal. Drive actual prompts,
   // including a typed physical move; the server verifies the resulting state.
-  async function driveTerminal(steps, filename, { expectCommit = true, warehouse = scope.warehouse, columns = 70, rows = 44, url = origin } = {}) {
+  async function driveTerminal(steps, filename, { expectCommit = true, warehouse = scope.warehouse, columns = 70, rows = 44, url = origin, resizable = false } = {}) {
     assert.ok(Number.isSafeInteger(columns) && Number.isSafeInteger(rows));
-    const terminal = spawn('script', ['-qefc', `stty cols ${columns} rows ${rows}; exec ${shell(process.execPath)} ${shell(path.join(repo, 'cli/warehouse-tui.mjs'))}`, '/dev/null'], { env: { ...env, WMS_URL: url, WMS_TOKEN: token, WMS_WAREHOUSE: warehouse, WMS_TUI_STATE_DIR: journal.root, TERM: 'xterm-ghostty', TERM_PROGRAM: 'ghostty' }, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
-    let transcript = ''; let position = 0; let handled = 0;
+    const ttyFile = path.join(root, `${filename}.tty`);
+    const terminal = spawn('script', ['-qefc', `stty cols ${columns} rows ${rows}; ${resizable ? `tty > ${shell(ttyFile)}; ` : ''}exec ${shell(process.execPath)} ${shell(path.join(repo, 'cli/warehouse-tui.mjs'))}`, '/dev/null'], { env: { ...env, WMS_URL: url, WMS_TOKEN: token, WMS_WAREHOUSE: warehouse, WMS_TUI_STATE_DIR: journal.root, TERM: 'xterm-ghostty', TERM_PROGRAM: 'ghostty' }, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
+    let transcript = ''; let position = 0; let handled = 0; let driveError;
     const drive = chunk => {
       transcript += chunk.toString();
       while (handled < steps.length) {
         const [prompt, answer] = steps[handled]; const index = transcript.indexOf(prompt, position); if (index < 0) break;
-        position = index + prompt.length; handled++; terminal.stdin.write(typeof answer === 'object' ? answer.keys : `${answer}\n`);
+        position = index + prompt.length; handled++;
+        if (typeof answer === 'object' && answer.resize) {
+          try {
+            assert.ok(resizable); const tty = readFileSync(ttyFile, 'utf8').trim();
+            assert.match(tty, /^\/dev\/pts\/\d+$/);
+            assert.ok(Number.isSafeInteger(answer.resize.columns) && Number.isSafeInteger(answer.resize.rows));
+            // This is the PTY created by this driver, never an operator's pane.
+            execFileSync('stty', ['-F', tty, 'cols', String(answer.resize.columns), 'rows', String(answer.resize.rows)]);
+          } catch (error) { driveError = error; try { process.kill(-terminal.pid, 'SIGTERM'); } catch {} return; }
+        } else terminal.stdin.write(typeof answer === 'object' ? answer.keys : `${answer}\n`);
       }
     };
     terminal.stdout.on('data', drive); terminal.stderr.on('data', drive);
@@ -95,6 +106,7 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
     let code;
     try { [code] = await once(terminal, 'exit'); } finally { clearTimeout(timer); terminal.stdin.end(); }
     await fs.writeFile(path.join(root, filename), transcript, { mode: 0o600 });
+    if (driveError) throw driveError;
     assert.equal(code, 0, `Terminal failed; evidence: ${root}`); assert.equal(handled, steps.length, `Incomplete PTY interaction; evidence: ${root}`);
     if (expectCommit) assert.ok(transcript.includes('Recovery status: committed'));
     assert.ok(!transcript.includes(token));
@@ -607,5 +619,20 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
   assert.deepEqual(afterState, beforeState, 'outage/recovery inspection records no physical work');
   assert.deepEqual(await journal.load(pending.dir), pendingBefore, 'local recovery inspection never changes original checkpoints');
   await fs.writeFile(path.join(root, 'connection-outage-requests.json'), JSON.stringify(proxied, null, 2), { mode: 0o600 });
+  const beforeResize = await client.read(client.warehousePath(scope.warehouse));
+  const requestsBeforeResize = await journal.listForIdentity(scope);
+  const resizeTranscript = await driveTerminal([
+    ['Select: ', { keys: '/Inven' }], ['/Inven', { resize: { columns: 49, rows: 20 } }],
+    ['Select: ', { keys: 'tory\n' }], ['Select: ', ''],
+    ['View: ', { keys: '/OPS-PA' }], ['/OPS-PA', { resize: { columns: 70, rows: 24 } }],
+    ['View: ', { keys: 'CK\n' }], ['View: ', '1'],
+    ['n next | p previous | Enter back: ', ''], ['View: ', 'q'], ['Select: ', 'q'],
+  ], 'pane-resize-terminal.txt', { expectCommit: false, resizable: true });
+  assert.ok(resizeTranscript.includes('Search: Inventory'));
+  assert.ok(resizeTranscript.includes('"sku": "OPS"') && resizeTranscript.includes('"lot": "OPS-PACK"'));
+  const { availability_checked_at: resizeCheck, ...afterResize } = await client.read(client.warehousePath(scope.warehouse));
+  const { availability_checked_at: originalCheck, ...resizeState } = beforeResize;
+  assert.ok(resizeCheck && originalCheck); assert.deepEqual(afterResize, resizeState);
+  assert.deepEqual(await journal.listForIdentity(scope), requestsBeforeResize, 'pane resizing and read-only navigation never prepare or change original requests');
   t.diagnostic(`Private synthetic TUI evidence retained: ${root}`);
 });

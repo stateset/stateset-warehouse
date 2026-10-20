@@ -43,9 +43,9 @@ export class Keys {
     if (this.queue.length) return this.queue.shift();
     return new Promise(resolve => { this.waiter = resolve; });
   }
-  async read(prompt, navigate = false, controls = {}) {
+  async read(prompt, navigate = false, controls = {}, draft) {
     if (this.closed) return null;
-    let buffer = ''; let cursor = 0;
+    let buffer = draft?.buffer ?? ''; let cursor = draft?.cursor ?? 0;
     let label;
     const showPrompt = () => {
       const prompts = prompt.split('\n').flatMap(line => wrap(line, this.columns()));
@@ -87,7 +87,8 @@ export class Keys {
       else if (!buffer && Object.hasOwn(controls, key.name)) return { key: controls[key.name] };
       else if (navigate && key.name === 'escape') return { key: 'escape' };
       else if (key.name === 'escape') { const error = new Error('Entry cancelled'); error.code = 'INPUT_CANCELLED'; throw error; }
-      else if (navigate && (key.name === 'resize' || !buffer && ['up', 'down', 'left', 'right', 'pageup', 'pagedown', 'home', 'end', 'tab', 'f1', 'f2', 'f3', 'f4'].includes(key.name))) return { key: key.name === 'tab' ? (key.shift ? 'up' : 'down') : key.name };
+      else if (navigate && key.name === 'resize') return { key: 'resize', draft: { buffer, cursor } };
+      else if (navigate && !buffer && ['up', 'down', 'left', 'right', 'pageup', 'pagedown', 'home', 'end', 'tab', 'f1', 'f2', 'f3', 'f4'].includes(key.name)) return { key: key.name === 'tab' ? (key.shift ? 'up' : 'down') : key.name };
       else if (key.name === 'resize') { this.output.write('\n'); showPrompt(); }
       else if (key.name === 'backspace' || key.ctrl && key.name === 'h') {
         const previous = boundary(buffer, cursor, -1); buffer = buffer.slice(0, previous) + buffer.slice(cursor); cursor = previous;

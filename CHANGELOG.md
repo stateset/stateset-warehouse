@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Preserve unfinished menu/table input and its Unicode editing cursor across Ghostty pane resizing. Keep selected records and the previously visible row in view, and anchor long reviews to their source text when wrapping changes. Resizing remains local, without extra reads, automatic choices or changes to original requests.
 - Keep the operations console open through startup/session outages with explicit reconnect, original-identity fencing and local-only request inspection. Retain table data and search/filter/sort context after failed reads or actions, mark it stale, and hold row work until a successful refresh. Never automatically retry physical commands or modify recovery checkpoints during local inspection.
 - Shape the Ghostty terminal into a WMS operations center with stage counts, priority/quality work, compact command bars and full scope context on demand. Bound menus and tables to compact panes; retain critical recovery alerts and literal input behavior.
 - Add readable work/outcome reviews with complete original JSON inspection, and return cancelled selected-row forms to their table context. Add guided stock dispatch, partial package sources, original package handoff/unpacking and shipped-line return authorization with fresh role/scope/version/source checks.
