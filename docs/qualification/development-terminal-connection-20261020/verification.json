@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "scope": "targeted_terminal_connection_recovery_development",
+  "recorded_at": "2026-10-20T15:40:50.883477+00:00",
+  "result": "passed",
+  "production_qualified": false,
+  "baseline_tag": "v0.2.0",
+  "parent_commit": "4d8060897045d24161a5c7a9279936788d44a013",
+  "terminal_checks_passed": 81,
+  "terminal_checks_skipped": 0,
+  "node_version": "22.18.0",
+  "test_command": "WMS_TEST_DATABASE_URL=<isolated-test-db> npm --prefix cli run test:acceptance",
+  "actual_pg_api_and_pty_passed": true,
+  "operations_checks": [
+    "Startup and later session outages retain a live console with explicit retry and safe exit",
+    "Initial unknown identities cannot inspect local recovery; a previously verified identity can inspect only its scoped original requests",
+    "Reconnect refuses actor or tenant substitution and accepts the current role after identity verification",
+    "Offline local request inspection does not look up receipts, resend commands or append checkpoints",
+    "Failed table refreshes and post-action reads preserve retained data and search/filter/sort context",
+    "Stale warnings and last successful read time remain available; stale row work stays held until a successful read",
+    "Real 49x20 API/PTY startup interruption, table outage, reconnect and local request inspection",
+    "Read-only fault proxy observed four session reads and five inventory reads, no writes or receipt lookups",
+    "Warehouse state and saved original request/checkpoints unchanged across outage inspection",
+    "Existing physical workflows, exact recovery, scanner behavior, paging and Ghostty-oriented layouts still pass"
+  ],
+  "recovery_journal_module_unchanged_sha256": "c6ba9e83810940cd19ba9675cc25c337cc326d928913dd95483a6a5961c11e7d",
+  "qualified_backend_image_inputs_unchanged": 305,
+  "qualified_backend_image_inputs_sha256": "7d59f80d543801c9237fa9a7dac313f00b31228f81b699a100e34f531343be89",
+  "full_release_gate_rerun": false,
+  "npm_package_dry_run_files": 21,
+  "package_published": false,
+  "owned_test_postgres_stopped": true,
+  "source_files": [
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "bd1e48a9228c4a0472f08be9a1e55e8845f6a39fa830cfc40cbddec4be330b01"
+    },
+    {
+      "path": "cli/README.md",
+      "sha256": "f22ce83584ef71b790af5aebbe21f35adf48336674bbc12de3d9a8774d7ecfee"
+    },
+    {
+      "path": "cli/lib/connection.mjs",
+      "sha256": "66bb05fd1b29edb71283ea08b885fbab39796a232b4f42398919a8940b2f41b4"
+    },
+    {
+      "path": "cli/lib/views.mjs",
+      "sha256": "bec11c9c30478f4a14bf384cad480826622cef29bbe343eb65c38f9a0eb315c0"
+    },
+    {
+      "path": "cli/test/connection.test.mjs",
+      "sha256": "7d229f9923feccad6991487e4bc1bcf9e2043fed08da0928d734218603094bba"
+    },
+    {
+      "path": "cli/test/live.test.mjs",
+      "sha256": "390c94f971fefdbf68fab7585fa6f51aec1d28fd426e78d3724c1f86d8a054b0"
+    },
+    {
+      "path": "cli/warehouse-tui.mjs",
+      "sha256": "7115afb28542111ddb9d6bd4cdcaedf11b368c7f6a3940ca801c2153493ec117"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "connection-recovery.svg",
+      "sha256": "118c321ec263605289a7fe87efcafc7c6b79fb320849c4355fdc911885340d93"
+    },
+    {
+      "path": "terminal-checks.log",
+      "sha256": "d0b50ce5aa8ff3119b22d396fcd88949c69f7ccd2c4d26df4d10576f2126bfd2"
+    }
+  ],
+  "limits": [
+    "Software terminal checks do not establish native Ghostty GPU/compositor, scanner hardware or physical facility acceptance.",
+    "The console uses explicit refresh and retry; it does not continuously poll or automatically resubmit commands.",
+    "No hosted CI or deployed acceptance is implied by these local checks.",
+    "The original full release gate, dated reports and version tags are unchanged.",
+    "This update does not restart an existing interactive console process."
+  ]
+}

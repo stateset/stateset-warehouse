@@ -7,6 +7,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { createServer } from 'node:http';
 import { Client } from '../lib/client.mjs';
 import { Journal, sendOriginal } from '../lib/journal.mjs';
 import { visibleCommands } from '../lib/commands.mjs';
@@ -78,9 +79,9 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
 
   // The script utility supplies a real pseudoterminal. Drive actual prompts,
   // including a typed physical move; the server verifies the resulting state.
-  async function driveTerminal(steps, filename, { expectCommit = true, warehouse = scope.warehouse, columns = 70, rows = 44 } = {}) {
+  async function driveTerminal(steps, filename, { expectCommit = true, warehouse = scope.warehouse, columns = 70, rows = 44, url = origin } = {}) {
     assert.ok(Number.isSafeInteger(columns) && Number.isSafeInteger(rows));
-    const terminal = spawn('script', ['-qefc', `stty cols ${columns} rows ${rows}; exec ${shell(process.execPath)} ${shell(path.join(repo, 'cli/warehouse-tui.mjs'))}`, '/dev/null'], { env: { ...env, WMS_URL: origin, WMS_TOKEN: token, WMS_WAREHOUSE: warehouse, WMS_TUI_STATE_DIR: journal.root, TERM: 'xterm-ghostty', TERM_PROGRAM: 'ghostty' }, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
+    const terminal = spawn('script', ['-qefc', `stty cols ${columns} rows ${rows}; exec ${shell(process.execPath)} ${shell(path.join(repo, 'cli/warehouse-tui.mjs'))}`, '/dev/null'], { env: { ...env, WMS_URL: url, WMS_TOKEN: token, WMS_WAREHOUSE: warehouse, WMS_TUI_STATE_DIR: journal.root, TERM: 'xterm-ghostty', TERM_PROGRAM: 'ghostty' }, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
     let transcript = ''; let position = 0; let handled = 0;
     const drive = chunk => {
       transcript += chunk.toString();
@@ -563,5 +564,48 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
   assert.equal(afterReturn.receipts.find(receipt => receipt.reference === 'OPS-RETURN').return_source.order_id, opsOrder.id);
   assert.equal((await client.read(client.warehousePath(scope.warehouse, '/reconciliation'))).ok, true);
   assert.equal((await client.read(client.warehousePath(newId, '/reconciliation'))).ok, true);
+  // Interrupt real console reads through an owned loopback proxy. Only session
+  // and inventory reads fail; no write or receipt lookup is allowed through it.
+  let sessionReads = 0; let inventoryReads = 0; const proxied = [];
+  const proxy = createServer(async (request, response) => {
+    proxied.push({ method: request.method, path: request.url });
+    try {
+      if (request.method !== 'GET' || request.url.includes('/commands/')) {
+        response.writeHead(405, { 'content-type': 'application/json' }); response.end(JSON.stringify({ error: 'Synthetic read-only outage proxy' })); return;
+      }
+      const sessionFault = request.url === '/v1/session' && [1, 3].includes(++sessionReads);
+      const inventoryFault = request.url === client.warehousePath(scope.warehouse) && ++inventoryReads === 3;
+      if (sessionFault || inventoryFault) {
+        response.writeHead(503, { 'content-type': 'application/json' }); response.end(JSON.stringify({ error: 'Synthetic connection interruption' })); return;
+      }
+      const upstream = await fetch(new URL(request.url, origin), { headers: { authorization: request.headers.authorization }, redirect: 'error' });
+      response.writeHead(upstream.status, { 'content-type': 'application/json' }); response.end(await upstream.text());
+    } catch {
+      response.writeHead(502, { 'content-type': 'application/json' }); response.end(JSON.stringify({ error: 'Synthetic proxy upstream unavailable' }));
+    }
+  });
+  await new Promise(resolve => proxy.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise(resolve => { proxy.close(resolve); proxy.closeAllConnections(); }));
+  const proxyOrigin = `http://127.0.0.1:${proxy.address().port}`;
+  const pending = await journal.prepare({ ...scope, origin: proxyOrigin }, { request_id: randomUUID(), expected_version: (await client.read(client.warehousePath(scope.warehouse))).version, command: { type: 'move_stock', sku: 'OPS', lot: 'OPS-PACK', from: 'A', to: 'B', quantity: 1 } });
+  const beforeOutage = await client.read(client.warehousePath(scope.warehouse));
+  const pendingBefore = await journal.load(pending.dir);
+  const outageTranscript = await driveTerminal([
+    ['Select: ', 'r'], ['Select: ', 'i'], ['View: ', '/OPS-PACK'],
+    ['View: ', 'r'], ['View: ', { keys: '\x1b[B' }], ['View: ', 'a'],
+    ['View: ', 'r'], ['View: ', 'q'],
+    ['Select: ', 'c'], ['Select: ', `/${pending.request.request_id}`], ['Select: ', ''],
+    ['n next | p previous | Enter back: ', ''], ['Select: ', 'r'], ['Select: ', 'q'],
+  ], 'connection-outage-terminal.txt', { expectCommit: false, columns: 49, rows: 20, url: proxyOrigin });
+  assert.ok(outageTranscript.includes('Connection held') && outageTranscript.includes('STALE'));
+  assert.ok(outageTranscript.includes('Refresh successfully'));
+  assert.equal(sessionReads, 4); assert.equal(inventoryReads, 5);
+  assert.ok(proxied.every(request => request.method === 'GET' && !request.path.includes('/commands/')));
+  const { availability_checked_at: beforeCheck, ...beforeState } = beforeOutage;
+  const { availability_checked_at: afterCheck, ...afterState } = await client.read(client.warehousePath(scope.warehouse));
+  assert.ok(beforeCheck && afterCheck, 'availability is freshly evaluated on each read');
+  assert.deepEqual(afterState, beforeState, 'outage/recovery inspection records no physical work');
+  assert.deepEqual(await journal.load(pending.dir), pendingBefore, 'local recovery inspection never changes original checkpoints');
+  await fs.writeFile(path.join(root, 'connection-outage-requests.json'), JSON.stringify(proxied, null, 2), { mode: 0o600 });
   t.diagnostic(`Private synthetic TUI evidence retained: ${root}`);
 });

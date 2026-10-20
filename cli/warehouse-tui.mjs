@@ -15,6 +15,7 @@ import { readTablePage } from './lib/pages.mjs';
 import { readOrderReview } from './lib/reviews.mjs';
 import { workSummary, outcomeSummary } from './lib/summaries.mjs';
 import { collectWork } from './lib/entry.mjs';
+import { connectSession } from './lib/connection.mjs';
 
 export function argumentsFor(argv) {
   const result = {};
@@ -104,12 +105,13 @@ async function perform(client, journal, scope, ui, supplied, selection) {
   await inspectText(ui, `Recovery status: ${outcome.stage} | ${request.request_id}`, outcomeSummary(outcome), { details: outcome.events.at(-1).details, prompt: '\nn next | p previous | Enter to continue: ' });
   if (command.type === 'create_warehouse' && outcome.stage === 'committed') return scope.warehouse;
 }
-async function recover(client, journal, scope, ui) {
+async function recover(client, journal, scope, ui, { localOnly = false } = {}) {
   const records = await journal.listForIdentity(scope);
   const record = await ui.menu('Original request recovery — all your facilities', records.map(r => [`${r.stage} | ${r.original.scope.warehouse} | ${r.request.command.type} | ${r.request.request_id}`, r]));
   if (!record) return;
   if (!await inspectJson(ui, 'Original request — preserved scope and complete body', { scope: record.original.scope, request: record.request, stage: record.stage })) return;
   if (['committed', 'not_committed'].includes(record.stage)) { await inspectJson(ui, `Original outcome: ${record.stage}`, record.events.at(-1).details); return; }
+  if (localOnly) return;
   const action = await ui.menu('Recovery action', [['Look up original actor-owned command receipt', 'lookup'], ['Resend complete exact original request', 'retry']]);
   if (!action) return;
   if (action === 'lookup') {
@@ -234,10 +236,11 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
   const [major, minor] = process.versions.node.split('.').map(Number);
   if (major < 22 || major === 22 && minor < 12) throw new Error('Node.js >=22.12 is required');
   const client = new Client(originUrl(args.url ?? env.WMS_URL ?? 'http://127.0.0.1:8088'), await tokenFromEnv(env));
-  let session = await client.session(); let warehouse = args.warehouse ?? env.WMS_WAREHOUSE ?? session.default_warehouse_id;
-  if (!warehouse) throw new Error('Select an explicit warehouse');
+  let session; let warehouse = args.warehouse ?? env.WMS_WAREHOUSE;
   const journal = new Journal(args['state-dir'] ?? env.WMS_TUI_STATE_DIR ?? path.join(env.XDG_STATE_HOME ?? path.join(homedir(), '.local/state'), 'stateset-warehouse'));
   if (args.once) {
+    session = await client.session(); warehouse ??= session.default_warehouse_id;
+    if (!warehouse) throw new Error('Select an explicit warehouse');
     const scope = scopeFor(client, session, warehouse); let data;
     if (args.once === 'session') data = session;
     else if (args.once === 'warehouses') data = await client.read('/v1/warehouses?limit=100');
@@ -251,7 +254,15 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
   const ui = new Terminal(process.stdin, process.stdout, env);
   try {
     for (;;) {
-      session = await client.session(); const scope = scopeFor(client, session, warehouse);
+      const previous = session;
+      session = await connectSession(client, ui, {
+        previous,
+        ...(previous && warehouse ? { inspectRecovery: () => recover(client, journal, scopeFor(client, previous, warehouse), ui, { localOnly: true }) } : {}),
+      });
+      if (!session) break;
+      warehouse ??= session.default_warehouse_id;
+      if (!warehouse) throw new Error('Select an explicit warehouse');
+      const scope = scopeFor(client, session, warehouse);
       // Read failures must leave Recovery and facility selection accessible.
       // The overview never supplies authority/version to a subsequent write.
       const [snapshot, pending] = await Promise.all([

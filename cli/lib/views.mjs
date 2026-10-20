@@ -127,8 +127,18 @@ export function scanProgress(ui, state, scope, version, command = {}) {
 }
 export async function inspectRows(ui, kind, load, { onAction, filter: initialFilter = 'all', sort: initialSort = 'source', serverPaged = false } = {}) {
   let snapshot = await load(null); let query = ''; let page = 0; let message = ''; let selected = null;
+  let readError = ''; let readAt = new Date().toISOString();
   let cursors = [null]; let batch = 0;
   let filterId = initialFilter; let sortId = initialSort;
+  const read = async cursor => {
+    const next = await load(cursor);
+    readError = ''; readAt = new Date().toISOString();
+    return next;
+  };
+  const held = error => {
+    selected = null; readError = safeText(error.message);
+    message = `Read held: ${readError}. Current batch retained; retry or refresh.`;
+  };
   for (;;) {
     const all = snapshot.rows;
     const view = tableView(kind, snapshot, { filter: filterId, sort: sortId, query });
@@ -143,10 +153,12 @@ export async function inspectRows(ui, kind, load, { onAction, filter: initialFil
     if (onAction) footer.push('a actions for selected row · quantities stay explicit');
     if (compact) footer = [`↑↓ Enter details · ${onAction ? 'a work' : 'j JSON'} · Esc back`, '/ find · f filter · s sort · n/p · r · v info'].map(line => fit(line, ui.columns).trimEnd());
     const empty = all.length ? filterId === 'all' ? 'No matches. Enter / to clear the search.' : 'No rows in this filter. Use f to change; / clears search.' : 'No records in this snapshot.';
-    const compactMeta = [batchInfo, settings, snapshot.note].filter(Boolean).map(line => fit(line, ui.columns).trimEnd());
+    const readStatus = readError ? 'STALE · r refresh before work' : '';
+    const compactMeta = [readStatus, batchInfo, settings, snapshot.note].filter(Boolean).map(line => fit(line, ui.columns).trimEnd());
     const reserved = compact ? 10 + compactMeta.length + (message ? 1 : 0) + (!filtered.length ? 1 : 0) : 8 + wrap(snapshot.title, ui.columns).length + wrap(range(filtered.length, filtered.length), ui.columns).length
       + footer.reduce((total, line) => total + wrap(line, ui.columns).length, 0)
       + (message ? wrap(message, ui.columns).length : 0) + (settings ? wrap(settings, ui.columns).length : 0) + (!filtered.length ? wrap(empty, ui.columns).length : 0)
+      + (readStatus ? wrap(readStatus, ui.columns).length : 0)
       + (batchInfo ? wrap(batchInfo, ui.columns).length : 0) + (snapshot.note ? wrap(snapshot.note, ui.columns).length : 0);
     const count = Math.max(1, ui.rows - reserved);
     if (selected !== null) page = Math.floor(selected / count);
@@ -156,6 +168,7 @@ export async function inspectRows(ui, kind, load, { onAction, filter: initialFil
     ui.line(compact ? fit(range(filtered.length ? offset + 1 : 0, offset + rows.length), ui.columns).trimEnd() : range(filtered.length ? offset + 1 : 0, offset + rows.length));
     if (compact) compactMeta.forEach(line => ui.line(line, 'muted'));
     else {
+      if (readStatus) ui.line(readStatus, 'danger');
       if (batchInfo) ui.line(batchInfo, 'muted');
       if (snapshot.note) ui.line(snapshot.note, 'muted');
       if (settings) ui.line(settings, 'muted');
@@ -178,11 +191,11 @@ export async function inspectRows(ui, kind, load, { onAction, filter: initialFil
       try {
         const cursor = direction > 0 ? snapshot.nextCursor : cursors[batch - 1];
         if (direction > 0 && cursors.slice(0, batch + 1).includes(cursor)) throw new Error('Repeated server cursor; refresh to read again');
-        const next = await load(cursor);
+        const next = await read(cursor);
         if (direction > 0) { cursors = [...cursors.slice(0, batch + 1), cursor]; batch++; }
         else batch--;
         snapshot = next; page = direction > 0 ? 0 : Number.MAX_SAFE_INTEGER;
-      } catch (error) { message = `Read held: ${error.message}. Current batch retained; retry or refresh.`; }
+      } catch (error) { held(error); }
     };
     let answer = await (ui.action ? ui.action('\nView: ') : ui.ask('\nView: '));
     if (answer && typeof answer === 'object') {
@@ -209,11 +222,9 @@ export async function inspectRows(ui, kind, load, { onAction, filter: initialFil
     else if (answer === 'p') await movePage(-1);
     else if (answer.startsWith('/')) { query = answer.slice(1); page = 0; selected = null; }
     else if (answer === 'r') {
-      if (serverPaged) {
-        selected = null;
-        try { snapshot = await load(null); cursors = [null]; batch = 0; page = 0; selected = null; }
-        catch (error) { message = `Read held: ${error.message}. Current batch retained; retry or refresh.`; }
-      } else { snapshot = await load(null); page = 0; selected = null; }
+      selected = null;
+      try { snapshot = await read(null); cursors = [null]; batch = 0; page = 0; }
+      catch (error) { held(error); }
     }
     else if (answer === 'f' || answer === 's') {
       const choices = answer === 'f' ? filtersFor(kind, snapshot) : sortsFor(kind);
@@ -224,12 +235,16 @@ export async function inspectRows(ui, kind, load, { onAction, filter: initialFil
       }
     }
     else if (answer === 'a' && onAction) {
+      if (readError) { message = 'Refresh successfully before opening work from this retained view.'; continue; }
       if (selected === null || !filtered[selected]) { message = 'Highlight a row with the arrow keys before opening actions.'; continue; }
-      await onAction(filtered[selected], snapshot.version);
-      snapshot = await load(serverPaged ? cursors[batch] : null); selected = null; page = 0;
+      const row = filtered[selected]; selected = null;
+      try {
+        await onAction(row, snapshot.version);
+        snapshot = await read(serverPaged ? cursors[batch] : null); page = 0;
+      } catch (error) { held(error); }
     }
     else if (answer === 'j') await inspectJson(ui, `${snapshot.title} | page JSON`, rows);
-    else if (answer === 'v') await inspectText(ui, 'View context', [snapshot.title, batchInfo, settings, snapshot.note, `Search: /${query}`, message].filter(Boolean).join('\n'));
+    else if (answer === 'v') await inspectText(ui, 'View context', [snapshot.title, readStatus, `Last successful read: ${readAt}`, readError && `Read held: ${readError}`, batchInfo, settings, snapshot.note, `Search: /${query}`, message].filter(Boolean).join('\n'));
     else if (/^[1-9]\d*$/.test(answer) && Number(answer) > offset && Number(answer) <= offset + rows.length) {
       await inspectJson(ui, `${snapshot.title} | row ${answer}`, filtered[Number(answer) - 1]);
     } else message = 'Choose a row number on this page, or one of the view keys.';
