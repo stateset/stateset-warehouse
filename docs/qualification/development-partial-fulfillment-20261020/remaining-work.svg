@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="620" viewBox="0 0 1120 620" role="img" aria-labelledby="title description">
+<title id="title">Original partial fulfillment and remaining-demand closure</title>
+<desc id="description">Recorded 49 by 20 synthetic PTY text rendered as SVG, showing eight units of remaining demand before explicit closure and eight cancelled units afterward, with the original two-unit handoff unchanged. Not a native Ghostty screenshot.</desc>
+<rect width="1120" height="620" fill="#0c1420"/>
+<text x="28" y="36" fill="#e5edf5" font-family="sans-serif" font-size="21">Warehouse console · Remaining fulfillment</text>
+<text x="28" y="61" fill="#93a7b9" font-family="sans-serif" font-size="13">Recorded 49×20 PTY text · Synthetic goods · SVG rendering, not a native Ghostty screenshot</text>
+<rect x="28" y="86" width="518" height="480" rx="10" fill="#111e2c" stroke="#32465b"/>
+<text x="46" y="112" fill="#93a7b9" font-family="sans-serif" font-size="13">After original handoff · remaining work</text>
+<text x="46" y="144" fill="#6cd5e5" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">STATESET / WAREHOUSE</text>
+<text x="46" y="162" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Remaining fulfillment work</text>
+<text x="46" y="180" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">────────────────────────────────────────────────</text>
+<text x="46" y="198" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Facility: wh-main | reviewed v36</text>
+<text x="46" y="216" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Original order: CONTINUE-PARTIAL | 2d81c3c7-a9f8</text>
+<text x="46" y="234" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">-4b61-93bd-e1498feb1b80</text>
+<text x="46" y="252" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Status: partially_shipped | Mode: packages</text>
+<text x="46" y="270" fill="#6cd5e5" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Ordered 10 each | Handed off 2 each</text>
+<text x="46" y="288" fill="#f9c36b" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Cancelled original demand: 0 each</text>
+<text x="46" y="306" fill="#6cd5e5" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Remaining active demand: 8 each</text>
+<text x="46" y="324" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Unallocated: 2 each | To pick: 6 each</text>
+<text x="46" y="342" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Picked / not handed off: 0 each</text>
+<text x="46" y="360" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Open original packages: 0</text>
+<text x="46" y="378" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Picked units may already be packed. Review origi</text>
+<text x="46" y="396" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Lines 1–11 of 29</text>
+<text x="46" y="414" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">j complete original JSON</text>
+<text x="46" y="432" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve"></text>
+<text x="46" y="450" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">n next | p previous | Enter back: </text>
+<rect x="574" y="86" width="518" height="480" rx="10" fill="#111e2c" stroke="#32465b"/>
+<text x="592" y="112" fill="#93a7b9" font-family="sans-serif" font-size="13">After explicit closure · original handoff preserved</text>
+<text x="592" y="144" fill="#6cd5e5" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">STATESET / WAREHOUSE</text>
+<text x="592" y="162" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Remaining fulfillment work</text>
+<text x="592" y="180" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">────────────────────────────────────────────────</text>
+<text x="592" y="198" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Facility: wh-main | reviewed v42</text>
+<text x="592" y="216" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Original order: CONTINUE-PARTIAL | 2d81c3c7-a9f8</text>
+<text x="592" y="234" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">-4b61-93bd-e1498feb1b80</text>
+<text x="592" y="252" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Status: closed_partial | Mode: packages</text>
+<text x="592" y="270" fill="#6cd5e5" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Ordered 10 each | Handed off 2 each</text>
+<text x="592" y="288" fill="#f9c36b" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Cancelled original demand: 8 each</text>
+<text x="592" y="306" fill="#6cd5e5" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Remaining active demand: 0 each</text>
+<text x="592" y="324" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Unallocated: 0 each | To pick: 0 each</text>
+<text x="592" y="342" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Picked / not handed off: 0 each</text>
+<text x="592" y="360" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Open original packages: 0</text>
+<text x="592" y="378" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Picked units may already be packed. Review origi</text>
+<text x="592" y="396" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">Lines 1–11 of 29</text>
+<text x="592" y="414" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">j complete original JSON</text>
+<text x="592" y="432" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve"></text>
+<text x="592" y="450" fill="#dce6ef" font-family="DejaVu Sans Mono, monospace" font-size="15" xml:space="preserve">n next | p previous | Enter back: </text>
+<text x="28" y="597" fill="#93a7b9" font-family="sans-serif" font-size="14">Exact original line ownership · Released reservations stay distinct · Explicit decisions · Immutable original requests</text></svg>

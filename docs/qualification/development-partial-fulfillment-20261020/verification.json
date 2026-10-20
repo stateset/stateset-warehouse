@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "scope": "targeted_partial_fulfillment_console_development",
+  "recorded_at": "2026-10-20T16:33:05.708715+00:00",
+  "result": "passed",
+  "production_qualified": false,
+  "baseline_tag": "v0.2.0",
+  "parent_commit": "bee391aaeda94d0ca9122662797c70b24cda1945",
+  "terminal_checks_passed": 101,
+  "terminal_checks_skipped": 0,
+  "node_version": "22.18.0",
+  "test_command": "WMS_TEST_DATABASE_URL=<isolated-test-db> npm --prefix cli run test:acceptance",
+  "actual_pg_api_and_pty_passed": true,
+  "operations_checks": [
+    "Dedicated l home lane and queue 10 retain active package/partial work before and after an original handoff",
+    "Original first nine queue positions and home menu numbers preserved",
+    "Remaining-work review binds live original actor/tenant, facility, selected version, order identity and verified original package source",
+    "Exact per-line and aggregate ordered/allocated/remaining/unallocated/to-pick/staged/shipped/cancelled each quantities",
+    "Same-SKU original lines stay distinct; released reservations do not appear as current allocations",
+    "BigInt arithmetic retains exact aggregates beyond a single safe integer; malformed/duplicate/substituted/overallocated facts hold calculations",
+    "Cancelled and closed original demand is excluded from active remaining work",
+    "Partial-order row actions support continued allocation/picking, staged-stock return, unpicked reservation release and explicit remainder closure",
+    "Selected pick/unpick lines require original remaining work; physical bins/lots/quantities and reasons remain explicit inputs",
+    "Existing role/scope/version guards and complete original-request recovery remain in effect",
+    "Real 49x20 API/PTY review and continuation of a partly shipped two-line same-SKU order",
+    "Actual additional allocation, unpicked release and return of three observed staged units",
+    "Declined closure creates no journal; confirmed closure cancels eight original remaining units without moving goods",
+    "Closed order leaves the partial queue; original two-unit physical handoff remains unchanged and full reconciliation passes",
+    "Existing monitoring, connection faults, exact scanner input, resizing and physical workflows pass"
+  ],
+  "recovery_journal_module_unchanged_sha256": "c6ba9e83810940cd19ba9675cc25c337cc326d928913dd95483a6a5961c11e7d",
+  "qualified_backend_image_inputs_unchanged": 305,
+  "qualified_backend_image_inputs_sha256": "7d59f80d543801c9237fa9a7dac313f00b31228f81b699a100e34f531343be89",
+  "full_release_gate_rerun": false,
+  "npm_package_dry_run_files": 23,
+  "package_published": false,
+  "owned_test_postgres_stopped": true,
+  "source_files": [
+    {
+      "path": "README.md",
+      "sha256": "0878757a335e80432217b1e7a73b44a0ac98d6ad8ace0d4a501888cfbbd41ce8"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "8f0e28c629ca03363de443c776d73f9539cd1a59363f902f1006e866d348a6c7"
+    },
+    {
+      "path": "cli/README.md",
+      "sha256": "3e1ae68dd9d72e726fa5f4b192c2772c2ed3feccde0b372ab873b29cd3b9ec83"
+    },
+    {
+      "path": "cli/lib/board.mjs",
+      "sha256": "818b58541d9fd4477aa5b122a50ac4d91a93f7531ce6fc1f8cac047a8c96af27"
+    },
+    {
+      "path": "cli/lib/commands.mjs",
+      "sha256": "d8314988cacfeb9cbdcf727430685d6661b2f8ca9319d1485a70bc62b55717b7"
+    },
+    {
+      "path": "cli/lib/fulfillment.mjs",
+      "sha256": "43fd737179685d6b0a9cd7a6a08459df312a856afce5d2eaaf9c6afffbac4430"
+    },
+    {
+      "path": "cli/lib/queues.mjs",
+      "sha256": "1efc571b51204151192c68a81aaabfc82582c0219057cdad329f949e166ae8f7"
+    },
+    {
+      "path": "cli/lib/reviews.mjs",
+      "sha256": "e107a0063f11e59bda8005fb2e3b88f984507b50e912b816238ff594fdb26539"
+    },
+    {
+      "path": "cli/lib/views.mjs",
+      "sha256": "72e166c7ec07915a6b1a11c56885e34042d8cb22ba82c51753901c269e5707ff"
+    },
+    {
+      "path": "cli/lib/workflows.mjs",
+      "sha256": "4fb3e8f4889f4e3850fc71b28a7faf87188ae258d9a97d866563cbe835525d22"
+    },
+    {
+      "path": "cli/test/fulfillment.test.mjs",
+      "sha256": "1a78968c6b3cd19174af470b36a2658e9807505a1c0c2c4bf84a7e38a15b14c5"
+    },
+    {
+      "path": "cli/test/live.test.mjs",
+      "sha256": "7f379b6f58a219081f23ef69b01b97a53b501c944bf079e8e34dc34b7eed95c6"
+    },
+    {
+      "path": "cli/warehouse-tui.mjs",
+      "sha256": "f0243c73ac81d16baa6bbe185de7edca0e125ebd970838d9e19a5544413e8a3e"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "remaining-work.svg",
+      "sha256": "021b53a3054c25dbb93381586ec81e909c2cd990144ee1ab8e5314a4229f8134"
+    },
+    {
+      "path": "terminal-checks.log",
+      "sha256": "e87049ec06e51711bc07da11d75f9871f0d696a18a4b2b4787919b0e0447d672"
+    }
+  ],
+  "limits": [
+    "The new partial-continuation PTY fixture uses synthetic nonserial stock; actual scanner/device/facility acceptance remains separate.",
+    "Stage queues are status-based; the overlapping partial/package lane exposes work that spans multiple stages.",
+    "Progress is read-only arithmetic, not availability or command admission; picked/unshipped units can already belong to packages.",
+    "PTY output does not establish native Ghostty GPU/compositor acceptance.",
+    "No hosted CI or deployed acceptance is implied by local checks.",
+    "The full release gate, original dated evidence and version tags are unchanged.",
+    "Existing interactive console processes are not restarted by this source update."
+  ]
+}

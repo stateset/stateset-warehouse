@@ -8,7 +8,7 @@ export function refreshInterval(value = '15') {
   if (!/^(0|[1-9]\d*)$/.test(value) || value !== '0' && (Number(value) < 5 || Number(value) > 300)) throw new Error('WMS_TUI_REFRESH_SECONDS must be 0 (paused) or a whole number from 5 to 300');
   return Number(value) * 1000;
 }
-export const laneShortcuts = { a: 'pending', k: 'picking', f: 'picked', g: 'packed', d: 'incoming', b: 'receiving', e: 'open', u: 'attention' };
+export const laneShortcuts = { a: 'pending', k: 'picking', f: 'picked', g: 'packed', d: 'incoming', b: 'receiving', e: 'open', u: 'attention', l: 'partial' };
 export function laneFor(key, snapshot) {
   return workQueues(snapshot).find(queue => queue.filter === laneShortcuts[key] && (key !== 'e' || queue.kind === 'exceptions'));
 }
@@ -67,7 +67,7 @@ export class OperationsBoard {
     const snapshot = this.snapshot ?? { error: this.error || this.sessionError || 'No snapshot read yet' };
     const overview = overviewLines(snapshot, this.pending, this.session, this.scope.warehouse);
     const count = key => laneFor(key, this.queueSnapshot)?.count ?? '?';
-    const lanes = [`a Allocate ${count('a')} · k Pick ${count('k')} · f Pack ${count('f')} · g Ship ${count('g')}`, `d Inbound ${count('d')} · b Putaway ${count('b')} · e Issues ${count('e')} · u Priority ${count('u')}`];
+    const lanes = [`a Allocate ${count('a')} · k Pick ${count('k')} · f Pack ${count('f')} · g Ship ${count('g')}`, `d Inbound ${count('d')} · b Putaway ${count('b')} · e Issues ${count('e')} · u Priority ${count('u')}`, `l Partial / package work ${count('l')} · review remaining fulfillment`];
     const warning = this.sessionError ? `ACTION: Session held · r reconnect · c local recovery` : stale ? 'STALE: Last read retained · r refresh' : '';
     const header = `${this.snapshot?.warehouse.code ?? this.scope.warehouse} | v${this.snapshot?.version ?? '?'} | ${status}${this.session.demo ? ' | DEMO' : ''}`;
     const attention = this.snapshot ? attentionLines(this.snapshot, now) : [];
@@ -80,7 +80,8 @@ export class OperationsBoard {
       ].filter(Boolean).map(line => fit(line, columns).trimEnd()),
       compactIntro: [`${this.paused ? 'PAUSED' : `AUTO ${this.intervalMs / 1000}s`} · age ${elapsed === null ? '?' : age(elapsed)} | ${this.snapshot?.warehouse.code ?? this.scope.warehouse} v${this.snapshot?.version ?? '?'}${this.session.demo ? ' | DEMO' : ''}`,
         `a Alloc ${count('a')} · k Pick ${count('k')} · f Pack ${count('f')} · g Ship ${count('g')}`,
-        `d In ${count('d')} · b Put ${count('b')} · e Issues ${count('e')} · u Prio ${count('u')}`],
+        `d In ${count('d')} · b Put ${count('b')} · e Issues ${count('e')} · u Prio ${count('u')}`,
+        `l Partial/package ${count('l')} · remaining work`],
       detailsIntro,
     };
   }

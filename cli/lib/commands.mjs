@@ -100,7 +100,7 @@ export async function commandForm(spec, ask, notice, identities, { quantity, row
     move_stock: ['sku', 'lot', 'from'], count_stock: ['sku', 'lot', 'location'],
     receive: ['receipt_id', 'line_id'], cancel_receipt: ['receipt_id'],
     allocate_available: ['order_id'], pick: ['order_id', 'line_id'], unpick: ['order_id', 'line_id'],
-    release_unpicked: ['order_id'], cancel_order: ['order_id'], pack: ['order_id'], ship: ['order_id'],
+    release_unpicked: ['order_id'], cancel_order: ['order_id'], cancel_remainder: ['order_id'], pack: ['order_id'], ship: ['order_id'],
     report_exception: ['order_id'], resolve_exception: ['exception_id'],
     receive_transfer: ['transfer_id', 'line_id'], pack_shipment: ['order_id'], create_return: ['order_id'],
     handoff_shipment: ['shipment_id'], unpack_shipment: ['shipment_id'],

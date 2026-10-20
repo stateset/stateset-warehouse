@@ -1,5 +1,6 @@
 import { visibleCommands } from './commands.mjs';
 import { readSelectedTransfer } from './pages.mjs';
+import { orderProgress, remainingOrderLines } from './fulfillment.mjs';
 
 const sources = new Set(['stocks', 'orders', 'receipts', 'exceptions', 'transfers', 'lots', 'shipments']);
 export function remainingTransferLines(row) {
@@ -20,6 +21,17 @@ export function rowWork(kind, row, role, warehouse) {
     if (row.status === 'picked') types = ['unpick', ...(!row.shipment_mode ? ['pack'] : [])];
     if (row.status === 'packed' && !row.shipment_mode) types = ['ship'];
     if (['allocated', 'picking', 'picked', 'partially_shipped'].includes(row.status) && row.allocations?.some(allocation => allocation.picked > allocation.shipped)) types.push('pack_shipment');
+    if (row.shipment_mode === 'packages' && !['shipped', 'cancelled', 'closed_partial'].includes(row.status)) {
+      const progress = orderProgress(row);
+      types = types.filter(type => !['allocate_available', 'pick', 'unpick', 'release_unpicked', 'pack_shipment', 'cancel_order'].includes(type));
+      if (!progress.error) {
+        if (['pending', 'allocated'].includes(row.status)) types.push('cancel_order');
+        if (BigInt(progress.totals.unallocated) > 0n) types.push('allocate_available');
+        if (BigInt(progress.totals.to_pick) > 0n) types.push('pick', 'release_unpicked');
+        if (BigInt(progress.totals.staged) > 0n) types.push('unpick', 'pack_shipment');
+        if (row.status === 'partially_shipped' && progress.totals.staged === '0') types.push('cancel_remainder');
+      }
+    }
     if (['shipped', 'partially_shipped', 'closed_partial'].includes(row.status)) types.push('create_return');
     types.push('report_exception');
   }
@@ -59,7 +71,7 @@ export function selectedWork(snapshot, scope, selection, role) {
     ? { sku: row.sku, lot: row.lot, [spec.type === 'move_stock' ? 'from' : 'location']: row.location }
     : { [recordField]: row.id };
   if (['receive', 'pick', 'unpick', 'receive_transfer'].includes(spec.type)) {
-    const line = (spec.type === 'receive_transfer' ? remainingTransferLines(row) : row.lines).find(line => line.id === selection.lineId);
+    const line = (spec.type === 'receive_transfer' ? remainingTransferLines(row) : selection.kind === 'orders' ? remainingOrderLines(row, spec.type) : row.lines).find(line => line.id === selection.lineId);
     if (!line) throw new Error('Select an exact original line before recording this work');
     identities.line_id = line.id;
   } else if (selection.lineId !== undefined) throw new Error('This action does not take a selected line');

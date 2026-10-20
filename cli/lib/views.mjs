@@ -124,6 +124,7 @@ i inventory · o orders · w observed work · c recovery
 t work queues · r refresh · q exit · F1 or ? help
 a allocate · k pick · f pack · g ship · d inbound
 b putaway · e issues · u priority · z pause/resume auto reads
+l opens active partial/package fulfillment, including after a first handoff.
 Home reads refresh every 15s while idle. Typing pauses reads.
 Task/review views have no automatic reads. Writes require a fresh review.
 v shows complete context when a compact screen shortens it.
@@ -154,6 +155,8 @@ Recover uncertain work using its complete original request.
 Work/outcome summaries: j opens the complete original JSON.
 Quantity fields accept pack for an actual reviewed pack code/count.
 Selected orders offer partial packages, handoffs and original returns.
+Order row actions also review remaining fulfillment and original packages.
+Partial work keeps exact line ownership; released/cancelled demand stays distinct.
 Arrow keys never record a physical warehouse action.`);
 }
 export function scanProgress(ui, state, scope, version, command = {}) {

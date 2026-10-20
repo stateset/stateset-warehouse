@@ -25,6 +25,7 @@ export function filtersFor(kind, snapshot = {}) {
       filter('attention', 'High / urgent open orders', row => openOrder(row) && ['high', 'urgent'].includes(row.priority)),
       filter('shipped', 'Shipped orders', row => row.status === 'shipped'),
       filter('closed', 'Cancelled / closed partial', row => ['cancelled', 'closed_partial'].includes(row.status)),
+      filter('partial', 'Open partial / package fulfillment', row => openOrder(row) && (row.shipment_mode === 'packages' || row.status === 'partially_shipped')),
     ],
     receipts: [
       filter('incoming', 'Incoming receipts', row => !['received', 'cancelled'].includes(row.status)),
@@ -80,6 +81,7 @@ const queues = [
   { label: 'Incoming receipts', kind: 'receipts', filter: 'incoming', sort: 'reference' },
   { label: 'Stock in receiving bins', kind: 'stocks', filter: 'receiving', sort: 'identity' },
   { label: 'Open exceptions', kind: 'exceptions', filter: 'open', sort: 'category' },
+  { label: 'Open partial / package fulfillment', kind: 'orders', filter: 'partial', sort: 'priority' },
 ];
 export function workQueues(snapshot) {
   return queues.map(queue => {

@@ -12,7 +12,8 @@ import { rowWork, reviewSelectedWork, selectionFor, remainingTransferLines, ship
 import { observationSession } from './lib/scanning.mjs';
 import { workQueues } from './lib/queues.mjs';
 import { readTablePage } from './lib/pages.mjs';
-import { readOrderReview } from './lib/reviews.mjs';
+import { readOrderReview, readFulfillmentReview } from './lib/reviews.mjs';
+import { fulfillmentSummary, remainingOrderLines, orderProgress } from './lib/fulfillment.mjs';
 import { workSummary, outcomeSummary } from './lib/summaries.mjs';
 import { collectWork } from './lib/entry.mjs';
 import { connectSession } from './lib/connection.mjs';
@@ -45,7 +46,7 @@ Compact panes: v shows full context. Reviews: j shows original JSON.
 Home auto-refreshes every 15s; z pauses/resumes. WMS_TUI_REFRESH_SECONDS
 sets 5..300 seconds, or 0 to start paused. Typing and task views pause reads.
 Home lanes: a allocate, k pick, f pack, g ship, d inbound, b putaway,
-e issues, u priority. Shortcuts open fresh read-only queue views.
+e issues, u priority, l partial/package work. Shortcuts open fresh queue views.
 Quantity fields: pack scans an actual reviewed packaging code and count.
 Menus: /text searches, / clears, ? shows help. Tables: row number opens full
 details; a opens highlighted row actions, n/p page, j shows page JSON,
@@ -144,6 +145,7 @@ async function selectedActions(client, journal, scope, ui, kind, row, version) {
     ...work.map(spec => [spec.label, spec]),
     ...(kind === 'exceptions' && row.order_id ? [['Review linked order and shipments', 'linked-order']] : []),
     ...(kind === 'orders' ? [['Shipment packages and handoffs', 'packages']] : []),
+    ...(kind === 'orders' ? [['Review remaining fulfillment work', 'remaining']] : []),
   ], { intro: [kind === 'lots' ? `${row.sku} | ${row.lot}` : kind === 'stocks' ? `${row.sku} | ${row.lot} | ${row.location}` : `${kind === 'exceptions' ? row.category : row.reference} | ${row.id}`, `Selected facility: ${scope.warehouse} | snapshot v${version}`] });
   if (!action) return;
   if (action === 'review') {
@@ -152,6 +154,11 @@ async function selectedActions(client, journal, scope, ui, kind, row, version) {
     return;
   }
   if (action === 'linked-order') { await inspectOriginal(client, scope, ui, 'orders', row.order_id); return; }
+  if (action === 'remaining') {
+    const review = await readFulfillmentReview(client, scope, row.id, version);
+    await inspectText(ui, 'Remaining fulfillment work', fulfillmentSummary(scope, review), { details: { scope, ...review } });
+    return;
+  }
   if (action === 'packages') {
     await inspectRows(ui, 'shipments', async () => {
       const page = await shipmentReview(client, scope, row.id);
@@ -161,9 +168,10 @@ async function selectedActions(client, journal, scope, ui, kind, row, version) {
   }
   let lineId;
   if (['receive', 'pick', 'unpick', 'receive_transfer'].includes(action.type)) {
-    const lines = action.type === 'receive_transfer' ? remainingTransferLines(row) : row.lines;
+    const lines = action.type === 'receive_transfer' ? remainingTransferLines(row) : kind === 'orders' ? remainingOrderLines(row, action.type) : row.lines;
+    const progress = kind === 'orders' ? orderProgress(row) : null;
     lineId = await ui.menu('Select original line', lines.map(line => [
-      `${line.id} | ${line.sku}${line.lot ? ` | ${line.lot}` : ''} | ${action.type === 'receive_transfer' ? `in transit ${line.quantity - line.received - line.lost}` : `ordered ${line.quantity}`} each`, line.id,
+      `${line.id} | ${line.sku}${line.lot ? ` | ${line.lot}` : ''} | ${action.type === 'receive_transfer' ? `in transit ${line.quantity - line.received - line.lost}` : progress && !progress.error ? `${action.type === 'pick' ? 'to pick' : 'picked / unshipped'} ${progress.lines.find(original => original.id === line.id)[action.type === 'pick' ? 'to_pick' : 'staged']}` : `ordered ${line.quantity}`} each`, line.id,
     ]));
     if (lineId === null) return;
   }

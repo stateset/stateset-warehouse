@@ -13,6 +13,7 @@ import { Client } from '../lib/client.mjs';
 import { Journal, sendOriginal } from '../lib/journal.mjs';
 import { visibleCommands } from '../lib/commands.mjs';
 import { rowWork } from '../lib/workflows.mjs';
+import { orderProgress } from '../lib/fulfillment.mjs';
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const database = process.env.WMS_TEST_DATABASE_URL;
 const shell = value => `'${value.replaceAll("'", "'\\''")}'`;
@@ -669,5 +670,85 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
   await driveTerminal([
     ['Select: ', 'a'], ['View: ', 'q'], ['Select: ', 'b'], ['View: ', 'q'], ['Select: ', 'e'], ['View: ', 'q'], ['Select: ', 'q'],
   ], 'operations-board-direct-lanes-terminal.txt', { expectCommit: false, columns: 49, rows: 20 });
+  // Continue and recover exact same-SKU lines after an original partial handoff.
+  const partialSku = 'CONTINUE-PARTIAL'; const partialLot = 'Original-Partial-Lot';
+  await seed(scope.warehouse, { type: 'create_product', sku: partialSku, name: 'Synthetic partial continuation', category: 'Synthetic', reorder_point: 0, serial_controlled: false });
+  await seed(scope.warehouse, { type: 'count_stock', sku: partialSku, lot: partialLot, location: 'A', counted: 8, reason: 'Actual synthetic opening stock' });
+  await seed(scope.warehouse, { type: 'create_order', reference: 'CONTINUE-PARTIAL', source_order_id: 'Original-Partial-Source', customer: 'Synthetic customer', destination: 'Synthetic destination', priority: 'normal', lines: [{ id: 'Original-Partial-L1', sku: partialSku, quantity: 6 }, { id: 'original-partial-l2', sku: partialSku, quantity: 4 }] });
+  const partialState = () => client.read(client.warehousePath(scope.warehouse));
+  const partialOrder = state => state.orders.find(row => row.reference === 'CONTINUE-PARTIAL');
+  let partial = partialOrder(await partialState());
+  await seed(scope.warehouse, { type: 'allocate_available', order_id: partial.id });
+  await seed(scope.warehouse, { type: 'pick', order_id: partial.id, line_id: 'Original-Partial-L1', location: 'A', lot: partialLot, quantity: 2 });
+  await seed(scope.warehouse, { type: 'pack_shipment', order_id: partial.id, reference: 'Original-Partial-Package', lines: [{ line_id: 'Original-Partial-L1', location: 'A', lot: partialLot, quantity: 2 }] });
+  const originalPackage = (await client.read(client.warehousePath(scope.warehouse, `/orders/${partial.id}/shipments`))).packages.find(pack => pack.reference === 'Original-Partial-Package');
+  await seed(scope.warehouse, { type: 'handoff_shipment', shipment_id: originalPackage.id, carrier: 'Actual synthetic carrier', handoff_reference: 'Original actual two-unit departure' });
+  const originalHandoff = (await client.read(client.warehousePath(scope.warehouse, `/orders/${partial.id}/shipments`))).packages.find(pack => pack.id === originalPackage.id);
+  async function partialStart(type, home = 'l') {
+    const state = await partialState(); const order = partialOrder(state); const work = rowWork('orders', order, 'admin');
+    const index = type === 'remaining' ? work.length + 3 : work.findIndex(spec => spec.type === type) + 2;
+    assert.ok(type === 'remaining' || index > 1, `missing partial action ${type}`);
+    return { state, order, steps: [['Select: ', home], ['View: ', '/CONTINUE-PARTIAL'], ['View: ', { keys: '\x1b[B' }], ['View: ', 'a'], ['Select: ', String(index)]] };
+  }
+  const readPartial = await partialStart('remaining'); assert.equal(readPartial.order.status, 'partially_shipped');
+  const partialRecordsBefore = await journal.listForIdentity(scope);
+  const progressTranscript = await driveTerminal([
+    ...readPartial.steps, ['n next | p previous | Enter back: ', 'j'], ['n next | p previous | Enter back: ', ''], ['n next | p previous | Enter back: ', ''], ['View: ', 'q'], ['Select: ', 'q'],
+  ], 'partial-remaining-work-terminal.txt', { expectCommit: false, columns: 49, rows: 20 });
+  assert.ok(progressTranscript.includes('Remaining active demand: 8 each') && progressTranscript.includes('To pick: 6 each'));
+  assert.equal((await partialState()).version, readPartial.state.version);
+  assert.deepEqual(await journal.listForIdentity(scope), partialRecordsBefore);
+  const pickPartial = await partialStart('pick');
+  await driveTerminal([
+    ...pickPartial.steps, ['Select: ', '1'], ['location: ', 'A'], ['lot: ', partialLot], ['quantity (whole each): ', '3'],
+    ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'yes'], ['Enter to continue: ', ''], ['View: ', 'q'], ['Select: ', 'q'],
+  ], 'partial-continued-pick-terminal.txt', { columns: 49, rows: 20 });
+  partial = partialOrder(await partialState());
+  assert.equal(orderProgress(partial).totals.shipped, '2'); assert.equal(orderProgress(partial).totals.staged, '3');
+  const partialPick = (await journal.listForIdentity(scope)).find(record => record.request.command.type === 'pick' && record.request.command.order_id === partial.id);
+  assert.equal(partialPick.request.expected_version, pickPartial.state.version);
+  assert.deepEqual(partialPick.request.command, { type: 'pick', order_id: partial.id, line_id: 'Original-Partial-L1', location: 'A', lot: partialLot, quantity: 3 });
+  await seed(scope.warehouse, { type: 'count_stock', sku: partialSku, lot: partialLot, location: 'A', counted: 5, reason: 'Actual synthetic additional two units' });
+  const allocatePartial = await partialStart('allocate_available');
+  await driveTerminal([
+    ...allocatePartial.steps, ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'yes'], ['Enter to continue: ', ''], ['View: ', 'q'], ['Select: ', 'q'],
+  ], 'partial-additional-allocation-terminal.txt', { columns: 49, rows: 20 });
+  partial = partialOrder(await partialState()); assert.equal(orderProgress(partial).totals.unallocated, '0'); assert.equal(orderProgress(partial).totals.to_pick, '5');
+  const releasePartial = await partialStart('release_unpicked');
+  await driveTerminal([
+    ...releasePartial.steps, ['reason: ', 'Actual decision to release unpicked demand'], ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'yes'], ['Enter to continue: ', ''], ['View: ', 'q'], ['Select: ', 'q'],
+  ], 'partial-release-unpicked-terminal.txt', { columns: 49, rows: 20 });
+  const afterPartialRelease = await partialState();
+  assert.deepEqual(afterPartialRelease.stocks.map(({ reserved, ...row }) => row), releasePartial.state.stocks.map(({ reserved, ...row }) => row), 'release changes no physical stock');
+  assert.equal(orderProgress(partialOrder(afterPartialRelease)).totals.to_pick, '0');
+  const unpickPartial = await partialStart('unpick');
+  await driveTerminal([
+    ...unpickPartial.steps, ['Select: ', '1'], ['location: ', 'A'], ['lot: ', partialLot], ['quantity (whole each): ', '3'], ['reason: ', 'Actual return of three unshipped staged units'],
+    ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'yes'], ['Enter to continue: ', ''], ['View: ', 'q'], ['Select: ', 'q'],
+  ], 'partial-return-staged-terminal.txt', { columns: 49, rows: 20 });
+  const closePartial = await partialStart('cancel_remainder'); const beforeClosureRecords = await journal.listForIdentity(scope);
+  await driveTerminal([
+    ...closePartial.steps, ['reason: ', 'Actual proposed closure declined'], ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'no'], ['View: ', 'q'], ['Select: ', 'q'],
+  ], 'partial-declined-closure-terminal.txt', { expectCommit: false, columns: 49, rows: 20 });
+  assert.deepEqual(await journal.listForIdentity(scope), beforeClosureRecords);
+  await driveTerminal([
+    ...closePartial.steps, ['reason: ', 'Actual decision to close the original unshipped remainder'], ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'yes'], ['Enter to continue: ', ''], ['View: ', 'q'], ['Select: ', 'q'],
+  ], 'partial-original-remainder-closure-terminal.txt', { columns: 49, rows: 20 });
+  const afterClosure = await partialState(); partial = partialOrder(afterClosure);
+  assert.equal(partial.status, 'closed_partial'); assert.equal(orderProgress(partial).totals.remaining, '0'); assert.equal(orderProgress(partial).totals.cancelled, '8'); assert.equal(orderProgress(partial).totals.shipped, '2');
+  assert.deepEqual(afterClosure.stocks.map(({ reserved, ...row }) => row), closePartial.state.stocks.map(({ reserved, ...row }) => row), 'closing the commercial remainder does not move goods');
+  assert.equal(afterClosure.stocks.find(row => row.sku === partialSku && row.location === 'A').reserved, 0);
+  const cancellation = (await journal.listForIdentity(scope)).find(record => record.request.command.type === 'cancel_remainder' && record.request.command.order_id === partial.id);
+  assert.equal(cancellation.stage, 'committed'); assert.equal(cancellation.request.expected_version, closePartial.state.version);
+  assert.deepEqual(cancellation.request.command, { type: 'cancel_remainder', order_id: partial.id, reason: 'Actual decision to close the original unshipped remainder' });
+  const closedRead = await partialStart('remaining', 'o');
+  const closedTranscript = await driveTerminal([
+    ['Select: ', 'l'], ['View: ', '/CONTINUE-PARTIAL'], ['View: ', 'q'], ...closedRead.steps,
+    ['n next | p previous | Enter back: ', ''], ['View: ', 'q'], ['Select: ', 'q'],
+  ], 'partial-closed-original-review-terminal.txt', { expectCommit: false, columns: 49, rows: 20 });
+  assert.ok(closedTranscript.includes('No rows in this filter.') && closedTranscript.includes('Cancelled original demand: 8 each') && closedTranscript.includes('Remaining active demand: 0 each'));
+  const retainedPackage = (await client.read(client.warehousePath(scope.warehouse, `/orders/${partial.id}/shipments`))).packages.find(pack => pack.id === originalPackage.id);
+  assert.deepEqual(retainedPackage, originalHandoff, 'the original physical handoff remains unchanged');
+  assert.equal((await client.read(client.warehousePath(scope.warehouse, '/reconciliation'))).ok, true);
   t.diagnostic(`Private synthetic TUI evidence retained: ${root}`);
 });
