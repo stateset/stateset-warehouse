@@ -12,6 +12,7 @@ import { rowWork, selectedWork, selectionFor } from './lib/workflows.mjs';
 import { observationSession } from './lib/scanning.mjs';
 import { workQueues } from './lib/queues.mjs';
 import { readTablePage } from './lib/pages.mjs';
+import { readOrderReview } from './lib/reviews.mjs';
 
 export function argumentsFor(argv) {
   const result = {};
@@ -113,13 +114,9 @@ async function recover(client, journal, scope, ui) {
   await ui.pause();
 }
 async function inspectOriginal(client, scope, ui, kind, id) {
-  const base = client.warehousePath(scope.warehouse);
-  const record = await client.read(`${base}/${kind}/${encodeURIComponent(id)}`);
   if (kind === 'orders') {
-    const shipments = await client.read(`${base}/orders/${encodeURIComponent(id)}/shipments`);
-    const returnEligibility = await client.read(`${base}/orders/${encodeURIComponent(id)}/return-eligibility`);
-    await inspectJson(ui, `Original order | ${id}`, { record, shipments, returnEligibility });
-  } else await inspectJson(ui, `Original receiving record | ${id}`, record);
+    await inspectJson(ui, `Original order | ${id}`, await readOrderReview(client, scope.warehouse, id));
+  } else await inspectJson(ui, `Original receiving record | ${id}`, await client.read(client.warehousePath(scope.warehouse, `/${kind}/${encodeURIComponent(id)}`)));
 }
 async function readView(client, scope, ui, kind, journal, settings = {}) {
   const base = client.warehousePath(scope.warehouse);
@@ -131,19 +128,21 @@ async function readView(client, scope, ui, kind, journal, settings = {}) {
       const snapshot = await client.read(base);
       const title = { stocks: 'Inventory', locations: 'Bins', receipts: 'Receiving / returns' }[kind] ?? kind;
       return { title: `${title} | ${scope.warehouse} | snapshot v${snapshot.version}`, rows: snapshot[kind], version: snapshot.version, locations: snapshot.locations };
-    }, { filter: settings.filter, sort: settings.sort, onAction: ['stocks', 'orders', 'receipts'].includes(kind) ? async (row, version) => {
+    }, { filter: settings.filter, sort: settings.sort, onAction: ['stocks', 'orders', 'receipts', 'exceptions'].includes(kind) ? async (row, version) => {
       const session = await boundSession(client, scope);
       const work = rowWork(kind, row, session.identity.role);
       const action = await ui.menu('Selected record actions', [
         ['Review complete original record', 'review'],
         ...work.map(spec => [spec.label, spec]),
-      ], { intro: [kind === 'stocks' ? `${row.sku} | ${row.lot} | ${row.location}` : `${row.reference} | ${row.id}`, `Selected facility: ${scope.warehouse} | snapshot v${version}`] });
+        ...(kind === 'exceptions' && row.order_id ? [['Review linked order and shipments', 'linked-order']] : []),
+      ], { intro: [kind === 'stocks' ? `${row.sku} | ${row.lot} | ${row.location}` : `${kind === 'exceptions' ? row.category : row.reference} | ${row.id}`, `Selected facility: ${scope.warehouse} | snapshot v${version}`] });
       if (!action) return;
       if (action === 'review') {
-        if (kind === 'stocks') await inspectJson(ui, 'Original selected stock row', row);
+        if (['stocks', 'exceptions'].includes(kind)) await inspectJson(ui, `Original selected ${kind === 'stocks' ? 'stock row' : 'exception'}`, row);
         else await inspectOriginal(client, scope, ui, kind, row.id);
         return;
       }
+      if (action === 'linked-order') { await inspectOriginal(client, scope, ui, 'orders', row.order_id); return; }
       let lineId;
       if (['receive', 'pick', 'unpick'].includes(action.type)) {
         lineId = await ui.menu('Select original line', row.lines.map(line => [`${line.id} | ${line.sku}${line.lot ? ` | ${line.lot}` : ''} | ordered ${line.quantity} each`, line.id]));

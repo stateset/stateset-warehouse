@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Report exceptions from selected orders and investigate/resolve selected open exceptions from their table or queue. Preserve exact original order/exception IDs, require actual issue and resolution details, retain role/scope/version checks, and support linked order/shipment review. Declined confirmation creates no request; resolving an issue does not rewrite physical stock or fulfillment work.
+- Keep original order/shipment reviews available when the server reports no returnable physical handoff. Display the original return-eligibility conflict as unavailable; authentication and service failures remain held.
 - Replace first-page lot/transfer JSON with readable tables and complete server-batch navigation. Preserve exact cursors and original detail records, retain the displayed batch after failed reads, show server lot availability/check times, and include settled transfers with facility-direction filters. Search/filter/sort scope stays explicit per batch; these views remain read-only.
 - Add work queues for order stages/urgency, incoming receipts, receiving-bin stock and open exceptions. Add F3/filter and F4/sort controls, retain filter/sort/search on refresh, and clear highlighted records on view changes before allowing an action. Preserve original identities and version checks; verify sorted order actions through the real API and terminal.
 - Show serial capture progress and physical source context, retain earlier observations after duplicate/malformed scans, and support F2 correction before submission. Undo preserves original target groups and requires reconfirming zero observations. Sent request bytes and recovery checkpoints remain immutable.

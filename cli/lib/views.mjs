@@ -82,7 +82,7 @@ TABLES
 ↑ / ↓ selects a row; Enter opens its complete details.
 A displayed row number also opens details.
 n / p page; j opens page JSON; r refreshes the view.
-a opens actions for a highlighted stock, order or receipt.
+a opens actions for highlighted stock, orders, receipts or exceptions.
 F3 or f opens filters; F4 or s opens sort choices.
 Changing filters or sorting clears the highlighted row.
 Lots/transfers: n/p crosses server batches at page boundaries.

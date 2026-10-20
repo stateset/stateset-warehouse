@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { Client } from '../lib/client.mjs';
 import { Journal, sendOriginal } from '../lib/journal.mjs';
 import { visibleCommands } from '../lib/commands.mjs';
+import { rowWork } from '../lib/workflows.mjs';
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const database = process.env.WMS_TEST_DATABASE_URL;
 const shell = value => `'${value.replaceAll("'", "'\\''")}'`;
@@ -310,6 +311,58 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
   assert.equal((await client.read(client.warehousePath(scope.warehouse))).version, mainBeforeBrowsing.version, 'paged browsing does not commit destination work');
   assert.equal((await journal.listForIdentity(scope)).length, recordsBeforeBrowsing);
   assert.equal((await client.read(client.warehousePath(newId, '/reconciliation'))).ok, true);
+  assert.equal((await client.read(client.warehousePath(scope.warehouse, '/reconciliation'))).ok, true);
+  // Report from the exact selected order, then investigate and resolve from
+  // the open-exceptions queue. Declining confirmation creates no request.
+  const beforeIssue = await client.read(client.warehousePath(scope.warehouse));
+  const issueOrder = beforeIssue.orders.find(row => row.id === highOrder.id);
+  const reportIndex = rowWork('orders', issueOrder, 'admin').findIndex(spec => spec.type === 'report_exception') + 2;
+  assert.ok(reportIndex > 1);
+  const reportTranscript = await driveTerminal([
+    ['Select: ', 'o'], ['View: ', '/QUEUE-HIGH'], ['View: ', { keys: '\x1b[B' }],
+    ['View: ', 'a'], ['Select: ', String(reportIndex)],
+    ['category: ', 'TUI-LINKED'], ['detail: ', 'Synthetic observed issue requiring original-order review'],
+    ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'yes'],
+    ['Enter to continue: ', ''], ['View: ', ''], ['Select: ', 'q'],
+  ], 'order-exception-report-terminal.txt');
+  assert.ok(reportTranscript.includes(`Selected order_id: ${issueOrder.id}`));
+  const reported = (await journal.listForIdentity(scope)).find(row => row.request.command.type === 'report_exception');
+  assert.equal(reported.stage, 'committed');
+  assert.equal(reported.request.expected_version, beforeIssue.version);
+  assert.deepEqual(reported.request.command, { type: 'report_exception', order_id: issueOrder.id, category: 'TUI-LINKED', detail: 'Synthetic observed issue requiring original-order review' });
+  const afterIssue = await client.read(client.warehousePath(scope.warehouse));
+  const issue = afterIssue.exceptions.find(row => row.category === 'TUI-LINKED');
+  assert.ok(issue); assert.equal(issue.order_id, issueOrder.id); assert.equal(issue.status, 'open');
+  assert.equal(afterIssue.version, beforeIssue.version + 1);
+  const issueRecords = (await journal.listForIdentity(scope)).length;
+  const resolvedTranscript = await driveTerminal([
+    ['Select: ', 't'], ['Select: ', '9'], ['View: ', { keys: '\x1b[B' }],
+    ['View: ', 'a'], ['Select: ', '1'], ['n next | p previous | Enter back: ', ''],
+    ['View: ', { keys: '\x1b[B' }], ['View: ', 'a'], ['Select: ', '3'],
+    ['n next | p previous | Enter back: ', ''],
+    ['View: ', { keys: '\x1b[B' }], ['View: ', 'a'], ['Select: ', '2'],
+    ['resolution: ', 'Do not send this draft'], ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'no'],
+    ['View: ', { keys: '\x1b[B' }], ['View: ', 'a'], ['Select: ', '2'],
+    ['resolution: ', 'Synthetic investigation completed against original order'],
+    ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'yes'],
+    ['Enter to continue: ', ''], ['View: ', ''], ['Select: ', 'q'],
+  ], 'exception-linked-review-and-resolution-terminal.txt');
+  assert.ok(resolvedTranscript.includes(`"id": "${issue.id}"`));
+  assert.ok(resolvedTranscript.includes(`"id": "${issueOrder.id}"`), 'linked review opens the original order');
+  assert.ok(resolvedTranscript.includes(`Selected exception_id: ${issue.id}`));
+  assert.ok(resolvedTranscript.includes('No rows in this filter.'), 'resolved issue leaves the open queue');
+  const issueJournal = await journal.listForIdentity(scope);
+  const resolution = issueJournal.find(row => row.request.command.type === 'resolve_exception');
+  assert.equal(issueJournal.length, issueRecords + 1, 'declined draft and linked reviews create no journal');
+  assert.equal(resolution.stage, 'committed');
+  assert.equal(resolution.request.expected_version, afterIssue.version);
+  assert.deepEqual(resolution.request.command, { type: 'resolve_exception', exception_id: issue.id, resolution: 'Synthetic investigation completed against original order' });
+  assert.ok(!issueJournal.some(row => row.original.body.includes('Do not send this draft')));
+  const afterResolution = await client.read(client.warehousePath(scope.warehouse));
+  assert.equal(afterResolution.version, afterIssue.version + 1);
+  assert.equal(afterResolution.exceptions.find(row => row.id === issue.id).status, 'resolved');
+  assert.deepEqual(afterResolution.stocks, beforeIssue.stocks, 'reporting and resolving do not change physical stock or reservations');
+  assert.deepEqual(afterResolution.orders, beforeIssue.orders, 'investigation does not rewrite original fulfillment work');
   assert.equal((await client.read(client.warehousePath(scope.warehouse, '/reconciliation'))).ok, true);
   t.diagnostic(`Private synthetic TUI evidence retained: ${root}`);
 });

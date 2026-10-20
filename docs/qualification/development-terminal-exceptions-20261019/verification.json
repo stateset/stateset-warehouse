@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "scope": "targeted_terminal_exceptions_development",
+  "recorded_at": "2026-10-20T04:38:12.640744+00:00",
+  "result": "passed",
+  "production_qualified": false,
+  "baseline_tag": "v0.2.0",
+  "parent_commit": "3f41e7fe47848bae8a816a06f1e165c60f2d7155",
+  "terminal_checks_passed": 62,
+  "terminal_checks_skipped": 0,
+  "node_version": "22.18.0",
+  "test_command": "WMS_TEST_DATABASE_URL=<isolated-test-db> node --test cli/test/*.test.mjs",
+  "actual_pg_api_and_70_column_44_row_pty_passed": true,
+  "exception_checks": [
+    "Report observed issues from exact selected orders, including completed orders",
+    "Manual exception reports may still omit an order",
+    "Resolve exact selected open exceptions from tables or queues",
+    "Review complete original exception and linked order/shipments",
+    "Preserve original source identities and require actual category, details and resolution",
+    "Stale versions, changed facility, unavailable roles, mismatched IDs and already-resolved issues hold selected work",
+    "OMS exception-writing privileges remain unavailable",
+    "Declined confirmation creates no original request or checkpoint",
+    "Committed resolution leaves the open queue and remains in the full exception source",
+    "Reporting and resolving preserve physical stock, reservations and original fulfillment work",
+    "Unavailable return eligibility does not block original order review; original server response remains visible",
+    "Authentication and service errors still hold order review",
+    "Original-request recovery, actual receiving/putaway, sorted queue actions, 101-lot paging and settled transfers still pass",
+    "Complete reconciliation passes after the full linked exception lifecycle"
+  ],
+  "recovery_journal_module_unchanged_sha256": "c6ba9e83810940cd19ba9675cc25c337cc326d928913dd95483a6a5961c11e7d",
+  "qualified_backend_image_inputs_unchanged": 305,
+  "qualified_backend_image_inputs_sha256": "7d59f80d543801c9237fa9a7dac313f00b31228f81b699a100e34f531343be89",
+  "full_release_gate_rerun": false,
+  "npm_package_dry_run_files": 18,
+  "package_published": false,
+  "source_files": [
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "9f100f110fbbe542027db6ef74f1a858301b6fb0c5ff5d378c9d61b49448788a"
+    },
+    {
+      "path": "cli/README.md",
+      "sha256": "69f1e48046cb18041b57908b6bf7831293f498249648097b09e806e3514ce640"
+    },
+    {
+      "path": "cli/warehouse-tui.mjs",
+      "sha256": "5b1e0d2a13786dd9b6f706cb902b5a4c10a845e417dfcd6d58e4f5733576b3dc"
+    },
+    {
+      "path": "cli/lib/commands.mjs",
+      "sha256": "d3289821d34ec670528a45440e862ec321491e3f72de805eb62493804d44b1c6"
+    },
+    {
+      "path": "cli/lib/workflows.mjs",
+      "sha256": "4774ace8d2dc1f0c7df7fc5d2426f0e30e59e32aaf0e9fdd5a35bc3c4f15e3ce"
+    },
+    {
+      "path": "cli/lib/reviews.mjs",
+      "sha256": "7043fc1139c26b3938b2dedebfefca834d69884291a7eb18d06373a79f42fddb"
+    },
+    {
+      "path": "cli/lib/views.mjs",
+      "sha256": "beca732199c5e898feb8a825d12c728cbcdf569aa3cd6bd2dec16fb26e25d23d"
+    },
+    {
+      "path": "cli/test/workflows.test.mjs",
+      "sha256": "e9c926940fda97976a5e35003b1fb9ee211baa4c5bf6a966d57bbe37833cd98e"
+    },
+    {
+      "path": "cli/test/live.test.mjs",
+      "sha256": "a54b0d1255471333e26fd44fa7a7bf5f7c98329d356f4b3fdb05acc2a7f3e59c"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "terminal-checks.log",
+      "sha256": "3502d591a6ebd95e06c43fcd9719be73228e8d5b995f7059fcea52f7834ccbd4"
+    }
+  ],
+  "retained_attempts": [
+    {
+      "result": "failed_original_order_review",
+      "reason": "The initial linked-order review stopped on the expected return-eligibility HTTP 409 for an unshipped order. The review now preserves that unavailable server verdict and still displays original order/shipments. Original committed report, journals, transcript and server evidence remain retained privately."
+    }
+  ],
+  "limits": [
+    "Local synthetic software checks do not establish deployed scanner hardware or physical facility acceptance.",
+    "Resolution records the entered investigation; it does not itself change physical stock or fulfillment work.",
+    "The full v0.2.0 release gate was not rerun; original dated evidence and release tags remain unchanged.",
+    "The existing terminal pane was not restarted."
+  ]
+}
