@@ -77,8 +77,8 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
 
   // The script utility supplies a real pseudoterminal. Drive actual prompts,
   // including a typed physical move; the server verifies the resulting state.
-  async function driveTerminal(steps, filename, { expectCommit = true } = {}) {
-    const terminal = spawn('script', ['-qefc', `stty cols 70 rows 44; exec ${shell(process.execPath)} ${shell(path.join(repo, 'cli/warehouse-tui.mjs'))}`, '/dev/null'], { env: { ...env, WMS_URL: origin, WMS_TOKEN: token, WMS_TUI_STATE_DIR: journal.root, TERM: 'xterm' }, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
+  async function driveTerminal(steps, filename, { expectCommit = true, warehouse = scope.warehouse } = {}) {
+    const terminal = spawn('script', ['-qefc', `stty cols 70 rows 44; exec ${shell(process.execPath)} ${shell(path.join(repo, 'cli/warehouse-tui.mjs'))}`, '/dev/null'], { env: { ...env, WMS_URL: origin, WMS_TOKEN: token, WMS_WAREHOUSE: warehouse, WMS_TUI_STATE_DIR: journal.root, TERM: 'xterm' }, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
     let transcript = ''; let position = 0; let handled = 0;
     const drive = chunk => {
       transcript += chunk.toString();
@@ -266,6 +266,50 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
   assert.equal(afterQueue.orders.find(row => row.id === urgentOrder.id).status, 'pending');
   assert.deepEqual(afterQueue.stocks.map(({ reserved, ...row }) => row), queueSnapshot.stocks.map(({ reserved, ...row }) => row), 'allocation does not move physical stock');
   assert.deepEqual(await client.read('/v1/serials?sku=TUI-PART&warehouse_id=wh-main&limit=100'), guidedCustody, 'allocation does not change physical serial custody');
+  assert.equal((await client.read(client.warehousePath(scope.warehouse, '/reconciliation'))).ok, true);
+  // Exercise a real cursor boundary containing quotes, non-ASCII and URL
+  // delimiters. These fixtures are isolated in the new synthetic facility.
+  async function seed(warehouse, command) {
+    const state = await client.read(client.warehousePath(warehouse));
+    const result = await client.call('POST', client.warehousePath(warehouse, '/commands'), { request_id: randomUUID(), expected_version: state.version, command });
+    assert.equal(result.status, 200, JSON.stringify(result.data));
+  }
+  const pagedProduct = { type: 'create_product', sku: 'PAGED', name: 'Synthetic paged stock', category: 'Synthetic', reorder_point: 0, serial_controlled: false };
+  await seed(newId, pagedProduct); await seed(scope.warehouse, pagedProduct);
+  const bin = 'PAGED-STORAGE';
+  await seed(newId, { type: 'create_location', code: bin, zone: 'Synthetic pagination', kind: 'storage' });
+  const lotAt = index => `Lot / " É & ? #${String(index).padStart(3, '0')}`;
+  for (let index = 0; index < 101; index++) await seed(newId, { type: 'count_stock', sku: 'PAGED', lot: lotAt(index), location: bin, counted: 1, reason: 'Synthetic pagination boundary fixture' });
+  await seed(newId, { type: 'quarantine_lot', sku: 'PAGED', lot: lotAt(100), reason: 'Synthetic held lot in second batch' });
+  await seed(newId, { type: 'dispatch_transfer', reference: 'PAGED-SETTLED', destination_warehouse_id: scope.warehouse, carrier: 'Synthetic carrier', handoff_reference: 'Synthetic original handoff', lines: [{ id: 'Original-Transfer-Line', sku: 'PAGED', lot: lotAt(0), location: bin, quantity: 1 }] });
+  const dispatched = await client.read(client.warehousePath(newId, '/transfers?limit=100'));
+  const transfer = dispatched.items.find(row => row.data.reference === 'PAGED-SETTLED').data;
+  await seed(scope.warehouse, { type: 'receive_transfer', transfer_id: transfer.id, line_id: 'Original-Transfer-Line', quantity: 1, location: 'RECV-01', arrival_reference: 'Synthetic actual arrival' });
+  assert.equal((await client.read(client.warehousePath(newId, '/transfers?limit=100'))).items.length, 0, 'settled transfer is excluded by the server default');
+  const beforeBrowsing = await client.read(client.warehousePath(newId));
+  const mainBeforeBrowsing = await client.read(client.warehousePath(scope.warehouse));
+  const recordsBeforeBrowsing = (await journal.listForIdentity(scope)).length;
+  const pagedTranscript = await driveTerminal([
+    ['Select: ', '9'], ['View: ', '/100'], ['View: ', 'n'],
+    ['View: ', { keys: '\x1bOR' }], ['Select: ', '3'],
+    ['View: ', 'r'], ['View: ', 'n'], ['View: ', '/'], ['View: ', '1'],
+    ['n next | p previous | Enter back: ', ''], ['View: ', 'p'],
+    ['View: ', { keys: '\x1bOR' }], ['Select: ', '1'], ['View: ', 'r'],
+    ['View: ', ''], ['Select: ', '10'],
+    ['View: ', 'f'], ['Select: ', '2'], ['View: ', 'f'], ['Select: ', '3'],
+    ['View: ', '1'], ['n next | p previous | Enter back: ', ''],
+    ['View: ', ''], ['Select: ', 'q'],
+  ], 'paged-lots-and-settled-transfer-terminal.txt', { expectCommit: false, warehouse: newId });
+  assert.ok(pagedTranscript.includes('Batch 2 · last batch'));
+  assert.ok(pagedTranscript.includes(JSON.stringify(lotAt(100))), 'complete original lot label beyond the first 100 records');
+  assert.ok(pagedTranscript.includes('"availability": "quarantined"'));
+  assert.ok(pagedTranscript.includes('PAGED-SETTLED'), 'settled transfer remains visible');
+  assert.ok(pagedTranscript.includes(`"id": "${transfer.id}"`));
+  assert.ok(pagedTranscript.includes('Inbound to this facility') && pagedTranscript.includes('Outbound from this facility'));
+  assert.equal((await client.read(client.warehousePath(newId))).version, beforeBrowsing.version, 'paged browsing does not commit source work');
+  assert.equal((await client.read(client.warehousePath(scope.warehouse))).version, mainBeforeBrowsing.version, 'paged browsing does not commit destination work');
+  assert.equal((await journal.listForIdentity(scope)).length, recordsBeforeBrowsing);
+  assert.equal((await client.read(client.warehousePath(newId, '/reconciliation'))).ok, true);
   assert.equal((await client.read(client.warehousePath(scope.warehouse, '/reconciliation'))).ok, true);
   t.diagnostic(`Private synthetic TUI evidence retained: ${root}`);
 });

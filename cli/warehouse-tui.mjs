@@ -11,6 +11,7 @@ import { inspectJson, inspectRows, overviewLines, scanProgress } from './lib/vie
 import { rowWork, selectedWork, selectionFor } from './lib/workflows.mjs';
 import { observationSession } from './lib/scanning.mjs';
 import { workQueues } from './lib/queues.mjs';
+import { readTablePage } from './lib/pages.mjs';
 
 export function argumentsFor(argv) {
   const result = {};
@@ -122,6 +123,9 @@ async function inspectOriginal(client, scope, ui, kind, id) {
 }
 async function readView(client, scope, ui, kind, journal, settings = {}) {
   const base = client.warehousePath(scope.warehouse);
+  if (['lots', 'transfers'].includes(kind)) {
+    await inspectRows(ui, kind, cursor => readTablePage(client, scope.warehouse, kind, cursor), { serverPaged: true }); return;
+  }
   if (['stocks', 'products', 'locations', 'orders', 'receipts', 'exceptions', 'activity', 'movements'].includes(kind)) {
     await inspectRows(ui, kind, async () => {
       const snapshot = await client.read(base);
@@ -175,7 +179,7 @@ async function readView(client, scope, ui, kind, journal, settings = {}) {
     }
     return;
   } else {
-    const endpoint = { reconciliation: `${base}/reconciliation`, transfers: `${base}/transfers?limit=100`, lots: `${base}/lots?limit=100`, operations: '/v1/operations/health' }[kind];
+    const endpoint = { reconciliation: `${base}/reconciliation`, operations: '/v1/operations/health' }[kind];
     await inspectJson(ui, `${kind} | ${scope.warehouse}`, await client.read(endpoint));
   }
 }

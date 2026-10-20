@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Replace first-page lot/transfer JSON with readable tables and complete server-batch navigation. Preserve exact cursors and original detail records, retain the displayed batch after failed reads, show server lot availability/check times, and include settled transfers with facility-direction filters. Search/filter/sort scope stays explicit per batch; these views remain read-only.
 - Add work queues for order stages/urgency, incoming receipts, receiving-bin stock and open exceptions. Add F3/filter and F4/sort controls, retain filter/sort/search on refresh, and clear highlighted records on view changes before allowing an action. Preserve original identities and version checks; verify sorted order actions through the real API and terminal.
 - Show serial capture progress and physical source context, retain earlier observations after duplicate/malformed scans, and support F2 correction before submission. Undo preserves original target groups and requires reconfirming zero observations. Sent request bytes and recovery checkpoints remain immutable.
 - Open guided work from selected stock, order and receiving rows, including original record review and explicit original-line selection. Carry only exact source identities; require fresh role/scope/version checks, actual quantities, destinations and serial observations through the existing original-request journal.

@@ -145,3 +145,43 @@ test('filter changes clear selection while refresh retains filter, sort and sear
   assert.ok(last.includes('Beta'));
   assert.ok(!last.includes('Alpha'));
 });
+
+test('server batches cross both boundaries, preserve search and refresh from the beginning', async () => {
+  const requests = [];
+  const ui = scripted(['/Original', 'n', '1', '', 'p', 'n', 'r', ''], 100, 40);
+  const first = { sku: 'SKU', lot: 'Original-First', physical: 1, reserved: 0, usable: 1, availability: 'available' };
+  const last = { ...first, lot: 'Original-Last' };
+  const cursor = '["SKU","Original / & ?"]';
+  await inspectRows(ui, 'lots', async after => {
+    requests.push(after);
+    return { title: `batch ${after === null ? 'one' : 'two'}`, rows: [after === null ? first : last], nextCursor: after === null ? cursor : null };
+  }, { serverPaged: true });
+  assert.deepEqual(requests, [null, cursor, null, cursor, null]);
+  assert.ok(ui.screens.some(screen => screen.lines.join(' ').includes('"lot": "Original-Last"')));
+  assert.ok(ui.screens.at(-1).lines.join(' ').includes('/Original'));
+  assert.ok(ui.screens.at(-1).lines.join(' ').includes('Batch 1'));
+  assert.ok(ui.screens.some(screen => screen.lines.join(' ').includes('Batch 2 · last batch')));
+});
+
+test('an empty filtered batch can advance and failed reads retain its original position for retry', async () => {
+  const requests = []; let failed = false;
+  const ui = scripted(['/needle', 'n', 'n', 'p', 'n', ''], 100, 40);
+  await inspectRows(ui, 'lots', async cursor => {
+    requests.push(cursor);
+    if (cursor === 'next' && !failed) { failed = true; throw new Error('Synthetic read interruption'); }
+    return { title: cursor === null ? 'first original batch' : 'second original batch', rows: [{ sku: 'SKU', lot: cursor === null ? 'not-a-match' : 'needle', physical: 1 }], nextCursor: cursor === null ? 'next' : null };
+  }, { serverPaged: true });
+  assert.deepEqual(requests, [null, 'next', 'next', null, 'next']);
+  const held = ui.screens.find(screen => screen.lines.join(' ').includes('Synthetic read interruption'));
+  assert.equal(held.title, 'first original batch');
+  assert.ok(held.lines.join(' ').includes('Batch 1'));
+  assert.ok(ui.screens.at(-1).lines.join(' ').includes('needle'));
+});
+
+test('repeated server cursors cannot silently loop through the same records', async () => {
+  let loads = 0;
+  const ui = scripted(['n', 'n', ''], 100, 40);
+  await inspectRows(ui, 'lots', async () => { loads++; return { title: 'Original batch', rows: [], nextCursor: 'repeat' }; }, { serverPaged: true });
+  assert.equal(loads, 2);
+  assert.ok(ui.screens.at(-1).lines.join(' ').includes('Repeated server cursor'));
+});

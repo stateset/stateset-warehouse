@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "scope": "targeted_terminal_paging_development",
+  "recorded_at": "2026-10-20T02:57:39.036821+00:00",
+  "result": "passed",
+  "production_qualified": false,
+  "baseline_tag": "v0.2.0",
+  "parent_commit": "1e4e2384ca3d73510bed567ad7e74287dc688838",
+  "terminal_checks_passed": 58,
+  "terminal_checks_skipped": 0,
+  "node_version": "22.18.0",
+  "test_command": "WMS_TEST_DATABASE_URL=<isolated-test-db> node --test cli/test/*.test.mjs",
+  "actual_pg_api_and_70_column_44_row_pty_passed": true,
+  "paging_checks": [
+    "Readable lot and transfer tables retain complete original row details",
+    "Exact opaque cursors with quotes, non-ASCII and URL delimiters",
+    "Next and previous batch boundaries, refresh to first batch",
+    "Search/filter/sort are explicitly scoped to the displayed batch",
+    "Empty search results can advance to the next server batch",
+    "Failed reads retain the current batch and cursor history for retry",
+    "Repeated cursors hold instead of looping",
+    "Lot availability uses the server verdict and database check time",
+    "Transfers include settled work and facility-direction filters",
+    "Real API and terminal test browses 101 lots including quarantined stock beyond the first batch",
+    "Real fully received transfer remains visible despite the open-only server default",
+    "Read-only browsing changes neither facility version nor original recovery journals",
+    "Both fixture facilities pass complete reconciliation",
+    "Original-request recovery, selected work, receiving, putaway and sorted order actions still pass"
+  ],
+  "recovery_journal_module_unchanged_sha256": "c6ba9e83810940cd19ba9675cc25c337cc326d928913dd95483a6a5961c11e7d",
+  "qualified_backend_image_inputs_unchanged": 305,
+  "qualified_backend_image_inputs_sha256": "7d59f80d543801c9237fa9a7dac313f00b31228f81b699a100e34f531343be89",
+  "full_release_gate_rerun": false,
+  "npm_package_dry_run_files": 17,
+  "package_published": false,
+  "source_files": [
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "dd568542f92c6de31d87d552841c2d3482fdd87ba349ca8ff3225fba1507c9ff"
+    },
+    {
+      "path": "cli/README.md",
+      "sha256": "f29c3100e7569fa45d767ab5c7b4569cf2837057569eed19fdfa5d9750c815a4"
+    },
+    {
+      "path": "cli/warehouse-tui.mjs",
+      "sha256": "bce14ca2b0df3b074e84c4e48d5ce79742f766742eebf21b58dbdafd8d4ece0c"
+    },
+    {
+      "path": "cli/lib/pages.mjs",
+      "sha256": "fd593ae4fe36c2e6a7b97fd12a1a956c2dd05f175f84ab07b5b5ec42869d3640"
+    },
+    {
+      "path": "cli/lib/queues.mjs",
+      "sha256": "ce1b9c35a76093a584db3334a289703b9abdd68babf27d8a0404129d2b4a7898"
+    },
+    {
+      "path": "cli/lib/views.mjs",
+      "sha256": "2b69045fc7e19bcfcf40ef5bec9961a80448d2904223a665d86e41046bff2680"
+    },
+    {
+      "path": "cli/test/pages.test.mjs",
+      "sha256": "2a6fe26f6187a5eb4e42ad416c7e186f4d85b485923df9bd2c5a2b8eed85f850"
+    },
+    {
+      "path": "cli/test/views.test.mjs",
+      "sha256": "8db05e29d54e6b54e6584428f1d18b56c8cd4c05d3640e05a2e4aa4409b396fb"
+    },
+    {
+      "path": "cli/test/live.test.mjs",
+      "sha256": "cdcc62ce490ea3eb4b3db1bc93f900a97ffb830376f23057f4a61fa44a54b611"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "terminal-checks.log",
+      "sha256": "c8287722a593aaf06b9482ce212c350d8c15f02d0c04c5c748f80cb720368f68"
+    }
+  ],
+  "retained_attempts": [
+    {
+      "result": "failed_fixture_setup",
+      "reason": "Initial fixture assumed a new facility already had a storage bin; corrected fixture creates one explicitly. Original test output, journals and server evidence remain retained privately."
+    }
+  ],
+  "limits": [
+    "Local synthetic software checks do not establish scanner hardware or physical facility acceptance.",
+    "Each server batch is a fresh read; search, filters and sorting apply only to the displayed batch.",
+    "Lot availability may change with time without a warehouse-version change and never authorizes a physical command.",
+    "The full v0.2.0 release gate was not rerun; original dated evidence and release tags remain unchanged.",
+    "The existing terminal pane was not restarted."
+  ]
+}

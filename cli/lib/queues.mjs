@@ -34,6 +34,17 @@ export function filtersFor(kind, snapshot = {}) {
     exceptions: [filter('open', 'Open exceptions', row => row.status === 'open'), filter('resolved', 'Resolved exceptions', row => row.status === 'resolved')],
     products: [filter('serial', 'Serial-controlled products', row => row.serial_controlled === true), filter('expiry', 'Products requiring expiry', row => row.expiry_required === true)],
     locations: [filter('receiving', 'Receiving bins', row => row.kind === 'receiving'), filter('storage', 'Storage bins', row => row.kind === 'storage')],
+    lots: [
+      filter('available', 'Server availability: available', row => row.availability === 'available'),
+      filter('quarantined', 'Quarantined lots', row => row.availability === 'quarantined'),
+      filter('expiry', 'Expired / missing expiry', row => ['expired', 'expiry_missing'].includes(row.availability)),
+      filter('physical', 'Positive physical stock', row => row.physical > 0),
+    ],
+    transfers: [
+      filter('inbound', 'Inbound to this facility', row => row.destination_warehouse_id === snapshot.warehouseId),
+      filter('outbound', 'Outbound from this facility', row => row.source_warehouse_id === snapshot.warehouseId),
+      filter('held', 'Source check held', row => row.ok !== true),
+    ],
   }[kind] ?? [])];
 }
 export function sortsFor(kind) {
@@ -44,6 +55,8 @@ export function sortsFor(kind) {
     products: [sort('sku', 'SKU', (left, right) => text(left, right, 'sku')), sort('name', 'Product name', (left, right) => text(left, right, 'name'))],
     locations: [sort('code', 'Bin code', (left, right) => text(left, right, 'code')), sort('zone', 'Zone / bin', (left, right) => text(left, right, 'zone') || text(left, right, 'code'))],
     exceptions: [sort('category', 'Category', (left, right) => text(left, right, 'category'))],
+    lots: [sort('identity', 'SKU / lot', (left, right) => text(left, right, 'sku') || text(left, right, 'lot')), sort('physical', 'Physical: highest first', (left, right) => compare(right.physical, left.physical) || text(left, right, 'sku') || text(left, right, 'lot'))],
+    transfers: [sort('reference', 'Transfer reference', (left, right) => text(left, right, 'reference')), sort('dispatched', 'Dispatched: newest first', (left, right) => text(right, left, 'dispatched_at'))],
   }[kind] ?? [])];
 }
 export function tableView(kind, snapshot, { filter: filterId = 'all', sort: sortId = 'source', query = '' } = {}) {

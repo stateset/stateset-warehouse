@@ -12,6 +12,8 @@ const schemas = {
   orders: [column('Reference', 'reference', 18), column('Status', 'status', 15), column('Priority', 'priority', 8), column('Customer', 'customer', 26), column('Lines', row => row.lines.length, 6, true)],
   receipts: [column('Reference', 'reference', 18), column('Status', 'status', 15), column('Supplier', 'supplier', 26), column('Lines', row => row.lines.length, 6, true)],
   exceptions: [column('Category', 'category', 18), column('Status', 'status', 10), column('Detail', 'detail', 40), column('ID', 'id', 36)],
+  lots: [column('SKU', 'sku', 18), column('Lot', 'lot', 18), column('Availability', 'availability', 15), column('Physical', 'physical', 9, true), column('Reserved', 'reserved', 9, true), column('Usable', 'usable', 9, true)],
+  transfers: [column('Reference', 'reference', 18), column('Check', row => row.ok === true ? 'ok' : 'held', 7), column('Source', 'source_warehouse_id', 18), column('Destination', 'destination_warehouse_id', 18), column('Lines', row => row.lines.length, 6, true)],
   movements: [column('SKU', 'sku', 20), column('Kind', 'kind', 16), column('Each', 'quantity', 9, true), column('From', 'from', 14), column('To', 'to', 14), column('Reference', 'reference', 20)],
   activity: [column('Kind', 'kind', 24), column('Reference', 'reference', 24), column('Detail', 'detail', 32), column('Actor', 'actor', 24)],
 };
@@ -83,6 +85,9 @@ n / p page; j opens page JSON; r refreshes the view.
 a opens actions for a highlighted stock, order or receipt.
 F3 or f opens filters; F4 or s opens sort choices.
 Changing filters or sorting clears the highlighted row.
+Lots/transfers: n/p crosses server batches at page boundaries.
+Search, filters and sorting apply to the displayed batch only.
+Refresh returns to the first batch; each batch is a fresh read.
 Enter returns when no row is selected; Esc always returns.
 Detail views support arrows, Home/End and paging keys.
 
@@ -112,8 +117,9 @@ export function scanProgress(ui, state, scope, version, command = {}) {
   }
   if (state.message) ui.line(state.message, 'warning');
 }
-export async function inspectRows(ui, kind, load, { onAction, filter: initialFilter = 'all', sort: initialSort = 'source' } = {}) {
-  let snapshot = await load(); let query = ''; let page = 0; let message = ''; let selected = null;
+export async function inspectRows(ui, kind, load, { onAction, filter: initialFilter = 'all', sort: initialSort = 'source', serverPaged = false } = {}) {
+  let snapshot = await load(null); let query = ''; let page = 0; let message = ''; let selected = null;
+  let cursors = [null]; let batch = 0;
   let filterId = initialFilter; let sortId = initialSort;
   for (;;) {
     const all = snapshot.rows;
@@ -121,30 +127,49 @@ export async function inspectRows(ui, kind, load, { onAction, filter: initialFil
     const filtered = view.rows;
     const settings = filterId !== 'all' || sortId !== 'source' ? `Filter: ${view.filter.label} · Sort: ${view.sort.label}` : '';
     const range = (start, end) => `${start}–${end} of ${filtered.length} rows${query || filterId !== 'all' ? ` · ${all.length} total${query ? ` · /${query}` : ''}` : ''}`;
-    const footer = ['Row # details · /text search · / clear · r refresh', `n next · p previous · j page JSON · ${selected === null ? 'Enter back' : 'Esc back'}`];
+    const batchInfo = serverPaged ? `Batch ${batch + 1} · ${snapshot.nextCursor === null ? 'last batch' : 'more on server'} · search/filter/sort apply to this batch` : '';
+    const footer = [`Row # details · /text search${serverPaged ? ' batch' : ''} · / clear · r refresh`, `n next · p previous · j page JSON · ${selected === null ? 'Enter back' : 'Esc back'}`];
     if (ui.keys) footer.push(selected === null ? '↑↓ select · PgUp/PgDn page · Esc back' : '↑↓ select · Enter details · Esc back');
     if (ui.keys) footer.push('F3 / f filters · F4 / s sort');
     if (onAction) footer.push('a actions for selected row · quantities stay explicit');
     const empty = all.length ? filterId === 'all' ? 'No matches. Enter / to clear the search.' : 'No rows in this filter. Use f to change; / clears search.' : 'No records in this snapshot.';
     const reserved = 8 + wrap(snapshot.title, ui.columns).length + wrap(range(filtered.length, filtered.length), ui.columns).length
       + footer.reduce((total, line) => total + wrap(line, ui.columns).length, 0)
-      + (message ? wrap(message, ui.columns).length : 0) + (settings ? wrap(settings, ui.columns).length : 0) + (!filtered.length ? wrap(empty, ui.columns).length : 0);
+      + (message ? wrap(message, ui.columns).length : 0) + (settings ? wrap(settings, ui.columns).length : 0) + (!filtered.length ? wrap(empty, ui.columns).length : 0)
+      + (batchInfo ? wrap(batchInfo, ui.columns).length : 0) + (snapshot.note ? wrap(snapshot.note, ui.columns).length : 0);
     const count = Math.max(1, ui.rows - reserved);
     if (selected !== null) page = Math.floor(selected / count);
     page = Math.min(page, Math.max(0, Math.ceil(filtered.length / count) - 1));
     const offset = page * count; const rows = filtered.slice(offset, offset + count);
     ui.screen(snapshot.title);
     ui.line(range(filtered.length ? offset + 1 : 0, offset + rows.length));
+    if (batchInfo) ui.line(batchInfo, 'muted');
+    if (snapshot.note) ui.line(snapshot.note, 'muted');
     if (settings) ui.line(settings, 'muted');
     tableLines(kind, rows, ui.columns, offset).forEach((line, index) => {
       const row = rows[index - 2];
       const tone = index === 0 ? 'accent' : index === 1 ? 'muted' : selected === offset + index - 2 ? 'selected'
-        : row?.priority === 'urgent' ? 'danger' : row?.status === 'open' ? 'warning' : ['shipped', 'received'].includes(row?.status) ? 'success' : '';
+        : row?.priority === 'urgent' || row?.availability === 'expired' || row?.ok === false ? 'danger'
+          : row?.status === 'open' || ['quarantined', 'expiry_missing', 'invalid'].includes(row?.availability) ? 'warning' : ['shipped', 'received'].includes(row?.status) ? 'success' : '';
       ui.print(ui.style ? ui.style(line, tone) : line);
     });
     if (!rows.length) ui.line(empty);
     footer.forEach(line => ui.line(line, 'muted'));
     if (message) ui.line(message);
+    const movePage = async direction => {
+      selected = null; message = '';
+      const lastPage = Math.max(0, Math.ceil(filtered.length / count) - 1);
+      if (direction > 0 && page < lastPage || direction < 0 && page > 0) { page += direction; return; }
+      if (!serverPaged || direction > 0 && snapshot.nextCursor === null || direction < 0 && batch === 0) return;
+      try {
+        const cursor = direction > 0 ? snapshot.nextCursor : cursors[batch - 1];
+        if (direction > 0 && cursors.slice(0, batch + 1).includes(cursor)) throw new Error('Repeated server cursor; refresh to read again');
+        const next = await load(cursor);
+        if (direction > 0) { cursors = [...cursors.slice(0, batch + 1), cursor]; batch++; }
+        else batch--;
+        snapshot = next; page = direction > 0 ? 0 : Number.MAX_SAFE_INTEGER;
+      } catch (error) { message = `Read held: ${error.message}. Current batch retained; retry or refresh.`; }
+    };
     let answer = await (ui.action ? ui.action('\nView: ') : ui.ask('\nView: '));
     if (answer && typeof answer === 'object') {
       if (answer.key === 'escape') return;
@@ -152,8 +177,7 @@ export async function inspectRows(ui, kind, load, { onAction, filter: initialFil
       if (answer.key === 'f3' || answer.key === 'f4') answer = answer.key === 'f3' ? 'f' : 's';
       else {
         if (['left', 'pageup', 'right', 'pagedown'].includes(answer.key)) {
-          page = Math.max(0, Math.min(page + (['left', 'pageup'].includes(answer.key) ? -1 : 1), Math.max(0, Math.ceil(filtered.length / count) - 1)));
-          selected = null;
+          await movePage(['left', 'pageup'].includes(answer.key) ? -1 : 1);
         } else if (['up', 'down', 'home', 'end'].includes(answer.key) && filtered.length) {
           if (selected === null) selected = offset;
           else selected = Math.max(0, Math.min(filtered.length - 1, selected + (answer.key === 'up' ? -1 : answer.key === 'down' ? 1 : 0)));
@@ -167,10 +191,16 @@ export async function inspectRows(ui, kind, load, { onAction, filter: initialFil
     if (answer === '' && selected !== null && filtered[selected]) answer = String(selected + 1);
     if (!answer || answer === 'q') return;
     message = '';
-    if (answer === 'n') { page = Math.min(page + 1, Math.max(0, Math.ceil(filtered.length / count) - 1)); selected = null; }
-    else if (answer === 'p') { page = Math.max(0, page - 1); selected = null; }
+    if (answer === 'n') await movePage(1);
+    else if (answer === 'p') await movePage(-1);
     else if (answer.startsWith('/')) { query = answer.slice(1); page = 0; selected = null; }
-    else if (answer === 'r') { snapshot = await load(); page = 0; selected = null; }
+    else if (answer === 'r') {
+      if (serverPaged) {
+        selected = null;
+        try { snapshot = await load(null); cursors = [null]; batch = 0; page = 0; selected = null; }
+        catch (error) { message = `Read held: ${error.message}. Current batch retained; retry or refresh.`; }
+      } else { snapshot = await load(null); page = 0; selected = null; }
+    }
     else if (answer === 'f' || answer === 's') {
       const choices = answer === 'f' ? filtersFor(kind, snapshot) : sortsFor(kind);
       const chosen = await ui.menu(answer === 'f' ? 'Filter records' : 'Sort records', choices.map(choice => [choice.label, choice.id]));
