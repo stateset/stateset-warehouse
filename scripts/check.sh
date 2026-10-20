@@ -15,6 +15,7 @@ cargo fmt --package stateset-warehouse -- --check
 cargo clippy --locked --all-targets -- -D warnings
 cargo test --locked --lib --test domain --test http_auth --test mcp --test native_contracts --test native_api --test oms_client --test oms_fulfillment_api --test operations --test startup --test serial_admission --test icommerce
 python3 -m unittest discover -s scripts -p 'test_*.py'
+python3 scripts/dashboard_notices.py --check
 node --test cli/test/*.test.mjs
 if [[ "${1:-}" == '--postgres' ]]; then
   : "${WMS_TEST_DATABASE_URL:?Set WMS_TEST_DATABASE_URL to an isolated Postgres database with test in its name}"

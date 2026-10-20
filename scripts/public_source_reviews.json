@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "scope": "Exact original source/rule/line false-positive review; any source change requires new review. No live credential exceptions.",
+  "reviews": [
+    {
+      "rule": "generic-api-key",
+      "path": "vendor/stateset-icommerce/crates/stateset-crypto/src/pqc_backend.rs",
+      "start_line": 8,
+      "end_line": 9,
+      "source_sha256": "5927430b6e8c7d08a995cdaea6cea3c8557267995942e829d078564e44ca16fa",
+      "reason": "Rust import identifiers for ML-KEM types; no credential literal. Original vendored bytes match public iCommerce upstream."
+    },
+    {
+      "rule": "generic-api-key",
+      "path": "docs/performance/http-500-8-operators-wms-mcp-provenance.json",
+      "start_line": 26,
+      "end_line": 26,
+      "source_sha256": "e976a08924e0267341c64cbf34398258d89f93db32b81bf9eab1ca1a64b2cc77",
+      "reason": "SHA256 digests of retained synthetic qualification artifacts in the explicitly named artifacts_sha256 object; no authentication capability."
+    },
+    {
+      "rule": "generic-api-key",
+      "path": "docs/performance/http-500-8-operators-wms-mcp-provenance.json",
+      "start_line": 35,
+      "end_line": 35,
+      "source_sha256": "e976a08924e0267341c64cbf34398258d89f93db32b81bf9eab1ca1a64b2cc77",
+      "reason": "SHA256 digests of retained synthetic qualification artifacts in the explicitly named artifacts_sha256 object; no authentication capability."
+    },
+    {
+      "rule": "curl-auth-header",
+      "path": "scripts/container-smoke.sh",
+      "start_line": 124,
+      "end_line": 124,
+      "source_sha256": "dd5eaefa76083e2dfc6d4aaf64e80aab9433dc4f50fa0f1e96a7557267db7df0",
+      "reason": "Fixed synthetic release-smoke credential configured only inside the owned isolated test container. Its matching API-key fixture is in the same script; it is not a deployment credential."
+    },
+    {
+      "rule": "curl-auth-header",
+      "path": "scripts/container-smoke.sh",
+      "start_line": 113,
+      "end_line": 116,
+      "source_sha256": "5953e166762a6bea9616b8180eed4e6b13ecd30ddffcf1a9710f289df74f5be7",
+      "reason": "Fixed synthetic release-smoke credential configured only inside the owned isolated test container. Its matching API-key fixture is in the same script; it is not a deployment credential."
+    },
+    {
+      "rule": "curl-auth-header",
+      "path": "scripts/container-smoke.sh",
+      "start_line": 118,
+      "end_line": 118,
+      "source_sha256": "5953e166762a6bea9616b8180eed4e6b13ecd30ddffcf1a9710f289df74f5be7",
+      "reason": "Fixed synthetic release-smoke credential configured only inside the owned isolated test container. Its matching API-key fixture is in the same script; it is not a deployment credential."
+    },
+    {
+      "rule": "generic-api-key",
+      "path": "tests/fixtures/facility-v2-command-journal.json",
+      "start_line": 61074,
+      "end_line": 61074,
+      "source_sha256": "fb8b94c814bdb8fc7983e5620975a9f305ebc1df0c62d3a81dbc6f57c992be09",
+      "reason": "Synthetic UUID idempotency keys in the original restore fixture. Recipient is loopback port 1 and tenant is restore-oms; these are request identities, not authentication secrets."
+    },
+    {
+      "rule": "generic-api-key",
+      "path": "tests/fixtures/facility-v2-command-journal.json",
+      "start_line": 61126,
+      "end_line": 61126,
+      "source_sha256": "fb8b94c814bdb8fc7983e5620975a9f305ebc1df0c62d3a81dbc6f57c992be09",
+      "reason": "Synthetic UUID idempotency keys in the original restore fixture. Recipient is loopback port 1 and tenant is restore-oms; these are request identities, not authentication secrets."
+    },
+    {
+      "rule": "curl-auth-header",
+      "path": "scripts/container-smoke.sh",
+      "start_line": 124,
+      "end_line": 124,
+      "source_sha256": "097372d09d11a7ef450f28ba745af5e818e79218f55e16e8047238f2c13e3e42",
+      "reason": "Fixed synthetic release-smoke credential configured only inside the owned isolated test container. Its matching API-key fixture is in the same script; it is not a deployment credential."
+    },
+    {
+      "rule": "curl-auth-header",
+      "path": "scripts/container-smoke.sh",
+      "start_line": 129,
+      "end_line": 131,
+      "source_sha256": "097372d09d11a7ef450f28ba745af5e818e79218f55e16e8047238f2c13e3e42",
+      "reason": "Fixed synthetic release-smoke credential configured only inside the owned isolated test container. Its matching API-key fixture is in the same script; it is not a deployment credential."
+    },
+    {
+      "rule": "curl-auth-header",
+      "path": "scripts/container-smoke.sh",
+      "start_line": 133,
+      "end_line": 133,
+      "source_sha256": "097372d09d11a7ef450f28ba745af5e818e79218f55e16e8047238f2c13e3e42",
+      "reason": "Fixed synthetic release-smoke credential configured only inside the owned isolated test container. Its matching API-key fixture is in the same script; it is not a deployment credential."
+    }
+  ]
+}

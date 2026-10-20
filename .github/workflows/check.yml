@@ -27,6 +27,30 @@ jobs:
       WMS_RELEASE_REVISION: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Audit public source and full available Git history
+        run: |
+          python3 - <<'PY'
+          import hashlib, os, pathlib, tarfile, urllib.request
+          directory = pathlib.Path(os.environ['RUNNER_TEMP']) / 'warehouse-gitleaks'
+          directory.mkdir(mode=0o700)
+          url = 'https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz'
+          archive = directory / 'gitleaks.tar.gz'
+          with urllib.request.urlopen(url, timeout=60) as response:
+              data = response.read()
+          assert hashlib.sha256(data).hexdigest() == '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb', 'Gitleaks asset digest differs'
+          archive.write_bytes(data)
+          with tarfile.open(archive) as source:
+              member = source.getmember('gitleaks')
+              assert member.isfile()
+              binary = directory / 'gitleaks'
+              binary.write_bytes(source.extractfile(member).read())
+              binary.chmod(0o700)
+          PY
+          python3 scripts/public_source_audit.py --repository . \
+            --gitleaks "$RUNNER_TEMP/warehouse-gitleaks/gitleaks" \
+            --output "$RUNNER_TEMP/warehouse-source-review"
       - uses: dtolnay/rust-toolchain@1.90.0
         with:
           components: rustfmt, clippy
@@ -45,6 +69,13 @@ jobs:
         env:
           WMS_RELEASE_ARTIFACT_DIR: ${{ runner.temp }}/warehouse-release-qualification
         run: bash scripts/qualify-release.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: warehouse-source-review
+          retention-days: 14
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/warehouse-source-review/report.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:

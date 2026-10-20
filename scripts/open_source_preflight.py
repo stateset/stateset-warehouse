@@ -9,7 +9,7 @@ import sys
 
 
 def inspect(root):
-    required = ["LICENSE", "LICENSE-MIT", "LICENSE-APACHE", "SECURITY.md", "CONTRIBUTING.md", "THIRD_PARTY_NOTICES.md", "docs/open-source-release.md", "docs/icommerce.md", "cli/README.md"]
+    required = ["LICENSE", "LICENSE-MIT", "LICENSE-APACHE", "SECURITY.md", "CONTRIBUTING.md", "THIRD_PARTY_NOTICES.md", "docs/open-source-release.md", "docs/icommerce.md", "cli/README.md", "dashboard/public/THIRD_PARTY_NOTICES.txt"]
     files = {}
     for name in required:
         raw = (root / name).read_bytes()

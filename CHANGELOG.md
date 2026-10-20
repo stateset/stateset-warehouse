@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add a reproducible full-history/public-source audit with exact-byte false-positive reviews and pinned, checksum-verified CI scanning. Retain original license and copyright texts for all eight browser runtime dependencies in the built dashboard, and reject stale notices during ordinary checks.
+
 - Keep open partial/package orders visible in a dedicated work queue and `l` home lane before and after handoff. Add a fresh, source-checked remaining-work review with exact original line quantities, released reservations, original packages and cancelled demand. Offer continued allocation/picking, staged-stock return, reservation release and explicit remainder closure from the original partial order, with unchanged role/scope/version and original-request recovery guards.
 - Add a home operations board with timed read-only refresh, visible snapshot age, pause/resume, retained stale snapshots, source-timestamp attention items and direct work-lane shortcuts. Preserve unfinished menu input and selection across clock updates; suspend reads while typing or inside task/review views. Recheck the original live identity before refreshing and hold automatic reads after session failures.
 - Keep exact on-hand/reserved quantities visible in compact stock tables and availability/physical/reserved/usable figures in compact lot views. Adapt identity widths first and use multiple lines for values that cannot fit; never abbreviate operational quantities. Show an explicit selected-row marker even with colors disabled.
