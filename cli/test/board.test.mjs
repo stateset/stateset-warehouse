@@ -61,7 +61,8 @@ test('board lane shortcuts and attention age use original status, location types
   assert.equal(refreshInterval(), 15000); assert.equal(refreshInterval('0'), 0); assert.equal(refreshInterval('5'), 5000);
 });
 
-test('home clock ticks retain unfinished input, selection and context; refresh callbacks stop at exit', async () => {
+test('home clock ticks retain unfinished input, selection and context; refresh callbacks stop at exit', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
   const io = device(); let ticks = 0; let paused = false;
   try {
     const menu = io.ui.menu('Operations', [['Other', 'other'], ['Original inventory', 'inventory']], {
@@ -69,12 +70,12 @@ test('home clock ticks retain unfinished input, selection and context; refresh c
       context: () => ({ intro: ['Operator: Original', paused ? 'Paused' : 'Current'], compactIntro: ['Original'], detailsIntro: ['Complete original context'] }),
       localActions: { z: () => { paused = true; } },
     });
-    io.input.write('/Orig'); await new Promise(resolve => setTimeout(resolve, 25));
+    io.input.write('/Orig'); await settle();
+    t.mock.timers.tick(10); await settle(); assert.equal(ticks, 1);
     io.input.write('inal\n\n'); assert.equal(await menu, 'inventory');
-    const atExit = ticks; await new Promise(resolve => setTimeout(resolve, 25)); assert.equal(ticks, atExit);
-    assert.ok(ticks > 0);
+    const atExit = ticks; t.mock.timers.tick(1000); await settle(); assert.equal(ticks, atExit);
     io.input.write('z\nq\n'); assert.equal(await io.ui.menu('Pause', [['Original', 'original']], { localActions: { z: () => { paused = true; } } }), null); assert.equal(paused, true);
-  } finally { io.ui.close(); }
+  } finally { io.ui.close(); t.mock.timers.reset(); }
   assert.equal(io.input.isRaw, false);
 });
 
