@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "scope": "targeted_ghostty_operations_center_development",
+  "recorded_at": "2026-10-20T15:30:18.240661+00:00",
+  "result": "passed",
+  "production_qualified": false,
+  "baseline_tag": "v0.2.0",
+  "parent_commit": "896c0ac1feec475f34c009328927258d326ade4b",
+  "terminal_checks_passed": 76,
+  "terminal_checks_skipped": 0,
+  "node_version": "22.18.0",
+  "test_command": "WMS_TEST_DATABASE_URL=<isolated-test-db> npm --prefix cli run test:acceptance",
+  "actual_pg_api_and_pty_passed": true,
+  "software_terminal_profiles": [
+    "49x20 real API/PTY operations",
+    "70x44 real API/PTY operations",
+    "49x20,70x24,70x44,120x32 layout bounds",
+    "30x12 smaller-pane layout checks"
+  ],
+  "operations_checks": [
+    "Ghostty-oriented operations board with fulfillment stages, incoming work, priority/quality counts and recovery visibility",
+    "Compact command bars and UTC snapshot time; full original context remains available",
+    "Bounded menus and compact tables retain prompts and stable command numbers",
+    "Readable field-complete work summaries and committed/uncertain outcomes with original JSON inspection",
+    "Cancel selected-row forms back to their current table context",
+    "Guided stock dispatch and destination directory with explicit original stock/line identities",
+    "Guided partial packing subtracts existing open packages and draft claims",
+    "Original package handoff/unpacking rechecks scope, order, package, role and selected version",
+    "Return authorization binds the original shipped line/lot and fresh remaining eligibility",
+    "Actual pack codes and counts bind the reviewed original definition, factor and target",
+    "Exact pack conversion carries unit_inputs alongside each quantities; physical serial observations remain required",
+    "Invalid pack inputs and stale/source-held definitions cannot produce a conversion request",
+    "Rejected conversion evidence is absent when a subsequent each entry replaces it",
+    "Real 49x20 pack conversion and guided dispatch, actual partial package/handoff and original-line return",
+    "Return authorization alone leaves physical stock unchanged; both facilities reconcile",
+    "Original recovery, concurrency, literal scanner behavior, lot controls, exceptions and serial transfer arrivals still pass",
+    "Acceptance entry point refuses to skip PostgreSQL or a missing API binary",
+    "Repository launcher finds compatible local Node runtimes and honors an explicit validated runtime"
+  ],
+  "recovery_journal_module_unchanged_sha256": "c6ba9e83810940cd19ba9675cc25c337cc326d928913dd95483a6a5961c11e7d",
+  "qualified_backend_image_inputs_unchanged": 305,
+  "qualified_backend_image_inputs_sha256": "7d59f80d543801c9237fa9a7dac313f00b31228f81b699a100e34f531343be89",
+  "full_release_gate_rerun": false,
+  "npm_package_dry_run_files": 20,
+  "package_published": false,
+  "source_files": [
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "3993e4ca396144750cda637f5fef5942ffbed7f5087025409547f3be2f3f8c47"
+    },
+    {
+      "path": "cli/README.md",
+      "sha256": "7e375f2a65495dbe2b732d22850f6b8072d7f7a8320a088dbf7ad9bdaee79734"
+    },
+    {
+      "path": "cli/lib/commands.mjs",
+      "sha256": "aeb0a74f5125a75e702f33c64c8a9050ee8657baf14f2bc45bcc8ed7bda75528"
+    },
+    {
+      "path": "cli/lib/entry.mjs",
+      "sha256": "646e519d8c61ec5421614ae55c3dbf3305d742307596b7fe3da3d97fe9835687"
+    },
+    {
+      "path": "cli/lib/queues.mjs",
+      "sha256": "5c698a304aedd9f5123fb0179f39398420ec37f001bf0b03f1c8dbb1658117cf"
+    },
+    {
+      "path": "cli/lib/summaries.mjs",
+      "sha256": "e3dc8fbc6d8194943818227d53a3f9eea4a653b1bbd4f6876fd19f2898a487a4"
+    },
+    {
+      "path": "cli/lib/terminal.mjs",
+      "sha256": "698674e390604ed35d5dc0640a8af1c458f7bfcc21febb1ea396ecc94ba7f939"
+    },
+    {
+      "path": "cli/lib/views.mjs",
+      "sha256": "dce641dc65fca9030f35ab2a8e261665a3e28cdb1bfabc392e6f53cad0788d1a"
+    },
+    {
+      "path": "cli/lib/workflows.mjs",
+      "sha256": "ed9859ade82d53072366fb18d25c4826d70c7e4bd29fa516af893f6495897b90"
+    },
+    {
+      "path": "cli/package.json",
+      "sha256": "6f65293f7f44e2862d934458e23cb83a111b9776052d320503e4b7528ef12095"
+    },
+    {
+      "path": "cli/test/acceptance.mjs",
+      "sha256": "537f2946f50163c2f31bcc064e6f8ab6c3f5a33a79e7424a9466340e198a9bc7"
+    },
+    {
+      "path": "cli/test/live.test.mjs",
+      "sha256": "b88dc7c3508026873e91a9e7279e9e7e9afb467c3f670f7aa53785c261971d1a"
+    },
+    {
+      "path": "cli/test/operations.test.mjs",
+      "sha256": "84d9844ef1b4d58729aab8fda23ce926100787462dc50a2d7e8601782eba2bd7"
+    },
+    {
+      "path": "cli/test/workflows.test.mjs",
+      "sha256": "65a7316ff5233ce19ae52e911c6afb6cc6ce9bb1219bff0c509bfe267f031ece"
+    },
+    {
+      "path": "cli/warehouse-tui.mjs",
+      "sha256": "b52ee9530925c54e045e85233b67e316f4452c5b23218810da30093c52d2c46d"
+    },
+    {
+      "path": "scripts/warehouse-tui.sh",
+      "sha256": "555fc4af4c35174a053e5a0fdf65ff2bcf747646bd6ec047c02fbac1e6db1143"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "compact-console.svg",
+      "sha256": "87ac136178aa7de2dcd42abc6759fbe71870104395014507034f5e670ceeb21b"
+    },
+    {
+      "path": "terminal-checks.log",
+      "sha256": "0ccaf95172dc79273d0dbbea14602ee36fad9383c06d9743f224c495fadf91d2"
+    }
+  ],
+  "limits": [
+    "The user specified a Ghostty warehouse operations center; scanner hardware and operator pane sizes were unspecified.",
+    "PTY and renderer checks do not establish native Ghostty GPU/compositor, scanner hardware or physical facility acceptance.",
+    "The board shows a timestamped operational snapshot and explicit refresh; it does not continuously poll.",
+    "No hosted CI or deployed/operator-throughput acceptance is implied by local software checks.",
+    "The full v0.2.0 release gate was not rerun; original dated evidence and release tags remain unchanged.",
+    "Pane control returned Operation not permitted; the existing running pane was not restarted."
+  ]
+}

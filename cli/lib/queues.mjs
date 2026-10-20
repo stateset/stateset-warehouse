@@ -45,6 +45,7 @@ export function filtersFor(kind, snapshot = {}) {
       filter('outbound', 'Outbound from this facility', row => row.source_warehouse_id === snapshot.warehouseId),
       filter('held', 'Source check held', row => row.ok !== true),
     ],
+    shipments: [filter('open', 'Packed / awaiting handoff', row => row.closure === null), filter('closed', 'Handed off / unpacked', row => row.closure !== null)],
   }[kind] ?? [])];
 }
 export function sortsFor(kind) {
@@ -57,6 +58,7 @@ export function sortsFor(kind) {
     exceptions: [sort('category', 'Category', (left, right) => text(left, right, 'category'))],
     lots: [sort('identity', 'SKU / lot', (left, right) => text(left, right, 'sku') || text(left, right, 'lot')), sort('physical', 'Physical: highest first', (left, right) => compare(right.physical, left.physical) || text(left, right, 'sku') || text(left, right, 'lot'))],
     transfers: [sort('reference', 'Transfer reference', (left, right) => text(left, right, 'reference')), sort('dispatched', 'Dispatched: newest first', (left, right) => text(right, left, 'dispatched_at'))],
+    shipments: [sort('reference', 'Package reference', (left, right) => text(left, right, 'reference'))],
   }[kind] ?? [])];
 }
 export function tableView(kind, snapshot, { filter: filterId = 'all', sort: sortId = 'source', query = '' } = {}) {

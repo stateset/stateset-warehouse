@@ -52,7 +52,7 @@ test('receiving requires an explicitly selected original line and never assumes 
 test('row action suggestions respect role and terminal states without claiming server admission', () => {
   assert.deepEqual(rowWork('stocks', stock, 'oms'), []);
   assert.deepEqual(rowWork('receipts', { ...receipt, status: 'received' }, 'admin'), []);
-  assert.deepEqual(rowWork('orders', { status: 'shipped' }, 'admin').map(spec => spec.type), ['report_exception']);
+  assert.deepEqual(rowWork('orders', { status: 'shipped' }, 'admin').map(spec => spec.type), ['create_return', 'report_exception']);
   assert.deepEqual(rowWork('orders', { status: 'pending' }, 'oms').map(spec => spec.type), ['cancel_order']);
   assert.ok(!rowWork('orders', { status: 'packed', shipment_mode: 'split' }, 'admin').some(spec => spec.type === 'ship'));
 });
@@ -202,4 +202,30 @@ test('expiry entry retries invalid dates without changing literal offsets or mic
   await assert.rejects(commandForm(spec, async () => assert.fail('must reject before asking'), undefined, { sku: stock.sku, lot: stock.lot, expires_at: actual }), /cannot supply/);
   const corrected = ['', 'Actual correction evidence'];
   assert.equal((await commandForm(commands.find(command => command.type === 'correct_lot_expiry'), async () => corrected.shift(), undefined, { sku: stock.sku, lot: stock.lot })).expires_at, null);
+});
+
+test('shipment handoff preserves the exact package and rejects stale, closed or foreign-order sources', async () => {
+  const pack = { id: 'Original-Package', order_id: 'Original-Order', reference: 'Package', closure: null, lines: [] };
+  const selection = selectionFor(scope, 'shipments', pack, 7, 'handoff_shipment');
+  const page = { warehouse_id: scope.warehouse, order_id: pack.order_id, version: 7, ok: true, packages: [pack] };
+  const client = { warehousePath: (_warehouse, suffix) => `/v1/warehouses/Original${suffix}`, read: async () => page };
+  const { spec, identities } = await reviewSelectedWork(client, snapshot, scope, selection, 'operator');
+  assert.deepEqual(identities, { shipment_id: pack.id });
+  const values = ['Actual carrier', 'Actual handoff'];
+  assert.deepEqual(await commandForm(spec, async () => values.shift(), undefined, identities), { type: 'handoff_shipment', shipment_id: pack.id, carrier: 'Actual carrier', handoff_reference: 'Actual handoff' });
+  for (const change of [{ version: 8 }, { ok: false }, { order_id: 'Other' }, { packages: [{ ...pack, closure: { kind: 'handoff' } }] }, { packages: [{ ...pack, order_id: 'Other' }] }]) await assert.rejects(reviewSelectedWork({ ...client, read: async () => ({ ...page, ...change }) }, snapshot, scope, selection, 'operator'), /changed|held|unavailable/);
+  await assert.rejects(reviewSelectedWork(client, snapshot, scope, selection, 'oms'), /current role/);
+});
+
+test('selected return authorization binds its reviewed original order and warehouse version', async () => {
+  const order = { id: 'Original-Order', status: 'partially_shipped', allocations: [] };
+  const state = { ...snapshot, orders: [order] };
+  const selection = selectionFor(scope, 'orders', order, 7, 'create_return');
+  const page = { order_id: order.id, version: 7, lines: [{ order_line_id: 'Original-Line', sku: stock.sku, lot: stock.lot, remaining: 1 }] };
+  const client = { warehousePath: (_warehouse, suffix) => `/v1/warehouses/Original${suffix}`, read: async () => page };
+  const chosen = await reviewSelectedWork(client, state, scope, selection, 'operator');
+  assert.deepEqual(chosen.identities, { order_id: order.id });
+  assert.equal(chosen.returns, page);
+  for (const change of [{ version: 8 }, { order_id: 'original-order' }]) await assert.rejects(reviewSelectedWork({ ...client, read: async () => ({ ...page, ...change }) }, state, scope, selection, 'operator'), /changed/);
+  await assert.rejects(reviewSelectedWork(client, state, scope, selection, 'oms'), /current role/);
 });

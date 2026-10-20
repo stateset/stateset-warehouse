@@ -55,9 +55,9 @@ function exactExpiry(value) {
   const utcYear = new Date(value).getUTCFullYear();
   return year >= 1 && month >= 1 && month <= 12 && day >= 1 && day <= days[month - 1] && utcYear >= 1 && utcYear <= 9999;
 }
-export async function formFields(spec, ask, notice = () => {}, identities = {}) {
+export async function formFields(spec, ask, notice = () => {}, identities = {}, { quantity, maximum } = {}) {
   const result = {};
-  const sourceFields = new Set(['sku', 'lot', 'from', 'location', 'order_id', 'receipt_id', 'line_id', 'exception_id', 'transfer_id', 'hold_id']);
+  const sourceFields = new Set(['sku', 'lot', 'from', 'location', 'order_id', 'receipt_id', 'line_id', 'exception_id', 'transfer_id', 'hold_id', 'order_line_id', 'shipment_id']);
   const names = spec.split(' ').map(field => field.replace(/[#!?]$/, ''));
   for (const [name, value] of Object.entries(identities)) {
     if (!sourceFields.has(name) || !names.includes(name) || typeof value !== 'string' || !value || value.trim() !== value || Buffer.byteLength(value) > 240 || /[\x00-\x1f\x7f-\x9f]/.test(value)) throw new Error('Selected work can carry only valid original reference fields');
@@ -67,12 +67,17 @@ export async function formFields(spec, ask, notice = () => {}, identities = {}) 
     if (Object.hasOwn(identities, name)) { result[name] = identities[name]; continue; }
     for (;;) {
       const choices = { priority: ['normal', 'high', 'urgent'], kind: ['storage', 'receiving'] }[name];
-      const value = await ask(`${name}${choices ? ` (${choices.join('/')})` : field.endsWith('?') ? ' (optional)' : field.endsWith('#') ? ' (whole each)' : field.endsWith('!') ? ' (yes/no)' : ''}: `);
+      let value = await ask(`${name}${choices ? ` (${choices.join('/')})` : field.endsWith('?') ? ' (optional)' : field.endsWith('#') ? ' (whole each)' : field.endsWith('!') ? ' (yes/no)' : ''}: `);
       if (value === null) throw new Error('Input ended; no request sent');
       if (field.endsWith('?') && value === '') { result[name] = null; break; }
       if (field.endsWith('#')) {
         const minimum = ['counted', 'reorder_point'].includes(name) ? 0 : 1;
+        if (quantity && ['quantity', 'counted'].includes(name)) {
+          const converted = await quantity({ name, values: result, minimum, value });
+          if (value === 'pack') { if (converted === null) continue; value = String(converted); }
+        }
         if (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)) || Number(value) < minimum || Number(value) > 1_000_000) { notice(`Enter a whole each quantity from ${minimum} to 1000000.`); continue; }
+        if (maximum !== undefined && Number(value) > maximum) { notice(`This selected source has ${maximum} each remaining; enter the actually observed quantity within that limit.`); continue; }
         result[name] = Number(value); break;
       }
       if (field.endsWith('!')) {
@@ -90,22 +95,26 @@ export async function formFields(spec, ask, notice = () => {}, identities = {}) 
   }
   return result;
 }
-export async function commandForm(spec, ask, notice, identities) {
+export async function commandForm(spec, ask, notice, identities, { quantity, rowSource } = {}) {
   const selectedFields = {
     move_stock: ['sku', 'lot', 'from'], count_stock: ['sku', 'lot', 'location'],
     receive: ['receipt_id', 'line_id'], cancel_receipt: ['receipt_id'],
     allocate_available: ['order_id'], pick: ['order_id', 'line_id'], unpick: ['order_id', 'line_id'],
     release_unpicked: ['order_id'], cancel_order: ['order_id'], pack: ['order_id'], ship: ['order_id'],
     report_exception: ['order_id'], resolve_exception: ['exception_id'],
-    receive_transfer: ['transfer_id', 'line_id'],
+    receive_transfer: ['transfer_id', 'line_id'], pack_shipment: ['order_id'], create_return: ['order_id'],
+    handoff_shipment: ['shipment_id'], unpack_shipment: ['shipment_id'],
     quarantine_lot: ['sku', 'lot'], record_lot_expiry: ['sku', 'lot'], correct_lot_expiry: ['sku', 'lot'], release_lot_hold: ['hold_id'],
   }[spec.type] ?? [];
   if (Object.keys(identities ?? {}).some(name => !selectedFields.includes(name))) throw new Error('Selected work cannot supply quantities, destinations, observations or other form values');
-  const command = { type: spec.type, ...await formFields(spec.fields, ask, notice, identities) };
+  const command = { type: spec.type, ...await formFields(spec.fields, ask, notice, identities, { quantity: quantity ? values => quantity({ ...values, command: { type: spec.type }, row: null }) : undefined }) };
   if (spec.rows) {
     const [field, rowSpec] = spec.rows; command[field] = [];
     for (let count = 0; count < 100; count++) {
-      command[field].push(await formFields(rowSpec, ask, notice));
+      const source = rowSource ? await rowSource({ command, index: count }) : undefined;
+      const allowed = { pack_shipment: ['line_id', 'location', 'lot'], create_return: ['order_line_id', 'lot'], dispatch_transfer: ['sku', 'lot', 'location'] }[spec.type] ?? [];
+      if (Object.keys(source?.identities ?? {}).some(key => !allowed.includes(key))) throw new Error('Guided lines can carry only original source identities');
+      command[field].push(await formFields(rowSpec, ask, notice, source?.identities, { maximum: source?.maximum, quantity: quantity ? values => quantity({ ...values, command, row: count }) : undefined }));
       if (await ask('Add another line? (yes/no): ') !== 'yes') break;
     }
   }

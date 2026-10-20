@@ -3,7 +3,7 @@ import { safeText } from './client.mjs';
 
 import { fit, wrap } from './format.mjs';
 import { Keys } from './keys.mjs';
-import { keyboardHelp } from './views.mjs';
+import { keyboardHelp, inspectText } from './views.mjs';
 export { fit, wrap, width } from './format.mjs';
 
 export class Terminal {
@@ -51,38 +51,54 @@ export class Terminal {
     this.line('STATESET / WAREHOUSE', 'accent'); this.line(title, 'title'); this.line('─'.repeat(this.columns), 'muted');
   }
   json(value) { this.print(JSON.stringify(value, (_key, item) => typeof item === 'string' ? safeText(item) : item, 2)); }
-  async menu(title, items, { intro = [], shortcuts = {}, hint = '', sections = {} } = {}) {
+  async menu(title, items, { intro = [], compactIntro, compactHint, shortcuts = {}, hint = '', sections = {} } = {}) {
     let query = ''; let page = 0; let message = ''; let selected = 1;
     for (;;) {
-      this.screen(title); intro.forEach(line => this.line(line, line.startsWith('ACTION:') || line.includes('unavailable:') || line.startsWith('Recovery check held:') ? 'danger' : line.includes('SYNTHETIC DEMO') ? 'warning' : line.startsWith('Snapshot at') || line.startsWith('Recovery:') ? 'muted' : ''));
-      if (intro.length) this.print();
       const filtered = items.map(([label, value], index) => ({ label, value, number: index + 1 }))
         .filter(item => item.label.toLowerCase().includes(query.toLowerCase()));
       if (!filtered.some(item => item.number === selected)) selected = filtered[0]?.number;
       // Keep the prompt visible even in short panes. Numbers stay stable when
       // searching or paging so existing operator muscle memory still applies.
-      const used = 2 + wrap(title, this.columns).length + intro.reduce((n, line) => n + wrap(line, this.columns).length, 0) + (intro.length ? 1 : 0);
-      const footer = hint ? (Array.isArray(hint) ? [...hint] : [hint]) : ['/text search · ? help · q back / exit'];
+      let visibleIntro = [...intro];
+      let footer = hint ? (Array.isArray(hint) ? [...hint] : [hint]) : ['/text search · ? help · q back / exit'];
       if (this.keys) footer.push('↑↓ move · Enter open · Esc back · F1 help');
+      if (intro.length) footer.push('v full context');
+      const fullSize = 5 + wrap(title, this.columns).length + intro.reduce((n, line) => n + wrap(line, this.columns).length, 0) + (intro.length ? 1 : 0)
+        + footer.reduce((n, line) => n + wrap(line, this.columns).length, 0) + Object.keys(sections).length + 3
+        + (query ? wrap(`Search: ${query}`, this.columns).length : 0) + (message ? wrap(message, this.columns).length : 0);
+      const compact = fullSize > this.rows;
+      if (compact) {
+        footer = (compactHint ?? ['↑↓ Enter · / find · v info · ? help · q back']).map(line => fit(line, this.columns).trimEnd());
+        const danger = intro.filter(line => /^(ACTION:|Recovery check held:|Snapshot unavailable:)/.test(line));
+        const context = intro.filter(line => /^(Facility:|Operator:|Tenant:)/.test(line));
+        const priority = compactIntro ? [...danger, ...compactIntro.filter(line => !danger.includes(line))] : [...danger, ...context];
+        const budget = Math.max(0, this.rows - 8 - footer.length - (query ? 1 : 0) - (message ? 1 : 0));
+        visibleIntro = (priority.length ? priority : intro).slice(0, Math.min(4, budget)).map(line => fit(line, this.columns).trimEnd());
+      }
+      const shownTitle = compact ? fit(title, this.columns).trimEnd() : title;
+      const used = 2 + wrap(shownTitle, this.columns).length + visibleIntro.reduce((n, line) => n + wrap(line, this.columns).length, 0) + (visibleIntro.length && !compact ? 1 : 0);
       const reserved = 3 + footer.reduce((n, line) => n + wrap(line, this.columns).length, 0)
-        + Object.keys(sections).length
-        + (query ? wrap(`Search: ${query}`, this.columns).length : 0)
-        + (message ? wrap(message, this.columns).length : 0);
+        + (compact ? 0 : Object.keys(sections).length)
+        + (query ? compact ? 1 : wrap(`Search: ${query}`, this.columns).length : 0)
+        + (message ? compact ? 1 : wrap(message, this.columns).length : 0);
       const count = Math.max(1, this.rows - used - reserved);
       if (this.keys && selected !== undefined) page = Math.floor(filtered.findIndex(item => item.number === selected) / count);
       page = Math.min(page, Math.max(0, Math.ceil(filtered.length / count) - 1));
+      this.screen(shownTitle);
+      visibleIntro.forEach(line => this.line(line, line.startsWith('ACTION:') || line.includes('unavailable:') || line.startsWith('Recovery check held:') ? 'danger' : line.includes('SYNTHETIC DEMO') ? 'warning' : ''));
+      if (visibleIntro.length && !compact) this.print();
       let section;
       filtered.slice(page * count, (page + 1) * count).forEach(item => {
         const group = Object.keys(sections).map(Number).filter(number => number <= item.number).at(-1);
-        if (group !== undefined && section !== group) { this.line(sections[group], 'accent'); section = group; }
+        if (!compact && group !== undefined && section !== group) { this.line(sections[group], 'accent'); section = group; }
         const active = item.number === selected;
         this.print(this.style(fit(`${this.keys ? active ? '› ' : '  ' : ''}${String(item.number).padStart(2)}. ${item.label}`, this.columns).trimEnd(), this.keys && active ? 'selected' : ''));
       });
-      if (!filtered.length) this.line('No matching actions. Enter / to clear the search.');
-      if (filtered.length > count) this.line(`Page ${page + 1}/${Math.ceil(filtered.length / count)} · n next · p previous`);
-      if (query) this.line(`Search: ${query}`);
+      if (!filtered.length) this.line(fit('No matching actions. / clears search.', this.columns).trimEnd());
+      if (filtered.length > count) this.line(fit(`Page ${page + 1}/${Math.ceil(filtered.length / count)} · n next · p previous`, this.columns).trimEnd());
+      if (query) this.line(compact ? fit(`Search: ${query}`, this.columns).trimEnd() : `Search: ${query}`);
       footer.forEach(line => this.line(line, 'muted'));
-      if (message) this.line(message, 'warning');
+      if (message) this.line(compact ? fit(message, this.columns).trimEnd() : message, 'warning');
       const raw = await this.action('\nSelect: ');
       if (raw && typeof raw === 'object') {
         if (raw.key === 'escape') return null;
@@ -101,6 +117,7 @@ export class Terminal {
       if (answer === undefined || answer === 'q') return null;
       if (answer === '' && this.keys && selected !== undefined) return filtered.find(item => item.number === selected).value;
       if (answer === '?') { await keyboardHelp(this); continue; }
+      if (answer === 'v' && intro.length) { await inspectText(this, title, intro.join('\n')); continue; }
       if (answer.startsWith('/')) { query = answer.slice(1); page = 0; message = ''; continue; }
       if (answer === 'n' || answer === 'p') {
         page = Math.max(0, Math.min(page + (answer === 'n' ? 1 : -1), Math.max(0, Math.ceil(filtered.length / count) - 1)));

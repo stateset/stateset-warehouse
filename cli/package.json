@@ -18,7 +18,8 @@
   ],
   "scripts": {
     "start": "node warehouse-tui.mjs",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "test:acceptance": "node test/acceptance.mjs"
   },
   "repository": {
     "type": "git",

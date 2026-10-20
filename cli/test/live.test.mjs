@@ -17,7 +17,7 @@ const shell = value => `'${value.replaceAll("'", "'\\''")}'`;
 
 // This test starts only an owned API with synthetic identities on an explicitly
 // isolated existing test DB; it never configures native/external integrations.
-test('real API/PG terminal work, lost-success recovery, actor fencing and PTY navigation', { skip: !database, timeout: 90000 }, async t => {
+test('real API/PG terminal work, lost-success recovery, actor fencing and PTY navigation', { skip: !database, timeout: 180000 }, async t => {
   assert.ok(new URL(database).pathname.includes('test'), 'isolated test database name');
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'wms-tui-live-'));
   const token = randomBytes(32).toString('hex'), otherToken = randomBytes(32).toString('hex');
@@ -78,8 +78,9 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
 
   // The script utility supplies a real pseudoterminal. Drive actual prompts,
   // including a typed physical move; the server verifies the resulting state.
-  async function driveTerminal(steps, filename, { expectCommit = true, warehouse = scope.warehouse } = {}) {
-    const terminal = spawn('script', ['-qefc', `stty cols 70 rows 44; exec ${shell(process.execPath)} ${shell(path.join(repo, 'cli/warehouse-tui.mjs'))}`, '/dev/null'], { env: { ...env, WMS_URL: origin, WMS_TOKEN: token, WMS_WAREHOUSE: warehouse, WMS_TUI_STATE_DIR: journal.root, TERM: 'xterm' }, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
+  async function driveTerminal(steps, filename, { expectCommit = true, warehouse = scope.warehouse, columns = 70, rows = 44 } = {}) {
+    assert.ok(Number.isSafeInteger(columns) && Number.isSafeInteger(rows));
+    const terminal = spawn('script', ['-qefc', `stty cols ${columns} rows ${rows}; exec ${shell(process.execPath)} ${shell(path.join(repo, 'cli/warehouse-tui.mjs'))}`, '/dev/null'], { env: { ...env, WMS_URL: origin, WMS_TOKEN: token, WMS_WAREHOUSE: warehouse, WMS_TUI_STATE_DIR: journal.root, TERM: 'xterm-ghostty', TERM_PROGRAM: 'ghostty' }, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
     let transcript = ''; let position = 0; let handled = 0;
     const drive = chunk => {
       transcript += chunk.toString();
@@ -487,6 +488,80 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
   assert.deepEqual(afterCorrection.stocks, beforeQuality.stocks, 'lot disposition moves no physical stock or reservations');
   assert.deepEqual(afterCorrection.orders, beforeQuality.orders);
   assert.deepEqual((await client.read(`/v1/serials?sku=TUI-PART&warehouse_id=${newId}&limit=100`)).items, arrivalCustody.items, 'lot disposition does not change physical serial custody');
+  assert.equal((await client.read(client.warehousePath(newId, '/reconciliation'))).ok, true);
+  // Ghostty-sized operations-center flows: actual pack conversion, selected
+  // stock dispatch, partial package/handoff and original shipped-line return.
+  for (const warehouse of [scope.warehouse, newId]) await seed(warehouse, { type: 'create_product', sku: 'OPS', name: 'Synthetic operations stock', category: 'Synthetic', reorder_point: 0, serial_controlled: false });
+  await seed(scope.warehouse, { type: 'count_stock', sku: 'OPS', lot: 'OPS-PACK', location: 'A', counted: 24, reason: 'Actual synthetic opening count' });
+  await seed(scope.warehouse, { type: 'set_unit_pack', sku: 'OPS', code: 'BOX', label: 'Observed six-each box', each_per_pack: 6, enabled: true, reason: 'Actual synthetic pack definition' });
+  const beforePackMove = await client.read(client.warehousePath(scope.warehouse));
+  await driveTerminal([
+    ['Select: ', '1'], ['Select: ', '2'], ['sku: ', 'OPS'], ['lot: ', 'OPS-PACK'], ['from: ', 'A'], ['to: ', 'B'],
+    ['quantity (whole each): ', 'pack'], ['Scan pack code (EA cancels): ', 'BOX'], ['Observed pack count: ', '2'],
+    ['Enter to confirm: ', 'j'], ['n next | p previous | Enter back: ', ''], ['Enter to confirm: ', ''],
+    ['Record this observed work? Type yes: ', 'yes'], ['Enter to continue: ', ''], ['Select: ', 'q'],
+  ], 'operations-pack-conversion-terminal.txt', { columns: 49, rows: 20 });
+  const converted = (await journal.listForIdentity(scope)).find(row => row.request.command.type === 'move_stock' && row.request.command.sku === 'OPS');
+  assert.equal(converted.stage, 'committed'); assert.equal(converted.request.expected_version, beforePackMove.version);
+  assert.equal(converted.request.command.quantity, 12);
+  assert.deepEqual(converted.request.unit_inputs, [{ target: [], sku: 'OPS', pack_code: 'BOX', definition_id: beforePackMove.unit_packs.find(pack => pack.sku === 'OPS').id, pack_quantity: 2, each_per_pack: 6 }]);
+  const dispatchState = await client.read(client.warehousePath(scope.warehouse));
+  const opsStocks = dispatchState.stocks.filter(row => JSON.stringify(row).toLowerCase().includes('ops-pack'));
+  const sourceIndex = opsStocks.findIndex(row => row.location === 'A'); assert.ok(sourceIndex >= 0);
+  await driveTerminal([
+    ['Select: ', 'i'], ['View: ', '/OPS-PACK'], ['View: ', { keys: '\x1b[B'.repeat(sourceIndex + 1) }], ['View: ', 'a'], ['Select: ', '3'],
+    ['reference: ', 'OPS-DISPATCH'], ['Select: ', '1'], ['carrier: ', 'Actual carrier'], ['handoff_reference: ', 'Actual departure'],
+    ['id: ', 'Original-OPS-Transfer'], ['quantity (whole each): ', '3'], ['Add another line? (yes/no): ', 'no'],
+    ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'yes'], ['Enter to continue: ', ''], ['View: ', ''], ['Select: ', 'q'],
+  ], 'operations-guided-dispatch-terminal.txt', { columns: 49, rows: 20 });
+  const dispatchedWork = (await journal.listForIdentity(scope)).find(row => row.request.command.type === 'dispatch_transfer');
+  assert.equal(dispatchedWork.stage, 'committed');
+  assert.deepEqual(dispatchedWork.request.command.lines, [{ id: 'Original-OPS-Transfer', sku: 'OPS', lot: 'OPS-PACK', location: 'A', quantity: 3 }]);
+  assert.equal(dispatchedWork.request.command.destination_warehouse_id, newId);
+  await seed(scope.warehouse, { type: 'create_order', reference: 'OPS-ORDER', source_order_id: 'Synthetic-OPS-Order', customer: 'Synthetic customer', destination: 'Synthetic destination', priority: 'normal', lines: [{ id: 'Original-OPS-Line', sku: 'OPS', quantity: 5 }] });
+  let opsOrder = (await client.read(client.warehousePath(scope.warehouse))).orders.find(order => order.reference === 'OPS-ORDER');
+  await seed(scope.warehouse, { type: 'allocate_available', order_id: opsOrder.id });
+  opsOrder = (await client.read(client.warehousePath(scope.warehouse))).orders.find(order => order.id === opsOrder.id);
+  const opsAllocation = opsOrder.allocations[0];
+  await seed(scope.warehouse, { type: 'pick', order_id: opsOrder.id, line_id: 'Original-OPS-Line', location: opsAllocation.location, lot: opsAllocation.lot, quantity: 5 });
+  opsOrder = (await client.read(client.warehousePath(scope.warehouse))).orders.find(order => order.id === opsOrder.id);
+  const packIndex = rowWork('orders', opsOrder, 'admin').findIndex(spec => spec.type === 'pack_shipment') + 2;
+  await driveTerminal([
+    ['Select: ', 'o'], ['View: ', '/OPS-ORDER'], ['View: ', { keys: '\x1b[B' }], ['View: ', 'a'], ['Select: ', String(packIndex)],
+    ['reference: ', 'OPS-PACKAGE'], ['Select: ', '1'], ['quantity (whole each): ', '2'], ['Add another line? (yes/no): ', 'no'],
+    ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'yes'], ['Enter to continue: ', ''], ['View: ', ''], ['Select: ', 'q'],
+  ], 'operations-guided-partial-package-terminal.txt');
+  const packedWork = (await journal.listForIdentity(scope)).find(row => row.request.command.type === 'pack_shipment');
+  assert.equal(packedWork.stage, 'committed'); assert.equal(packedWork.request.command.order_id, opsOrder.id);
+  assert.deepEqual(packedWork.request.command.lines, [{ line_id: 'Original-OPS-Line', location: opsAllocation.location, lot: opsAllocation.lot, quantity: 2 }]);
+  opsOrder = (await client.read(client.warehousePath(scope.warehouse))).orders.find(order => order.id === opsOrder.id);
+  const packageMenu = rowWork('orders', opsOrder, 'admin').length + 2;
+  await driveTerminal([
+    ['Select: ', 'o'], ['View: ', '/OPS-ORDER'], ['View: ', { keys: '\x1b[B' }], ['View: ', 'a'], ['Select: ', String(packageMenu)],
+    ['View: ', { keys: '\x1b[B' }], ['View: ', 'a'], ['Select: ', '3'], ['carrier: ', 'Actual parcel carrier'], ['handoff_reference: ', 'Actual original parcel handoff'],
+    ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'yes'], ['Enter to continue: ', ''], ['View: ', ''], ['View: ', ''], ['Select: ', 'q'],
+  ], 'operations-guided-package-handoff-terminal.txt');
+  const handedOff = (await journal.listForIdentity(scope)).find(row => row.request.command.type === 'handoff_shipment');
+  assert.equal(handedOff.stage, 'committed');
+  const packages = await client.read(client.warehousePath(scope.warehouse, `/orders/${opsOrder.id}/shipments`));
+  assert.equal(packages.packages[0].id, handedOff.request.command.shipment_id); assert.ok(packages.packages[0].closure);
+  opsOrder = (await client.read(client.warehousePath(scope.warehouse))).orders.find(order => order.id === opsOrder.id);
+  assert.equal(opsOrder.status, 'partially_shipped');
+  const returnIndex = rowWork('orders', opsOrder, 'admin').findIndex(spec => spec.type === 'create_return') + 2;
+  const beforeReturn = await client.read(client.warehousePath(scope.warehouse));
+  await driveTerminal([
+    ['Select: ', 'o'], ['View: ', '/OPS-ORDER'], ['View: ', { keys: '\x1b[B' }], ['View: ', 'a'], ['Select: ', String(returnIndex)],
+    ['reference: ', 'OPS-RETURN'], ['reason: ', 'Actual original return authorization'], ['Select: ', '1'], ['id: ', 'Original-OPS-Return'],
+    ['quantity (whole each): ', '1'], ['Add another line? (yes/no): ', 'no'], ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'yes'],
+    ['Enter to continue: ', ''], ['View: ', ''], ['Select: ', 'q'],
+  ], 'operations-guided-return-terminal.txt');
+  const returnedWork = (await journal.listForIdentity(scope)).find(row => row.request.command.type === 'create_return');
+  assert.equal(returnedWork.stage, 'committed'); assert.equal(returnedWork.request.command.order_id, opsOrder.id);
+  assert.deepEqual(returnedWork.request.command.lines, [{ id: 'Original-OPS-Return', order_line_id: 'Original-OPS-Line', lot: opsAllocation.lot, quantity: 1 }]);
+  const afterReturn = await client.read(client.warehousePath(scope.warehouse));
+  assert.deepEqual(afterReturn.stocks, beforeReturn.stocks, 'return authorization alone does not move physical goods');
+  assert.equal(afterReturn.receipts.find(receipt => receipt.reference === 'OPS-RETURN').return_source.order_id, opsOrder.id);
+  assert.equal((await client.read(client.warehousePath(scope.warehouse, '/reconciliation'))).ok, true);
   assert.equal((await client.read(client.warehousePath(newId, '/reconciliation'))).ok, true);
   t.diagnostic(`Private synthetic TUI evidence retained: ${root}`);
 });

@@ -14,6 +14,7 @@ const schemas = {
   exceptions: [column('Category', 'category', 18), column('Status', 'status', 10), column('Detail', 'detail', 40), column('ID', 'id', 36)],
   lots: [column('SKU', 'sku', 18), column('Lot', 'lot', 18), column('Availability', 'availability', 15), column('Physical', 'physical', 9, true), column('Reserved', 'reserved', 9, true), column('Usable', 'usable', 9, true)],
   transfers: [column('Reference', 'reference', 18), column('Check', row => row.ok === true ? 'ok' : 'held', 7), column('Source', 'source_warehouse_id', 18), column('Destination', 'destination_warehouse_id', 18), column('Lines', row => row.lines.length, 6, true)],
+  shipments: [column('Reference', 'reference', 20), column('State', row => row.closure?.kind ?? 'packed', 14), column('Lines', row => row.lines.length, 6, true), column('Package', 'id', 36)],
   movements: [column('SKU', 'sku', 20), column('Kind', 'kind', 16), column('Each', 'quantity', 9, true), column('From', 'from', 14), column('To', 'to', 14), column('Reference', 'reference', 20)],
   activity: [column('Kind', 'kind', 24), column('Reference', 'reference', 24), column('Detail', 'detail', 32), column('Actor', 'actor', 24)],
 };
@@ -36,15 +37,17 @@ export function tableLines(kind, rows, columns, offset = 0) {
 export async function inspectJson(ui, title, value, options) {
   return inspectText(ui, title, JSON.stringify(value, null, 2), options);
 }
-export async function inspectText(ui, title, raw, { prompt = '\nn next | p previous | Enter back: ', allowUndo = false } = {}) {
+export async function inspectText(ui, title, raw, { prompt = '\nn next | p previous | Enter back: ', allowUndo = false, details } = {}) {
   let offset = 0;
   for (;;) {
+    const shownTitle = ui.rows < 28 ? fit(title, ui.columns).trimEnd() : title;
     const lines = raw.split('\n').flatMap(line => wrap(line, ui.columns));
-    const count = Math.max(1, ui.rows - 5 - wrap(title, ui.columns).length - (allowUndo ? wrap('F2 correct last observation before submission', ui.columns).length : 0) - prompt.split('\n').reduce((total, line) => total + wrap(line, ui.columns).length, 0));
+    const count = Math.max(1, ui.rows - 5 - wrap(shownTitle, ui.columns).length - (allowUndo ? wrap('F2 correct last observation before submission', ui.columns).length : 0) - (details ? 1 : 0) - prompt.split('\n').reduce((total, line) => total + wrap(line, ui.columns).length, 0));
     offset = Math.min(offset, Math.max(0, lines.length - 1));
-    ui.screen(title); lines.slice(offset, offset + count).forEach(line => ui.print(line));
+    ui.screen(shownTitle); lines.slice(offset, offset + count).forEach(line => ui.print(line));
     ui.line(`Lines ${offset + 1}–${Math.min(offset + count, lines.length)} of ${lines.length}`);
     if (allowUndo) ui.line('F2 correct last observation before submission', 'muted');
+    if (details) ui.line('j complete original JSON', 'muted');
     const answer = await (ui.action ? ui.action(prompt) : ui.ask(prompt));
     if (answer && typeof answer === 'object') {
       if (answer.key === 'escape') return false;
@@ -57,7 +60,8 @@ export async function inspectText(ui, title, raw, { prompt = '\nn next | p previ
       if (answer.key === 'end') offset = Math.max(0, lines.length - count);
       continue;
     }
-    if (answer === 'n' && offset + count < lines.length) offset += count;
+    if (answer === 'j' && details) await inspectJson(ui, 'Complete original data', details);
+    else if (answer === 'n' && offset + count < lines.length) offset += count;
     else if (answer === 'p') offset = Math.max(0, offset - count);
     else if (answer === null || answer === 'q') return false;
     else if (answer === '') return true;
@@ -77,6 +81,7 @@ Ctrl-C                   Exit, preserving original requests
 HOME SHORTCUTS (then Enter)
 i inventory · o orders · w observed work · c recovery
 t work queues · r refresh · q exit · F1 or ? help
+v shows complete context when a compact screen shortens it.
 
 TABLES
 ↑ / ↓ selects a row; Enter opens its complete details.
@@ -100,6 +105,9 @@ Paste one field at a time. Multi-line paste is ignored.
 Review the complete paged request, then explicitly type yes.
 Esc before submission cancels entry; it cannot undo sent work.
 Recover uncertain work using its complete original request.
+Work/outcome summaries: j opens the complete original JSON.
+Quantity fields accept pack for an actual reviewed pack code/count.
+Selected orders offer partial packages, handoffs and original returns.
 Arrow keys never record a physical warehouse action.`);
 }
 export function scanProgress(ui, state, scope, version, command = {}) {
@@ -128,12 +136,15 @@ export async function inspectRows(ui, kind, load, { onAction, filter: initialFil
     const settings = filterId !== 'all' || sortId !== 'source' ? `Filter: ${view.filter.label} · Sort: ${view.sort.label}` : '';
     const range = (start, end) => `${start}–${end} of ${filtered.length} rows${query || filterId !== 'all' ? ` · ${all.length} total${query ? ` · /${query}` : ''}` : ''}`;
     const batchInfo = serverPaged ? `Batch ${batch + 1} · ${snapshot.nextCursor === null ? 'last batch' : 'more on server'} · search/filter/sort apply to this batch` : '';
-    const footer = [`Row # details · /text search${serverPaged ? ' batch' : ''} · / clear · r refresh`, `n next · p previous · j page JSON · ${selected === null ? 'Enter back' : 'Esc back'}`];
+    const compact = Boolean(ui.keys) && ui.rows < 28;
+    let footer = [`Row # details · /text search${serverPaged ? ' batch' : ''} · / clear · r refresh`, `n next · p previous · j page JSON · ${selected === null ? 'Enter back' : 'Esc back'}`];
     if (ui.keys) footer.push(selected === null ? '↑↓ select · PgUp/PgDn page · Esc back' : '↑↓ select · Enter details · Esc back');
     if (ui.keys) footer.push('F3 / f filters · F4 / s sort');
     if (onAction) footer.push('a actions for selected row · quantities stay explicit');
+    if (compact) footer = [`↑↓ Enter details · ${onAction ? 'a work' : 'j JSON'} · Esc back`, '/ find · f filter · s sort · n/p · r · v info'].map(line => fit(line, ui.columns).trimEnd());
     const empty = all.length ? filterId === 'all' ? 'No matches. Enter / to clear the search.' : 'No rows in this filter. Use f to change; / clears search.' : 'No records in this snapshot.';
-    const reserved = 8 + wrap(snapshot.title, ui.columns).length + wrap(range(filtered.length, filtered.length), ui.columns).length
+    const compactMeta = [batchInfo, settings, snapshot.note].filter(Boolean).map(line => fit(line, ui.columns).trimEnd());
+    const reserved = compact ? 10 + compactMeta.length + (message ? 1 : 0) + (!filtered.length ? 1 : 0) : 8 + wrap(snapshot.title, ui.columns).length + wrap(range(filtered.length, filtered.length), ui.columns).length
       + footer.reduce((total, line) => total + wrap(line, ui.columns).length, 0)
       + (message ? wrap(message, ui.columns).length : 0) + (settings ? wrap(settings, ui.columns).length : 0) + (!filtered.length ? wrap(empty, ui.columns).length : 0)
       + (batchInfo ? wrap(batchInfo, ui.columns).length : 0) + (snapshot.note ? wrap(snapshot.note, ui.columns).length : 0);
@@ -141,11 +152,14 @@ export async function inspectRows(ui, kind, load, { onAction, filter: initialFil
     if (selected !== null) page = Math.floor(selected / count);
     page = Math.min(page, Math.max(0, Math.ceil(filtered.length / count) - 1));
     const offset = page * count; const rows = filtered.slice(offset, offset + count);
-    ui.screen(snapshot.title);
-    ui.line(range(filtered.length ? offset + 1 : 0, offset + rows.length));
-    if (batchInfo) ui.line(batchInfo, 'muted');
-    if (snapshot.note) ui.line(snapshot.note, 'muted');
-    if (settings) ui.line(settings, 'muted');
+    ui.screen(compact ? fit(`${kind} | v${snapshot.version ?? '?'} | ${snapshot.warehouseId ?? snapshot.title}`, ui.columns).trimEnd() : snapshot.title);
+    ui.line(compact ? fit(range(filtered.length ? offset + 1 : 0, offset + rows.length), ui.columns).trimEnd() : range(filtered.length ? offset + 1 : 0, offset + rows.length));
+    if (compact) compactMeta.forEach(line => ui.line(line, 'muted'));
+    else {
+      if (batchInfo) ui.line(batchInfo, 'muted');
+      if (snapshot.note) ui.line(snapshot.note, 'muted');
+      if (settings) ui.line(settings, 'muted');
+    }
     tableLines(kind, rows, ui.columns, offset).forEach((line, index) => {
       const row = rows[index - 2];
       const tone = index === 0 ? 'accent' : index === 1 ? 'muted' : selected === offset + index - 2 ? 'selected'
@@ -153,9 +167,9 @@ export async function inspectRows(ui, kind, load, { onAction, filter: initialFil
           : row?.status === 'open' || ['quarantined', 'expiry_missing', 'invalid'].includes(row?.availability) ? 'warning' : ['shipped', 'received'].includes(row?.status) ? 'success' : '';
       ui.print(ui.style ? ui.style(line, tone) : line);
     });
-    if (!rows.length) ui.line(empty);
+    if (!rows.length) ui.line(compact ? fit(empty, ui.columns).trimEnd() : empty);
     footer.forEach(line => ui.line(line, 'muted'));
-    if (message) ui.line(message);
+    if (message) ui.line(compact ? fit(message, ui.columns).trimEnd() : message);
     const movePage = async direction => {
       selected = null; message = '';
       const lastPage = Math.max(0, Math.ceil(filtered.length / count) - 1);
@@ -215,6 +229,7 @@ export async function inspectRows(ui, kind, load, { onAction, filter: initialFil
       snapshot = await load(serverPaged ? cursors[batch] : null); selected = null; page = 0;
     }
     else if (answer === 'j') await inspectJson(ui, `${snapshot.title} | page JSON`, rows);
+    else if (answer === 'v') await inspectText(ui, 'View context', [snapshot.title, batchInfo, settings, snapshot.note, `Search: /${query}`, message].filter(Boolean).join('\n'));
     else if (/^[1-9]\d*$/.test(answer) && Number(answer) > offset && Number(answer) <= offset + rows.length) {
       await inspectJson(ui, `${snapshot.title} | row ${answer}`, filtered[Number(answer) - 1]);
     } else message = 'Choose a row number on this page, or one of the view keys.';
@@ -237,6 +252,9 @@ export function overviewLines(snapshot, pending, session, warehouse) {
     lines.push(`${snapshot.warehouse.code} · ${snapshot.warehouse.name} · v${snapshot.version}`);
     lines.push(`On hand ${sum(snapshot.stocks, 'on_hand')} ea · Reserved ${sum(snapshot.stocks, 'reserved')} ea`);
     lines.push(`Open orders ${openOrders} · Incoming ${incoming} · Exceptions ${exceptions}`);
+    const at = statuses => snapshot.orders.filter(order => statuses.includes(order.status)).length;
+    lines.push(`Allocate ${at(['pending'])} · Pick ${at(['allocated', 'picking'])} · Pack ${at(['picked'])} · Ship ${at(['packed'])}`);
+    lines.push(`Priority work ${snapshot.orders.filter(order => !['shipped', 'cancelled', 'closed_partial'].includes(order.status) && ['high', 'urgent'].includes(order.priority)).length} · Quarantined lots ${(snapshot.lot_controls ?? []).filter(lot => lot.holds.length).length}`);
     lines.push(`Snapshot at ${snapshot.readAt} · r refresh`);
   }
   lines.push(pending.error ? `Recovery check held: ${pending.error}` : pending.count ? `ACTION: ${pending.count} pending original request(s) · c recovery` : 'Recovery: no pending original requests for your identity');

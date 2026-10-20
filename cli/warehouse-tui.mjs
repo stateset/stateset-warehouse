@@ -5,14 +5,16 @@ import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { Client, originUrl, parseJson, safeText, tokenFromEnv } from './lib/client.mjs';
 import { Journal, boundSession, sendOriginal } from './lib/journal.mjs';
-import { commandForm, visibleCommands } from './lib/commands.mjs';
+import { visibleCommands } from './lib/commands.mjs';
 import { Terminal } from './lib/terminal.mjs';
-import { inspectJson, inspectRows, overviewLines, scanProgress } from './lib/views.mjs';
-import { rowWork, reviewSelectedWork, selectionFor, remainingTransferLines } from './lib/workflows.mjs';
+import { inspectJson, inspectText, inspectRows, overviewLines, scanProgress } from './lib/views.mjs';
+import { rowWork, reviewSelectedWork, selectionFor, remainingTransferLines, shipmentReview } from './lib/workflows.mjs';
 import { observationSession } from './lib/scanning.mjs';
 import { workQueues } from './lib/queues.mjs';
 import { readTablePage } from './lib/pages.mjs';
 import { readOrderReview } from './lib/reviews.mjs';
+import { workSummary, outcomeSummary } from './lib/summaries.mjs';
+import { collectWork } from './lib/entry.mjs';
 
 export function argumentsFor(argv) {
   const result = {};
@@ -25,7 +27,7 @@ export function argumentsFor(argv) {
   }
   return result;
 }
-const help = `StateSet Warehouse TUI — Node.js >=22.12
+const help = `StateSet WMS operations center for Ghostty — Node.js >=22.12
 Usage: stateset-warehouse-tui [--url ORIGIN] [--warehouse ID] [--state-dir DIRECTORY]
        stateset-warehouse-tui --once session|warehouses|inventory|orders|receipts|reconciliation|recovery
 
@@ -37,18 +39,21 @@ Uncertain work keeps its exact original request until resolved. The repository's
 cli/README.md describes recovery and terminal workflows. q exits menus; Ctrl-C exits safely.
 Home: i inventory, o orders, w work, c recovery, r refresh (then Enter).
       t work queues. Tables: F3/f filters; F4/s sorting.
+Compact panes: v shows full context. Reviews: j shows original JSON.
+Quantity fields: pack scans an actual reviewed packaging code and count.
 Menus: /text searches, / clears, ? shows help. Tables: row number opens full
 details; a opens highlighted row actions, n/p page, j shows page JSON,
 r refreshes; Enter returns when no row is selected. Esc returns or cancels.`;
 function scopeFor(client, session, warehouse) { return { origin: client.origin, tenant: session.identity.tenant, actor: session.identity.actor, warehouse }; }
-async function selectWarehouse(client, ui) {
+async function selectWarehouse(client, ui, exclude) {
+  const nextPage = Symbol('next facility page');
   let after = '';
   for (;;) {
     const page = await client.read(`/v1/warehouses?limit=100${after ? `&after=${encodeURIComponent(after)}` : ''}`);
-    const items = page.warehouses.map(({ warehouse: row }) => [`${row.code} — ${row.name} (${row.id})`, row.id]);
-    if (page.next_after) items.push(['Next page', '__next__']);
+    const items = page.warehouses.filter(({ warehouse }) => warehouse.id !== exclude).map(({ warehouse: row }) => [`${row.code} — ${row.name} (${row.id})`, row.id]);
+    if (page.next_after) items.push(['Next page', nextPage]);
     const choice = await ui.menu('Select facility', items);
-    if (choice === '__next__') { after = page.next_after; continue; }
+    if (choice === nextPage) { after = page.next_after; continue; }
     return choice;
   }
 }
@@ -57,7 +62,7 @@ async function perform(client, journal, scope, ui, supplied, selection) {
   if ((await journal.listForIdentity(scope)).some(record => !['committed', 'not_committed'].includes(record.stage))) throw new Error('Resolve your original pending work in Recovery before recording new work');
   const session = await boundSession(client, scope);
   let snapshot = await client.read(client.warehousePath(scope.warehouse));
-  let command = supplied;
+  let command = supplied; let unit_inputs = [];
   if (!command) {
     const chosen = selection ? await reviewSelectedWork(client, snapshot, scope, selection, session.identity.role) : null;
     const spec = chosen?.spec ?? await ui.menu('Record warehouse work', visibleCommands(session.identity.role).map(c => [c.label, c]));
@@ -66,7 +71,13 @@ async function perform(client, journal, scope, ui, supplied, selection) {
     ui.line(`Facility: ${scope.warehouse} | reviewed v${snapshot.version}`);
     ui.line('Enter observed values. Esc cancels; Ctrl-C exits.', 'muted');
     for (const [name, value] of Object.entries(chosen?.identities ?? {})) ui.line(`Selected ${name}: ${value}`);
-    command = await commandForm(spec, prompt => ui.ask(prompt), message => ui.line(message, 'warning'), chosen?.identities);
+    ui.line('Quantity: enter each units, or pack to scan a packaging code.', 'muted');
+    const collected = await collectWork(client, ui, scope, snapshot, spec, chosen, async () => {
+      const warehouse = await selectWarehouse(client, ui, scope.warehouse);
+      if (warehouse === null) { const error = new Error('Destination selection cancelled'); error.code = 'INPUT_CANCELLED'; throw error; }
+      return warehouse;
+    });
+    command = collected.command; unit_inputs = collected.unit_inputs;
   }
   if (session.identity.role === 'oms' && command.type === 'create_order' && !command.source_order_id) throw new Error('OMS orders require an original source_order_id');
   if (command.type === 'create_warehouse') {
@@ -80,8 +91,8 @@ async function perform(client, journal, scope, ui, supplied, selection) {
   const requestId = randomUUID(); let request;
   for (;;) {
     const serial_inputs = observations.inputs;
-    request = { request_id: requestId, expected_version: snapshot.version, command, ...(serial_inputs.length ? { serial_inputs } : {}) };
-    const review = await inspectJson(ui, `Review actual work | ${scope.warehouse} | v${snapshot.version}`, { scope, request }, { prompt: '\nn next | p previous | Enter to confirm: ', allowUndo: observations.canUndo });
+    request = { request_id: requestId, expected_version: snapshot.version, command, ...(serial_inputs.length ? { serial_inputs } : {}), ...(unit_inputs.length ? { unit_inputs } : {}) };
+    const review = await inspectText(ui, `Review actual work | ${scope.warehouse} | v${snapshot.version}`, workSummary(scope, request), { details: { scope, request }, prompt: '\nn next | p previous | Enter to confirm: ', allowUndo: observations.canUndo });
     if (review === 'undo') { observations.undo(); await capture(); continue; }
     if (!review) return;
     break;
@@ -90,7 +101,7 @@ async function perform(client, journal, scope, ui, supplied, selection) {
   if (await ui.ask('Record this observed work? Type yes: ') !== 'yes') return;
   const record = await journal.prepare(scope, request);
   const outcome = await sendOriginal(client, journal, record);
-  await inspectJson(ui, `Recovery status: ${outcome.stage} | ${request.request_id}`, outcome.events.at(-1).details, { prompt: '\nn next | p previous | Enter to continue: ' });
+  await inspectText(ui, `Recovery status: ${outcome.stage} | ${request.request_id}`, outcomeSummary(outcome), { details: outcome.events.at(-1).details, prompt: '\nn next | p previous | Enter to continue: ' });
   if (command.type === 'create_warehouse' && outcome.stage === 'committed') return scope.warehouse;
 }
 async function recover(client, journal, scope, ui) {
@@ -125,14 +136,22 @@ async function selectedActions(client, journal, scope, ui, kind, row, version) {
     ['Review complete original record', 'review'],
     ...work.map(spec => [spec.label, spec]),
     ...(kind === 'exceptions' && row.order_id ? [['Review linked order and shipments', 'linked-order']] : []),
+    ...(kind === 'orders' ? [['Shipment packages and handoffs', 'packages']] : []),
   ], { intro: [kind === 'lots' ? `${row.sku} | ${row.lot}` : kind === 'stocks' ? `${row.sku} | ${row.lot} | ${row.location}` : `${kind === 'exceptions' ? row.category : row.reference} | ${row.id}`, `Selected facility: ${scope.warehouse} | snapshot v${version}`] });
   if (!action) return;
   if (action === 'review') {
-    if (['stocks', 'exceptions', 'transfers', 'lots'].includes(kind)) await inspectJson(ui, `Original selected ${kind === 'stocks' ? 'stock row' : kind === 'exceptions' ? 'exception' : kind === 'lots' ? 'lot' : 'transfer'}`, row);
+    if (['stocks', 'exceptions', 'transfers', 'lots', 'shipments'].includes(kind)) await inspectJson(ui, `Original selected ${kind === 'stocks' ? 'stock row' : kind === 'exceptions' ? 'exception' : kind === 'lots' ? 'lot' : kind === 'shipments' ? 'shipment package' : 'transfer'}`, row);
     else await inspectOriginal(client, scope, ui, kind, row.id);
     return;
   }
   if (action === 'linked-order') { await inspectOriginal(client, scope, ui, 'orders', row.order_id); return; }
+  if (action === 'packages') {
+    await inspectRows(ui, 'shipments', async () => {
+      const page = await shipmentReview(client, scope, row.id);
+      return { title: `Shipment packages | ${row.reference} | v${page.version}`, rows: page.packages, version: page.version, warehouseId: scope.warehouse };
+    }, { onAction: (pack, version) => selectedActions(client, journal, scope, ui, 'shipments', pack, version) });
+    return;
+  }
   let lineId;
   if (['receive', 'pick', 'unpick', 'receive_transfer'].includes(action.type)) {
     const lines = action.type === 'receive_transfer' ? remainingTransferLines(row) : row.lines;
@@ -146,7 +165,8 @@ async function selectedActions(client, journal, scope, ui, kind, row, version) {
     holdId = await ui.menu('Select original hold', row.control.holds.map(hold => [`${hold.id} | ${hold.reason}`, hold.id]));
     if (holdId === null) return;
   }
-  await perform(client, journal, scope, ui, undefined, selectionFor(scope, kind, row, version, action.type, lineId, holdId));
+  try { await perform(client, journal, scope, ui, undefined, selectionFor(scope, kind, row, version, action.type, lineId, holdId)); }
+  catch (error) { if (error.code !== 'INPUT_CANCELLED') throw error; }
 }
 async function readView(client, scope, ui, kind, journal, settings = {}) {
   const base = client.warehousePath(scope.warehouse);
@@ -160,7 +180,7 @@ async function readView(client, scope, ui, kind, journal, settings = {}) {
     await inspectRows(ui, kind, async () => {
       const snapshot = await client.read(base);
       const title = { stocks: 'Inventory', locations: 'Bins', receipts: 'Receiving / returns' }[kind] ?? kind;
-      return { title: `${title} | ${scope.warehouse} | snapshot v${snapshot.version}`, rows: snapshot[kind], version: snapshot.version, locations: snapshot.locations };
+      return { title: `${title} | ${scope.warehouse} | snapshot v${snapshot.version}`, rows: snapshot[kind], version: snapshot.version, locations: snapshot.locations, warehouseId: scope.warehouse };
     }, { filter: settings.filter, sort: settings.sort, onAction: ['stocks', 'orders', 'receipts', 'exceptions'].includes(kind)
       ? (row, version) => selectedActions(client, journal, scope, ui, kind, row, version) : undefined }); return;
   }
@@ -238,10 +258,16 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
         client.read(client.warehousePath(warehouse)).then(value => ({ ...value, readAt: new Date().toISOString() })).catch(error => ({ error: error.message })),
         journal.listForIdentity(scope).then(records => ({ count: records.filter(record => !['committed', 'not_committed'].includes(record.stage)).length })).catch(error => ({ error: error.message })),
       ]);
-      const action = await ui.menu('Warehouse overview', [
+      const overview = overviewLines(snapshot, pending, session, warehouse);
+      const action = await ui.menu('WMS operations center', [
         ['Record observed warehouse work', 'work'], ['Inventory', 'stocks'], ['Products', 'products'], ['Bins', 'locations'], ['Orders', 'orders'], ['Receiving / returns', 'receipts'], ['Original order and shipment review', 'order-detail'], ['Original receiving record', 'receipt-detail'], ['Lots and holds', 'lots'], ['Facility transfers', 'transfers'], ['Serial custody', 'serials'], ['Serial history', 'serial-history'], ['Exceptions', 'exceptions'], ['Retained history', 'history'], ['Reconciliation', 'reconciliation'], ['Operations', 'operations'], ['Original request recovery', 'recovery'], ['iCommerce interop', 'interop'], ['Select facility', 'warehouse'], ['Work queues', 'queues'],
       ], {
-        intro: overviewLines(snapshot, pending, session, warehouse),
+        intro: overview,
+        compactIntro: [
+          snapshot.error ? `Facility: ${warehouse}` : `${snapshot.warehouse.code} | v${snapshot.version} | ${snapshot.readAt.slice(11, 19)} UTC${session.demo ? ' | DEMO' : ''}`,
+          ...overview.filter(line => line.startsWith('Open orders') || line.startsWith('Allocate') || line.startsWith('Priority work')),
+        ],
+        compactHint: ['t queues · i stock · o orders · w work', '↑↓ Enter · / find · r refresh · v info · q'],
         sections: { 1: 'WORK & INVENTORY', 9: 'TRACEABILITY & CONTROL', 16: 'OPERATIONS & RECOVERY' },
         shortcuts: { i: 'stocks', o: 'orders', w: 'work', c: 'recovery', r: 'refresh', t: 'queues' },
         hint: ['t queues · i inventory · o orders · w work', 'c recovery · r refresh · /text search · ? help · q exit'],
