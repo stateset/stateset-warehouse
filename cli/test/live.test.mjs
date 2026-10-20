@@ -417,5 +417,76 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
   assert.deepEqual(rowWork('transfers', settled, 'admin', newId), [], 'settled transfer exposes no further receive action');
   assert.equal((await client.read(client.warehousePath(newId, '/reconciliation'))).ok, true);
   assert.equal((await client.read(client.warehousePath(scope.warehouse, '/reconciliation'))).ok, true);
+  // Control a lot beyond the first server batch. Releasing one original hold
+  // must preserve the other; after all releases, expiry can still block use.
+  const beforeQuality = await client.read(client.warehousePath(newId));
+  const originalControl = beforeQuality.lot_controls.find(row => row.sku === 'PAGED' && row.lot === lotAt(100));
+  assert.equal(originalControl.holds.length, 1);
+  const originalHold = originalControl.holds[0].id;
+  const qualityPrefix = [
+    ['Select: ', '9'], ['View: ', '/#100'], ['View: ', 'n'],
+    ['View: ', { keys: '\x1b[B' }], ['View: ', 'a'],
+  ];
+  const actualExpiry = '2020-02-29T12:00:00.123456-07:00';
+  const qualityTranscript = await driveTerminal([
+    ...qualityPrefix, ['Select: ', '2'], ['reason: ', 'Actual separate synthetic quality issue'],
+    ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'yes'], ['Enter to continue: ', ''],
+    ['View: ', { keys: '\x1b[B' }], ['View: ', 'a'], ['Select: ', '3'],
+    ['expires_at: ', '2027-02-29T00:00:00Z'], ['expires_at: ', actualExpiry], ['reason: ', 'Actual original expiry label'],
+    ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'yes'], ['Enter to continue: ', ''],
+    ['View: ', ''], ['Select: ', 'q'],
+  ], 'selected-lot-quarantine-and-expiry-terminal.txt', { warehouse: newId });
+  assert.ok(qualityTranscript.includes(`Selected lot: ${lotAt(100)}`));
+  assert.ok(qualityTranscript.includes('at most 6 fractional digits'));
+  assert.ok(qualityTranscript.includes('Batch 2'));
+  const afterQuality = await client.read(client.warehousePath(newId));
+  assert.equal(afterQuality.version, beforeQuality.version + 2);
+  const controlled = afterQuality.lot_controls.find(row => row.sku === 'PAGED' && row.lot === lotAt(100));
+  assert.equal(controlled.holds.length, 2);
+  const addedHold = controlled.holds.find(hold => hold.id !== originalHold).id;
+  assert.equal(controlled.expires_at, '2020-02-29T19:00:00.123456+00:00');
+  const qualityRecords = await journal.listForIdentity(scope);
+  const quarantine = qualityRecords.find(row => row.request.command.type === 'quarantine_lot');
+  const recordedExpiry = qualityRecords.find(row => row.request.command.type === 'record_lot_expiry');
+  assert.equal(quarantine.request.expected_version, beforeQuality.version);
+  assert.deepEqual(quarantine.request.command, { type: 'quarantine_lot', sku: 'PAGED', lot: lotAt(100), reason: 'Actual separate synthetic quality issue' });
+  assert.equal(recordedExpiry.request.expected_version, beforeQuality.version + 1);
+  assert.deepEqual(recordedExpiry.request.command, { type: 'record_lot_expiry', sku: 'PAGED', lot: lotAt(100), expires_at: actualExpiry, reason: 'Actual original expiry label' });
+  assert.ok(!qualityRecords.some(row => row.original.body.includes('2027-02-29')));
+  const release = async (index, reason, filename) => driveTerminal([
+    ...qualityPrefix, ['Select: ', '4'], ['Select: ', String(index)], ['reason: ', reason],
+    ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'yes'], ['Enter to continue: ', ''],
+    ['View: ', ''], ['Select: ', 'q'],
+  ], filename, { warehouse: newId });
+  await release(2, 'Actual disposition of separate issue', 'selected-lot-second-hold-release-terminal.txt');
+  const afterOneRelease = await client.read(client.warehousePath(newId));
+  assert.deepEqual(afterOneRelease.lot_controls.find(row => row.lot === lotAt(100)).holds.map(hold => hold.id), [originalHold], 'only the explicitly selected original hold is released');
+  const qualityPage = async () => client.read(client.warehousePath(newId, `/lots?sku=PAGED&limit=100&after=${encodeURIComponent(JSON.stringify(['PAGED', lotAt(99)]))}`));
+  assert.equal((await qualityPage()).items.find(row => row.lot === lotAt(100)).availability, 'quarantined');
+  await release(1, 'Actual disposition of original issue', 'selected-lot-original-hold-release-terminal.txt');
+  const afterReleases = await client.read(client.warehousePath(newId));
+  assert.equal(afterReleases.version, beforeQuality.version + 4);
+  assert.deepEqual(afterReleases.lot_controls.find(row => row.lot === lotAt(100)).holds, []);
+  assert.equal((await qualityPage()).items.find(row => row.lot === lotAt(100)).availability, 'expired', 'removing quarantine does not override expired availability');
+  const correctedExpiry = '2028-02-29T12:34:56.654321-07:00';
+  await driveTerminal([
+    ...qualityPrefix, ['Select: ', '3'], ['expires_at (optional): ', correctedExpiry], ['reason: ', 'Actual supervisor correction evidence'],
+    ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'yes'], ['Enter to continue: ', ''],
+    ['View: ', ''], ['Select: ', 'q'],
+  ], 'selected-lot-supervisor-expiry-correction-terminal.txt', { warehouse: newId });
+  const correction = (await journal.listForIdentity(scope)).find(row => row.request.command.type === 'correct_lot_expiry');
+  assert.equal(correction.stage, 'committed');
+  assert.equal(correction.request.expected_version, beforeQuality.version + 4);
+  assert.deepEqual(correction.request.command, { type: 'correct_lot_expiry', sku: 'PAGED', lot: lotAt(100), expires_at: correctedExpiry, reason: 'Actual supervisor correction evidence' });
+  assert.equal((await qualityPage()).items.find(row => row.lot === lotAt(100)).availability, 'available', 'availability follows the server verdict after the explicit supervisor correction');
+  const releases = (await journal.listForIdentity(scope)).filter(row => row.request.command.type === 'release_lot_hold');
+  assert.deepEqual(new Set(releases.map(row => row.request.command.hold_id)), new Set([originalHold, addedHold]));
+  for (const record of [quarantine, recordedExpiry, ...releases]) { assert.equal(record.stage, 'committed'); assert.equal(record.original.scope.warehouse, newId); }
+  const afterCorrection = await client.read(client.warehousePath(newId));
+  assert.equal(afterCorrection.version, beforeQuality.version + 5);
+  assert.deepEqual(afterCorrection.stocks, beforeQuality.stocks, 'lot disposition moves no physical stock or reservations');
+  assert.deepEqual(afterCorrection.orders, beforeQuality.orders);
+  assert.deepEqual((await client.read(`/v1/serials?sku=TUI-PART&warehouse_id=${newId}&limit=100`)).items, arrivalCustody.items, 'lot disposition does not change physical serial custody');
+  assert.equal((await client.read(client.warehousePath(newId, '/reconciliation'))).ok, true);
   t.diagnostic(`Private synthetic TUI evidence retained: ${root}`);
 });

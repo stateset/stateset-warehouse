@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add guided quarantine, original expiry recording, administrator expiry correction and exact original-hold release from selected lot rows. Check fresh canonical SKU/lot evidence and selected scope/version; collect actual reasons and expiry values. Retry invalid calendar/offset/precision entries locally while preserving literal request timestamps. Releasing holds does not override other quarantine or expiry restrictions, or move physical stock.
 - Receive actual facility-transfer arrivals from selected original transfer rows and lines. Re-read the exact server position and check destination scope/version, role, source evidence and remaining in-transit work before collecting explicit quantity, dock, arrival reference and actual serial scans. Preserve the current server batch after row actions; source-side and settled transfer inspection cannot start receiving.
 - Report exceptions from selected orders and investigate/resolve selected open exceptions from their table or queue. Preserve exact original order/exception IDs, require actual issue and resolution details, retain role/scope/version checks, and support linked order/shipment review. Declined confirmation creates no request; resolving an issue does not rewrite physical stock or fulfillment work.
 - Keep original order/shipment reviews available when the server reports no returnable physical handoff. Display the original return-eligibility conflict as unavailable; authentication and service failures remain held.

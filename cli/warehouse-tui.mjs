@@ -125,10 +125,10 @@ async function selectedActions(client, journal, scope, ui, kind, row, version) {
     ['Review complete original record', 'review'],
     ...work.map(spec => [spec.label, spec]),
     ...(kind === 'exceptions' && row.order_id ? [['Review linked order and shipments', 'linked-order']] : []),
-  ], { intro: [kind === 'stocks' ? `${row.sku} | ${row.lot} | ${row.location}` : `${kind === 'exceptions' ? row.category : row.reference} | ${row.id}`, `Selected facility: ${scope.warehouse} | snapshot v${version}`] });
+  ], { intro: [kind === 'lots' ? `${row.sku} | ${row.lot}` : kind === 'stocks' ? `${row.sku} | ${row.lot} | ${row.location}` : `${kind === 'exceptions' ? row.category : row.reference} | ${row.id}`, `Selected facility: ${scope.warehouse} | snapshot v${version}`] });
   if (!action) return;
   if (action === 'review') {
-    if (['stocks', 'exceptions', 'transfers'].includes(kind)) await inspectJson(ui, `Original selected ${kind === 'stocks' ? 'stock row' : kind === 'exceptions' ? 'exception' : 'transfer'}`, row);
+    if (['stocks', 'exceptions', 'transfers', 'lots'].includes(kind)) await inspectJson(ui, `Original selected ${kind === 'stocks' ? 'stock row' : kind === 'exceptions' ? 'exception' : kind === 'lots' ? 'lot' : 'transfer'}`, row);
     else await inspectOriginal(client, scope, ui, kind, row.id);
     return;
   }
@@ -141,14 +141,19 @@ async function selectedActions(client, journal, scope, ui, kind, row, version) {
     ]));
     if (lineId === null) return;
   }
-  await perform(client, journal, scope, ui, undefined, selectionFor(scope, kind, row, version, action.type, lineId));
+  let holdId;
+  if (action.type === 'release_lot_hold') {
+    holdId = await ui.menu('Select original hold', row.control.holds.map(hold => [`${hold.id} | ${hold.reason}`, hold.id]));
+    if (holdId === null) return;
+  }
+  await perform(client, journal, scope, ui, undefined, selectionFor(scope, kind, row, version, action.type, lineId, holdId));
 }
 async function readView(client, scope, ui, kind, journal, settings = {}) {
   const base = client.warehousePath(scope.warehouse);
   if (['lots', 'transfers'].includes(kind)) {
     await inspectRows(ui, kind, cursor => readTablePage(client, scope.warehouse, kind, cursor), {
       serverPaged: true,
-      onAction: kind === 'transfers' ? (row, version) => selectedActions(client, journal, scope, ui, kind, row, version) : undefined,
+      onAction: (row, version) => selectedActions(client, journal, scope, ui, kind, row, version),
     }); return;
   }
   if (['stocks', 'products', 'locations', 'orders', 'receipts', 'exceptions', 'activity', 'movements'].includes(kind)) {

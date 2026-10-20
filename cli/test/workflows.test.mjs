@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { commandForm } from '../lib/commands.mjs';
+import { commandForm, commands } from '../lib/commands.mjs';
 import { rowWork, selectedWork, selectionFor, reviewSelectedWork } from '../lib/workflows.mjs';
 import { readOrderReview } from '../lib/reviews.mjs';
 
@@ -155,4 +155,51 @@ test('transfer selection re-reads its exact server position and rejects stale or
   await assert.rejects(reviewSelectedWork(noRead, snapshot, { ...scope, actor: 'other' }, selection, 'operator'), /different/);
   await assert.rejects(reviewSelectedWork(noRead, snapshot, scope, selection, 'oms'), /current role/);
   assert.equal(reads, 1);
+});
+
+const lot = { sku: stock.sku, lot: stock.lot, control: { sku: stock.sku, lot: stock.lot, expiry_recorded: true, expires_at: '2027-01-01T00:00:00Z', holds: [{ id: 'Original-HOLD', reason: 'Original issue' }, { id: 'original-hold', reason: 'Separate issue' }] } };
+test('selected lot controls preserve exact SKU/lot and require explicit reasons and expiry observations', async () => {
+  const state = { ...snapshot, products: [{ sku: stock.sku }], lot_controls: [lot.control] };
+  const selection = selectionFor(scope, 'lots', lot, 7, 'quarantine_lot');
+  assert.deepEqual(selection.key, { sku: stock.sku, lot: stock.lot });
+  const { spec, identities } = selectedWork(state, scope, selection, 'operator');
+  assert.deepEqual(identities, { sku: stock.sku, lot: stock.lot });
+  const prompts = [];
+  assert.deepEqual(await commandForm(spec, async prompt => { prompts.push(prompt); return 'Actual observed quality issue'; }, undefined, identities), { type: 'quarantine_lot', sku: stock.sku, lot: stock.lot, reason: 'Actual observed quality issue' });
+  assert.deepEqual(prompts, ['reason: ']);
+  assert.throws(() => selectedWork({ ...state, version: 8 }, scope, selection, 'operator'), /stale/);
+  assert.throws(() => selectedWork({ ...state, stocks: [], lot_controls: [] }, scope, selection, 'operator'), /missing/);
+  assert.throws(() => selectedWork({ ...state, products: [] }, scope, selection, 'operator'), /missing/);
+  assert.throws(() => selectedWork(state, scope, selection, 'oms'), /current role/);
+  const expiry = selectionFor(scope, 'lots', lot, 7, 'correct_lot_expiry');
+  assert.throws(() => selectedWork(state, scope, expiry, 'operator'), /current role/);
+  assert.equal(selectedWork(state, scope, expiry, 'admin').spec.type, 'correct_lot_expiry');
+  assert.equal(selectedWork({ ...state, lot_controls: [] }, scope, { ...expiry, commandType: 'record_lot_expiry' }, 'operator').spec.type, 'record_lot_expiry', 'an existing stock tuple can establish a lot without prior controls');
+  await assert.rejects(commandForm(spec, async () => assert.fail('must reject before asking'), undefined, { ...identities, reason: 'Assumed reason' }), /cannot supply/);
+});
+
+test('releasing a lot hold requires an administrator and the explicitly selected original hold only', async () => {
+  const state = { ...snapshot, products: [{ sku: stock.sku }], lot_controls: [lot.control] };
+  const selection = selectionFor(scope, 'lots', lot, 7, 'release_lot_hold', undefined, 'Original-HOLD');
+  const { spec, identities } = selectedWork(state, scope, selection, 'admin');
+  assert.deepEqual(identities, { hold_id: 'Original-HOLD' });
+  assert.deepEqual(await commandForm(spec, async () => 'Actual disposition for this issue', undefined, identities), { type: 'release_lot_hold', hold_id: 'Original-HOLD', reason: 'Actual disposition for this issue' });
+  for (const holdId of [undefined, 'original-HOLD', 'unknown']) assert.throws(() => selectedWork(state, scope, { ...selection, holdId }, 'admin'), /exact original hold/);
+  assert.equal(selectedWork(state, scope, { ...selection, holdId: 'original-hold' }, 'admin').identities.hold_id, 'original-hold');
+  assert.throws(() => selectedWork(state, scope, selection, 'operator'), /current role/);
+  assert.throws(() => selectedWork({ ...state, lot_controls: [{ ...lot.control, holds: [] }] }, scope, selection, 'admin'), /unavailable/);
+  assert.throws(() => selectedWork(state, scope, { ...selection, commandType: 'quarantine_lot' }, 'admin'), /does not take a selected hold/);
+});
+
+test('expiry entry retries invalid dates without changing literal offsets or microseconds', async () => {
+  const spec = commands.find(command => command.type === 'record_lot_expiry');
+  const invalid = ['2027-02-29T00:00:00Z', '2027-04-31T00:00:00Z', '2027-01-01T00:00:00', '2027-01-01T00:00:60Z', '2027-01-01T00:00:00.1234567Z', '0000-01-01T00:00:00Z', '9999-12-31T23:00:00-02:00'];
+  const actual = '2028-02-29T12:34:56.123456-07:00';
+  const values = [...invalid, actual, 'Actual expiry evidence']; const messages = [];
+  const command = await commandForm(spec, async () => values.shift(), message => messages.push(message), { sku: stock.sku, lot: stock.lot });
+  assert.equal(messages.length, invalid.length);
+  assert.equal(command.expires_at, actual, 'literal timestamp is validated without rewriting');
+  await assert.rejects(commandForm(spec, async () => assert.fail('must reject before asking'), undefined, { sku: stock.sku, lot: stock.lot, expires_at: actual }), /cannot supply/);
+  const corrected = ['', 'Actual correction evidence'];
+  assert.equal((await commandForm(commands.find(command => command.type === 'correct_lot_expiry'), async () => corrected.shift(), undefined, { sku: stock.sku, lot: stock.lot })).expires_at, null);
 });

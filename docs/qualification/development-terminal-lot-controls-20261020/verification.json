@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "scope": "targeted_terminal_lot_controls_development",
+  "recorded_at": "2026-10-20T11:34:35.047891+00:00",
+  "result": "passed",
+  "production_qualified": false,
+  "baseline_tag": "v0.2.0",
+  "parent_commit": "622db3169236681bff3b0cfef185fa7e2d4b3336",
+  "terminal_checks_passed": 68,
+  "terminal_checks_skipped": 0,
+  "node_version": "22.18.0",
+  "test_command": "WMS_TEST_DATABASE_URL=<isolated-test-db> node --test cli/test/*.test.mjs",
+  "actual_pg_api_and_70_column_44_row_pty_passed": true,
+  "lot_control_checks": [
+    "Guided quarantine, original expiry recording, administrator correction and exact original-hold release",
+    "Selected exact SKU/lot validated against fresh canonical stock and lot-control sources",
+    "Stale scope/version, missing source identities and unavailable roles hold selected work",
+    "Reasons and expiry values remain explicit observations; selected work supplies only original identities",
+    "Original hold membership validated in the exact selected lot before release",
+    "Role restrictions retain operator quarantine/original recording and administrator-only release/correction",
+    "Invalid calendar dates, missing offsets and excess fractional precision retry locally",
+    "Original request retains literal expiry offset and microseconds without rewriting",
+    "Real terminal actions target a lot beyond the first 100 records and retain the current server batch",
+    "Releasing one of two holds preserves the other and keeps quarantine availability",
+    "Releasing the final hold leaves expired availability unchanged",
+    "Explicit administrator expiry correction updates the server availability verdict",
+    "The complete disposition cycle leaves physical stock, reservations, fulfillment and serial custody unchanged",
+    "Complete reconciliation passes after the full lot-control cycle",
+    "Original-request recovery, selected receiving/putaway, queue sorting, exception workflows and transfer arrivals still pass"
+  ],
+  "recovery_journal_module_unchanged_sha256": "c6ba9e83810940cd19ba9675cc25c337cc326d928913dd95483a6a5961c11e7d",
+  "qualified_backend_image_inputs_unchanged": 305,
+  "qualified_backend_image_inputs_sha256": "7d59f80d543801c9237fa9a7dac313f00b31228f81b699a100e34f531343be89",
+  "full_release_gate_rerun": false,
+  "npm_package_dry_run_files": 18,
+  "package_published": false,
+  "source_files": [
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "681181a45e80242c5a63b8661930fc47e6cf8b16877ad1d36bc5d5cd689df2ed"
+    },
+    {
+      "path": "cli/README.md",
+      "sha256": "2a592f1912b5e9a36709cecdf4255e931d2ec5ed2ceaa9aa1ddbc612b93722a3"
+    },
+    {
+      "path": "cli/warehouse-tui.mjs",
+      "sha256": "9189238cc5650f599ed417250ed917e745521d54ca768b22425f3298d2c7db39"
+    },
+    {
+      "path": "cli/lib/commands.mjs",
+      "sha256": "d1d7b8d0bc463ebac7c1d6657665073b43b9b65543095a1bce96080934b4b61e"
+    },
+    {
+      "path": "cli/lib/workflows.mjs",
+      "sha256": "9ff457caac6933c138a57db1f38bc98fd7dcae3d4e190b60e22ffd925ba8727c"
+    },
+    {
+      "path": "cli/lib/views.mjs",
+      "sha256": "6fd2bac56cf013ed74e3191806c1ecedf2686f993aa2feb2ead85dec0bb2fa46"
+    },
+    {
+      "path": "cli/test/workflows.test.mjs",
+      "sha256": "254f091a3fc53a82e3662c5cd66f359991f5538378d97372d75a7deefc0c8c07"
+    },
+    {
+      "path": "cli/test/live.test.mjs",
+      "sha256": "c92053e9b44f6da28fb311d150e9cfdf57b3e8b380450874bb902486020a10df"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "terminal-checks.log",
+      "sha256": "fad0dcb301c07a0dd5d995ee533423a35f0c4a129b17cab1763fc982ce16f39e"
+    }
+  ],
+  "limits": [
+    "Local synthetic software checks do not establish scanner hardware or physical facility acceptance.",
+    "Release of a hold is not an availability guarantee; expiry and other server policies remain authoritative.",
+    "Lot actions collect the entered evidence; they do not themselves move physical custody.",
+    "The full v0.2.0 release gate was not rerun; original dated evidence and release tags remain unchanged.",
+    "The existing terminal pane was not restarted."
+  ]
+}

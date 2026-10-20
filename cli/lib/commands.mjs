@@ -47,9 +47,17 @@ export function visibleCommands(role) {
   return commands.filter(c => role === 'admin' || role === 'operator' && c.role !== 'admin' || role === 'oms' && ['create_order', 'cancel_order', 'cancel_remainder'].includes(c.type));
 }
 export const needsSerialPlan = new Set(['count_stock', 'move_stock', 'receive', 'pick', 'unpick', 'receive_transfer', 'record_transfer_loss', 'reverse_transfer_loss', 'create_return', 'pack_shipment', 'dispatch_transfer']);
+function exactExpiry(value) {
+  const parts = /^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)(?:\.\d{1,6})?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/.exec(value);
+  if (!parts) return false;
+  const year = Number(parts[1]), month = Number(parts[2]), day = Number(parts[3]);
+  const days = [31, year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  const utcYear = new Date(value).getUTCFullYear();
+  return year >= 1 && month >= 1 && month <= 12 && day >= 1 && day <= days[month - 1] && utcYear >= 1 && utcYear <= 9999;
+}
 export async function formFields(spec, ask, notice = () => {}, identities = {}) {
   const result = {};
-  const sourceFields = new Set(['sku', 'lot', 'from', 'location', 'order_id', 'receipt_id', 'line_id', 'exception_id', 'transfer_id']);
+  const sourceFields = new Set(['sku', 'lot', 'from', 'location', 'order_id', 'receipt_id', 'line_id', 'exception_id', 'transfer_id', 'hold_id']);
   const names = spec.split(' ').map(field => field.replace(/[#!?]$/, ''));
   for (const [name, value] of Object.entries(identities)) {
     if (!sourceFields.has(name) || !names.includes(name) || typeof value !== 'string' || !value || value.trim() !== value || Buffer.byteLength(value) > 240 || /[\x00-\x1f\x7f-\x9f]/.test(value)) throw new Error('Selected work can carry only valid original reference fields');
@@ -73,6 +81,7 @@ export async function formFields(spec, ask, notice = () => {}, identities = {}) 
       }
       if (!value || value.trim() !== value || Buffer.byteLength(value) > 240 || /[\x00-\x1f\x7f-\x9f]/.test(value)) { notice('Enter an exact value, up to 240 UTF-8 bytes, without surrounding spaces or control characters.'); continue; }
       if (choices && !choices.includes(value)) { notice(`Choose ${choices.join(', ')}.`); continue; }
+      if (name === 'expires_at' && !exactExpiry(value)) { notice('Enter an exact time such as 2027-01-31T16:30:00Z, with an offset and at most 6 fractional digits.'); continue; }
       if (name === 'timezone') {
         try { new Intl.DateTimeFormat('en', { timeZone: value }); } catch { notice('Enter a valid time zone, for example America/Vancouver.'); continue; }
       }
@@ -89,6 +98,7 @@ export async function commandForm(spec, ask, notice, identities) {
     release_unpicked: ['order_id'], cancel_order: ['order_id'], pack: ['order_id'], ship: ['order_id'],
     report_exception: ['order_id'], resolve_exception: ['exception_id'],
     receive_transfer: ['transfer_id', 'line_id'],
+    quarantine_lot: ['sku', 'lot'], record_lot_expiry: ['sku', 'lot'], correct_lot_expiry: ['sku', 'lot'], release_lot_hold: ['hold_id'],
   }[spec.type] ?? [];
   if (Object.keys(identities ?? {}).some(name => !selectedFields.includes(name))) throw new Error('Selected work cannot supply quantities, destinations, observations or other form values');
   const command = { type: spec.type, ...await formFields(spec.fields, ask, notice, identities) };
