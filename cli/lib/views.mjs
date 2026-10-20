@@ -1,5 +1,6 @@
 import { fit, wrap } from './format.mjs';
 import { safeText } from './client.mjs';
+import { filtersFor, sortsFor, tableView } from './queues.mjs';
 
 // Columns are in priority order: narrow panes retain identity and operational
 // quantities. Full original values are always available in the row detail.
@@ -73,13 +74,15 @@ Ctrl-C                   Exit, preserving original requests
 
 HOME SHORTCUTS (then Enter)
 i inventory · o orders · w observed work · c recovery
-r refresh · q exit · F1 or ? help
+t work queues · r refresh · q exit · F1 or ? help
 
 TABLES
 ↑ / ↓ selects a row; Enter opens its complete details.
 A displayed row number also opens details.
 n / p page; j opens page JSON; r refreshes the view.
 a opens actions for a highlighted stock, order or receipt.
+F3 or f opens filters; F4 or s opens sort choices.
+Changing filters or sorting clears the highlighted row.
 Enter returns when no row is selected; Esc always returns.
 Detail views support arrows, Home/End and paging keys.
 
@@ -109,25 +112,30 @@ export function scanProgress(ui, state, scope, version, command = {}) {
   }
   if (state.message) ui.line(state.message, 'warning');
 }
-export async function inspectRows(ui, kind, load, { onAction } = {}) {
+export async function inspectRows(ui, kind, load, { onAction, filter: initialFilter = 'all', sort: initialSort = 'source' } = {}) {
   let snapshot = await load(); let query = ''; let page = 0; let message = ''; let selected = null;
+  let filterId = initialFilter; let sortId = initialSort;
   for (;;) {
     const all = snapshot.rows;
-    const filtered = query ? all.filter(row => JSON.stringify(row).toLowerCase().includes(query.toLowerCase())) : all;
-    const range = (start, end) => `${start}–${end} of ${filtered.length} rows${query ? ` · ${all.length} total · /${query}` : ''}`;
+    const view = tableView(kind, snapshot, { filter: filterId, sort: sortId, query });
+    const filtered = view.rows;
+    const settings = filterId !== 'all' || sortId !== 'source' ? `Filter: ${view.filter.label} · Sort: ${view.sort.label}` : '';
+    const range = (start, end) => `${start}–${end} of ${filtered.length} rows${query || filterId !== 'all' ? ` · ${all.length} total${query ? ` · /${query}` : ''}` : ''}`;
     const footer = ['Row # details · /text search · / clear · r refresh', `n next · p previous · j page JSON · ${selected === null ? 'Enter back' : 'Esc back'}`];
     if (ui.keys) footer.push(selected === null ? '↑↓ select · PgUp/PgDn page · Esc back' : '↑↓ select · Enter details · Esc back');
+    if (ui.keys) footer.push('F3 / f filters · F4 / s sort');
     if (onAction) footer.push('a actions for selected row · quantities stay explicit');
-    const empty = all.length ? 'No matches. Enter / to clear the search.' : 'No records in this snapshot.';
+    const empty = all.length ? filterId === 'all' ? 'No matches. Enter / to clear the search.' : 'No rows in this filter. Use f to change; / clears search.' : 'No records in this snapshot.';
     const reserved = 8 + wrap(snapshot.title, ui.columns).length + wrap(range(filtered.length, filtered.length), ui.columns).length
       + footer.reduce((total, line) => total + wrap(line, ui.columns).length, 0)
-      + (message ? wrap(message, ui.columns).length : 0) + (!filtered.length ? wrap(empty, ui.columns).length : 0);
+      + (message ? wrap(message, ui.columns).length : 0) + (settings ? wrap(settings, ui.columns).length : 0) + (!filtered.length ? wrap(empty, ui.columns).length : 0);
     const count = Math.max(1, ui.rows - reserved);
     if (selected !== null) page = Math.floor(selected / count);
     page = Math.min(page, Math.max(0, Math.ceil(filtered.length / count) - 1));
     const offset = page * count; const rows = filtered.slice(offset, offset + count);
     ui.screen(snapshot.title);
     ui.line(range(filtered.length ? offset + 1 : 0, offset + rows.length));
+    if (settings) ui.line(settings, 'muted');
     tableLines(kind, rows, ui.columns, offset).forEach((line, index) => {
       const row = rows[index - 2];
       const tone = index === 0 ? 'accent' : index === 1 ? 'muted' : selected === offset + index - 2 ? 'selected'
@@ -141,17 +149,20 @@ export async function inspectRows(ui, kind, load, { onAction } = {}) {
     if (answer && typeof answer === 'object') {
       if (answer.key === 'escape') return;
       if (answer.key === 'f1') { await keyboardHelp(ui); continue; }
-      if (['left', 'pageup', 'right', 'pagedown'].includes(answer.key)) {
-        page = Math.max(0, Math.min(page + (['left', 'pageup'].includes(answer.key) ? -1 : 1), Math.max(0, Math.ceil(filtered.length / count) - 1)));
-        selected = null;
-      } else if (['up', 'down', 'home', 'end'].includes(answer.key) && filtered.length) {
-        if (selected === null) selected = offset;
-        else selected = Math.max(0, Math.min(filtered.length - 1, selected + (answer.key === 'up' ? -1 : answer.key === 'down' ? 1 : 0)));
-        if (answer.key === 'home') selected = 0;
-        if (answer.key === 'end') selected = filtered.length - 1;
-        page = Math.floor(selected / count);
+      if (answer.key === 'f3' || answer.key === 'f4') answer = answer.key === 'f3' ? 'f' : 's';
+      else {
+        if (['left', 'pageup', 'right', 'pagedown'].includes(answer.key)) {
+          page = Math.max(0, Math.min(page + (['left', 'pageup'].includes(answer.key) ? -1 : 1), Math.max(0, Math.ceil(filtered.length / count) - 1)));
+          selected = null;
+        } else if (['up', 'down', 'home', 'end'].includes(answer.key) && filtered.length) {
+          if (selected === null) selected = offset;
+          else selected = Math.max(0, Math.min(filtered.length - 1, selected + (answer.key === 'up' ? -1 : answer.key === 'down' ? 1 : 0)));
+          if (answer.key === 'home') selected = 0;
+          if (answer.key === 'end') selected = filtered.length - 1;
+          page = Math.floor(selected / count);
+        }
+        continue;
       }
-      continue;
     }
     if (answer === '' && selected !== null && filtered[selected]) answer = String(selected + 1);
     if (!answer || answer === 'q') return;
@@ -160,6 +171,14 @@ export async function inspectRows(ui, kind, load, { onAction } = {}) {
     else if (answer === 'p') { page = Math.max(0, page - 1); selected = null; }
     else if (answer.startsWith('/')) { query = answer.slice(1); page = 0; selected = null; }
     else if (answer === 'r') { snapshot = await load(); page = 0; selected = null; }
+    else if (answer === 'f' || answer === 's') {
+      const choices = answer === 'f' ? filtersFor(kind, snapshot) : sortsFor(kind);
+      const chosen = await ui.menu(answer === 'f' ? 'Filter records' : 'Sort records', choices.map(choice => [choice.label, choice.id]));
+      if (chosen !== null) {
+        if (answer === 'f') filterId = chosen; else sortId = chosen;
+        selected = null; page = 0;
+      }
+    }
     else if (answer === 'a' && onAction) {
       if (selected === null || !filtered[selected]) { message = 'Highlight a row with the arrow keys before opening actions.'; continue; }
       await onAction(filtered[selected], snapshot.version);

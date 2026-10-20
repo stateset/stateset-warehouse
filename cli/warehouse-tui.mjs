@@ -10,6 +10,7 @@ import { Terminal } from './lib/terminal.mjs';
 import { inspectJson, inspectRows, overviewLines, scanProgress } from './lib/views.mjs';
 import { rowWork, selectedWork, selectionFor } from './lib/workflows.mjs';
 import { observationSession } from './lib/scanning.mjs';
+import { workQueues } from './lib/queues.mjs';
 
 export function argumentsFor(argv) {
   const result = {};
@@ -33,6 +34,7 @@ Commands record whole each units and actually observed serial labels.
 Uncertain work keeps its exact original request until resolved. The repository's
 cli/README.md describes recovery and terminal workflows. q exits menus; Ctrl-C exits safely.
 Home: i inventory, o orders, w work, c recovery, r refresh (then Enter).
+      t work queues. Tables: F3/f filters; F4/s sorting.
 Menus: /text searches, / clears, ? shows help. Tables: row number opens full
 details; a opens highlighted row actions, n/p page, j shows page JSON,
 r refreshes; Enter returns when no row is selected. Esc returns or cancels.`;
@@ -118,14 +120,14 @@ async function inspectOriginal(client, scope, ui, kind, id) {
     await inspectJson(ui, `Original order | ${id}`, { record, shipments, returnEligibility });
   } else await inspectJson(ui, `Original receiving record | ${id}`, record);
 }
-async function readView(client, scope, ui, kind, journal) {
+async function readView(client, scope, ui, kind, journal, settings = {}) {
   const base = client.warehousePath(scope.warehouse);
   if (['stocks', 'products', 'locations', 'orders', 'receipts', 'exceptions', 'activity', 'movements'].includes(kind)) {
     await inspectRows(ui, kind, async () => {
       const snapshot = await client.read(base);
       const title = { stocks: 'Inventory', locations: 'Bins', receipts: 'Receiving / returns' }[kind] ?? kind;
-      return { title: `${title} | ${scope.warehouse} | snapshot v${snapshot.version}`, rows: snapshot[kind], version: snapshot.version };
-    }, { onAction: ['stocks', 'orders', 'receipts'].includes(kind) ? async (row, version) => {
+      return { title: `${title} | ${scope.warehouse} | snapshot v${snapshot.version}`, rows: snapshot[kind], version: snapshot.version, locations: snapshot.locations };
+    }, { filter: settings.filter, sort: settings.sort, onAction: ['stocks', 'orders', 'receipts'].includes(kind) ? async (row, version) => {
       const session = await boundSession(client, scope);
       const work = rowWork(kind, row, session.identity.role);
       const action = await ui.menu('Selected record actions', [
@@ -221,12 +223,12 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
         journal.listForIdentity(scope).then(records => ({ count: records.filter(record => !['committed', 'not_committed'].includes(record.stage)).length })).catch(error => ({ error: error.message })),
       ]);
       const action = await ui.menu('Warehouse overview', [
-        ['Record observed warehouse work', 'work'], ['Inventory', 'stocks'], ['Products', 'products'], ['Bins', 'locations'], ['Orders', 'orders'], ['Receiving / returns', 'receipts'], ['Original order and shipment review', 'order-detail'], ['Original receiving record', 'receipt-detail'], ['Lots and holds', 'lots'], ['Facility transfers', 'transfers'], ['Serial custody', 'serials'], ['Serial history', 'serial-history'], ['Exceptions', 'exceptions'], ['Retained history', 'history'], ['Reconciliation', 'reconciliation'], ['Operations', 'operations'], ['Original request recovery', 'recovery'], ['iCommerce interop', 'interop'], ['Select facility', 'warehouse'],
+        ['Record observed warehouse work', 'work'], ['Inventory', 'stocks'], ['Products', 'products'], ['Bins', 'locations'], ['Orders', 'orders'], ['Receiving / returns', 'receipts'], ['Original order and shipment review', 'order-detail'], ['Original receiving record', 'receipt-detail'], ['Lots and holds', 'lots'], ['Facility transfers', 'transfers'], ['Serial custody', 'serials'], ['Serial history', 'serial-history'], ['Exceptions', 'exceptions'], ['Retained history', 'history'], ['Reconciliation', 'reconciliation'], ['Operations', 'operations'], ['Original request recovery', 'recovery'], ['iCommerce interop', 'interop'], ['Select facility', 'warehouse'], ['Work queues', 'queues'],
       ], {
         intro: overviewLines(snapshot, pending, session, warehouse),
-        sections: { 1: 'WORK & INVENTORY', 9: 'TRACEABILITY & CONTROL', 16: 'SYSTEM & RECOVERY' },
-        shortcuts: { i: 'stocks', o: 'orders', w: 'work', c: 'recovery', r: 'refresh' },
-        hint: ['i inventory · o orders · w work · c recovery · r refresh', '/text search · ? help · q exit'],
+        sections: { 1: 'WORK & INVENTORY', 9: 'TRACEABILITY & CONTROL', 16: 'OPERATIONS & RECOVERY' },
+        shortcuts: { i: 'stocks', o: 'orders', w: 'work', c: 'recovery', r: 'refresh', t: 'queues' },
+        hint: ['t queues · i inventory · o orders · w work', 'c recovery · r refresh · /text search · ? help · q exit'],
       });
       if (!action) break;
       try {
@@ -235,6 +237,12 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
         else if (action === 'recovery') await recover(client, journal, scope, ui);
         else if (action === 'warehouse') warehouse = await selectWarehouse(client, ui) ?? warehouse;
         else if (action === 'interop') await interop(client, journal, scope, ui);
+        else if (action === 'queues') {
+          const queue = await ui.menu('Work queues', workQueues(snapshot).map(queue => [`${queue.label} | ${queue.count ?? '?'} records`, queue]), {
+            intro: [`Facility: ${warehouse}`, snapshot.error ? 'Counts unavailable. Choose a queue to retry its view.' : `Counts from snapshot v${snapshot.version}. Opens a fresh view.`],
+          });
+          if (queue) await readView(client, scope, ui, queue.kind, journal, queue);
+        }
         else await readView(client, scope, ui, action, journal);
       } catch (error) {
         if (error.code === 'INPUT_CANCELLED') continue;

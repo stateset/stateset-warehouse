@@ -219,5 +219,53 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
   assert.equal(guidedCustody.items.find(row => row.serial === 'Guided-Spare').place.location, 'RECV-01');
   assert.equal(guidedCustody.items.find(row => row.serial === 'Third').place.location, 'A');
   assert.equal((await client.read(client.warehousePath(scope.warehouse, '/reconciliation'))).ok, true);
+  // Real queues retain original identities across filtering, refresh and sorting.
+  for (const priority of ['normal', 'high', 'urgent']) {
+    const state = await client.read(client.warehousePath(scope.warehouse));
+    const result = await client.call('POST', client.warehousePath(scope.warehouse, '/commands'), {
+      request_id: randomUUID(), expected_version: state.version,
+      command: { type: 'create_order', reference: `QUEUE-${priority.toUpperCase()}`, source_order_id: `synthetic:queue:${priority}`, customer: 'Synthetic customer', destination: 'Synthetic destination', priority, lines: [{ id: `Original-${priority}`, sku: 'TUI-PART', quantity: 1 }] },
+    });
+    assert.equal(result.status, 200, JSON.stringify(result.data));
+  }
+  const queueSnapshot = await client.read(client.warehousePath(scope.warehouse));
+  const highOrder = queueSnapshot.orders.find(row => row.reference === 'QUEUE-HIGH');
+  const urgentOrder = queueSnapshot.orders.find(row => row.reference === 'QUEUE-URGENT');
+  const queueRecords = (await journal.listForIdentity(scope)).length;
+  const queueTranscript = await driveTerminal([
+    ['Select: ', 't'], ['Select: ', '1'], ['View: ', '1'],
+    ['n next | p previous | Enter back: ', ''],
+    ['View: ', { keys: '\x1bOR' }], ['Select: ', '7'],
+    ['View: ', '/URGENT'], ['View: ', 'r'], ['View: ', '/'],
+    ['View: ', { keys: '\x1bOS' }], ['Select: ', '3'],
+    ['View: ', '1'], ['n next | p previous | Enter back: ', ''],
+    ['View: ', ''], ['Select: ', 'q'],
+  ], 'queues-read-only-terminal.txt', { expectCommit: false });
+  const queueDetails = queueTranscript.split('"reference": ').slice(1).map(body => body.split('\r')[0]);
+  assert.ok(queueDetails[0].startsWith('"QUEUE-URGENT"'), 'open queue starts with the most urgent order');
+  assert.ok(queueDetails.at(-1).startsWith('"QUEUE-HIGH"'), 'reference sorting changes the displayed first record');
+  assert.ok(queueTranscript.includes('of 2 rows · 3 total'));
+  assert.equal((await client.read(client.warehousePath(scope.warehouse))).version, queueSnapshot.version);
+  assert.equal((await journal.listForIdentity(scope)).length, queueRecords);
+  const queuedAction = await driveTerminal([
+    ['Select: ', 't'], ['Select: ', '6'], ['View: ', { keys: '\x1b[B' }],
+    ['View: ', { keys: '\x1bOS' }], ['Select: ', '3'], ['View: ', 'a'],
+    ['View: ', { keys: '\x1b[B' }], ['View: ', 'a'], ['Select: ', '2'],
+    ['Enter to confirm: ', ''], ['Record this observed work? Type yes: ', 'yes'],
+    ['Enter to continue: ', ''], ['View: ', ''], ['Select: ', 'q'],
+  ], 'queue-sorted-action-terminal.txt');
+  assert.ok(queuedAction.includes('Highlight a row with the arrow keys'));
+  assert.ok(queuedAction.includes(`Selected order_id: ${highOrder.id}`));
+  const allocated = (await journal.listForIdentity(scope)).find(row => row.request.command.type === 'allocate_available');
+  assert.equal(allocated.stage, 'committed');
+  assert.equal(allocated.request.expected_version, queueSnapshot.version);
+  assert.deepEqual(allocated.request.command, { type: 'allocate_available', order_id: highOrder.id });
+  const afterQueue = await client.read(client.warehousePath(scope.warehouse));
+  assert.equal(afterQueue.version, queueSnapshot.version + 1);
+  assert.equal(afterQueue.orders.find(row => row.id === highOrder.id).status, 'allocated');
+  assert.equal(afterQueue.orders.find(row => row.id === urgentOrder.id).status, 'pending');
+  assert.deepEqual(afterQueue.stocks.map(({ reserved, ...row }) => row), queueSnapshot.stocks.map(({ reserved, ...row }) => row), 'allocation does not move physical stock');
+  assert.deepEqual(await client.read('/v1/serials?sku=TUI-PART&warehouse_id=wh-main&limit=100'), guidedCustody, 'allocation does not change physical serial custody');
+  assert.equal((await client.read(client.warehousePath(scope.warehouse, '/reconciliation'))).ok, true);
   t.diagnostic(`Private synthetic TUI evidence retained: ${root}`);
 });

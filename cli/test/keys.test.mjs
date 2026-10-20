@@ -127,3 +127,13 @@ test('F2 is a dedicated scan correction key and never a reserved literal label',
     assert.deepEqual(await keys.read('Scan: ', false, { f2: 'undo' }), { key: 'undo' });
   } finally { keys.close(); }
 });
+
+test('F3 and F4 open table controls while their typed names remain literal input', async () => {
+  const io = device(); const keys = new Keys(io.input, io.output, () => 69);
+  try {
+    io.input.write('\x1bOR\x1bOSF3\n');
+    assert.deepEqual(await keys.read('View: ', true), { key: 'f3' });
+    assert.deepEqual(await keys.read('View: ', true), { key: 'f4' });
+    assert.equal(await keys.read('Scan: '), 'F3');
+  } finally { keys.close(); }
+});

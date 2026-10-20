@@ -120,3 +120,28 @@ test('correction is enabled only in an unsent review and scanning keeps physical
   assert.ok(ui.screens[0].lines.includes('SKU | Original'));
   assert.ok(ui.screens[0].lines.includes('Duplicate; scan again'));
 });
+
+test('sort changes clear selection before an action can target a reordered record', async () => {
+  const rows = [{ sku: 'Original', location: 'A', lot: 'lot', on_hand: 1, reserved: 0 }, { sku: 'original', location: 'B', lot: 'lot', on_hand: 9, reserved: 0 }];
+  const ui = scripted([{ key: 'down' }, { key: 'f4' }, 'a', { key: 'down' }, 'a', '']);
+  ui.menu = async (_title, choices) => { assert.ok(choices.some(([, value]) => value === 'on_hand')); return 'on_hand'; };
+  const called = [];
+  await inspectRows(ui, 'stocks', async () => ({ title: 'Original snapshot', version: 7, rows }), { onAction: async row => called.push(row) });
+  assert.deepEqual(called, [rows[1]], 'only the explicitly highlighted row after sorting is used');
+  assert.ok(ui.screens.some(screen => screen.lines.join(' ').includes('Highlight a row')));
+});
+
+test('filter changes clear selection while refresh retains filter, sort and search', async () => {
+  let loads = 0;
+  const rows = [{ sku: 'Alpha', location: 'A', lot: 'lot', on_hand: 2, reserved: 0 }, { sku: 'Beta', location: 'B', lot: 'lot', on_hand: 9, reserved: 1 }];
+  const ui = scripted(['/BETA', { key: 'down' }, { key: 'f3' }, 'a', 'r', ''], 100);
+  ui.menu = async () => 'reserved';
+  await inspectRows(ui, 'stocks', async () => ({ title: `snapshot v${++loads}`, version: loads, rows }), { sort: 'on_hand', onAction: async () => assert.fail('a filter change must clear the old selection') });
+  assert.equal(loads, 2);
+  const last = ui.screens.at(-1).lines.join(' ');
+  assert.ok(last.includes('/BETA'));
+  assert.ok(last.includes('Stock with reservations'));
+  assert.ok(last.includes('On hand: highest first'));
+  assert.ok(last.includes('Beta'));
+  assert.ok(!last.includes('Alpha'));
+});

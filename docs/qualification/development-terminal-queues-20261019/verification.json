@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "scope": "targeted_terminal_queues_development",
+  "recorded_at": "2026-10-20T00:57:24.366050+00:00",
+  "result": "passed",
+  "production_qualified": false,
+  "baseline_tag": "v0.2.0",
+  "parent_commit": "5e54668451bcacdeebe6bbf85f09e19bd552c180",
+  "terminal_checks_passed": 52,
+  "terminal_checks_skipped": 0,
+  "node_version": "22.18.0",
+  "test_command": "WMS_TEST_DATABASE_URL=<isolated-test-db> node --test cli/test/*.test.mjs",
+  "actual_pg_api_and_70_column_44_row_pty_passed": true,
+  "queue_checks": [
+    "Nine operational work queues with urgency sorting and snapshot counts",
+    "Unavailable counts remain distinct from zero",
+    "Receiving stock uses configured receiving-bin kinds and includes reserved stock without availability claims",
+    "Search intersects filters without altering exact IDs or source ordering",
+    "F3/F4 controls remain separate from literal field input",
+    "Filter and sort changes clear highlighted selection",
+    "Refresh retains filter, sorting and search",
+    "Actual sorted queue action commits the newly highlighted original order only",
+    "Allocation preserves physical quantities and serial custody; complete reconciliation passes",
+    "Original-request recovery, concurrency, legacy continuation, actual receiving and putaway still pass"
+  ],
+  "recovery_journal_module_unchanged_sha256": "c6ba9e83810940cd19ba9675cc25c337cc326d928913dd95483a6a5961c11e7d",
+  "qualified_backend_image_inputs_unchanged": 305,
+  "qualified_backend_image_inputs_sha256": "7d59f80d543801c9237fa9a7dac313f00b31228f81b699a100e34f531343be89",
+  "full_release_gate_rerun": false,
+  "npm_package_dry_run_files": 16,
+  "package_published": false,
+  "source_files": [
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "3fbb89fd2b8f88afb78e49ab7bac5236113444933092cbd75f662c7a1db405c5"
+    },
+    {
+      "path": "cli/README.md",
+      "sha256": "c980ed5157cc29b08831335a4bfb26eb07c251a6fdc3898c32a7bf805f4d31c4"
+    },
+    {
+      "path": "cli/warehouse-tui.mjs",
+      "sha256": "b11f7f049fa13d220037ad2f203c636ec5a5ca2201153d56b56c90f51d8ce588"
+    },
+    {
+      "path": "cli/lib/queues.mjs",
+      "sha256": "ff15e9c9e3c49359919dd3e2ce333ae53e5a318fb38fe9c48fd2c7d67f69111c"
+    },
+    {
+      "path": "cli/lib/keys.mjs",
+      "sha256": "ef8a0bbbb16a074d9a0451af28ee030086f7daea8e84749ce761df815eecb49b"
+    },
+    {
+      "path": "cli/lib/views.mjs",
+      "sha256": "02d8a26db3bd28fb04e77f0801d6fa7ebec59c4116e378fd840d5277f6a35368"
+    },
+    {
+      "path": "cli/test/queues.test.mjs",
+      "sha256": "e9e53483309763a312dc94ef271502b3163516e53c63bf21fe8282f42941fa3a"
+    },
+    {
+      "path": "cli/test/keys.test.mjs",
+      "sha256": "d985de25b6e7d045fdc1c18c4071c90aa207913a1ed9b2a9fb5008cbb6e1e75c"
+    },
+    {
+      "path": "cli/test/views.test.mjs",
+      "sha256": "e472171804fd05129fe7d0d6de1e8ef56c21bbb91a1ca9cf711846e7dfb9f767"
+    },
+    {
+      "path": "cli/test/live.test.mjs",
+      "sha256": "12ae29a1c0b5f0dd84123b593c37b9f8d01b71ccd46c1015dca92d9fb0f5d34f"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "terminal-checks.log",
+      "sha256": "15056b5b47d16a1da2923ef482447f249dcc3ea7ca39cc2a21018015cb8838e5"
+    }
+  ],
+  "limits": [
+    "Local synthetic software checks do not establish deployed scanner hardware or physical facility acceptance.",
+    "Queue counts describe the operational snapshot, not all retained history or server admission.",
+    "The full v0.2.0 release gate was not rerun; its original dated evidence remains unchanged.",
+    "The existing pane was not restarted because pane control was denied in this session."
+  ]
+}
