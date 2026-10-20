@@ -27,7 +27,7 @@ type Fault =
   | "broken_source"
   | "negative_ledger"
   | "changed_page";
-async function setup(page: Page, fault?: Fault) {
+async function setup(page: Page, fault?: Fault, nextPageGate?: Promise<void>) {
   const state = domain();
   const requests: URL[] = [];
   let revision = "a".repeat(64),
@@ -167,6 +167,7 @@ async function setup(page: Page, fault?: Fault) {
       const section = url.searchParams.get("section")!,
         start = url.searchParams.has("after") ? 25 : 0,
         all = records[section] ?? [];
+      if (start > 0 && nextPageGate) await nextPageGate;
       const items = structuredClone(all.slice(start, start + 25));
       if (fault === "broken_source" && section === "shipments")
         items[0].source_ok = false;
@@ -257,25 +258,45 @@ async function exported(page: Page, panel: ReturnType<Page["locator"]>) {
 test("viewer traces pages without claiming a partial section is a complete cross-facility report", async ({
   page,
 }) => {
-  const { panel, requests } = await setup(page);
-  await expect(panel.getByRole("status")).toContainText("Showing 25 of 26");
-  const partial = await exported(page, panel);
-  expect(partial.section_complete).toBe(false);
-  expect(partial.global_trace_complete).toBe(false);
-  expect(partial.loaded_records).toBe(25);
-  await panel
-    .getByRole("button", { name: "Load more trace records", exact: true })
-    .click();
-  await expect(panel.getByRole("status")).toContainText("Showing 26 of 26");
-  const full = await exported(page, panel);
-  expect(full.section_complete).toBe(true);
-  expect(full.global_trace_complete).toBe(false);
-  expect(full.items).toHaveLength(26);
-  expect(full.pages).toHaveLength(2);
-  expect(requests[1].searchParams.get("review")).toBe(
-    requests[0].searchParams.get("review") ?? "a".repeat(64),
-  );
-  expect(requests[1].searchParams.get("after")).toBe("original-trace-cursor");
+  let releaseNextPage!: () => void;
+  const nextPageGate = new Promise<void>((resolve) => {
+    releaseNextPage = resolve;
+  });
+  try {
+    const { panel, requests } = await setup(page, undefined, nextPageGate);
+    const recordCount = panel
+      .getByRole("status")
+      .filter({ hasText: /^Showing / });
+    await expect(recordCount).toContainText("Showing 25 of 26");
+    const partial = await exported(page, panel);
+    expect(partial.section_complete).toBe(false);
+    expect(partial.global_trace_complete).toBe(false);
+    expect(partial.loaded_records).toBe(25);
+    await panel
+      .getByRole("button", { name: "Load more trace records", exact: true })
+      .click();
+    // Hold the actual next-page response so the loading announcement and the
+    // retained count coexist deterministically, without sleeps or retries.
+    await expect(
+      panel.getByRole("status").filter({
+        hasText: "Loading the original lot records",
+      }),
+    ).toBeVisible();
+    await expect(recordCount).toContainText("Showing 25 of 26");
+    releaseNextPage();
+    await expect(recordCount).toContainText("Showing 26 of 26");
+    const full = await exported(page, panel);
+    expect(full.section_complete).toBe(true);
+    expect(full.global_trace_complete).toBe(false);
+    expect(full.items).toHaveLength(26);
+    expect(full.pages).toHaveLength(2);
+    expect(requests[1].searchParams.get("review")).toBe(
+      requests[0].searchParams.get("review") ?? "a".repeat(64),
+    );
+    expect(requests[1].searchParams.get("after")).toBe("original-trace-cursor");
+  } finally {
+    releaseNextPage();
+  }
 });
 test("a changed source discards old trace pages and requires an explicit fresh review", async ({
   page,

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Make the lot-trace pagination contract target its retained record-count announcement while a held next-page response verifies loading, retained progress and the complete export. Preserve the original strict-selector failure evidence.
 - Share complete serial event, receipt and batch facts within each read-only reconciliation snapshot, including historical count completeness and unchanged observations. Retain exact original source verdicts, immutable write guards and the existing database timeout; preserve the earlier large-fixture timeout evidence.
 - Add a reproducible full-history/public-source audit with exact-byte false-positive reviews and pinned, checksum-verified CI scanning. Retain original license and copyright texts for all eight browser runtime dependencies in the built dashboard, and reject stale notices during ordinary checks.
 
