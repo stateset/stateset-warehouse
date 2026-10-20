@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Share complete serial event, receipt and batch facts within each read-only reconciliation snapshot, including historical count completeness and unchanged observations. Retain exact original source verdicts, immutable write guards and the existing database timeout; preserve the earlier large-fixture timeout evidence.
 - Add a reproducible full-history/public-source audit with exact-byte false-positive reviews and pinned, checksum-verified CI scanning. Retain original license and copyright texts for all eight browser runtime dependencies in the built dashboard, and reject stale notices during ordinary checks.
 
 - Keep open partial/package orders visible in a dedicated work queue and `l` home lane before and after handoff. Add a fresh, source-checked remaining-work review with exact original line quantities, released reservations, original packages and cancelled demand. Offer continued allocation/picking, staged-stock return, reservation release and explicit remainder closure from the original partial order, with unchanged role/scope/version and original-request recovery guards.

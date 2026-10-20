@@ -1,8 +1,8 @@
 -- Rebuild complete original validity in one read-only snapshot.
--- Ordinary events retain every input, head/batch, scoped-step, source/effect
--- and label-membership predicate. Counts, derived historical closures and
--- malformed envelopes use its complete read-only counterpart, with actual
--- event/receipt/batch facts shared only within the current snapshot.
+-- Ordinary and count events retain every input, head/batch, scoped-step,
+-- source/effect, observed-label and complete historical-count predicate.
+-- Derived closures and malformed envelopes use the complete read-only
+-- counterpart. Actual event/receipt/batch facts are shared only in this snapshot.
 -- Input/command classes are total maps over the selected ordinary events.
 -- LEFT JOIN preserves that cardinality estimate; null-safe hash keys preserve
 -- the distinction between an absent command and JSON null. No verdict lives
@@ -15,20 +15,31 @@ WITH required_events AS MATERIALIZED (
   CASE WHEN jsonb_typeof(COALESCE(e.payload->'serial_steps','[]'::jsonb)) IS DISTINCT FROM 'array' THEN false
    WHEN jsonb_array_length(COALESCE(e.payload->'serial_steps','[]'::jsonb))>10000 THEN false
    WHEN jsonb_typeof(COALESCE(e.payload->'serial_heads','{}'::jsonb)) IS DISTINCT FROM 'object' THEN false
-   ELSE COALESCE(e.payload#>>'{command,type}','') NOT IN('count_stock','ship','unpack_shipment','handoff_shipment','cancel_receipt') END AS direct
+   ELSE COALESCE(e.payload#>>'{command,type}','') NOT IN('ship','unpack_shipment','handoff_shipment','cancel_receipt') END AS direct
  FROM wms_events e WHERE e.tenant=$1
   AND (EXISTS(SELECT 1 FROM wms_serial_modes m WHERE m.tenant=$1 AND m.controlled)
    OR e.payload ?| ARRAY['serial_heads','serial_steps','serial_inputs'])
 ), input_classes AS MATERIALIZED (
  SELECT DISTINCT warehouse_id,command,inputs FROM required_events WHERE direct
 ), input_sources AS MATERIALIZED (
- SELECT warehouse_id,command,inputs,wms_serial_inputs_match_command($1,warehouse_id,command,inputs) AS ok FROM input_classes
+ -- The exact target-command set is defined by wms_serial_targets in migration
+ -- 021. Outside that set an empty observation has no target to validate; all
+ -- nonempty or target-bearing inputs still use the complete original matcher.
+ SELECT warehouse_id,command,inputs,CASE
+  WHEN inputs='[]'::jsonb AND COALESCE(command->>'type','') NOT IN(
+   'count_stock','move_stock','receive','pick','unpick','create_return','pack_shipment',
+   'dispatch_transfer','receive_transfer','record_transfer_loss','reverse_transfer_loss') THEN true
+  ELSE wms_serial_inputs_match_command($1,warehouse_id,command,inputs) END AS ok FROM input_classes
 ), command_sources AS MATERIALIZED (
  SELECT warehouse_id,command,CASE WHEN bool_or(ok) THEN
   (SELECT COALESCE(array_agg(sku ORDER BY sku),ARRAY[]::text[]) FROM wms_serial_event_skus($1,warehouse_id,command))
   ELSE ARRAY[]::text[] END AS expected FROM input_sources GROUP BY warehouse_id,command
 ), event_contexts AS MATERIALIZED (
  SELECT e.*,c.expected,
+  CASE WHEN e.command->>'type'='count_stock' THEN
+   (SELECT batch.version FROM wms_serial_batches batch WHERE batch.tenant=e.tenant AND batch.sku=e.command->>'sku'
+    AND batch.warehouse_id=e.warehouse_id AND batch.event_id=e.id AND to_jsonb(batch.version)=e.heads->(e.command->>'sku')) END AS count_version,
+  wms_serial_on_hand(e.warehouse_id,e.command->>'location') AS count_place,
   CASE WHEN i.ok THEN
    (SELECT count(*) FROM wms_serial_observations WHERE tenant=e.tenant AND warehouse_id=e.warehouse_id AND event_id=e.id)=jsonb_array_length(e.inputs)
    AND NOT EXISTS(
@@ -42,14 +53,34 @@ WITH required_events AS MATERIALIZED (
  LEFT JOIN input_sources i ON i.warehouse_id=e.warehouse_id AND (i.command IS NULL)=(e.command IS NULL) AND COALESCE(i.command,'null'::jsonb)=COALESCE(e.command,'null'::jsonb) AND i.inputs=e.inputs
  LEFT JOIN command_sources c ON c.warehouse_id=e.warehouse_id AND (c.command IS NULL)=(e.command IS NULL) AND COALESCE(c.command,'null'::jsonb)=COALESCE(e.command,'null'::jsonb)
  WHERE e.direct
+), event_facts AS MATERIALIZED (
+ -- Resolve original receipt/envelope facts once per event. LEFT JOINs below
+ -- keep missing or wrongly scoped facts visible as a failed step source.
+ SELECT e.tenant,e.id,e.warehouse_id,src.version,src.payload,src.payload->>'actor' AS actor,src.payload->>'occurred_at' AS recorded_at,
+  src.payload->'result' AS result,src.payload->'serial_steps' AS steps,c.actor AS receipt_actor,c.result AS receipt_result
+ FROM event_contexts e JOIN wms_events src ON src.tenant=e.tenant AND src.id=e.id AND src.warehouse_id=e.warehouse_id
+ LEFT JOIN wms_commands c ON c.tenant=src.tenant AND c.warehouse_id=src.warehouse_id AND c.request_id=src.payload->>'request_id'
+ WHERE e.inputs_bound
+), batch_facts AS MATERIALIZED (
+ SELECT b.*,wms_serial_batch_original(b) AS source_ok FROM wms_serial_batches b WHERE b.tenant=$1
 ), step_sources AS MATERIALIZED (
  SELECT step.event_id,step.warehouse_id=e.warehouse_id AS in_scope,
-  wms_serial_step_source_for_event(step,
-   EXISTS(SELECT 1 FROM wms_serial_observations o WHERE o.tenant=e.tenant AND o.warehouse_id=e.warehouse_id AND o.event_id=e.id
-    AND o.sku=step.sku AND o.target=step.target AND o.serials @> jsonb_build_array(step.serial)),
-   EXISTS(SELECT 1 FROM wms_serial_observations o WHERE o.tenant=e.tenant AND o.warehouse_id=e.warehouse_id AND o.event_id=e.id
-    AND o.sku=step.sku AND o.target='[]'::jsonb)) AS ok
+  COALESCE(b.source_ok AND b.warehouse_version=step.warehouse_version AND f.version=step.warehouse_version
+   AND f.actor=step.actor AND f.receipt_actor=step.actor AND f.recorded_at=step.recorded_at
+   AND f.result=f.receipt_result
+   AND f.steps->(step.ordinal-1)=to_jsonb(step)-'tenant'
+   AND wms_serial_step_effect_valid(step,f.payload,
+    EXISTS(SELECT 1 FROM wms_serial_observations o WHERE o.tenant=e.tenant AND o.warehouse_id=e.warehouse_id AND o.event_id=e.id
+     AND o.sku=step.sku AND o.target=step.target AND o.serials @> jsonb_build_array(step.serial)),
+    EXISTS(SELECT 1 FROM wms_serial_observations o WHERE o.tenant=e.tenant AND o.warehouse_id=e.warehouse_id AND o.event_id=e.id
+     AND o.sku=step.sku AND o.target='[]'::jsonb))
+   AND (step.revision=1 OR EXISTS(SELECT 1 FROM wms_serial_steps previous
+    WHERE previous.tenant=step.tenant AND previous.sku=step.sku AND previous.serial=step.serial AND previous.revision=step.previous_revision
+     AND previous.lot=step.lot AND previous.after_place=step.before_place AND previous.sku_version<step.sku_version)),false) AS ok
  FROM wms_serial_steps step JOIN event_contexts e ON e.tenant=step.tenant AND e.id=step.event_id
+ LEFT JOIN event_facts f ON f.tenant=step.tenant AND f.id=step.event_id AND f.warehouse_id=step.warehouse_id
+ LEFT JOIN batch_facts b ON b.tenant=step.tenant AND b.sku=step.sku AND b.version=step.sku_version
+  AND b.event_id=step.event_id AND b.warehouse_id=step.warehouse_id
  WHERE e.inputs_bound
 ), step_summaries AS MATERIALIZED (
  SELECT event_id,count(*) FILTER(WHERE in_scope) AS scoped_steps,NOT COALESCE(bool_or(NOT ok),false) AS source_ok
@@ -76,7 +107,27 @@ WITH required_events AS MATERIALIZED (
    WHERE o.tenant=e.tenant AND o.warehouse_id=e.warehouse_id AND o.event_id=e.id
     AND NOT EXISTS(SELECT 1 FROM wms_serial_steps step WHERE step.tenant=e.tenant AND step.event_id=e.id
      AND step.sku=o.sku AND step.serial=unit.label AND step.target=o.target)
-  )),false) END AS ok
+    AND (e.command->>'type' IS DISTINCT FROM 'count_stock'
+     OR wms_serial_at_version(e.tenant,o.sku,unit.label,(SELECT batch.version-1 FROM wms_serial_batches batch
+      WHERE batch.tenant=e.tenant AND batch.sku=o.sku AND batch.warehouse_id=e.warehouse_id AND batch.event_id=e.id
+       AND to_jsonb(batch.version)=e.heads->o.sku)) IS DISTINCT FROM wms_serial_on_hand(e.warehouse_id,e.command->>'location')
+     OR NOT EXISTS(SELECT 1 FROM wms_serial_units u WHERE u.tenant=e.tenant AND u.sku=o.sku AND u.serial=unit.label AND u.lot=e.command->>'lot'))
+  )
+  -- A count must account for every literal present at its original SKU
+  -- version, including labels omitted from an otherwise aligned observation.
+  -- The actual matching batch supplies the version, avoiding unsafe casts of
+  -- damaged head JSON. Later moves cannot rewrite the original count point.
+  AND CASE WHEN e.command->>'type'='count_stock' AND cardinality(e.expected)>0 THEN
+   (SELECT to_jsonb(count(*)) FROM (
+    SELECT DISTINCT step.serial FROM wms_serial_steps step
+    WHERE step.tenant=e.tenant AND step.sku=e.command->>'sku' AND step.lot=e.command->>'lot'
+     AND step.sku_version<=e.count_version
+     AND step.after_place->>'status'='on_hand' AND step.after_place->>'warehouse_id'=e.warehouse_id AND step.after_place->>'location'=e.command->>'location'
+   ) candidates WHERE wms_serial_at_version(e.tenant,e.command->>'sku',candidates.serial,
+    e.count_version)
+    =e.count_place) IS NOT DISTINCT FROM e.command->'counted'
+   ELSE true END
+  ),false) END AS ok
  FROM event_contexts e LEFT JOIN step_summaries s ON s.event_id=e.id LEFT JOIN batch_summaries b ON b.event_id=e.id
  UNION ALL
  SELECT e.id,e.warehouse_id,wms_serial_event_valid_read_source(e.tenant,e.warehouse_id,e.id)
