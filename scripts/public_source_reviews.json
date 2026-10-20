@@ -89,6 +89,30 @@
       "end_line": 133,
       "source_sha256": "097372d09d11a7ef450f28ba745af5e818e79218f55e16e8047238f2c13e3e42",
       "reason": "Fixed synthetic release-smoke credential configured only inside the owned isolated test container. Its matching API-key fixture is in the same script; it is not a deployment credential."
+    },
+    {
+      "rule": "curl-auth-header",
+      "path": "scripts/container-smoke.sh",
+      "start_line": 124,
+      "end_line": 124,
+      "source_sha256": "95ba3b7e7096344fe32c672589077e70bb75dbecf8942ee2cbf02b0eac1ff88b",
+      "reason": "Fixed synthetic release-smoke credential configured only inside the owned isolated test container. Its matching API-key fixture is in the same script; it is not a deployment credential. The owned-network creation call is the sole changed line; the fixed test credential assignment and reviewed authentication lines remain byte-identical to the earlier reviewed source."
+    },
+    {
+      "rule": "curl-auth-header",
+      "path": "scripts/container-smoke.sh",
+      "start_line": 129,
+      "end_line": 131,
+      "source_sha256": "95ba3b7e7096344fe32c672589077e70bb75dbecf8942ee2cbf02b0eac1ff88b",
+      "reason": "Fixed synthetic release-smoke credential configured only inside the owned isolated test container. Its matching API-key fixture is in the same script; it is not a deployment credential. The owned-network creation call is the sole changed line; the fixed test credential assignment and reviewed authentication lines remain byte-identical to the earlier reviewed source."
+    },
+    {
+      "rule": "curl-auth-header",
+      "path": "scripts/container-smoke.sh",
+      "start_line": 133,
+      "end_line": 133,
+      "source_sha256": "95ba3b7e7096344fe32c672589077e70bb75dbecf8942ee2cbf02b0eac1ff88b",
+      "reason": "Fixed synthetic release-smoke credential configured only inside the owned isolated test container. Its matching API-key fixture is in the same script; it is not a deployment credential. The owned-network creation call is the sole changed line; the fixed test credential assignment and reviewed authentication lines remain byte-identical to the earlier reviewed source."
     }
   ]
 }
