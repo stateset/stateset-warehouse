@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "scope": "software_release_gate",
+  "recorded_at": "2026-10-21T02:56:20.009063+00:00",
+  "result": "failed",
+  "production_qualified": false,
+  "synthetic": true,
+  "release_revision": "39807000fb0ed60ec5a4775b28368703dc3a4fd1+host-preflight-working-tree",
+  "elapsed_seconds": 1,
+  "stages": [
+    {
+      "name": "prerequisites",
+      "status": "failed",
+      "exit_code": 1,
+      "elapsed_seconds": 0.216
+    },
+    {
+      "name": "software_checks",
+      "status": "not_run"
+    },
+    {
+      "name": "observability_rules",
+      "status": "not_run"
+    },
+    {
+      "name": "release_builds",
+      "status": "not_run"
+    },
+    {
+      "name": "standard_workload",
+      "status": "not_run"
+    },
+    {
+      "name": "archive_restore",
+      "status": "not_run"
+    },
+    {
+      "name": "live_browsers",
+      "status": "not_run"
+    },
+    {
+      "name": "production_container",
+      "status": "not_run"
+    },
+    {
+      "name": "image_resilience",
+      "status": "not_run"
+    },
+    {
+      "name": "stable_source_inputs",
+      "status": "not_run"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "host-preflight.json",
+      "sha256": "685d2e11693bcf5a0d6216ae974253525646c533731086978d50b7f54e8f8798"
+    },
+    {
+      "path": "prerequisites.log",
+      "sha256": "d457fadf440daa0cd6a9c0e9e563f3b5a95a891b9f12f412ed80e64a4556ec19"
+    }
+  ],
+  "not_performed": [
+    "Deployed WorkOS sign-in and membership lifecycle",
+    "Deployed OMS/Freight qualification",
+    "Physical warehouse and scanner acceptance",
+    "Organization-hosted GitHub execution"
+  ],
+  "limits": [
+    "All inventory and native-service fixtures are synthetic",
+    "Performance results apply to the recorded profiles and host",
+    "Process/database restart is not managed database failover",
+    "Published logs are sanitized; private raw artifacts stay in the fresh evidence directory"
+  ]
+}

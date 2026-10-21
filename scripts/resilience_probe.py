@@ -20,6 +20,7 @@ import urllib.parse
 from serial_traffic_proof import serial_proof
 from serial_crash_barrier import barrier_sql, literal
 from crash_journal import CrashJournal
+from qualification_host import host_snapshot, write_report
 import uuid
 
 
@@ -98,6 +99,7 @@ class Probe:
             for name in (
                 "scripts/resilience-rehearsal.sh",
                 "scripts/qualification_resources.sh",
+                "scripts/qualification_host.py",
                 "scripts/resilience_probe.py",
                 "scripts/serial_traffic_proof.py",
                 "scripts/serial_crash_barrier.py",
@@ -154,8 +156,8 @@ class Probe:
             timeout=timeout,
         ).stdout
 
-    def owned(self, container):
-        metadata = json.loads(self.docker("inspect", container))[0]
+    def owned(self, container, timeout=90):
+        metadata = json.loads(self.docker("inspect", container, timeout=timeout))[0]
         require(
             metadata["Config"]["Labels"].get(self.label) == self.args.run,
             "Resource ownership label mismatch",
@@ -239,11 +241,48 @@ class Probe:
         )
 
     def ready(self):
-        for base in self.bases:
-            self.wait(
-                lambda: self.http(base, "GET", "/ready", timeout=7)[0] == 200,
-                "API database readiness",
-            )
+        for replica, base in enumerate(self.bases):
+            last_status = None
+
+            def available():
+                nonlocal last_status
+                last_status = self.http(base, "GET", "/ready", timeout=7)[0]
+                return last_status == 200
+
+            try:
+                self.wait(available, "API database readiness", 60)
+            except AssertionError:
+                try:
+                    self.record_readiness_failure(replica, last_status)
+                except Exception as error:
+                    # Disk exhaustion or failed diagnostics cannot hide the
+                    # original failed recovery or turn it into a passing test.
+                    print("Readiness diagnostics unavailable: " + type(error).__name__, flush=True)
+                raise
+
+    def record_readiness_failure(self, replica, last_status):
+        report = {'replica_index': replica, 'last_http_status': last_status,
+                  'readiness_deadline_seconds': 60, 'result': 'failed',
+                  'host': host_snapshot({'workspace': pathlib.Path.cwd(),
+                                         'artifacts': self.root, 'temporary': pathlib.Path('/tmp')})}
+        try:
+            state = self.owned(self.args.postgres, timeout=10)['State']
+            report['postgres'] = {key: state.get(key) for key in ('Status', 'Running', 'ExitCode', 'OOMKilled')}
+            report['postgres']['health_status'] = state.get('Health', {}).get('Status')
+        except Exception as error:
+            report['postgres_observation_error'] = type(error).__name__
+        if 'postgres' in report:
+            try:
+                log = subprocess.run(['docker', 'logs', '--timestamps', '--tail', '80', self.args.postgres],
+                                     check=True, capture_output=True, text=True, timeout=10)
+                # PostgreSQL writes important recovery messages to stderr. This
+                # private report is never included in the publish allowlist.
+                report['postgres_log_tail'] = log.stdout + log.stderr
+            except Exception as error:
+                report['postgres_log_error'] = type(error).__name__
+        else:
+            report['postgres_log_error'] = 'OwnershipNotVerified'
+        write_report(self.root / 'readiness-failure.json', report)
 
     def version(self, base=None, token=None):
         status, data = self.http(

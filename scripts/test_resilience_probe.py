@@ -8,6 +8,7 @@ from pathlib import Path
 from types import SimpleNamespace
 import threading
 import time
+import tempfile
 import unittest
 from unittest.mock import patch
 from contextlib import redirect_stdout
@@ -218,6 +219,77 @@ class SnapshotCoverageTests(unittest.TestCase):
                     snapshot["orders"][2] = deepcopy(snapshot["orders"][1])
                 with self.assertRaises(AssertionError):
                     probe.check_snapshot_coverage(snapshot)
+
+
+class ReadinessFailureTests(unittest.TestCase):
+    def probe(self, root):
+        probe = PROBE.Probe.__new__(PROBE.Probe)
+        probe.root = root
+        probe.args = Namespace(postgres='owned-postgres', run='owned-run')
+        probe.bases = ['http://replica-a', 'http://replica-b']
+        return probe
+
+    def test_recovery_deadline_keeps_original_failure_and_records_last_status(self):
+        with tempfile.TemporaryDirectory() as directory:
+            probe = self.probe(Path(directory))
+            failure = AssertionError('original sixty-second readiness failure')
+            def wait(condition, description, seconds=60):
+                self.assertEqual(seconds, 60)
+                self.assertEqual(description, 'API database readiness')
+                self.assertFalse(condition())
+                raise failure
+            with patch.object(probe, 'wait', side_effect=wait), \
+                    patch.object(probe, 'http', return_value=(503, {'ready': False})), \
+                    patch.object(probe, 'record_readiness_failure') as capture:
+                with self.assertRaises(AssertionError) as result:
+                    probe.ready()
+                self.assertIs(result.exception, failure)
+                capture.assert_called_once_with(0, 503)
+
+    def test_diagnostic_disk_failure_cannot_mask_or_pass_failed_recovery(self):
+        with tempfile.TemporaryDirectory() as directory:
+            probe = self.probe(Path(directory))
+            failure = AssertionError('original readiness failure')
+            with patch.object(probe, 'wait', side_effect=failure), \
+                    patch.object(probe, 'record_readiness_failure', side_effect=OSError('no space')), \
+                    redirect_stdout(io.StringIO()) as output:
+                with self.assertRaises(AssertionError) as result:
+                    probe.ready()
+                self.assertIs(result.exception, failure)
+                self.assertIn('diagnostics unavailable: OSError', output.getvalue())
+
+    def test_private_diagnostics_include_postgres_stderr_but_exclude_config_credentials(self):
+        with tempfile.TemporaryDirectory() as directory:
+            probe = self.probe(Path(directory))
+            metadata = {'State': {'Status': 'running', 'Running': True, 'ExitCode': 0, 'OOMKilled': False,
+                                  'Health': {'Status': 'unhealthy'}, 'other': 'private-state-sentinel'},
+                        'Config': {'Env': ['PASSWORD=private-config-sentinel']}}
+            with patch.object(probe, 'owned', return_value=metadata) as owned, \
+                    patch.object(PROBE.subprocess, 'run', return_value=SimpleNamespace(stdout='', stderr='Consistent recovery state has not been yet reached.\n')) as logs:
+                probe.record_readiness_failure(1, 503)
+            report = json.loads((probe.root / 'readiness-failure.json').read_text())
+            owned.assert_called_once_with('owned-postgres', timeout=10)
+            self.assertEqual(logs.call_args.kwargs['timeout'], 10)
+            self.assertTrue(logs.call_args.kwargs['check'])
+            self.assertIn('recovery state', report['postgres_log_tail'])
+            self.assertEqual(report['postgres']['health_status'], 'unhealthy')
+            self.assertEqual(report['last_http_status'], 503)
+            self.assertNotIn('private-config-sentinel', json.dumps(report))
+            self.assertNotIn('private-state-sentinel', json.dumps(report))
+            self.assertEqual((probe.root / 'readiness-failure.json').stat().st_mode & 0o777, 0o600)
+
+    def test_unavailable_postgres_diagnostics_still_retain_host_and_failed_status(self):
+        with tempfile.TemporaryDirectory() as directory:
+            probe = self.probe(Path(directory))
+            with patch.object(probe, 'owned', side_effect=TimeoutError()), \
+                    patch.object(PROBE.subprocess, 'run') as logs:
+                probe.record_readiness_failure(0, None)
+            report = json.loads((probe.root / 'readiness-failure.json').read_text())
+            self.assertEqual(report['result'], 'failed')
+            self.assertEqual(report['postgres_observation_error'], 'TimeoutError')
+            self.assertEqual(report['postgres_log_error'], 'OwnershipNotVerified')
+            logs.assert_not_called()
+            self.assertIn('filesystems', report['host'])
 
 
 if __name__ == "__main__":

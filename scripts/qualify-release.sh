@@ -111,7 +111,7 @@ for name, path in reports.items():
         output = root / "publish" / (name + ".json")
         output.write_bytes(raw)
         artifacts.append({"stage": name, "path": output.name, "sha256": hashlib.sha256(raw).hexdigest()})
-for name in ("source-inputs-before.json", "source-inputs-after.json", "tool-versions.json", "provenance.json", "dependency-licenses.json"):
+for name in ("source-inputs-before.json", "source-inputs-after.json", "tool-versions.json", "provenance.json", "dependency-licenses.json", "host-preflight.json"):
     path = root / name
     if path.is_file():
         raw = path.read_bytes()
@@ -198,6 +198,8 @@ PY
 }
 
 wms_release_prerequisites() {
+  python3 scripts/qualification_host.py --output "$wms_release_root/host-preflight.json" \
+    --path "workspace=$PWD" --path "artifacts=$wms_release_root" --path temporary=/tmp
   : "${WMS_TEST_DATABASE_URL:?Set WMS_TEST_DATABASE_URL to an isolated PostgreSQL database whose name contains test}"
   wms_qualification_validate_network_subnets "${WMS_RELEASE_CONTAINER_SUBNET:-}" \
     "${WMS_RELEASE_UNTRACKED_SUBNET:-}" "${WMS_RELEASE_SERIAL_SUBNET:-}"

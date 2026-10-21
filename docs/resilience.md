@@ -15,6 +15,10 @@ WMS_RESILIENCE_IMAGE=sha256:<64-character-image-id> \
 
 Python 3, Docker, and an already built image are required. Set `WMS_RESILIENCE_ARTIFACT_DIR` to an empty directory to choose where raw evidence is retained. The script rejects mutable application image tags.
 
+The rehearsal also checks the workspace, artifact directory and `/tmp` against a default 5 GiB free-space floor before calling Docker. `WMS_QUALIFICATION_MIN_FREE_GIB` selects a positive whole-number floor suitable for the runner; it does not estimate the whole workload or inspect remote Docker storage. Failed admission retains `host-preflight.json` and starts no rehearsal containers. See [host storage and diagnostics](release-qualification.md#host-storage-and-recovery-diagnostics).
+
+After a failed readiness deadline, private `readiness-failure.json` records the last HTTP status, local host pressure, selected owned PostgreSQL state and its recent stdout/stderr. Configuration and environment values are excluded. Do not publish this raw failure report: PostgreSQL logs can contain synthetic request facts. The original failure remains an error even when diagnostics cannot be collected; the deadline, database timeouts, original requests and journals are unchanged.
+
 After recovery and before timed traffic, the probe saves one validated synthetic operational snapshot as private `snapshot-fixture.json`. The report binds its SHA256, byte size and warehouse version. This additional read is outside the sustained interval and its read/latency counts. The fixture permits exact response comparisons without rerunning a competing load generator; publish the sanitized report rather than the raw run directory.
 
 | Variable | Default | Accepted range / meaning |

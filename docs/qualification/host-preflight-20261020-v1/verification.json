@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-21T02:57:44.797616+00:00",
+  "base_commit": "39807000fb0ed60ec5a4775b28368703dc3a4fd1",
+  "scope": "Development qualification-harness checks only",
+  "result": "passed_harness_checks",
+  "python_tests": 101,
+  "shell_syntax": "passed",
+  "actual_release_invocation": "failed_at_storage_prerequisites",
+  "later_release_stages": "not_run",
+  "default_minimum_free_gib": 5,
+  "source_sha256": {
+    "scripts/qualification_host.py": "cf52076c6a0952c4671232921c262d8852f0b5e1203720c64a2555f1f597101e",
+    "scripts/test_qualification_host.py": "f461289a470782dc10132f479aa35d17bdf0a3c714ac7863811dcf1c20127e92",
+    "scripts/qualify-release.sh": "76cabc66b0daac402a5741ab6647209e5a08a64c2bc05f9df2905545884ec080",
+    "scripts/resilience-rehearsal.sh": "3d285b63b6276a301dd9c4ee001796ba17d608581841cfa7d5fc2110cd831965",
+    "scripts/resilience_probe.py": "df3178737ce0f4746c88f19c9da559615ceef24efb3768ddfaa49bb91cab2cdd",
+    "scripts/test_resilience_probe.py": "08f522b971366691e50296def89861f7d595f82f83ed7e85a7998ec3d68e5b6e",
+    "CHANGELOG.md": "6f2735814edf0029809d56d6659acb7900537f1494e98a31db81e8769b3b59b7",
+    "docs/release-qualification.md": "ea8fbabeedc92420ee145ac1c44a465b843a8b6d3fe3be2efa7200fa6c953fd2",
+    "docs/resilience.md": "5bca5bf7e7f7227cf7c58b3af119cee5607710060de97d0c8d76a4c3e3b4534f"
+  },
+  "regressions": [
+    "Insufficient and unreadable targets cannot pass",
+    "Exact free-byte boundary is admitted",
+    "Invalid policies and duplicate labels rejected",
+    "Reports are private and cannot overwrite earlier evidence",
+    "Both actual shell entrypoints reject low storage before Cargo/Docker",
+    "Original readiness deadline and failure preserved",
+    "PostgreSQL stderr retained privately while container config/environment are excluded",
+    "Unverified container ownership prevents log access",
+    "Unavailable diagnostics cannot hide the original failed recovery"
+  ],
+  "compiler_cache_cleanup": {
+    "recorded_at": "2026-10-21T02:56:20.995360+00:00",
+    "path": "target/debug/incremental",
+    "scope": "Inactive, reproducible compiler incremental cache only",
+    "active_warehouse_builds": 0,
+    "files_removed": 6624,
+    "logical_bytes_removed": 3095781933,
+    "available_bytes_before": 1586659328,
+    "available_bytes_after": 4538470400,
+    "qualified_sources_and_binaries_modified": false,
+    "journals_databases_images_evidence_deleted": false,
+    "future_qualification_incremental_compilation": false
+  },
+  "source_launch_ready": false,
+  "full_release_qualified": false,
+  "production_qualified": false,
+  "limits": [
+    "The complete workload has not passed on this changed qualifier",
+    "Low-space rejection does not diagnose the earlier failures",
+    "Local path headroom does not measure remote Docker storage or predict total workload size",
+    "Hosted CI billing restrictions and facility acceptance remain separate"
+  ]
+}

@@ -21,6 +21,8 @@ if [[ -n "$(ls -A "$wms_root")" ]]; then
   exit 1
 fi
 wms_root="$(cd "$wms_root" && pwd)"
+python3 scripts/qualification_host.py --output "$wms_root/host-preflight.json" \
+  --path "workspace=$PWD" --path "artifacts=$wms_root" --path temporary=/tmp
 wms_run="$(python3 -c 'import secrets,time; print(str(int(time.time()))+"-"+secrets.token_hex(4))')"
 wms_label=org.stateset.wms.resilience
 wms_network="wms-resilience-$wms_run"

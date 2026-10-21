@@ -1,0 +1,1 @@
+{"ok": false, "minimum_free_gib": 5, "reasons": ["workspace: insufficient available storage", "artifacts: insufficient available storage", "temporary: insufficient available storage"]}

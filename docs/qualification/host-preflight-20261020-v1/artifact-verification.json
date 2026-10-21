@@ -1,0 +1,25 @@
+{
+  "public_artifacts": [
+    {
+      "path": "host-preflight.json",
+      "sha256": "685d2e11693bcf5a0d6216ae974253525646c533731086978d50b7f54e8f8798"
+    },
+    {
+      "path": "prerequisites.log",
+      "sha256": "d457fadf440daa0cd6a9c0e9e563f3b5a95a891b9f12f412ed80e64a4556ec19"
+    },
+    {
+      "path": "python-tests.log",
+      "sha256": "7e2f6d924f9782a7f42f14a1ee4b0e423f62823aa35b9b5a2422dae07ed3c620"
+    },
+    {
+      "path": "summary.json",
+      "sha256": "dd92cfd3621e7b59497f17b2e9a33050828211d6a35ec41050f7a1af2f2a422a"
+    },
+    {
+      "path": "verification.json",
+      "sha256": "bd486268a6aeb192a2ef51051516bd840912917c0e70031ba0b0179f8ad0e860"
+    }
+  ],
+  "scope": "Evidence integrity, not a release qualification"
+}

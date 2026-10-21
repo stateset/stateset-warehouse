@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Reject insufficient local storage before expensive release/resilience setup and retain host observations. Capture private PostgreSQL/readiness diagnostics on recovery failure while preserving the original deadline and failure; diagnostics cannot turn a failed test into a pass.
 - Allow explicit, distinct private subnets for the three image qualification stages, validate them before the run and retain actual Docker allocations. This supports retained rehearsals after default address pools are exhausted while preserving existing networks and data.
 - Drive the operations-board clock test with controlled timer advancement so unfinished input, exactly one refresh and callback cleanup are verified independently of host scheduling.
 - Make the lot-trace pagination contract target its retained record-count announcement while a held next-page response verifies loading, retained progress and the complete export. Preserve the original strict-selector failure evidence.

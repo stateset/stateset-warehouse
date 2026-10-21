@@ -33,6 +33,24 @@ WMS_RELEASE_ARTIFACT_DIR=/tmp/warehouse-release-fresh-run \
 
 The artifact directory must be absent or empty. Each run creates new mode-restricted evidence; it refuses to overwrite prior results. `WMS_RESTORE_ADMIN_URL` defaults explicitly to `WMS_TEST_DATABASE_URL` and may select another isolated test database on an approved test server. Both URLs are validated before connection, and the actual connections must report a test database and CREATEDB permission. Database-name/service query overrides are rejected. The former CI restore step omitted the administrator URL; the single gate fixes that configuration and checks it before a lengthy build. The gate also reads actual Cargo metadata and requires its canonical `target_directory` to equal this repository's `target` directory, matching the executables it qualifies. A custom Cargo target directory fails early instead of accidentally executing an older binary.
 
+## Host storage and recovery diagnostics
+
+The release and standalone resilience entry points check available local storage before expensive checks or Docker workloads. The default floor is **5 GiB free** on the workspace, artifact directory and `/tmp`; set `WMS_QUALIFICATION_MIN_FREE_GIB` to a positive whole number appropriate to the runner. The recorded floor is a headroom policy, not a complete estimate for builds, database fixtures, retained evidence or Docker daemon storage. Budget those separately, including any Docker data directory on another filesystem or remote host.
+
+An insufficient or unreadable target fails admission and retains `host-preflight.json`. The release gate records `prerequisites=failed` and all later stages as `not_run`; it does not attempt Cargo or Docker. When using `local-postgres.sh`, its small owned test database has already started and the wrapper stops it after the gate exits. To inspect storage before starting that wrapper, run the same helper with a fresh report destination:
+
+```bash
+python3 scripts/qualification_host.py \
+  --path workspace=. --path temporary=/tmp \
+  --output /tmp/warehouse-host-preflight-fresh.json
+```
+
+The report records free-byte counts, available memory and Linux CPU/I/O/memory pressure when available. It does not collect environment variables, credentials or process inventories. Pressure observations are diagnostic evidence, not proof of failure causation. Storage reports are safe for the gate's explicit publish allowlist; original failure logs remain private.
+
+If an API fails the existing 60-second database-readiness deadline, the resilience probe retains private `readiness-failure.json`: the replica index, last HTTP status, host observations, selected PostgreSQL state and a bounded PostgreSQL stdout/stderr tail. It verifies resource ownership before reading container logs, excludes container configuration/environment, and bounds both diagnostic Docker calls. An unavailable daemon or full evidence filesystem cannot replace the original failed-recovery exception or produce a pass. Diagnostics run after the unchanged deadline; they add no readiness retries and do not change database timeouts, physical commands or recovery journals.
+
+The [development host-check evidence](qualification/host-preflight-20261020-v1/verification.json) records the regression checks and actual low-storage rejection. It does not qualify the serial workload or change the six earlier failed runs.
+
 ## Required stages
 
 | Stage | Executed proof |

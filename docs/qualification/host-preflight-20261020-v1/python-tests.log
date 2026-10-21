@@ -1,0 +1,7 @@
+........Killing one API only after PostgreSQL proves its original HTTP write is waiting.
+..Killing one API only after PostgreSQL proves its original HTTP write is waiting.
+...........................................................................................
+----------------------------------------------------------------------
+Ran 101 tests in 42.346s
+
+OK
