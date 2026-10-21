@@ -1,0 +1,201 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-10-21T03:37:50.661088+00:00",
+  "scope": "Targeted development software verification for read-only Ghostty Kitty console; not a release or facility qualification",
+  "baseline_commit": "f5d81f85cf5b525be9d641348314763f604c4a0c",
+  "result": "passed",
+  "tests": {
+    "rust": {
+      "unique_passed": 55,
+      "failed": 0,
+      "targets": [
+        "lib",
+        "http_auth",
+        "mcp",
+        "console"
+      ],
+      "database": "owned isolated PostgreSQL; ignored database cases explicitly run",
+      "new_console_tests": 7
+    },
+    "terminal": {
+      "passed": 124,
+      "failed": 0,
+      "skipped": 0,
+      "includes": "actual API/PostgreSQL and owned pseudoterminals; synthetic Kitty capability acknowledgement and direct RGB/PNG transfers"
+    },
+    "independent_barcode": {
+      "decoder": "ZXing core 3.5.3 from Maven Central; private validation tool only",
+      "passed": 8,
+      "failed": 0,
+      "coverage": [
+        "exact case",
+        "leading and trailing spaces",
+        "80-character maximum",
+        "all printable ASCII characters across vectors"
+      ]
+    }
+  },
+  "checks": {
+    "rustfmt": "passed",
+    "clippy_all_targets_warnings_denied": "passed",
+    "shell_syntax": "passed",
+    "cli_package_dry_run": "passed; graphics modules, attribution and Apache license present",
+    "raster_previews": "flow, stock, configured geometry and label inspected as standalone PNGs"
+  },
+  "fences": [
+    "existing authentication and tenant/facility scope",
+    "original reconciliation verdict",
+    "decimal-string quantities and versions",
+    "bin review cursors",
+    "image identity/version/digest",
+    "bounded PNG bytes, dimensions, CRC, animation and inflation",
+    "scanner input isolated from terminal replies",
+    "read-only requests and owned image cleanup"
+  ],
+  "earlier_attempts": [
+    {
+      "check": "new Node contracts",
+      "result": "one pagination-fixture assertion failed; fixture expanded; retained original log; final acceptance passed"
+    },
+    {
+      "check": "Clippy",
+      "result": "boolean simplification and new test unwrap diagnostics fixed; both original logs retained; final all-target check passed"
+    },
+    {
+      "check": "npm package dry run",
+      "result": "initial root-directory invocation failed without root package.json; corrected CLI working directory; final dry run passed"
+    }
+  ],
+  "limitations": [
+    "Native Ghostty GPU/compositor rendering not witnessed",
+    "Physical scanner/printer and facility acceptance not performed",
+    "Floor plans and product images need actual administrator configuration",
+    "Complete release/resilience gate not rerun for this feature; original failures remain held",
+    "Hosted CI result must be checked separately; local software checks do not establish hosted or production qualification"
+  ],
+  "production_qualified": false,
+  "source_inputs": {
+    "CHANGELOG.md": {
+      "sha256": "401c032d5afd167a7675c6f433bc227806f1dd5a00e2d927ff5a66432e863c8e",
+      "bytes": 10921
+    },
+    "README.md": {
+      "sha256": "18a518a742a340cf57c3490b32a8f944d52f0fff36a3fb76d53efcc9c2f5c62e",
+      "bytes": 19321
+    },
+    "THIRD_PARTY_NOTICES.md": {
+      "sha256": "9a19bdd3783df2e586c95779239b9046cd24b6d7a4c195b426f3a8e6adabacac",
+      "bytes": 3217
+    },
+    "cli/README.md": {
+      "sha256": "a027530f244e308f3fdf07ad3bf3151c824b9c4d0583c73453472e8a69f96d77",
+      "bytes": 29620
+    },
+    "cli/lib/client.mjs": {
+      "sha256": "09c38561cb65014b5629aa196d2dd91d312d2f074df121f5b8bb33dd6de76da2",
+      "bytes": 4914
+    },
+    "cli/lib/keys.mjs": {
+      "sha256": "f40b1f9996854035692946ad924340826cc5022d6d16303e44545c9927bbf59f",
+      "bytes": 8037
+    },
+    "cli/lib/terminal.mjs": {
+      "sha256": "953b74cfdd20c4aa54ab6436b356cdce020c23564bb1e19e356b695edda8a6e5",
+      "bytes": 10697
+    },
+    "cli/test/live.test.mjs": {
+      "sha256": "6a34c703e04e9dedfa58b5cf6351cc6f5941a64612024569176ccfb35054a426",
+      "bytes": 72149
+    },
+    "cli/warehouse-tui.mjs": {
+      "sha256": "6c11fc1da7abd792e23ee8395b5f8eea59d685cd7995d5918bbaaea8abdc2bda",
+      "bytes": 24062
+    },
+    "docs/api.md": {
+      "sha256": "270f0227ba1a3bf6acf6c4423149dba504d34b847fcfa1dd3a138869d19ae07e",
+      "bytes": 72748
+    },
+    "scripts/check.sh": {
+      "sha256": "291f5cc5b9f087e005bf5532802d767bba08c969b9e3477f19dc7d8b8248f918",
+      "bytes": 2020
+    },
+    "scripts/local-postgres.sh": {
+      "sha256": "81443de353893e27b443b217a5d578852f4bd648d0e04beada55856c2af03f2e",
+      "bytes": 2368
+    },
+    "src/api.rs": {
+      "sha256": "ace10c3d1d651e0bd36fec679c781803d6cc3e7d56788ff408f3f9accec90719",
+      "bytes": 14769
+    },
+    "src/domain.rs": {
+      "sha256": "fa9b59e0804f0ff3a6e3fb96e8244936b7c8daf2f2c985ca47a5b35ae980997f",
+      "bytes": 79900
+    },
+    "src/lib.rs": {
+      "sha256": "16f28a7d07c0ee4d8005559769befb56c212be06c1eb6913a3285a8c7228c5f0",
+      "bytes": 609
+    },
+    "src/console.rs": {
+      "sha256": "d46c9bb4414162128fb8b947e923e710ac53cf4a787d3b47182beaf08c8b60a1",
+      "bytes": 21915
+    },
+    "tests/console.rs": {
+      "sha256": "66c9c7f1848ae7880ec4437aa6444f8fdd8c8cd83c10702947404be7b471c2e9",
+      "bytes": 19651
+    },
+    "cli/lib/graphics.mjs": {
+      "sha256": "c4e413de948006f275c4bc74e7339ccf941be7f034386d71f5a54ae2b3e7a579",
+      "bytes": 6421
+    },
+    "cli/lib/raster.mjs": {
+      "sha256": "061c7d86d148b9249a79a705d3516572f82a0a63290b380d2805e590464002cc",
+      "bytes": 9424
+    },
+    "cli/lib/code128.mjs": {
+      "sha256": "e9806fbf3c0c6b7959f02ca60432d6c622fcf5057a07133f679cf04aff86ebb6",
+      "bytes": 1809
+    },
+    "cli/lib/CODE128-NOTICE.txt": {
+      "sha256": "1656fe965bbf0fb7b7bcffd73ea94cadc4505396771719f00a1f7f1700fde55c",
+      "bytes": 429
+    },
+    "cli/lib/console.mjs": {
+      "sha256": "03bba6f266855874a5bf180fd6d0f2c5d71461c707ade51b01da94a88b0b9914",
+      "bytes": 6818
+    },
+    "cli/lib/visual.mjs": {
+      "sha256": "6112f26c3ff6ae51159ba60e1d832b782cf6bd8981a76109649160d53f74dad5",
+      "bytes": 13249
+    },
+    "cli/test/console-fixture.mjs": {
+      "sha256": "42cce74591d414bc9ea23973909513be558ec163decb948254d353c5c9fd165f",
+      "bytes": 1713
+    },
+    "cli/test/graphics.test.mjs": {
+      "sha256": "6c14017f899e9c6d36edcd68b36717757be6bf6a245157331fbcde05a07d41a1",
+      "bytes": 8550
+    },
+    "cli/test/console.test.mjs": {
+      "sha256": "160135f5145e3b5a0be6aebff03e94d00ca2235f57bd279274177e8ed324bd8f",
+      "bytes": 6582
+    },
+    "cli/test/visual.test.mjs": {
+      "sha256": "26949b3981cc85a53ba006a58f8a3a78efe6424efc728738352b98398e126600",
+      "bytes": 4512
+    },
+    "docs/visual-console.md": {
+      "sha256": "e212a983af8e9a115c80e3e856cbe5c4c19a664b9ec7be6e990348b6edd04139",
+      "bytes": 6829
+    }
+  },
+  "private_log_sha256": {
+    "server-regressions.log": "822874d0a52989af6cd2845cb56e0ca12a3dfa69abe3246d98df5ca9fd38e68e",
+    "postgres-console-mcp.log": "06345c8c3a260f5d4529a5bad7b9f0f80e09b229a53056b0c576168d70c09a87",
+    "postgres-final.log": "2bd86a2b18da8215e3d89cd7c10c8b1baef1f66b1e4fa957648397a42506816b",
+    "clippy-final.log": "65c327f2bd1afa7073db107f90fed36f4ec9c5fa852cbce4118a76acaab7afd7",
+    "server-build.log": "a70ea33daa04d35b505890f87a61d86f9b159add8ea6f9ce802c38e3fe5ab310",
+    "full-terminal-acceptance.log": "a1ff20a69566801908b1a5de6bfdd6d5249277702c55766b489cb7a05720a92e",
+    "independent-barcode-decode.log": "865ae80952cd31fbe2080bdf3921b1ece702f59ecc44b52ac5eefa2923654a59",
+    "cli-pack-dry-run-retry.json": "37184697b3373dc0cc85a7eadb0e3deb52e31785dc3c2019dc46e5b293212759"
+  }
+}

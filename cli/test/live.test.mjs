@@ -10,6 +10,8 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'node:http';
 import { Client } from '../lib/client.mjs';
+import { readConsole, readProduct, readProductImage } from '../lib/console.mjs';
+import { Raster } from '../lib/raster.mjs';
 import { Journal, sendOriginal } from '../lib/journal.mjs';
 import { visibleCommands } from '../lib/commands.mjs';
 import { rowWork } from '../lib/workflows.mjs';
@@ -28,6 +30,10 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
   const actor = 'synthetic:tui-original';
   const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('WMS_') && !k.startsWith('WORKOS_') && k !== 'DATABASE_URL'));
   Object.assign(env, { DATABASE_URL: database, WMS_DEMO: 'false', WMS_BIND: '127.0.0.1:0', WMS_API_KEYS_JSON: JSON.stringify({ [token]: { tenant, actor, role: 'admin' }, [otherToken]: { tenant, actor: 'synthetic:tui-other', role: 'admin' } }), RUST_LOG: 'stateset_warehouse=info', NO_COLOR: '1' });
+  await fs.writeFile(path.join(root, 'product.png'), new Raster(16, 12).png());
+  const assetsFile = path.join(root, 'console-assets.json');
+  await fs.writeFile(assetsFile, JSON.stringify({ schema_version: 1, facilities: [{ tenant, warehouse_id: 'wh-main', layout: { name: 'Synthetic test plan', unit: 'grid', width: 100, height: 50, bins: [{ code: 'A', x: 0, y: 0, width: 40, height: 40 }, { code: 'B', x: 50, y: 0, width: 40, height: 40 }] }, product_images: { 'TUI-PART': 'product.png' } }] }));
+  env.WMS_CONSOLE_ASSETS_FILE = assetsFile;
   const server = spawn(path.join(repo, 'target/debug/stateset-warehouse'), [], { cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'] });
   let log = ''; const capture = data => { log += data.toString(); }; server.stdout.on('data', capture); server.stderr.on('data', capture);
   t.after(async () => {
@@ -79,16 +85,25 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
   const onceResult = execFileSync(process.execPath, [path.join(repo, 'cli/warehouse-tui.mjs'), '--once', 'inventory'], { env: { ...env, WMS_URL: origin, WMS_TOKEN: token, WMS_TUI_STATE_DIR: journal.root }, encoding: 'utf8' });
   assert.equal(JSON.parse(onceResult).version, committedVersion); assert.ok(!onceResult.includes(token));
 
+  const visual = await readConsole(client, scope); assert.equal(visual.stock.on_hand_each, '3'); assert.equal(visual.floor_plan.available, true);
+  const product = await readProduct(client, scope, 'TUI-PART'); assert.equal(product.label.value, 'TUI-PART');
+  assert.deepEqual(await readProductImage(client, scope, product), await fs.readFile(path.join(root, 'product.png')));
+  await assert.rejects(readProductImage(new Client(origin, otherToken), scope, product), /409/);
+  const consoleOnce = execFileSync(process.execPath, [path.join(repo, 'cli/warehouse-tui.mjs'), '--once', 'console'], { env: { ...env, WMS_URL: origin, WMS_TOKEN: token }, encoding: 'utf8' });
+  assert.equal(JSON.parse(consoleOnce).version, String(committedVersion)); assert.ok(!consoleOnce.includes('\x1b_G'));
+
   // The script utility supplies a real pseudoterminal. Drive actual prompts,
   // including a typed physical move; the server verifies the resulting state.
-  async function driveTerminal(steps, filename, { expectCommit = true, warehouse = scope.warehouse, columns = 70, rows = 44, url = origin, resizable = false, refreshSeconds = 15, timeoutMs = 30000 } = {}) {
+  async function driveTerminal(steps, filename, { expectCommit = true, warehouse = scope.warehouse, columns = 70, rows = 44, url = origin, resizable = false, refreshSeconds = 15, timeoutMs = 30000, graphics = false } = {}) {
     assert.ok(Number.isSafeInteger(columns) && Number.isSafeInteger(rows));
     const ttyFile = path.join(root, `${filename}.tty`);
-    const terminal = spawn('script', ['-qefc', `stty cols ${columns} rows ${rows}; ${resizable ? `tty > ${shell(ttyFile)}; ` : ''}exec ${shell(process.execPath)} ${shell(path.join(repo, 'cli/warehouse-tui.mjs'))}`, '/dev/null'], { env: { ...env, WMS_URL: url, WMS_TOKEN: token, WMS_WAREHOUSE: warehouse, WMS_TUI_REFRESH_SECONDS: String(refreshSeconds), WMS_TUI_STATE_DIR: journal.root, TERM: 'xterm-ghostty', TERM_PROGRAM: 'ghostty' }, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
+    const terminal = spawn('script', ['-qefc', `stty cols ${columns} rows ${rows}; ${resizable ? `tty > ${shell(ttyFile)}; ` : ''}exec ${shell(process.execPath)} ${shell(path.join(repo, 'cli/warehouse-tui.mjs'))}`, '/dev/null'], { env: { ...env, WMS_URL: url, WMS_TOKEN: token, WMS_WAREHOUSE: warehouse, WMS_TUI_REFRESH_SECONDS: String(refreshSeconds), WMS_TUI_GRAPHICS: graphics ? 'kitty' : 'off', WMS_TUI_STATE_DIR: journal.root, TERM: 'xterm-ghostty', TERM_PROGRAM: 'ghostty' }, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
     let transcript = ''; let position = 0; let handled = 0; let driveError;
-    const delays = [];
+    const delays = []; let acknowledged = false;
     const drive = chunk => {
       transcript += chunk.toString();
+      const query = /\x1b_Ga=q,t=d,f=24,s=1,v=1,i=(\d+);AAAA\x1b\\/.exec(transcript);
+      if (graphics && query && !acknowledged) { acknowledged = true; terminal.stdin.write(`\x1b_Gi=${query[1]};OK\x1b\\`); }
       while (handled < steps.length) {
         const [prompt, answer] = steps[handled]; const index = transcript.indexOf(prompt, position); if (index < 0) break;
         position = index + prompt.length; handled++;
@@ -116,6 +131,15 @@ test('real API/PG terminal work, lost-success recovery, actor fencing and PTY na
     assert.ok(!transcript.includes(token));
     return transcript;
   }
+  const graphicsTranscript = await driveTerminal([
+    ['Select: ', 'm'], ['Select: ', '1'], ['Action: ', 'b'], ['Action: ', 'm'], ['Action: ', '/A'],
+    ['Action: ', 's'], ['Exact product SKU: ', 'TUI-PART'], ['Action: ', 'p'], ['Action: ', 'l'], ['Action: ', 'q'],
+    ['Action: ', '?'], ['n next | p previous | Enter back: ', ''], ['Action: ', 'q'], ['Select: ', 'q'],
+  ], 'kitty-graphics-terminal.txt', { expectCommit: false, graphics: true });
+  assert.match(graphicsTranscript, /a=T,t=d,f=24,o=z/); assert.match(graphicsTranscript, /a=T,t=d,f=100/);
+  assert.match(graphicsTranscript, /a=d,d=I,i=\d+,q=2/); assert.doesNotMatch(graphicsTranscript, /a=d,d=[aA][,;]/);
+  assert.ok(graphicsTranscript.includes('Synthetic test plan')); assert.ok(graphicsTranscript.includes('Label value: TUI-PART'));
+  assert.equal((await client.read(client.warehousePath('wh-main'))).version, committedVersion, 'visual navigation never writes');
   const readTranscript = await driveTerminal([
     ['Select: ', 'i'], ['View: ', '/tui-part'], ['View: ', '1'],
     ['n next | p previous | Enter back: ', ''], ['View: ', '/missing'],

@@ -1,0 +1,5 @@
+Code 128 pattern widths originate from ZXing Code128Reader.java.
+Copyright 2008 ZXing authors. Licensed under the Apache License, Version 2.0.
+The complete license is distributed in ../LICENSE-APACHE.
+Source: https://github.com/zxing/zxing/blob/zxing-3.5.3/core/src/main/java/com/google/zxing/oned/Code128Reader.java
+Modifications: extracted the standard width table; StateSet supplies its own Set B encoder and raster renderer.

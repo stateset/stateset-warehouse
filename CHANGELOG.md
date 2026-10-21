@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add authenticated, read-only visual console endpoints and Ghostty Kitty graphics for operations flow, physical/reserved stock by bin, configured floor plans, and exact-SKU Code 128/photo previews. Keep exact text pages, capability-based fallback, original scope/version checks, bounded image transport, scanner-safe terminal reply handling and cleanup of owned image IDs. Plans/photos require explicit tenant/facility asset configuration; no capacity or physical observations are inferred.
+
 - Reject insufficient local storage before expensive release/resilience setup and retain host observations. Capture private PostgreSQL/readiness diagnostics on recovery failure while preserving the original deadline and failure; diagnostics cannot turn a failed test into a pass.
 - Allow explicit, distinct private subnets for the three image qualification stages, validate them before the run and retain actual Docker allocations. This supports retained rehearsals after default address pools are exhausted while preserving existing networks and data.
 - Drive the operations-board clock test with controlled timer advancement so unfinished input, exactly one refresh and callback cleanup are verified independently of host scheduling.

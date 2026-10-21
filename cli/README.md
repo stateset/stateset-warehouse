@@ -74,6 +74,18 @@ Serial capture shows progress, target group, physical bin/move context and recen
 
 Forms capture a warehouse version before collecting work and retain it through submission. Creating a facility generates a new facility identity at version zero; a successful creation selects that facility. Concurrent facility work can cause a safe conflict; review again only after the previous original request is definitively resolved. Replenishment planning and native OMS/TMS writeback remain available through the dashboard/API/MCP.
 
+## Graphics and visual operations
+
+Press `m` at home or open menu 21, **Visual operations / labels**. Choose operations flow, stock by bin, configured floor plan, or a product photo/barcode preview. These views preserve exact text quantities, original case-sensitive SKUs, snapshot versions and capture times. `r` explicitly reads a fresh review; failed reads retain the previous snapshot marked **STALE**. Resizing, plan navigation and help send no warehouse commands.
+
+`WMS_TUI_GRAPHICS=auto` (default) queries the terminal before sending images. Ghostty supports the [Kitty graphics protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol/). Unsupported terminals, noninteractive output, `TERM=dumb`, `NO_COLOR`, and multiplexers use text in automatic mode. Set `off` to disable graphics explicitly; `kitty` attempts a capability query even with `NO_COLOR` or a multiplexer. It still requires a successful reply. Multiplexer passthrough must be configured separately. The client never changes Ghostty or multiplexer configuration. Headless `--once console` emits JSON only.
+
+Graphics appear in panes at least 60 columns by 24 rows. Complete text pages remain available in smaller panes. Flow bars compare order-stage counts; stock bars compare the current bin page's physical/reserved each quantities, **not bin capacity or sellable availability**. Plan positions must be configured by the facility administrator. Missing plans/photos remain explicitly unavailable.
+
+Within a visual board: `f` flow, `b` stock, `m` plan, `s` exact SKU, `r` refresh, `j` evidence, `n`/`p` pages and `q`/Esc back. Plans support arrow-key pan, `+`/`-` zoom, `/EXACT-BIN` find and `0` fit. Product previews use `l` label, `p` photo, `n`/`b` text pages. F1 or `?` opens help. The Code 128 preview encodes the exact SKU when it has 1–80 printable ASCII characters; unsupported values retain their original text. A product SKU label is not a captured serial observation or a shipping/carrier label. Screen previews do not print labels or establish physical scanner/printer acceptance.
+
+The server supplies authenticated, versioned metadata and bounded PNG bytes; the client supplies bounded raster rendering and terminal escape sequences. Images travel as direct bytes, so SSH needs no terminal access to server paths. Only this client's image IDs are removed. Terminal replies are filtered before scanner input; malformed replies reject the interrupted field and require a complete rescan. See [server configuration and API](../docs/visual-console.md).
+
 ## Recovery
 
 If the service is unavailable at startup or a later session check fails, the console stays open on **Connection held**. Press `r` to retry or `q` to exit safely; retries never send work. After an identity has been verified in this process, `c` can inspect that operator's saved original requests locally during the outage. Local inspection does not look up receipts, resend requests or append recovery checkpoints. A changed actor or tenant stays held: restore the original credential or exit and restart for the new identity. A successful retry checks the current role again.
@@ -90,7 +102,7 @@ A timeout, EOF, interrupted process, generic conflict, validation error or missi
 
 Changing credentials to another actor, tenant or origin does not transfer pending work. Return to the original scope. Keep the recovery directory backed up privately; do not edit, delete, export publicly or fabricate receipts to bypass a hold. A disk error before a send checkpoint prevents transmission. A disk error after a response retains the original request for later receipt lookup/replay. The hash chain detects accidental modification; it is not a signature against a malicious local account owner.
 
-`q` exits menus; Ctrl-C or EOF exits safely. Noninteractive use requires `--once`. Supported views are `session`, `warehouses`, `inventory`, `orders`, `receipts`, `reconciliation` and `recovery`. JSON output is read-only and may contain operational data. No headless write or automatic physical action is enabled.
+`q` exits menus; Ctrl-C or EOF exits safely. Noninteractive use requires `--once`. Supported views are `session`, `warehouses`, `inventory`, `orders`, `receipts`, `reconciliation`, `recovery` and `console`. JSON output is read-only and may contain operational data. No headless write or automatic physical action is enabled.
 
 ## Check
 
@@ -106,4 +118,4 @@ The suite exercises original-request recovery, exact source/version/role checks,
 
 Before using this console for facility work, record the exact console build, Node/Ghostty versions, pane sizes, font/scale and scanner model with its configured Enter suffix. In a controlled area, have an operator perform receiving, putaway, picking, partial packing, handoff, a return and uncertain-request recovery while an independent controller witnesses the actual stock and original records. Record task times and errors against targets chosen before the run.
 
-Include pane resizing during an unfinished search and scan, exact-case labels, duplicate/malformed scans, quantity visibility at the smallest deployed pane size, loss of service after submission, changed credentials, paused/stale board behavior and full terminal restoration on exit. Retain failures and original recovery files. These observations supplement the [signed facility acceptance process](../docs/facility-acceptance.md); the local synthetic terminal suite does not supply them or extend its machine-validated schema.
+Include capability detection, text fallback, photo/plan review, label readability and independent scan decoding at deployed font sizes, pane resizing during an unfinished search and scan, exact-case labels, duplicate/malformed scans, quantity visibility at the smallest deployed pane size, loss of service after submission, changed credentials, paused/stale board behavior and full terminal restoration on exit. Retain failures and original recovery files. These observations supplement the [signed facility acceptance process](../docs/facility-acceptance.md); the local synthetic terminal suite does not supply them or extend its machine-validated schema.

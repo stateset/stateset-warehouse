@@ -2,6 +2,7 @@ pub mod api;
 pub mod auth;
 mod command_state;
 pub mod concurrency;
+pub mod console;
 pub mod domain;
 pub mod icommerce;
 pub mod integrations;

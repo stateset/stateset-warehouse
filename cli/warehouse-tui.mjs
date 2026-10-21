@@ -18,6 +18,8 @@ import { workSummary, outcomeSummary } from './lib/summaries.mjs';
 import { collectWork } from './lib/entry.mjs';
 import { connectSession } from './lib/connection.mjs';
 import { OperationsBoard, refreshInterval, laneShortcuts, laneFor } from './lib/board.mjs';
+import { visualConsole } from './lib/visual.mjs';
+import { readConsole } from './lib/console.mjs';
 
 export function argumentsFor(argv) {
   const result = {};
@@ -32,7 +34,7 @@ export function argumentsFor(argv) {
 }
 const help = `StateSet WMS operations center for Ghostty — Node.js >=22.12
 Usage: stateset-warehouse-tui [--url ORIGIN] [--warehouse ID] [--state-dir DIRECTORY]
-       stateset-warehouse-tui --once session|warehouses|inventory|orders|receipts|reconciliation|recovery
+       stateset-warehouse-tui --once session|warehouses|inventory|orders|receipts|reconciliation|recovery|console
 
 Set WMS_URL (default http://127.0.0.1:8088) and WMS_TOKEN or WMS_TOKEN_FILE.
 Use an individual operator credential. Credentials are never saved in recovery files.
@@ -41,6 +43,8 @@ Commands record whole each units and actually observed serial labels.
 Uncertain work keeps its exact original request until resolved. The repository's
 cli/README.md describes recovery and terminal workflows. q exits menus; Ctrl-C exits safely.
 Home: i inventory, o orders, w work, c recovery, r refresh (then Enter).
+      m visual operations: flow, stock bins, configured plan, product/label previews.
+WMS_TUI_GRAPHICS=auto|off|kitty selects terminal graphics; text remains available.
       t work queues. Tables: F3/f filters; F4/s sorting.
 Compact panes: v shows full context. Reviews: j shows original JSON.
 Home auto-refreshes every 15s; z pauses/resumes. WMS_TUI_REFRESH_SECONDS
@@ -259,6 +263,7 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
     else if (args.once === 'warehouses') data = await client.read('/v1/warehouses?limit=100');
     else if (args.once === 'recovery') data = (await journal.listForIdentity(scope)).map(r => ({ warehouse_id: r.original.scope.warehouse, request_id: r.request.request_id, command_type: r.request.command.type, stage: r.stage }));
     else if (args.once === 'reconciliation') data = await client.read(client.warehousePath(warehouse, '/reconciliation'));
+    else if (args.once === 'console') data = await readConsole(client, scope);
     else if (['inventory', 'orders', 'receipts'].includes(args.once)) { const snapshot = await client.read(client.warehousePath(warehouse)); data = { scope, version: snapshot.version, items: snapshot[args.once === 'inventory' ? 'stocks' : args.once] }; }
     else throw new Error('Unknown --once view; see --help');
     console.log(JSON.stringify(data, null, 2)); return;
@@ -280,13 +285,13 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
       const board = new OperationsBoard(client, journal, scope, session, { intervalMs: refreshMs }); board.paused = boardPaused;
       await board.refresh({ verifySession: false });
       const action = await ui.menu('WMS operations center', [
-        ['Record observed warehouse work', 'work'], ['Inventory', 'stocks'], ['Products', 'products'], ['Bins', 'locations'], ['Orders', 'orders'], ['Receiving / returns', 'receipts'], ['Original order and shipment review', 'order-detail'], ['Original receiving record', 'receipt-detail'], ['Lots and holds', 'lots'], ['Facility transfers', 'transfers'], ['Serial custody', 'serials'], ['Serial history', 'serial-history'], ['Exceptions', 'exceptions'], ['Retained history', 'history'], ['Reconciliation', 'reconciliation'], ['Operations', 'operations'], ['Original request recovery', 'recovery'], ['iCommerce interop', 'interop'], ['Select facility', 'warehouse'], ['Work queues', 'queues'],
+        ['Record observed warehouse work', 'work'], ['Inventory', 'stocks'], ['Products', 'products'], ['Bins', 'locations'], ['Orders', 'orders'], ['Receiving / returns', 'receipts'], ['Original order and shipment review', 'order-detail'], ['Original receiving record', 'receipt-detail'], ['Lots and holds', 'lots'], ['Facility transfers', 'transfers'], ['Serial custody', 'serials'], ['Serial history', 'serial-history'], ['Exceptions', 'exceptions'], ['Retained history', 'history'], ['Reconciliation', 'reconciliation'], ['Operations', 'operations'], ['Original request recovery', 'recovery'], ['iCommerce interop', 'interop'], ['Select facility', 'warehouse'], ['Work queues', 'queues'], ['Visual operations / labels', 'visual'],
       ], {
         context: () => board.context({ columns: ui.columns }), tickMs: 5000, onTick: state => board.tick(state),
         localActions: { r: () => board.refresh(), z: () => { board.togglePause(); boardPaused = board.paused; } },
         compactHint: ['i stock · o orders · w work · t queues', 'r refresh · z auto on/off · v info · ? · q'],
         sections: { 1: 'WORK & INVENTORY', 9: 'TRACEABILITY & CONTROL', 16: 'OPERATIONS & RECOVERY' },
-        shortcuts: { i: 'stocks', o: 'orders', w: 'work', c: 'recovery', t: 'queues', ...Object.fromEntries(Object.keys(laneShortcuts).map(key => [key, `lane:${key}`])) },
+        shortcuts: { i: 'stocks', o: 'orders', w: 'work', c: 'recovery', t: 'queues', m: 'visual', ...Object.fromEntries(Object.keys(laneShortcuts).map(key => [key, `lane:${key}`])) },
         hint: ['i inventory · o orders · w work · t queues · c recovery', 'r refresh · z pause/resume · / search · v context · ? help · q exit'],
       });
       if (!action) break;
@@ -297,6 +302,7 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
         if (action === 'work') warehouse = await perform(client, journal, scope, ui) ?? warehouse;
         else if (action === 'warehouse') warehouse = await selectWarehouse(client, ui) ?? warehouse;
         else if (action === 'interop') await interop(client, journal, scope, ui);
+        else if (action === 'visual') await visualConsole(client, scope, ui);
         else if (action === 'queues') {
           const queue = await ui.menu('Work queues', workQueues(snapshot).map(queue => [`${queue.label} | ${queue.count ?? '?'} records`, queue]), {
             intro: [`Facility: ${warehouse}`, snapshot.error ? 'Counts unavailable. Choose a queue to retry its view.' : `Counts from snapshot v${snapshot.version}. Opens a fresh view.`],

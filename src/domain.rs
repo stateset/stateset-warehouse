@@ -216,6 +216,12 @@ pub struct OperationalSnapshot {
     reconciliation: OperationalReconciliation,
 }
 
+impl OperationalSnapshot {
+    pub(crate) fn console_source(&self) -> (&State, bool) {
+        (&self.state, self.reconciliation.ok)
+    }
+}
+
 #[derive(Debug, Serialize)]
 struct OperationalReconciliation {
     version: i64,

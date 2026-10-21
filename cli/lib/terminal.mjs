@@ -3,6 +3,7 @@ import { safeText } from './client.mjs';
 
 import { fit, wrap } from './format.mjs';
 import { Keys } from './keys.mjs';
+import { KittyGraphics } from './graphics.mjs';
 import { keyboardHelp, inspectText } from './views.mjs';
 export { fit, wrap, width } from './format.mjs';
 
@@ -10,9 +11,15 @@ export class Terminal {
   constructor(input = process.stdin, output = process.stdout, env = process.env) {
     this.input = input; this.output = output; this.lines = []; this.waiter = null; this.closed = false;
     this.colors = Boolean(output.isTTY && env.TERM !== 'dumb' && !Object.hasOwn(env, 'NO_COLOR'));
+    this.graphics = new KittyGraphics(output, env, { interactive: Boolean(input.isTTY && output.isTTY) });
     if (input.isTTY && output.isTTY && typeof input.setRawMode === 'function') {
       output.write('\x1b[?1049h'); this.alternate = true;
-      try { this.keys = new Keys(input, output, () => this.columns); }
+      try {
+        this.keys = new Keys(input, output, () => this.columns, this.graphics.enabled ? {
+          onProtocol: frame => this.graphics.reply(frame), onProtocolFault: () => this.graphics.finish(false),
+        } : {});
+        void this.graphics.detect();
+      }
       catch (error) { output.write('\x1b[?1049l'); throw error; }
       this.resize = () => this.keys.push({ key: { name: 'resize' } });
       output.on('resize', this.resize);
@@ -47,6 +54,7 @@ export class Terminal {
   async action(prompt, draft, options) { return this.keys ? this.keys.read(prompt, true, {}, draft, options) : this.ask(prompt); }
   async scan(prompt) { return this.keys ? this.keys.read(prompt, false, { f2: 'undo' }) : this.ask(prompt); }
   screen(title) {
+    this.graphics.clear();
     if (this.output.isTTY) this.output.write('\x1b[2J\x1b[H');
     this.line('STATESET / WAREHOUSE', 'accent'); this.line(title, 'title'); this.line('─'.repeat(this.columns), 'muted');
   }
@@ -135,6 +143,7 @@ export class Terminal {
   }
   async pause() { await this.ask('\nEnter to continue: '); }
   close() {
+    this.graphics.close();
     if (this.exitCleanup) process.removeListener('exit', this.exitCleanup);
     for (const [signal, handler] of this.signals ?? []) process.removeListener(signal, handler);
     if (this.resize) this.output.removeListener('resize', this.resize);

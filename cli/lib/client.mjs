@@ -55,6 +55,22 @@ export class Client {
     if (!response.ok) throw new Error(`HTTP ${response.status}: ${safeText(response.data.error ?? response.data.message ?? 'WMS read failed')}`);
     return response.data;
   }
+  async image(path) {
+    const url = new URL(path, this.origin);
+    if (!path.startsWith('/v1/') || path.startsWith('//') || url.origin !== this.origin || !url.pathname.startsWith('/v1/') || url.hash) throw new Error('Invalid WMS image path');
+    const response = await this.fetch(url, { method: 'GET', redirect: 'error', signal: AbortSignal.timeout(this.timeoutMs),
+      headers: { authorization: `Bearer ${this.#token}`, accept: 'image/png' } });
+    const reader = response.body?.getReader(); const chunks = []; let bytes = 0;
+    try {
+      if (!response.ok || response.headers.get('content-type')?.split(';')[0].trim() !== 'image/png') throw new Error(`Product image unavailable (HTTP ${response.status}); refresh the preview`);
+      if (!reader) throw new Error('Product image response is empty');
+      for (;;) {
+        const { done, value } = await reader.read(); if (done) break;
+        bytes += value.length; if (bytes > 4 * 1024 * 1024) throw new Error('Product image exceeds 4 MiB'); chunks.push(value);
+      }
+      return Buffer.concat(chunks);
+    } finally { await reader?.cancel().catch(() => {}); }
+  }
   async session() {
     const session = await this.read('/v1/session');
     const identity = session.identity;

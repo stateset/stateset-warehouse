@@ -279,12 +279,23 @@ pub fn router_with_auth_and_mcp(
     workos: Option<crate::auth::WorkOs>,
     mcp_config: crate::mcp::Config,
 ) -> Router {
+    router_complete(app, workos, mcp_config, crate::console::Assets::from_env())
+}
+pub fn router_with_console_assets(app: App, assets: crate::console::Assets) -> Router {
+    router_complete(app, None, crate::mcp::Config::default(), assets)
+}
+fn router_complete(
+    app: App,
+    workos: Option<crate::auth::WorkOs>,
+    mcp_config: crate::mcp::Config,
+    assets: crate::console::Assets,
+) -> Router {
     let public_auth = workos
         .as_ref()
         .map(|w| w.config.public())
         .unwrap_or(json!({"provider":"api_key"}));
     let auth_origin = workos.as_ref().map(|w| w.config.api_origin.clone());
-    let protected = business_routes()
+    let protected = business_routes_with_console(assets)
         .merge(crate::mcp::router(app.clone(), mcp_config))
         .route_layer(middleware::from_fn_with_state(
             (app.clone(), workos),
@@ -327,6 +338,9 @@ pub fn router_with_auth_and_mcp(
 
 /// Private trusted dispatch after the outer transport authenticates Identity.
 pub(crate) fn business_routes() -> Router<App> {
+    business_routes_with_console(crate::console::Assets::from_env())
+}
+fn business_routes_with_console(assets: crate::console::Assets) -> Router<App> {
     Router::new()
         .route("/v1/session", get(session))
         .route("/v1/warehouses", get(warehouses))
@@ -399,6 +413,7 @@ pub(crate) fn business_routes() -> Router<App> {
         .route("/v1/events/{id}", get(event))
         .merge(crate::native_api::router())
         .merge(crate::operations::router())
+        .merge(crate::console::router_with_assets(assets))
         .route("/v1", any(unknown_api))
         .route("/v1/", any(unknown_api))
         .route("/v1/{*path}", any(unknown_api))

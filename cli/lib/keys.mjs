@@ -1,5 +1,6 @@
 import { emitKeypressEvents } from 'node:readline';
 import { fit, width, wrap } from './format.mjs';
+import { GraphicsReplies } from './graphics.mjs';
 
 const segments = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
 const boundary = (text, cursor, direction) => {
@@ -10,12 +11,14 @@ const boundary = (text, cursor, direction) => {
 // One reader owns raw input for its whole lifetime. Keystrokes arriving in the
 // same scanner/PTY chunk stay queued across screen changes and prompts.
 export class Keys {
-  constructor(input, output, columns) {
+  constructor(input, output, columns, { onProtocol, onProtocolFault } = {}) {
     this.input = input; this.output = output; this.columns = columns;
     this.queue = []; this.waiter = null; this.closed = false; this.previousRaw = input.isRaw;
     this.paste = null; this.lastCR = false;
     this.receive = (text, key = {}) => {
       if (key.ctrl && key.name === 'c') { this.close(); return; }
+      if (this.badPaste) { if (key.name === 'paste-end') this.badPaste = false; return; }
+      if (this.badInputLine) { if (text === '\r' || text === '\n') { this.badInputLine = false; this.lastCR = text === '\r'; } return; }
       if (key.name === 'paste-start') { this.paste = ''; this.pasteOverflow = false; return; }
       if (key.name === 'paste-end') { const paste = this.paste; this.paste = null; this.push({ paste, overflow: this.pasteOverflow }); return; }
       if (this.paste !== null) {
@@ -28,7 +31,14 @@ export class Keys {
       this.push({ text, key });
     };
     this.end = () => this.close();
-    emitKeypressEvents(input);
+    this.keyInput = input;
+    if (onProtocol) {
+      this.keyInput = new GraphicsReplies(onProtocol);
+      this.keyInput.on('fault', () => { this.badPaste = this.paste !== null; this.paste = null; this.badInputLine = true; onProtocolFault?.(); this.push({ key: { name: 'protocol-error' } }); });
+      input.pipe(this.keyInput);
+      this.keyInput.on('keypress', this.receive);
+    }
+    emitKeypressEvents(this.keyInput);
     input.on('keypress', this.receive); input.on('end', this.end);
     input.setRawMode(true); input.resume();
     output.write('\x1b[?2004h');
@@ -78,6 +88,7 @@ export class Keys {
       const event = await this.next(deadline === undefined ? undefined : deadline - performance.now());
       if (!event) return null;
       const { key = {}, text } = event;
+      if (key.name === 'protocol-error') throw new Error('Incomplete terminal reply; enter the complete field again. No value accepted.');
       if (Object.hasOwn(event, 'paste')) {
         if (event.paste === null) continue;
         if (event.overflow || buffer.length + event.paste.length > 1024 * 1024) throw new Error('Input exceeds 1 MiB; no value accepted');
@@ -115,6 +126,7 @@ export class Keys {
     if (this.closed) return;
     this.closed = true; this.queue = [];
     this.input.removeListener('keypress', this.receive); this.input.removeListener('end', this.end);
+    if (this.keyInput !== this.input) { this.input.unpipe(this.keyInput); this.keyInput.removeListener('keypress', this.receive); this.keyInput.destroy(); }
     this.input.setRawMode(Boolean(this.previousRaw)); this.input.pause();
     this.output.write('\x1b[?2004l\x1b[0m');
     this.waiter?.(null); this.waiter = null;
