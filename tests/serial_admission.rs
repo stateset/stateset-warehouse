@@ -327,3 +327,5 @@ mod shared_sources;
 
 #[path = "serial_admission/payload_reuse.rs"]
 mod payload_reuse;
+#[path = "serial_admission/sku_scope.rs"]
+mod sku_scope;

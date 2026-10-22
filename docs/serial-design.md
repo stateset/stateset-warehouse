@@ -41,7 +41,7 @@ Only two tables change in place. `wms_serial_heads` advances its version with ea
 3. In **one transaction** the server writes stock, movements, the event, the command receipt, the outbox row, *and* the new batch, steps, observations and unit projections.
 4. At commit, **deferred constraint triggers** re-check everything that changed against the final transaction snapshot: labels match targets exactly once, quantities equal label counts, steps chain correctly, and serial custody equals stock (units on hand in a bin = stock in that bin, staged units = allocations, and so on). Any mismatch rolls the whole command back.
 
-Migration 032 makes step 4 cheaper without weakening it: a trigger only *queues a key* ("this event/SKU/warehouse needs checking"), and each key is checked once at commit. Ordinary SQL cannot insert or delete those keys.
+Migration 032 makes step 4 cheaper without weakening it: a trigger only *queues a key* ("this event/SKU/warehouse needs checking"), and each key is checked once at commit. Ordinary SQL cannot insert or delete those keys. Since migration 035, custody keys are per (warehouse, SKU), so a save checks only the products it touches. Damage to another product, which only a guard bypass can create, does not block it; full reconciliation still reports that damage.
 
 Recovery uses the same journal as every other command: retrying the exact original request (same request ID, actor, facility and `serial_inputs`) returns the original result.
 
@@ -85,6 +85,7 @@ Migrations are append-only: an applied migration's SHA-256 is recorded and any c
 | 032 | Deferred-check keys: each changed key is checked once at commit. |
 | 033 | Direct target dispatch for ordinary counts and moves. |
 | 034 | One target resolution per command for set-form reconciliation. |
+| 035 | Commit-time custody checks per (warehouse, SKU) instead of per warehouse. |
 
 ## Changing serial code safely
 

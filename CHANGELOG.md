@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Check serial custody per (warehouse, SKU) at commit in append-only migration 035, instead of rescanning every serial unit in the warehouse on every save. Each custody equation and place reference involves one SKU. Every mutation that can change custody now queues its SKU: SKU-bearing rows, the old and new places of changed serial units, package closures and receipts through the SKUs that reference them, and transfer losses through their original line. Location changes keep the warehouse-wide check. A new differential test shows the per-SKU checks together give exactly the warehouse-wide verdict on clean data and on five kinds of deliberate damage. It fails if the per-SKU check is disabled. On the retained 16,000-label fixture (8 SKUs) the commit-time check takes 18–24ms against 100–192ms. **Behavior change:** custody damage confined to one SKU, which only a guard bypass can create, now blocks commits for that SKU only, not the whole warehouse; full reconciliation still reports it.
+
 ## 0.3.0 — 2026-10-22
 
 **Highlights**

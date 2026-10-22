@@ -141,6 +141,12 @@ async fn schema() -> Transaction<'static, Postgres> {
     .execute(&mut *tx)
     .await
     .expect("shared command target rows with original conversion outcomes");
+    sqlx::raw_sql(include_str!(
+        "../migrations/035_serial_sku_scope_checks.sql"
+    ))
+    .execute(&mut *tx)
+    .await
+    .expect("SKU-scoped custody checks");
     tx
 }
 

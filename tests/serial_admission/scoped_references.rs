@@ -237,8 +237,10 @@ async fn scoped_mode_sources_preserve_original_selection_and_actual_commit_rejec
                 mode_verdict(&mut tx, tenant, sku).await;
             }
         }
+        // Migration 035 checks custody for the SKU a commit touches; damage
+        // confined to another SKU no longer rejects it.
         for sku in ["SERIAL", "OTHER"] {
-            let expected: bool = sqlx::query_scalar("SELECT NOT EXISTS(SELECT 1 FROM wms_serial_modes m WHERE tenant=$1 AND sku=$2 AND controlled) OR (NOT EXISTS(SELECT 1 FROM wms_serial_modes m WHERE tenant=$1 AND sku=$2 AND controlled AND NOT wms_serial_mode_original(m)) AND wms_serial_scope_current_valid($1,'wh-main') AND wms_serial_scope_transit_valid($1,'wh-main'))")
+            let expected: bool = sqlx::query_scalar("SELECT NOT EXISTS(SELECT 1 FROM wms_serial_modes m WHERE tenant=$1 AND sku=$2 AND controlled) OR (NOT EXISTS(SELECT 1 FROM wms_serial_modes m WHERE tenant=$1 AND sku=$2 AND controlled AND NOT wms_serial_mode_original(m)) AND wms_serial_scope_current_valid_sku($1,'wh-main',$2) AND wms_serial_scope_transit_valid_sku($1,'wh-main',$2))")
                 .bind(&f.who.tenant).bind(sku).fetch_one(&mut *tx).await.expect("original commit expression");
             sqlx::query("SAVEPOINT actual_guard").execute(&mut *tx).await.expect("real write boundary");
             let changed=sqlx::query("UPDATE wms_stock SET on_hand=on_hand WHERE tenant=$1 AND warehouse_id='wh-main' AND sku=$2")
