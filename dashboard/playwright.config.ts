@@ -21,7 +21,7 @@ export default defineConfig({
     {
       name: "live-postgres",
       testMatch:
-        /(?:^|\/)(?:live|scanner-live|operations-live|facilities-live|cancellation-live|transfers-live|split-live|lot-controls-live|lot-trace-live|transfer-loss-live|units-live|serials-live|serial-workflows-live|serial-transfers-live)\.spec\.ts$/,
+        /(?:^|\/)(?:live|scanner-live|operations-live|facilities-live|cancellation-live|transfers-live|split-live|lot-controls-live|lot-trace-live|transfer-loss-live|units-live|serials-live|serial-workflows-live|serial-transfers-live|planning-live)\.spec\.ts$/,
       use: { baseURL: process.env.WMS_BROWSER_URL || "http://127.0.0.1:8088" },
     },
   ],

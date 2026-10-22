@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **Planning.** Every plan below reserves and moves nothing. Each task is the exact canonical command, with its reviewed versions, confirmed through the normal command journal.
+  - Directed putaway: same lot, then same SKU, then a requested or SKU zone, then any empty bin. There is no capacity model.
+  - Batch picking: up to 50 orders per walk, stops in natural bin order and one tote per order. Blocked orders and unavailable lots are reported, not planned.
+  - Scheduled cycle counts: Pareto ABC classes by picked units, intervals of 7, 30 and 90 days, last-counted times from the original count events, blind by default.
+  - Saved replenishment rules (migration 036): admin-only, audited and removed with their product or bin, plus a due-now work queue.
+- **Labels.** 203 dpi ZPL labels for bins, products, 4×6 cartons and serial units. Code 128 barcodes encode exact values and reject what they can't carry; free text is escaped against ZPL injection.
+- **Carrier labels** (migration 037) record the carrier, service, tracking number, exact decimal rate, observed carton and a ZPL or HTTPS label on an open package. A package has one active label; labels are immutable apart from one void, and can't be added after handoff or unpacking. The WMS never calls a carrier; the TMS or an operator supplies the label.
+- Dashboard panels for each: putaway (Receiving), batch picking (Fulfillment), cycle counts, label printing and saved rules (Inventory), and carrier labels on each package. Ten new MCP tools.
+- Integration tests run every planned task through the real command path against PostgreSQL. The restore rehearsal populates both new tables.
+
 ## 0.3.1 — 2026-10-22
 
 **Highlights**

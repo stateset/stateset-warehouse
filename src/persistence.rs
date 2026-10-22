@@ -308,6 +308,14 @@ impl Store {
                 "035_serial_sku_scope_checks",
                 include_str!("../migrations/035_serial_sku_scope_checks.sql"),
             ),
+            (
+                "036_replenishment_rules",
+                include_str!("../migrations/036_replenishment_rules.sql"),
+            ),
+            (
+                "037_carrier_labels",
+                include_str!("../migrations/037_carrier_labels.sql"),
+            ),
         ] {
             let digest = format!("{:x}", Sha256::digest(sql.as_bytes()));
             let old: Option<String> =

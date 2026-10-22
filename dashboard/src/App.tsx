@@ -13,6 +13,12 @@ import NativePanel from "./NativePanel";
 import ScannerPanel from "./ScannerPanel";
 import OperationsPanel from "./OperationsPanel";
 import ReplenishmentPanel from "./ReplenishmentPanel";
+import {
+  BatchPickPanel,
+  CycleCountPanel,
+  LabelPrintPanel,
+  PutawayPanel,
+} from "./PlanningPanels";
 import LotControlsPanel from "./LotControlsPanel";
 import LotTracePanel from "./LotTracePanel";
 import {
@@ -249,7 +255,7 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
     rawSetModal(null);
   }, []);
   const request = useCallback(
-    async (path: string, body?: unknown) => {
+    async (path: string, body?: unknown, method?: "GET" | "POST" | "PUT") => {
       const controller = new AbortController();
       controllers.current.add(controller);
       const timeout = setTimeout(() => controller.abort(), 20000);
@@ -272,7 +278,7 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
         controller.signal.throwIfAborted();
         const response = await fetch(path, {
           signal: controller.signal,
-          method: body ? "POST" : "GET",
+          method: method ?? (body ? "POST" : "GET"),
           headers: {
             Authorization: `Bearer ${credential}`,
             ...(body ? { "Content-Type": "application/json" } : {}),
@@ -2305,11 +2311,26 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                     <ReplenishmentPanel
                       key={s.warehouse.id}
                       state={s}
+                      role={session.identity.role}
                       disabled={disabled}
                       request={request}
                       onSubmit={submit}
                     />
                   )}
+                  {canWork && (
+                    <CycleCountPanel
+                      key={`counts-${s.warehouse.id}`}
+                      state={s}
+                      disabled={disabled}
+                      request={request}
+                      onSubmit={submit}
+                    />
+                  )}
+                  <LabelPrintPanel
+                    key={`labels-${s.warehouse.id}`}
+                    state={s}
+                    request={request}
+                  />
                   <SerialTracePanel
                     key={`serial-${s.warehouse.id}`}
                     state={s}
@@ -2485,6 +2506,15 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                   </Section>
                 </>
               )}
+              {tab === "fulfillment" && canWork && (
+                <BatchPickPanel
+                  key={`batch-${s.warehouse.id}`}
+                  state={s}
+                  disabled={disabled}
+                  request={request}
+                  onSubmit={submit}
+                />
+              )}
               {tab === "fulfillment" && (
                 <Section
                   title="Fulfillment orders"
@@ -2507,6 +2537,15 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
               )}
               {tab === "receiving" && (
                 <>
+                  {canWork && (
+                    <PutawayPanel
+                      key={`putaway-${s.warehouse.id}`}
+                      state={s}
+                      disabled={disabled}
+                      request={request}
+                      onSubmit={submit}
+                    />
+                  )}
                   <div className="inventory-summary">
                     <span>{totals.receiving} inbound receipts open</span>
                     <span>

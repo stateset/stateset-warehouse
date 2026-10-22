@@ -178,3 +178,142 @@ pub async fn endpoint(
         plan(&state, &input.rules).map_err(|e| Error::new(422, e))?,
     ))
 }
+
+/// Saved rules for the warehouse, in SKU/bin order.
+async fn saved_rules(app: &App, tenant: &str, warehouse: &str) -> Result<Vec<Rule>, Error> {
+    Ok(
+        sqlx::query_as::<_, (String, String, i64, i64, Option<String>)>(
+            "SELECT sku,destination,minimum,target,source_zone FROM wms_replenishment_rules
+         WHERE tenant=$1 AND warehouse_id=$2 ORDER BY sku,destination",
+        )
+        .bind(tenant)
+        .bind(warehouse)
+        .fetch_all(&app.store.pool)
+        .await?
+        .into_iter()
+        .map(|(sku, destination, minimum, target, source_zone)| Rule {
+            sku,
+            destination,
+            minimum,
+            target,
+            source_zone,
+        })
+        .collect(),
+    )
+}
+
+pub async fn rules(
+    AppState(app): AppState<App>,
+    Extension(identity): Extension<Identity>,
+    Path(warehouse): Path<String>,
+) -> Result<Json<Value>, Error> {
+    if !["viewer", "operator", "admin"].contains(&identity.role.as_str()) {
+        return Err(Error::new(
+            403,
+            "Reading replenishment rules requires a warehouse role",
+        ));
+    }
+    let rules = saved_rules(&app, &identity.tenant, &warehouse).await?;
+    Ok(Json(
+        json!({"warehouse_id":warehouse,"rules":rules.iter().map(|r| json!({
+        "sku":r.sku,"destination":r.destination,"minimum":r.minimum,"target":r.target,"source_zone":r.source_zone
+    })).collect::<Vec<_>>()}),
+    ))
+}
+
+/// Replace the warehouse's saved rules as one audited change. An empty list
+/// clears them. Rules are validated exactly as an ad hoc plan would be.
+pub async fn replace_rules(
+    AppState(app): AppState<App>,
+    Extension(identity): Extension<Identity>,
+    Path(warehouse): Path<String>,
+    Json(input): Json<PlanRequest>,
+) -> Result<Json<Value>, Error> {
+    if identity.role != "admin" {
+        return Err(Error::new(
+            403,
+            "Only administrators may change replenishment rules",
+        ));
+    }
+    let state = app.store.state(&identity.tenant, &warehouse).await?;
+    if !input.rules.is_empty() {
+        plan(&state, &input.rules).map_err(|e| Error::new(422, e))?;
+    }
+    save_rules(
+        &app.store.pool,
+        &identity.tenant,
+        &warehouse,
+        &identity.actor,
+        &input.rules,
+    )
+    .await?;
+    Ok(Json(
+        json!({"warehouse_id":warehouse,"rules":input.rules.len()}),
+    ))
+}
+
+/// The replenishment work due now under the saved rules.
+pub async fn due(
+    AppState(app): AppState<App>,
+    Extension(identity): Extension<Identity>,
+    Path(warehouse): Path<String>,
+) -> Result<Json<Value>, Error> {
+    if !["operator", "admin"].contains(&identity.role.as_str()) {
+        return Err(Error::new(
+            403,
+            "Replenishment planning requires an operator",
+        ));
+    }
+    let state = app.store.state(&identity.tenant, &warehouse).await?;
+    state.validate().map_err(|_| {
+        Error::new(
+            503,
+            "Warehouse inventory requires reconciliation; replenishment held",
+        )
+    })?;
+    let rules = saved_rules(&app, &identity.tenant, &warehouse).await?;
+    if rules.is_empty() {
+        return Ok(Json(
+            json!({"schema_version":1,"warehouse_id":state.warehouse.id,
+            "version":state.version,"generated_at":domain::now(),"rules":0,"tasks":[],"shortages":[]}),
+        ));
+    }
+    let mut result = plan(&state, &rules).map_err(|e| Error::new(422, e))?;
+    result["rules"] = json!(rules.len());
+    Ok(Json(result))
+}
+
+/// Replace a warehouse's saved rules and audit the change in one
+/// transaction. Callers validate the rules first.
+pub async fn save_rules(
+    pool: &sqlx::PgPool,
+    tenant: &str,
+    warehouse: &str,
+    actor: &str,
+    rules: &[Rule],
+) -> Result<(), Error> {
+    let mut tx = pool.begin().await?;
+    sqlx::query("SELECT 1 FROM wms_warehouses WHERE tenant=$1 AND warehouse_id=$2 FOR UPDATE")
+        .bind(tenant)
+        .bind(warehouse)
+        .fetch_optional(&mut *tx)
+        .await?
+        .ok_or_else(|| Error::new(404, "Warehouse not found"))?;
+    sqlx::query("DELETE FROM wms_replenishment_rules WHERE tenant=$1 AND warehouse_id=$2")
+        .bind(tenant)
+        .bind(warehouse)
+        .execute(&mut *tx)
+        .await?;
+    for rule in rules {
+        sqlx::query("INSERT INTO wms_replenishment_rules(tenant,warehouse_id,sku,destination,minimum,target,source_zone,updated_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8)")
+            .bind(tenant).bind(warehouse).bind(&rule.sku).bind(&rule.destination)
+            .bind(rule.minimum).bind(rule.target).bind(&rule.source_zone).bind(actor)
+            .execute(&mut *tx).await?;
+    }
+    let reference = json!({"warehouse_id":warehouse,"rules":rules.len()}).to_string();
+    sqlx::query("INSERT INTO wms_admin_audit(id,tenant,actor,action,reference) VALUES($1,$2,$3,'replenishment.rules',$4)")
+        .bind(domain::id()).bind(tenant).bind(actor).bind(reference)
+        .execute(&mut *tx).await?;
+    tx.commit().await?;
+    Ok(())
+}

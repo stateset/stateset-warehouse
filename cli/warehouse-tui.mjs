@@ -19,6 +19,7 @@ import { collectWork } from './lib/entry.mjs';
 import { connectSession } from './lib/connection.mjs';
 import { OperationsBoard, refreshInterval, laneShortcuts, laneFor } from './lib/board.mjs';
 import { visualConsole } from './lib/visual.mjs';
+import { PLANS, planTasks, withCount, fetchPlan } from './lib/planning.mjs';
 import { readConsole } from './lib/console.mjs';
 
 export function argumentsFor(argv) {
@@ -69,6 +70,18 @@ async function selectWarehouse(client, ui, exclude) {
   }
 }
 export { collectSerials } from './lib/scanning.mjs';
+async function plannedWork(client, journal, scope, ui) {
+  const kind = await ui.menu('Planned work (suggestions only; each task is reviewed and confirmed)', Object.entries(PLANS).map(([key, plan]) => [plan.label, key]));
+  if (!kind) return;
+  const plan = await fetchPlan(client, scope.warehouse, kind);
+  const tasks = planTasks(kind, plan, scope.warehouse);
+  if (!tasks.length) { ui.print(`\n${PLANS[kind].label}: nothing to do right now.`); await ui.pause(); return; }
+  const task = await ui.menu(`${PLANS[kind].label} | plan v${plan.version} | ${tasks.length} tasks`, tasks.map(t => [t.label, t]));
+  if (!task) return;
+  let command = task.command;
+  if (task.needsCount) command = withCount(command, await ui.ask('Counted whole units (blind count): '));
+  await perform(client, journal, scope, ui, command);
+}
 async function perform(client, journal, scope, ui, supplied, selection) {
   if ((await journal.listForIdentity(scope)).some(record => !['committed', 'not_committed'].includes(record.stage))) throw new Error('Resolve your original pending work in Recovery before recording new work');
   const session = await boundSession(client, scope);
@@ -285,12 +298,12 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
       const board = new OperationsBoard(client, journal, scope, session, { intervalMs: refreshMs }); board.paused = boardPaused;
       await board.refresh({ verifySession: false });
       const action = await ui.menu('WMS operations center', [
-        ['Record observed warehouse work', 'work'], ['Inventory', 'stocks'], ['Products', 'products'], ['Bins', 'locations'], ['Orders', 'orders'], ['Receiving / returns', 'receipts'], ['Original order and shipment review', 'order-detail'], ['Original receiving record', 'receipt-detail'], ['Lots and holds', 'lots'], ['Facility transfers', 'transfers'], ['Serial custody', 'serials'], ['Serial history', 'serial-history'], ['Exceptions', 'exceptions'], ['Retained history', 'history'], ['Reconciliation', 'reconciliation'], ['Operations', 'operations'], ['Original request recovery', 'recovery'], ['iCommerce interop', 'interop'], ['Select facility', 'warehouse'], ['Work queues', 'queues'], ['Visual operations / labels', 'visual'],
+        ['Record observed warehouse work', 'work'], ['Planned work', 'planned'], ['Inventory', 'stocks'], ['Products', 'products'], ['Bins', 'locations'], ['Orders', 'orders'], ['Receiving / returns', 'receipts'], ['Original order and shipment review', 'order-detail'], ['Original receiving record', 'receipt-detail'], ['Lots and holds', 'lots'], ['Facility transfers', 'transfers'], ['Serial custody', 'serials'], ['Serial history', 'serial-history'], ['Exceptions', 'exceptions'], ['Retained history', 'history'], ['Reconciliation', 'reconciliation'], ['Operations', 'operations'], ['Original request recovery', 'recovery'], ['iCommerce interop', 'interop'], ['Select facility', 'warehouse'], ['Work queues', 'queues'], ['Visual operations / labels', 'visual'],
       ], {
         context: () => board.context({ columns: ui.columns }), tickMs: 5000, onTick: state => board.tick(state),
         localActions: { r: () => board.refresh(), z: () => { board.togglePause(); boardPaused = board.paused; } },
         compactHint: ['i stock · o orders · w work · t queues', 'r refresh · z auto on/off · v info · ? · q'],
-        sections: { 1: 'WORK & INVENTORY', 9: 'TRACEABILITY & CONTROL', 16: 'OPERATIONS & RECOVERY' },
+        sections: { 1: 'WORK & INVENTORY', 10: 'TRACEABILITY & CONTROL', 17: 'OPERATIONS & RECOVERY' },
         shortcuts: { i: 'stocks', o: 'orders', w: 'work', c: 'recovery', t: 'queues', m: 'visual', ...Object.fromEntries(Object.keys(laneShortcuts).map(key => [key, `lane:${key}`])) },
         hint: ['i inventory · o orders · w work · t queues · c recovery', 'r refresh · z pause/resume · / search · v context · ? help · q exit'],
       });
@@ -300,6 +313,7 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
         if (action === 'recovery') { await recover(client, journal, scope, ui, { localOnly: Boolean(board.sessionError) }); continue; }
         if (board.sessionError) throw new Error('Live identity verification is held. Retry the connection before opening server work.');
         if (action === 'work') warehouse = await perform(client, journal, scope, ui) ?? warehouse;
+        else if (action === 'planned') await plannedWork(client, journal, scope, ui);
         else if (action === 'warehouse') warehouse = await selectWarehouse(client, ui) ?? warehouse;
         else if (action === 'interop') await interop(client, journal, scope, ui);
         else if (action === 'visual') await visualConsole(client, scope, ui);

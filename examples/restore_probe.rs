@@ -301,6 +301,59 @@ async fn split_fixture(store: &Store) -> Result<Value> {
         .await?;
         let package = entity(&response)?;
         originals.push(json!({"request":request,"response":response}));
+        // Carrier labels: one recorded before the handoff, and on the still
+        // open package one voided label plus its active replacement.
+        if outcome != "unpack" {
+            let label = |tracking: &str| stateset_warehouse::carrier_labels::RecordRequest {
+                carrier: "Synthetic restore parcel".into(),
+                service: "Ground".into(),
+                tracking_number: tracking.into(),
+                rate: Some(stateset_warehouse::carrier_labels::Rate {
+                    amount: "9.75".into(),
+                    currency: "USD".into(),
+                }),
+                carton: None,
+                label: stateset_warehouse::carrier_labels::Label::Zpl {
+                    data: format!("^XA^FO40,40^FD{tracking}^FS^XZ"),
+                },
+            };
+            let first = application(
+                stateset_warehouse::carrier_labels::insert(
+                    &store.pool,
+                    TENANT,
+                    WAREHOUSE,
+                    "synthetic:restore",
+                    &package,
+                    &label(&format!("{reference}-LABEL")),
+                )
+                .await,
+            )?;
+            if outcome == "active" {
+                application(
+                    stateset_warehouse::carrier_labels::void_label(
+                        &store.pool,
+                        TENANT,
+                        WAREHOUSE,
+                        "synthetic:restore",
+                        &package,
+                        first["id"].as_str().ok_or("label id")?,
+                        "Synthetic reprint before recovery point",
+                    )
+                    .await,
+                )?;
+                application(
+                    stateset_warehouse::carrier_labels::insert(
+                        &store.pool,
+                        TENANT,
+                        WAREHOUSE,
+                        "synthetic:restore",
+                        &package,
+                        &label(&format!("{reference}-RELABEL")),
+                    )
+                    .await,
+                )?;
+            }
+        }
         let closure = match outcome {
             "handoff" => Some(Command::HandoffShipment {
                 shipment_id: package,
@@ -2387,6 +2440,22 @@ async fn seed(path: &str) -> Result<()> {
         "Transfer fixture must retain goods in transit",
     )?;
     let mut split_fulfillment = split_fixture(&store).await?;
+    application(
+        stateset_warehouse::replenishment::save_rules(
+            &store.pool,
+            TENANT,
+            WAREHOUSE,
+            "synthetic:restore",
+            &[stateset_warehouse::replenishment::Rule {
+                sku: "RESTORE-SPLIT".into(),
+                destination: "SPLIT-A".into(),
+                minimum: 1,
+                target: 2,
+                source_zone: None,
+            }],
+        )
+        .await,
+    )?;
     let mut remainder_cancellation = remainder_fixture(&store).await?;
     let lot_controls = quality_fixture(&store).await?;
     let transfer_loss = transfer_loss_fixture(&store).await?;

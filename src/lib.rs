@@ -3,12 +3,16 @@
 #![cfg_attr(not(test), deny(clippy::unwrap_used))]
 pub mod api;
 pub mod auth;
+pub mod batch_pick;
+pub mod carrier_labels;
 mod command_state;
 pub mod concurrency;
 pub mod console;
+pub mod cycle_counts;
 pub mod domain;
 pub mod icommerce;
 pub mod integrations;
+pub mod labels;
 pub mod native;
 pub mod native_api;
 pub mod native_store;
@@ -17,6 +21,7 @@ pub mod oms_fulfillment_api;
 pub mod operations;
 pub mod order_cancellation;
 mod persistence;
+pub mod putaway;
 pub mod receipts;
 pub mod replenishment;
 pub mod returns;

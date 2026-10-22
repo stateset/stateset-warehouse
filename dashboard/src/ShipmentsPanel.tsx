@@ -7,6 +7,7 @@ import type {
   UnitInput,
 } from "./types";
 import "./Workflows.css";
+import { CarrierLabelPanel } from "./PlanningPanels";
 import UnitQuantityInput from "./UnitQuantityInput";
 import { availability, availabilityLabel } from "./lotAvailability";
 type PackedLine = {
@@ -69,7 +70,11 @@ export default function ShipmentsPanel({
   state: WarehouseState;
   at: bigint | undefined;
   canWork: boolean;
-  request: (path: string, body?: unknown) => Promise<any>;
+  request: (
+    path: string,
+    body?: unknown,
+    method?: "GET" | "POST" | "PUT",
+  ) => Promise<any>;
   refreshWarehouse: (warehouse: string) => Promise<WarehouseState | undefined>;
   onSubmit: (
     command: Command,
@@ -680,6 +685,13 @@ export default function ShipmentsPanel({
                     </li>
                   ))}
                 </ul>
+                <CarrierLabelPanel
+                  warehouse={warehouse}
+                  packageId={p.id}
+                  open={!p.closure}
+                  canWork={canWork}
+                  request={request}
+                />
               </div>
               {canWork && !p.closure && (
                 <div>

@@ -32,6 +32,14 @@ The same authenticated service exposes a [native MCP endpoint](mcp.md) at `/mcp`
 | GET | `/v1/warehouses/{id}/receipts/{receipt_id}` | Authoritative receipt detail, including completed receipts |
 | GET | `/v1/warehouses/{id}/orders/{order_id}/return-eligibility` | Consistent shipped/authorized/remaining quantities for each exact order line and lot, plus reviewed warehouse version |
 | POST | `/v1/warehouses/{id}/replenishment/plan` | Read-only bounded pick-face plan; operator/admin |
+| GET / PUT | `/v1/warehouses/{id}/replenishment/rules` | Saved replenishment rules; read roles / admin (audited) |
+| GET | `/v1/warehouses/{id}/replenishment/due` | Replenishment due under saved rules; operator/admin |
+| POST | `/v1/warehouses/{id}/putaway/plan` | Read-only putaway suggestions for receiving stock; operator/admin |
+| POST | `/v1/warehouses/{id}/picking/batch-plan` | Read-only multi-order pick walk with totes; operator/admin |
+| POST | `/v1/warehouses/{id}/counts/plan` | Read-only ABC cycle counts due; operator/admin |
+| POST | `/v1/warehouses/{id}/labels` | ZPL labels for bins, products, packages, serials and carrier labels; read roles |
+| GET / POST | `/v1/warehouses/{id}/packages/{package}/carrier-labels` | List / record a package's carrier label; read roles / operator |
+| POST | `/v1/warehouses/{id}/packages/{package}/carrier-labels/{label}/void` | Void the active carrier label with a reason; operator |
 | POST | `/v1/warehouses/{id}/commands` | Atomic warehouse transition |
 | GET | `/v1/warehouses/{id}/commands/{request_id}` | Original command receipt for this actor; `{found:false}` if not committed |
 | GET | `/v1/warehouses/{id}/outbox` | Latest 200 tenant-scoped destination records |
@@ -411,13 +419,94 @@ The browser offers reviewed pack definitions in Inventory and explicit whole-pac
 
 <a id="serial-command-admission-in-development"></a>
 
+## Planning: putaway, batch picking, cycle counts and replenishment
+
+These endpoints suggest work. **None of them reserves, moves or counts anything.** Each task carries the exact canonical command to send through `POST /v1/warehouses/{warehouse}/commands`, usually with the reviewed `resource_versions` it was planned against. The command journal, version fences and database proofs apply exactly as for a hand-entered command. All plans need an `operator` or `admin` credential and return 503 if the warehouse needs reconciliation.
+
+| Endpoint | Suggests | Each task is |
+|---|---|---|
+| `POST /v1/warehouses/{w}/putaway/plan` | a storage bin for stock waiting in receiving | `move_stock` |
+| `POST /v1/warehouses/{w}/picking/batch-plan` | one walk that picks several orders | the line's `pick` |
+| `POST /v1/warehouses/{w}/counts/plan` | bins and lots due for a cycle count | `count_stock`, once the counter fills in `counted` |
+| `GET /v1/warehouses/{w}/replenishment/due` | pick-face refills under the saved rules | `move_stock` |
+
+### Directed putaway
+
+Body (all optional): `from` (receiving bins), `skus`, `zone` (preferred zone for empty bins) and `exclude` (bins never to suggest). For each SKU and lot in a receiving bin, the plan chooses, in order:
+
+1. a storage bin already holding the same SKU and lot (`consolidate_same_lot`);
+2. one holding the same SKU (`consolidate_same_sku`);
+3. an empty bin in the requested zone (`empty_bin_in_requested_zone`);
+4. an empty bin in a zone that already stores the SKU (`empty_bin_in_sku_zone`);
+5. any empty storage bin (`empty_bin`).
+
+Ties go to the lowest bin code. Stock with no eligible bin is listed under `unplaced`. There is **no bin capacity model**, so confirm that the stock physically fits. `serial_labels_required` marks tasks that need the serial review.
+
+### Batch picking
+
+Body: `order_ids` (exact orders, in tote order) or `max_orders` (1–50, default 20: the most urgent pickable orders, oldest first), plus an optional `zone`. The response lists `totes` (one per order) and `stops`. Stops are sorted by zone, then bin code with numbers compared numerically (`A-2` before `A-10`), then SKU and lot. Each stop holds its picks with tote, order, line, quantity and command.
+
+- Orders with an open blocking exception, the wrong status, or nothing left to pick are listed in `held_orders`.
+- Allocated lots that are quarantined, expired or missing a required expiry are listed in `unavailable`, not planned.
+- Picks at the same stop advance the same stock resource version. **After each committed pick, refresh the review or re-plan** before sending the next pick from that stop; the dashboard re-plans automatically.
+
+### Cycle counts
+
+Body (all optional): `interval_days` (`[A, B, C]`, default `[7, 30, 90]`, with A ≤ B ≤ C), `cumulative_shares` (default `[0.8, 0.95]`), `lookback_days` (1–365, default 90), `limit` (1–500, default 200) and `blind` (default `true`).
+
+- SKUs are classed by units picked in the lookback window: the SKUs making up the first 80% of picked volume are A, the next 15% B, and the rest, including never-picked SKUs, C.
+- A bin and lot with stock is due when its last `count_stock` is older than its class interval. That time comes from the original count events, because a count that matches stock creates no movement. Never-counted bins come first, then the most overdue.
+- Blind plans omit `expected_on_hand`, so the counter isn't biased. `reserved_minimum` shows the floor the command enforces, since a count below reserved stock is rejected.
+
+### Saved replenishment rules
+
+- `GET /v1/warehouses/{w}/replenishment/rules` (any warehouse role) lists the saved rules.
+- `PUT` with `{"rules": [...]}` (admin only) replaces them as one change, recorded in the immutable admin audit. An empty list clears them.
+- Rules are validated exactly like `POST /replenishment/plan` and are removed with their product or bin.
+- `GET /replenishment/due` runs that same planner over the saved rules.
+
+## Labels
+
+`POST /v1/warehouses/{w}/labels` with `{"labels": [...]}` (1–200 labels, any warehouse role) returns `{format: "zpl", dpi: 203, count, zpl}`. Printing changes nothing.
+
+| `kind` | Fields | Label |
+|---|---|---|
+| `location` | `code` | 4×2 in: bin barcode, zone and kind |
+| `product` | `sku` | 4×2 in: SKU barcode and name |
+| `package` | `id` | 4×6 in: ship-to, order and package barcode, up to 12 content lines |
+| `serial` | `sku`, `serial` | 4×2 in: serial barcode, SKU, lot and custody status |
+| `carrier_label` | `package_id` | the package's active carrier label, exactly as the carrier supplied it |
+
+Barcodes are Code 128 and encode the exact stored value. A value that isn't 1–80 printable ASCII characters is rejected with 422, never altered. Free text is escaped, so stored data can't inject ZPL commands, and prints as UTF-8. Unknown records return 404.
+
+## Carrier labels
+
+A carrier label records the actual shipping label for a packed package. It comes from the TMS, or from an operator copying it out of a carrier system. Recording one moves no inventory and does **not** hand off the package; that is still the reviewed `handoff_shipment` command, which can use the tracking number as its `handoff_reference`.
+
+- `POST /v1/warehouses/{w}/packages/{package}/carrier-labels` (operator or admin) records `{carrier, service, tracking_number, rate?, carton?, label}`.
+  - `rate` is `{amount, currency}`, with the amount as an exact decimal string (up to 8 decimals, never a JSON number).
+  - `carton` is the observed `weight_grams`, `length_mm`, `width_mm` and `height_mm`.
+  - `label` is `{"format":"zpl","data":"^XA…"}` (at most 64 KiB) or `{"format":"url","url":"https://…"}`.
+- A package has at most one active label. Recording a second returns 409; void the first.
+- Labels can't be added after the package is handed off or unpacked (409). Recording takes the warehouse lock, so it can't race a handoff.
+- `GET …/carrier-labels` lists every label, including voided ones. `POST …/carrier-labels/{label}/void` with `{"reason"}` voids the active one.
+- Rows are immutable apart from that single void, enforced by the database.
+
+**For TMS integrators:** this is the WMS side of a label contract. The TMS buys or rates the label with its carrier accounts and records it here; the WMS never calls a carrier.
+
 ## Serial command admission
 
-The [locally qualified software release](qualification/release-20261019-icommerce-tui-v1/summary.json) includes the canonical serial REST/MCP workflows, iCommerce interoperability and warehouse terminal on version0.2.0. The complete gate covers both 500-product image workloads, serial after-mutation crash recovery and restoration of 49 populated tables. Device/deployment/facility acceptance remains separate. See [evidence and limits](evidence.md).
+Serial tracking records every unit of a product by its printed label. This section is the request contract. For how it works inside, see the [serial design guide](serial-design.md); for what has been qualified, see [evidence and limits](evidence.md).
 
-An administrator chooses `serial_controlled: true` in `create_product` before that tenant/SKU has been introduced anywhere. Every later facility catalog entry must use the same mode. The flag defaults to false and is omitted when false; existing untracked products and their historical request bytes retain that mode. Existing inventory cannot acquire inferred identities by changing a catalog flag.
+### Choosing serial tracking for a product
 
-A physical command for a controlled SKU includes the complete literal IDs for every explicit quantity, for example:
+- An administrator sets `serial_controlled: true` in `create_product`, **before** that SKU exists anywhere in the tenant. Every later facility catalog entry for the SKU must use the same mode.
+- The flag defaults to `false` and is omitted from requests when false. Existing untracked products, and their original request bytes, keep that mode.
+- Changing a catalog flag never gives existing inventory invented identities.
+
+### Sending labels with a physical command
+
+A physical command for a serial-controlled SKU lists the exact label of every unit it moves, in `serial_inputs`:
 
 ```json
 {
@@ -428,35 +517,101 @@ A physical command for a controlled SKU includes the complete literal IDs for ev
 }
 ```
 
-Labels are case-sensitive, remain in their original lot and are unique per tenant/SKU across facilities. Leading/trailing whitespace and control characters are rejected; the server never normalizes or invents labels. `target` is `[]` for a single receive/move/count/pick/unpick/arrival/loss/reversal quantity, `[input_line_id]` for return authorization or dispatch, and `[order_line_id, original_allocation_bin, lot]` for package packing. Metadata receipt/order plans do not take serial observations. A count is the complete physically observed set, including an explicit root group with `serials: []` for a witnessed zero. Handoff, unpacking, whole-order shipment and RMA cancellation derive their exact original units and accept no caller-supplied substitute set.
+Each `serial_inputs` group names a `target`, the part of the command it belongs to:
 
-The existing each quantity must equal the number of observed IDs. Pack conversion and serial inputs can accompany the same command; every resulting each must be identified. Up to 100 unique targets, 10,000 observed IDs and 10,000 identity changes fit one command, subject to the 256 KiB body limit. Larger original closures are rejected in full. Reviewed large-count sessions are not available yet; truncating or saving partial count sets is not a valid full count.
+| Command | `target` |
+|---|---|
+| Receive, move, count, pick, unpick, transfer arrival, loss, loss reversal | `[]` (the single quantity) |
+| Return authorization, transfer dispatch | `[input_line_id]` |
+| Package packing | `[order_line_id, original_allocation_bin, lot]` |
+| Handoff, unpacking, whole-order shipment, RMA cancellation | none: the server derives the exact original units and accepts no substitute set |
+| Metadata receipt and order plans | none: they move no units |
 
-Keep the complete original `serial_inputs`, actor, facility, request ID and reviewed command unchanged during recovery. A final outbox failure rolls back serial and physical facts together; exact committed replay returns the original result after later ownership changes. Stock-balanced source corruption is exposed by full reconciliation under `serials.source_ok`; `serials.physical_ok` separately checks the warehouse custody equations. New commands hold an affected scanned identity whose current projection has lost its original source. There is no refund, carrier claim verification or automatic physical confirmation in a serial observation.
+### Label rules
+
+- Labels are **case-sensitive** (`Unit-A` and `unit-a` are different units), stay in their original lot, and are unique per tenant and SKU across all facilities.
+- Leading or trailing whitespace and control characters are rejected. The server never trims, normalizes or invents labels.
+- The command's each quantity must equal the number of labels. With pack conversion in the same command, every resulting each must be identified.
+- A count is the **complete** set physically observed. A witnessed zero is an explicit group with `serials: []`.
+- One command fits up to 100 unique targets, 10,000 labels and 10,000 identity changes, within the 256 KiB body limit. Larger closures are rejected in full. Partial or truncated count sets are not valid full counts; reviewed large-count sessions are not available yet.
+
+### Recovery and integrity
+
+- For a retry, resend the complete original `serial_inputs`, actor, facility, request ID and reviewed command unchanged. An exact committed retry returns the original result, even after later ownership changes.
+- If the final outbox write fails, serial and physical facts roll back together.
+- Full reconciliation reports `serials.source_ok` (every recorded fact matches its original event, which exposes source damage even when stock balances) and `serials.physical_ok` (serial custody matches stock, staging, packages and transfers).
+- New commands are held for a scanned identity whose current record has lost its original source.
+- A serial observation is not a refund, a carrier claim check or an automatic physical confirmation.
 
 ### Dashboard serial observation and recovery
 
-The product form offers the original whole-each or individual-serial choice. The choice is tenant/SKU-wide and cannot relabel existing inventory. Every explicit controlled physical quantity uses a shared serial review before saving: receiving, moves, full counts, picks, returns to bin, RMA authorization, package lines, transfer dispatch/arrival, loss and reversal. Metadata receipt/order plans require no serials. Unpack, handoff, classic whole-order shipment and RMA cancellation retain the server's derived original identities.
+- The product form offers the whole-each or individual-serial choice. It is tenant-wide per SKU and cannot relabel existing inventory.
+- Every explicit controlled quantity goes through a shared serial review before saving: receiving, moves, full counts, picks, returns to bin, RMA authorization, package lines, transfer dispatch and arrival, loss and reversal. Unpack, handoff, classic whole-order shipment and RMA cancellation use the server's derived original identities.
 
-`POST /v1/warehouses/{warehouse}/serial-observation-plan` accepts `{plan_id: <UUID>, command: <canonical command>}`. It resolves up to 100 original target groups in a read-only repeatable-read transaction, including original records outside the operational snapshot. The caller must have the command's existing role. Missing original targets/products return 404; duplicate targets, unsupported commands or more than 10000 required labels return 422; inconsistent original mode/head evidence returns 503. The response returns the correlation ID, facility, canonical command type, controlled `targets: [{target,sku,each_quantity}]`, required label count and an informational `observed_warehouse_version`. **This plan authorizes no physical save and replaces no original warehouse/resource fence.** It creates no command receipt, event, movement or outbox record. It is a REST preparation endpoint; the MCP catalog remains 68 tools.
+**Planning endpoint.** `POST /v1/warehouses/{warehouse}/serial-observation-plan` with `{plan_id: <UUID>, command: <canonical command>}` tells the client which label groups a command needs.
 
-The shared review shows original order, receipt, transfer, loss, source/destination bin and lot references from the captured physical command when present. Package groups identify the original order line, allocation bin and lot; transfer groups identify their original source bin and lot. This context does not replace write fences or change the original request. The shared review captures case-sensitive literal labels without prefill, trimming or identity generation. Repeated labels for the same SKU across groups reject; each exact target needs its complete each quantity. A zero count requires an explicit physical witness. At most 50 captured labels per group are rendered at once, with label navigation. The complete body must fit 256 KiB; an oversized captured request holds the review and keeps its labels visible rather than truncating or sending them.
+- It resolves up to 100 original target groups in one read-only repeatable-read transaction, including records outside the operational snapshot. The caller needs the command's normal role.
+- The response has the correlation ID, facility, canonical command type, controlled `targets: [{target,sku,each_quantity}]`, the required label count and an informational `observed_warehouse_version`.
+- Errors: missing targets or products → 404; duplicate targets, unsupported commands or more than 10,000 required labels → 422; inconsistent mode or head evidence → 503.
+- **The plan authorizes no save and replaces no warehouse or resource version check.** It creates no command receipt, event, movement or outbox record. It is a REST preparation endpoint, not an MCP tool.
 
-Only after the operator confirms does the browser persist the complete original command, request ID, actor/facility, reviewed warehouse/resource versions, pack observations and serial groups in the existing session journal, before issuing the physical POST. Reload recovery validates retained serial shapes and uniqueness, then finds or retries that exact original packet without replanning or rescanning. Malformed retained observations hold recovery and preserve the original browser data. Cancelling an unsaved review preserves the original form. Source/quantity validation still occurs in the atomic server command transaction.
+**Review screen.**
 
-Inventory also offers current custody, exact unit history and original observation reviews across the tenant or at the selected facility. The panel retains the global SKU review/cursor across pages, displays selected source disagreement, clears records on expired/invalid/incomplete pages and refreshes explicitly. It keeps at most 1000 displayed records; a literal serial/facility filter narrows further review. A known warehouse refresh invalidates displayed evidence; another facility's activity is fenced on the next server page/refresh. No read or scan is an independent physical confirmation. Desktop/mobile browser checks simulate keyboard-wedge input; hardware and facility acceptance remain separate.
+- Shows the original order, receipt, transfer, loss, source and destination bin and lot from the captured command. Package groups show the order line, allocation bin and lot; transfer groups show the source bin and lot. This context never changes the request.
+- Captures labels exactly as scanned, with no prefill, trimming or generated identities. Repeated labels for one SKU across groups are rejected, and each target needs its full each quantity. A zero count needs an explicit physical witness.
+- Shows at most 50 labels per group at once, with navigation. If the complete body would exceed 256 KiB, the review is held with every label still visible; nothing is truncated or sent.
+
+**Saving and reload recovery.**
+
+- Only after the operator confirms does the browser store the complete original command, request ID, actor and facility, reviewed versions, pack observations and serial groups in its session journal, and then send the save.
+- After a reload, it validates the stored groups and finds or retries that exact request, without replanning or rescanning. Malformed stored observations hold recovery and keep the original browser data.
+- Cancelling an unsaved review keeps the form. The server still validates sources and quantities inside the atomic command transaction.
+
+**Inventory review panel.** Shows current custody, exact unit history and original observations across the tenant or at one facility.
+
+- It keeps the SKU review and cursor across pages, shows source disagreement, clears records when a page is expired, invalid or incomplete, and refreshes only on request.
+- It keeps at most 1,000 displayed records; a label or facility filter narrows further.
+- A newer warehouse refresh invalidates displayed evidence; another facility's activity is caught on the next page or refresh.
+- No read or scan is an independent physical confirmation. Browser checks simulate keyboard-wedge scanners; scanner hardware and facility acceptance are separate.
 
 ### Serial identity review pages
 
-`GET /v1/serials`, `GET /v1/serial-history` and `GET /v1/serial-observations` require an exact `sku`. History also requires an exact, case-sensitive `serial`; the other views accept it as a filter. Optional `warehouse_id` scopes current custody to its facility or either original transfer facility. For history and observations it selects the facility that performed the original action. Only the current view accepts `status`: `on_hand`, `staged`, `shipped`, `in_transit`, `lost` or `missing`. These are authenticated tenant reads, available to viewers.
+Three read endpoints, available to viewers, all scoped to the authenticated tenant:
 
-Preserve `review` and the opaque `next_cursor` as `after`, with the original filters. `limit` is 1–100, default 50. Review uses the **global tenant/SKU identity head** (`version_scope: "tenant_sku_identity"`), so a destination arrival invalidates source-facility pages even when its warehouse version is unchanged. A 409 requires discarding the retained pages and explicitly refreshing the review. Malformed, nonexistent or changed-scope cursors return 422. The page review does not replace warehouse/resource versions on physical commands.
+| Endpoint | Required | Optional filters |
+|---|---|---|
+| `GET /v1/serials` (current custody) | exact `sku` | `serial`, `warehouse_id`, `status` (`on_hand`, `staged`, `shipped`, `in_transit`, `lost`, `missing`) |
+| `GET /v1/serial-history` (unit history) | exact `sku` and case-sensitive `serial` | `warehouse_id` |
+| `GET /v1/serial-observations` (scanned label sets) | exact `sku` | `serial`, `warehouse_id` |
 
-Responses contain `items`, `total_records`, `next_cursor`, `page_source_ok`, and original event references. History adds `current_source_ok` and retains exact per-unit before/after custody, revisions, original targets and actor/time. Current rows retain their last source reference; joins preserve damaged selected rows with false source flags. Invalid original mode/head evidence, retained steps without their current projection, or an exact requested label retained only in observations hold the read with 503. A whole-SKU empty page does not prove the absence of identities from every historical observation. An exact unknown unit has empty current/observation results and a 404 history. Untracked SKUs return 422.
+`warehouse_id` means the unit's facility (or either transfer facility) for current custody, and the facility that performed the action for history and observations.
 
-Observation pages contain one literal label occurrence at a time, with its original event, group ordinal, member ordinal and group size. A genuinely empty group has `observed_serial: null`, `serial_ordinal: 0` and size zero. Unchanged and zero counts remain visible even when there are no identity transitions. Preserve these original references when accumulating pages; a partial page is not a complete physical observation. No response copies an unbounded original label array or complete command. Items use a 128 KiB encoded JSON budget as well as the record limit; a large page stops before an item and returns its continuation. An individual oversized retained record returns 503.
+**Paging.**
 
-Source flags check original mode/head and the **selected records and their source events** in one read-only repeatable-read transaction. `total_records` counts retained scoped records, not verified physical units. Full historical/source/physical reconciliation is separate. Neither a successful read nor a zero result confirms a physical count. High-cardinality read cost and deployed MCP/device acceptance remain unqualified.
+- `limit` is 1–100 (default 50). To fetch the next page, send the returned `review` and `next_cursor` (as `after`) with the same filters.
+- Pages are tied to the **tenant/SKU identity version** (`version_scope: "tenant_sku_identity"`), so an arrival at another facility invalidates them even if this warehouse's version is unchanged. A 409 means: discard the retained pages and start the review again.
+- Malformed, unknown or changed-scope cursors return 422. Page reviews do not replace the version checks on physical commands.
+
+**Responses.**
+
+- Every response has `items`, `total_records`, `next_cursor`, `page_source_ok` and original event references. History adds `current_source_ok` and each unit's exact before and after custody, revisions, original targets, actor and time.
+- Current rows keep their last source reference; damaged rows stay visible with false source flags.
+- Observation pages return one label occurrence per item, with its original event, group ordinal, member ordinal and group size. A genuinely empty group has `observed_serial: null`, `serial_ordinal: 0` and size zero. Unchanged and zero counts stay visible.
+- Items are limited by count and by a 128 KiB encoded JSON budget. A large page stops before an item and returns a continuation; no response copies an unbounded label array or a complete command.
+
+**Errors.**
+
+| Condition | Status |
+|---|---|
+| SKU is not serial-controlled | 422 |
+| Unknown unit, history view | 404 (current and observation views return empty results) |
+| Invalid mode or head evidence, steps without a current record, a requested label found only in observations, or one oversized stored record | 503 |
+
+**What a page does and doesn't prove.**
+
+- Source flags check mode and head evidence plus the **selected records and their source events**, in one read-only repeatable-read transaction. Full reconciliation is separate.
+- `total_records` counts stored records, not verified physical units. An empty whole-SKU page does not prove that no identity appears in any historical observation, and a partial page is not a complete physical observation.
+- Neither a read nor a zero result confirms a physical count. High-cardinality read cost and deployed MCP and device acceptance are not yet qualified.
 
 
 ## Visual operations console

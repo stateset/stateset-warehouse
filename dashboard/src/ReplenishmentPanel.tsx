@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { sameVersions } from "./concurrency";
 import type { Command, WarehouseState } from "./types";
 import "./Workflows.css";
+import { SavedReplenishment } from "./PlanningPanels";
 type Task = {
   command: Command;
   resource_versions: Record<string, number>;
@@ -21,13 +22,19 @@ type Plan = {
 };
 export default function ReplenishmentPanel({
   state,
+  role = "operator",
   disabled,
   request,
   onSubmit,
 }: {
   state: WarehouseState;
+  role?: string;
   disabled: boolean;
-  request: (path: string, body?: unknown) => Promise<any>;
+  request: (
+    path: string,
+    body?: unknown,
+    method?: "GET" | "POST" | "PUT",
+  ) => Promise<any>;
   onSubmit: (
     command: Command,
     version: number,
@@ -266,6 +273,24 @@ export default function ReplenishmentPanel({
           ))}
         </div>
       )}
+      <SavedReplenishment
+        state={state}
+        role={role}
+        disabled={disabled}
+        request={request}
+        onSubmit={onSubmit}
+        draft={
+          sku && destination && Number(minimum) >= 1 && Number(target) >= Number(minimum)
+            ? {
+                sku,
+                destination,
+                minimum: Number(minimum),
+                target: Number(target),
+                source_zone: zone || null,
+              }
+            : null
+        }
+      />
     </details>
   );
 }

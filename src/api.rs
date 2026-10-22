@@ -405,6 +405,38 @@ fn business_routes_with_console(assets: crate::console::Assets) -> Router<App> {
             post(crate::replenishment::endpoint),
         )
         .route(
+            "/v1/warehouses/{warehouse}/replenishment/rules",
+            get(crate::replenishment::rules).put(crate::replenishment::replace_rules),
+        )
+        .route(
+            "/v1/warehouses/{warehouse}/replenishment/due",
+            get(crate::replenishment::due),
+        )
+        .route(
+            "/v1/warehouses/{warehouse}/putaway/plan",
+            post(crate::putaway::endpoint),
+        )
+        .route(
+            "/v1/warehouses/{warehouse}/picking/batch-plan",
+            post(crate::batch_pick::endpoint),
+        )
+        .route(
+            "/v1/warehouses/{warehouse}/counts/plan",
+            post(crate::cycle_counts::endpoint),
+        )
+        .route(
+            "/v1/warehouses/{warehouse}/labels",
+            post(crate::labels::endpoint),
+        )
+        .route(
+            "/v1/warehouses/{warehouse}/packages/{package}/carrier-labels",
+            get(crate::carrier_labels::list).post(crate::carrier_labels::record),
+        )
+        .route(
+            "/v1/warehouses/{warehouse}/packages/{package}/carrier-labels/{label}/void",
+            post(crate::carrier_labels::void),
+        )
+        .route(
             "/v1/warehouses/{warehouse}/commands/{request}",
             get(receipt),
         )
