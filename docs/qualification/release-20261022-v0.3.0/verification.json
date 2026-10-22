@@ -288,5 +288,30 @@
     "Hosted CI did not run (GitHub billing); PostgreSQL 16 runtime checks ran only inside the image stages",
     "The separate native serial latency profile (1,000 ms p95 target) was not part of this gate and remains open",
     "Repository remains private; no packages or images are published"
-  ]
+  ],
+  "source_audit": {
+    "report": "source-audit-report.json",
+    "result": "passed",
+    "audited_head": "b91d6f5c79790021617ec90909e30a8672e87922",
+    "refs": 4,
+    "commits": 43,
+    "current_files": 1439,
+    "unreviewed_findings": 0,
+    "scanner": "Gitleaks 8.30.1, archive SHA-256 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb",
+    "note": "Run on a full mirror of every branch and tag, including v0.3.0; the raw source export stays private."
+  },
+  "license_review": {
+    "report": "source-license-review.json",
+    "vendored_files_verified": 169,
+    "rust_packages": 311,
+    "browser_packages": 128,
+    "non_permissive": [
+      {
+        "package": "caniuse-lite",
+        "license": "CC-BY-4.0",
+        "note": "Development-only build data (dev: true in package-lock.json); absent from the built dashboard and its notices"
+      }
+    ],
+    "not_legal_approval": true
+  }
 }
