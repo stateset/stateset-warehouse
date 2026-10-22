@@ -20,6 +20,7 @@ import { connectSession } from './lib/connection.mjs';
 import { OperationsBoard, refreshInterval, laneShortcuts, laneFor } from './lib/board.mjs';
 import { visualConsole } from './lib/visual.mjs';
 import { PLANS, planTasks, withCount, fetchPlan } from './lib/planning.mjs';
+import { labelRequest, labelLines, listLabels, recordLabel } from './lib/carrier.mjs';
 import { readConsole } from './lib/console.mjs';
 
 export function argumentsFor(argv) {
@@ -163,8 +164,28 @@ async function selectedActions(client, journal, scope, ui, kind, row, version) {
     ...(kind === 'exceptions' && row.order_id ? [['Review linked order and shipments', 'linked-order']] : []),
     ...(kind === 'orders' ? [['Shipment packages and handoffs', 'packages']] : []),
     ...(kind === 'orders' ? [['Review remaining fulfillment work', 'remaining']] : []),
+    ...(kind === 'shipments' ? [['Carrier labels', 'carrier-labels']] : []),
+    ...(kind === 'shipments' && !row.closure && ['operator', 'admin'].includes(session.identity.role) ? [['Record carrier label (from the carrier system)', 'carrier-record']] : []),
   ], { intro: [kind === 'lots' ? `${row.sku} | ${row.lot}` : kind === 'stocks' ? `${row.sku} | ${row.lot} | ${row.location}` : `${kind === 'exceptions' ? row.category : row.reference} | ${row.id}`, `Selected facility: ${scope.warehouse} | snapshot v${version}`] });
   if (!action) return;
+  if (action === 'carrier-labels') {
+    await inspectText(ui, `Carrier labels | package ${row.id}`, labelLines(await listLabels(client, scope.warehouse, row.id)).join('\n'));
+    return;
+  }
+  if (action === 'carrier-record') {
+    ui.screen(`Record carrier label | package ${row.reference ?? row.id}`);
+    ui.line('Copy the label the carrier issued. Recording is not a handoff and moves no stock.', 'muted');
+    const body = labelRequest({
+      carrier: await ui.ask('carrier: '), service: await ui.ask('service: '), tracking: await ui.ask('tracking number: '),
+      amount: await ui.ask('rate amount (optional, exact decimal): '), currency: await ui.ask('rate currency (e.g. USD; blank if no rate): '),
+      url: await ui.ask('label link (https://...): '),
+    });
+    if (await ui.ask(`Record ${body.carrier} ${body.tracking_number} on package ${row.id}? Type yes: `) !== 'yes') return;
+    const recorded = await recordLabel(client, scope.warehouse, row.id, body);
+    ui.print(`Recorded active label ${recorded.id}. If the response was lost, list carrier labels before retrying.`);
+    await ui.pause();
+    return;
+  }
   if (action === 'review') {
     if (['stocks', 'exceptions', 'transfers', 'lots', 'shipments'].includes(kind)) await inspectJson(ui, `Original selected ${kind === 'stocks' ? 'stock row' : kind === 'exceptions' ? 'exception' : kind === 'lots' ? 'lot' : kind === 'shipments' ? 'shipment package' : 'transfer'}`, row);
     else await inspectOriginal(client, scope, ui, kind, row.id);

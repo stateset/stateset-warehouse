@@ -74,6 +74,18 @@ Serial capture shows progress, target group, physical bin/move context and recen
 
 Forms capture a warehouse version before collecting work and retain it through submission. Creating a facility generates a new facility identity at version zero; a successful creation selects that facility. Concurrent facility work can cause a safe conflict; review again only after the previous original request is definitively resolved. Replenishment planning and native OMS/TMS writeback remain available through the dashboard/API/MCP.
 
+### Planned work and carrier labels
+
+**Planned work** is the last item in the operations center (22). It loads a server plan:
+- directed putaway;
+- batch picking;
+- cycle counts due;
+- replenishment due under the saved rules.
+
+Choosing a task opens it in the normal reviewed, journaled save, with serial scanning where needed. A cycle count asks for the observed quantity first and never shows the expected one. Plans reserve and move nothing.
+
+On a shipment package row, **Carrier labels** lists the package's labels. On an open package, operators and administrators can **Record carrier label**: they type the carrier, service, tracking number, optional exact rate and the HTTPS label link the carrier issued. Recording is not a handoff. Labels aren't journaled commands, so if a response is lost, list the package's labels before retrying.
+
 ## Graphics and visual operations
 
 Press `m` at home or open menu 21, **Visual operations / labels**. Choose operations flow, stock by bin, configured floor plan, or a product photo/barcode preview. These views preserve exact text quantities, original case-sensitive SKUs, snapshot versions and capture times. `r` explicitly reads a fresh review; failed reads retain the previous snapshot marked **STALE**. Resizing, plan navigation and help send no warehouse commands.
