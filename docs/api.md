@@ -438,7 +438,8 @@ Body (all optional): `from` (receiving bins), `skus`, `zone` (preferred zone for
 2. one holding the same SKU (`consolidate_same_sku`);
 3. an empty bin in the requested zone (`empty_bin_in_requested_zone`);
 4. an empty bin in a zone that already stores the SKU (`empty_bin_in_sku_zone`);
-5. any empty storage bin (`empty_bin`).
+5. any empty storage bin (`empty_bin`);
+6. if none of those exist, a bin already holding other SKUs, the fewest first (`mixed_sku_bin`). Set `allow_mixed: false` to turn this off.
 
 Ties go to the lowest bin code. Stock with no eligible bin is listed under `unplaced`. There is **no bin capacity model**, so confirm that the stock physically fits. `serial_labels_required` marks tasks that need the serial review.
 

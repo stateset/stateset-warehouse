@@ -79,6 +79,7 @@ const reasonText: Record<string, string> = {
   empty_bin_in_requested_zone: "Empty bin in the chosen zone",
   empty_bin_in_sku_zone: "Empty bin near this SKU",
   empty_bin: "Empty bin",
+  mixed_sku_bin: "Shares a bin with other SKUs",
 };
 
 export function PutawayPanel({

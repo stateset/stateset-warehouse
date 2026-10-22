@@ -80,7 +80,9 @@ test("real browser and Postgres run putaway, batch picking, counts, labels and c
   const batch = await open("Batch picking");
   await batch.getByRole("spinbutton").fill("50");
   await batch.getByRole("button", { name: "Plan batch", exact: true }).click();
-  const stop = batch.locator("div").filter({ has: page.locator("h4", { hasText: sku }) });
+  const stop = batch
+    .locator(".workflow-plan > div")
+    .filter({ has: page.locator("h4", { hasText: sku }) });
   await expect(stop.locator("h4")).toContainText("2 each");
   for (let i = 0; i < 2; i++) {
     await stop

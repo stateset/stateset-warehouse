@@ -178,6 +178,31 @@ async fn putaway_plan_consolidates_by_lot_then_zone_and_its_moves_commit() {
         "requested zone wins for a new SKU"
     );
     assert_eq!(b["reason"], "empty_bin_in_requested_zone");
+    // With every empty bin excluded, SKU-B either shares the least mixed
+    // bin or, when mixing is disallowed, stays unplaced.
+    let only_mixed = json!({"skus":["SKU-B"],"exclude":["S-1","S-10","S-20"]});
+    let (_, mixed) = f
+        .call(
+            "operator",
+            "POST",
+            &format!("/v1/warehouses/{W}/putaway/plan"),
+            Some(only_mixed.clone()),
+        )
+        .await;
+    assert_eq!(mixed["tasks"][0]["command"]["to"], "S-2", "{mixed}");
+    assert_eq!(mixed["tasks"][0]["reason"], "mixed_sku_bin");
+    let mut strict = only_mixed;
+    strict["allow_mixed"] = json!(false);
+    let (_, strict) = f
+        .call(
+            "operator",
+            "POST",
+            &format!("/v1/warehouses/{W}/putaway/plan"),
+            Some(strict),
+        )
+        .await;
+    assert_eq!(strict["tasks"], json!([]), "{strict}");
+    assert_eq!(strict["unplaced"][0]["sku"], "SKU-B");
     // Viewers cannot plan physical work.
     let (status, _) = f
         .call(

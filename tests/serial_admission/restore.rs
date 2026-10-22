@@ -73,7 +73,11 @@ async fn table_contents(pool: &sqlx::PgPool) -> Value {
             assert_eq!(data, json!([]), "transient validation keys survived commit");
         } else if ["wms_replenishment_rules", "wms_carrier_labels"].contains(&name.as_str()) {
             // Created after migration 21; an upgrade must not invent rows here.
-            assert_eq!(data, json!([]), "upgrade invented planning or label rows in {name}");
+            assert_eq!(
+                data,
+                json!([]),
+                "upgrade invented planning or label rows in {name}"
+            );
         } else {
             result.insert(name, data);
         }
