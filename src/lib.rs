@@ -1,3 +1,6 @@
+// Production code must not panic on input: there are no `unwrap` calls, and
+// each remaining `expect` guards an internal invariant (see CONTRIBUTING.md).
+#![cfg_attr(not(test), deny(clippy::unwrap_used))]
 pub mod api;
 pub mod auth;
 mod command_state;
