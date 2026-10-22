@@ -1,0 +1,8 @@
+[Unit]
+Description=StateSet WMS verified database backup
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /opt/stateset-warehouse/deploy/production/backup.sh

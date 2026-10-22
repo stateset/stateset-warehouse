@@ -1,0 +1,58 @@
+# Production StateSet Warehouse: the API/dashboard container behind a
+# TLS-terminating Caddy proxy, against an external managed PostgreSQL 16.
+# Secrets come from env files outside the repository (see README.md).
+name: stateset-wms
+services:
+  app:
+    image: "stateset-warehouse:${WMS_RELEASE:?set WMS_RELEASE to the deployed tag}"
+    restart: unless-stopped
+    env_file:
+      - /etc/stateset-wms/database.env
+      - /etc/stateset-wms/app.env
+    environment:
+      WMS_BIND: 0.0.0.0:8088
+      WMS_DEMO: "false"
+    read_only: true
+    user: "10001:10001"
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs: ["/tmp:rw,nosuid,nodev,size=16m"]
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "http://127.0.0.1:8088/ready"]
+      interval: 10s
+      timeout: 3s
+      start_period: 30s
+      retries: 5
+    stop_grace_period: 30s
+    expose: ["8088"]
+    networks: [edge]
+  proxy:
+    image: caddy:2.8.4
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports: ["80:80", "443:443"]
+    environment:
+      WMS_DOMAIN: "${WMS_DOMAIN:?set WMS_DOMAIN to the public host name}"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [edge]
+  prometheus:
+    profiles: [monitoring]
+    image: prom/prometheus:v2.54.1
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - /etc/stateset-wms/metrics.token:/etc/prometheus/metrics.token:ro
+      - prometheus-data:/prometheus
+    networks: [edge]
+volumes:
+  caddy-data: {}
+  caddy-config: {}
+  prometheus-data: {}
+networks:
+  edge: {}

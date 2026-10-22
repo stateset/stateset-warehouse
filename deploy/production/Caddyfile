@@ -1,0 +1,16 @@
+# Automatic HTTPS for the public host; the API never listens publicly.
+{$WMS_DOMAIN} {
+	encode zstd gzip
+	# The API sets its own CSP and no-store headers; add transport hardening.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+	# Metrics stay internal to the compose network.
+	@metrics path /v1/operations/metrics
+	respond @metrics 404
+	reverse_proxy app:8088 {
+		health_uri /ready
+		health_interval 10s
+	}
+}

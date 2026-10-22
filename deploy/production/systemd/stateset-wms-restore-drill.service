@@ -1,0 +1,8 @@
+[Unit]
+Description=StateSet WMS restore drill (restores the latest backup and reconciles it)
+After=docker.service stateset-wms-backup.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /opt/stateset-warehouse/deploy/production/restore-drill.sh
