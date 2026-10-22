@@ -177,25 +177,35 @@ async fn direct_serial_targets_preserve_original_rows_duplicates_nulls_and_conve
     ] {
         commands.push(command);
     }
-    for batch in commands.chunks(32) {
-        let differences: Value = sqlx::query_scalar(
-            r#"
+    // The original UNION resolver's inactive-arm casts raise 22P02 under a
+    // custom plan but not under a generic plan, and PL/pgSQL switches plans
+    // after repeated calls. Compare both resolvers under each fixed mode so
+    // unequal plan-cache histories cannot produce a false difference.
+    for mode in ["force_custom_plan", "force_generic_plan"] {
+        sqlx::query(&format!("SET LOCAL plan_cache_mode={mode}"))
+            .execute(&mut *tx)
+            .await
+            .expect("fixed plan mode");
+        for batch in commands.chunks(32) {
+            let differences: Value = sqlx::query_scalar(
+                r#"
             SELECT COALESCE(jsonb_agg(jsonb_build_object('command',c,'old',old,'new',new)),'[]')
             FROM (SELECT c,pg_temp.serial_target_outcome($1,'wh-main',c,false) AS old,
                 pg_temp.serial_target_outcome($1,'wh-main',c,true) AS new
                 FROM jsonb_array_elements($2) c) compared WHERE old IS DISTINCT FROM new
         "#,
-        )
-        .bind(&f.who.tenant)
-        .bind(json!(batch))
-        .fetch_one(&mut *tx)
-        .await
-        .expect("all raw target vectors");
-        assert_eq!(
-            differences,
-            json!([]),
-            "target rows or conversion errors changed"
-        );
+            )
+            .bind(&f.who.tenant)
+            .bind(json!(batch))
+            .fetch_one(&mut *tx)
+            .await
+            .expect("all raw target vectors");
+            assert_eq!(
+                differences,
+                json!([]),
+                "target rows or conversion errors changed under {mode}"
+            );
+        }
     }
     let same:bool=sqlx::query_scalar("SELECT pg_temp.serial_target_outcome($1,'wh-main',NULL,false) IS NOT DISTINCT FROM pg_temp.serial_target_outcome($1,'wh-main',NULL,true)")
         .bind(&f.who.tenant).fetch_one(&mut *tx).await.expect("SQL NULL target envelope");
