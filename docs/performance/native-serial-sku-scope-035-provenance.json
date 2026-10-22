@@ -1,0 +1,26 @@
+{
+  "scope": "optimized native serial latency profile after migration 035",
+  "recorded_at_utc": "2026-10-22",
+  "source": "main at 60bd6dd (unreleased 0.3.1 work)",
+  "binary_sha256": "3a85b68432bdc56b9849183347f609b0eeb34a2c5f30c8652817c2251258b32a",
+  "build": "CARGO_INCREMENTAL=0 cargo build --locked --release --bin stateset-warehouse (rustc 1.90.0)",
+  "report": "native-serial-sku-scope-035.json",
+  "report_sha256": "1b41d39e0d62b044ac8003bf499194508888bed01349a9de1bf5ab5d023fb5dc",
+  "profile": {
+    "seconds": 300,
+    "products": 32,
+    "bins": 16,
+    "open_orders": 32,
+    "lots": 2,
+    "units": 32,
+    "clients": 8,
+    "pattern": "rotating",
+    "min_coverage": 1,
+    "max_action_p95_ms": 1000,
+    "min_moves_per_second": 5
+  },
+  "host": "shared 8-CPU host, 1-minute load 15.21 at start",
+  "comparison": "2026-10-21 run of the same profile before migration 035: 1,242.537ms action p95 (failed), 8.329 moves/s",
+  "excluded": "credentials, API logs, database name and cycle samples remain private",
+  "normalized": "binary_path made repository-relative before publication; no other bytes changed"
+}

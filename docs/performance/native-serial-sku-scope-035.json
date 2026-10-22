@@ -1,0 +1,431 @@
+{
+  "ok": true,
+  "synthetic": true,
+  "production_qualified": false,
+  "qualification": "development native serial HTTP traffic",
+  "binary_sha256": "3a85b68432bdc56b9849183347f609b0eeb34a2c5f30c8652817c2251258b32a",
+  "binary_path": "target/release/stateset-warehouse",
+  "script_sha256": {
+    "scripts/resilience_probe.py": "99c1de2af3685a85f4265124b2dc1e8f5d6aff896d50fc70e312bb9970fa3da2",
+    "scripts/serial_traffic.py": "3677db179f2f578acb67019ca14fd7a906a9aa3a103722610171677c251f2935",
+    "scripts/serial_traffic_proof.py": "fbf40276356a5992fd3c15a78d8ec81bc8b1913b612b1ff42061784583b1485e",
+    "scripts/traffic_policy.py": "9a50162a2c6ca7a998f37979e9405d61653ba01b0e78cc116b784c98f8a96aa5",
+    "scripts/serial-traffic-native.sh": "ff156a9fd8e7b20f349a53d1ff61a0290a88358914bdd71bb9bf807003ff8458"
+  },
+  "cycle_samples": {
+    "path": "cycle-samples.jsonl",
+    "sha256": "8a0e15f29f22f546d8094597564a178710ddbb284a03a60f5a131e6c88ae07ef"
+  },
+  "postgres_version": "12.22 (Ubuntu 12.22-0ubuntu0.20.04.4)",
+  "phases": {
+    "seed": {
+      "method": "authenticated actual HTTP commands only; opening counts are disclosed synthetic fixtures",
+      "seconds": 8.542,
+      "operational_products": 32,
+      "additional_recovery_product": 1,
+      "storage_bins": 16,
+      "lots_per_product": 2,
+      "opening_bin_lot_balances": 64,
+      "opening_each_per_balance": 32,
+      "serial_units_per_bin_lot": 32,
+      "open_orders": 32,
+      "allocated_orders": 16,
+      "commands_before_recovery_lifecycle": 162,
+      "expected_setup_commands": 162,
+      "observed_setup_commands": 162,
+      "independent_setup_command_count_matches": true,
+      "excluded_from_sustained_timing": true
+    },
+    "sustained_http": {
+      "requested_seconds": 300,
+      "review_mode": "resources",
+      "traffic_model": "independent-operators",
+      "client_schedule": "independent continuous client loops without think time or an operator barrier",
+      "serial_units_per_bin_lot": 32,
+      "serial_pattern": "rotating",
+      "serial_distinct_labels_per_operator": [
+        64,
+        64,
+        64,
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "serial_labels_available_per_operator": 64,
+      "serial_current_source_reads": 5661,
+      "serial_current_source_latency": {
+        "samples": 5661,
+        "p50_ms": 8.072,
+        "p95_ms": 17.467,
+        "p99_ms": 28.034,
+        "max_ms": 73.799
+      },
+      "measurement_limit": "Authenticated loopback HTTP and JSON processing; Python clients open HTTP connections per request; browser rendering, human timing and physical scanner input are excluded",
+      "elapsed_seconds": 300.754,
+      "replicas": 2,
+      "distinct_operator_identities": 8,
+      "rounds": null,
+      "committed_moves": 5661,
+      "exact_cross_replica_replays": 5661,
+      "definite_stale_conflicts": 0,
+      "unexpected_errors": 0,
+      "committed_moves_per_second": 18.823,
+      "action_latency": {
+        "samples": 5661,
+        "p50_ms": 362.745,
+        "p95_ms": 772.208,
+        "p99_ms": 1568.664,
+        "max_ms": 4498.941
+      },
+      "action_latency_scope": "command submission from the client's cached review through committed write and its own validated post-commit full warehouse refresh and, when enabled, exact literal serial source/custody review; initial review and subsequent exact replay excluded",
+      "throughput_scope": "all completed client cycles, including initial reviews, physical commands, post-commit refreshes when enabled, conflicts and exact cross-replica replays; replay is not another physical move",
+      "http_write_attempt_latency": {
+        "samples": 5661,
+        "p50_ms": 339.007,
+        "p95_ms": 742.049,
+        "p99_ms": 1546.809,
+        "max_ms": 4486.24
+      },
+      "frozen_replay_latency": {
+        "samples": 5661,
+        "p50_ms": 1.427,
+        "p95_ms": 4.979,
+        "p99_ms": 10.155,
+        "max_ms": 72.925
+      },
+      "operational_snapshot_latency": {
+        "samples": 5669,
+        "p50_ms": 12.352,
+        "p95_ms": 22.959,
+        "p99_ms": 32.37,
+        "max_ms": 90.996
+      },
+      "shared_round_snapshot_reads": 0,
+      "independent_post_commit_stock_visibility_verified": true,
+      "snapshot_coverage": "exact configured catalog SKU set and every seeded order ID/state, with completed history permitted",
+      "operators": [
+        {
+          "actor": "operator:serial-0",
+          "commits": 707,
+          "stale_conflicts": 0,
+          "exact_replays": 707,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 707,
+          "snapshot_reads": 708
+        },
+        {
+          "actor": "operator:serial-1",
+          "commits": 709,
+          "stale_conflicts": 0,
+          "exact_replays": 709,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 709,
+          "snapshot_reads": 710
+        },
+        {
+          "actor": "operator:serial-2",
+          "commits": 705,
+          "stale_conflicts": 0,
+          "exact_replays": 705,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 705,
+          "snapshot_reads": 706
+        },
+        {
+          "actor": "operator:serial-3",
+          "commits": 708,
+          "stale_conflicts": 0,
+          "exact_replays": 708,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 708,
+          "snapshot_reads": 709
+        },
+        {
+          "actor": "operator:serial-4",
+          "commits": 709,
+          "stale_conflicts": 0,
+          "exact_replays": 709,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 709,
+          "snapshot_reads": 710
+        },
+        {
+          "actor": "operator:serial-5",
+          "commits": 710,
+          "stale_conflicts": 0,
+          "exact_replays": 710,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 710,
+          "snapshot_reads": 711
+        },
+        {
+          "actor": "operator:serial-6",
+          "commits": 704,
+          "stale_conflicts": 0,
+          "exact_replays": 704,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 704,
+          "snapshot_reads": 705
+        },
+        {
+          "actor": "operator:serial-7",
+          "commits": 709,
+          "stale_conflicts": 0,
+          "exact_replays": 709,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 709,
+          "snapshot_reads": 710
+        }
+      ],
+      "acceptance": {
+        "ok": true,
+        "limits": {
+          "max_action_p95_ms": 1000.0,
+          "min_moves_per_second": 5.0,
+          "min_serial_coverage": 1.0
+        },
+        "failures": [],
+        "observed_serial_coverage_per_operator": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "scope": "Synthetic workload acceptance; unset latency/throughput limits establish no facility SLO"
+      }
+    }
+  },
+  "independent_proof": {
+    "ok": true,
+    "commands": 5823,
+    "physical_and_reserved_equations_recomputed": true,
+    "atomic_original_actors_results_commands_verified": true,
+    "cross_actor_and_tenant_isolation": true,
+    "complete_serial_proof": {
+      "ok": true,
+      "literal_units": 2048,
+      "steps": 7709,
+      "observations": 5725,
+      "batches": 5725,
+      "global_heads": 32,
+      "timed_moves": 5661,
+      "serial_pattern": "rotating",
+      "distinct_timed_labels": 512,
+      "recovered_moves_outside_timed_interval": 0,
+      "recovery_request_ids": [],
+      "all_literal_custody_revisions_original_steps_observations_and_heads_match": true
+    },
+    "final_table_fingerprints": {
+      "wms_activity": {
+        "rows": 5823,
+        "sha256": "f0e4ea70738bffc0a2deee5ac6cc0db9e7ca12cbc2005e5aa5259f7c8f4b0db0"
+      },
+      "wms_admin_audit": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_allocations": {
+        "rows": 16,
+        "sha256": "46d8dff5eb7ed2ce9a12e2414f6a137788ed82c61a994fbe2973fb3eb1b3496f"
+      },
+      "wms_commands": {
+        "rows": 5823,
+        "sha256": "05a99522aa2336a51cba4c12854b7b2f57f08c85f03956e3d2dd474acad97518"
+      },
+      "wms_delivery_attempts": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_events": {
+        "rows": 5823,
+        "sha256": "be92e6f1c557ee3b23159a2a5e5fff7e2dd7d6b6dabf4623112f15e01a1953a0"
+      },
+      "wms_exceptions": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_locations": {
+        "rows": 20,
+        "sha256": "63711e3febf7c0aa3851a81c60020c72000ea385dc7c6ba56c30c8e941134415"
+      },
+      "wms_lot_changes": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_lot_decisions": {
+        "rows": 16,
+        "sha256": "b17389a94cd43570d3c3d597247e5568ec1b555d14d8eb8106a838f020a50718"
+      },
+      "wms_lot_enforcement": {
+        "rows": 2,
+        "sha256": "93913cea8505cc1e249446971f145ffb2faa290f250977b7c09f997daae0ce73"
+      },
+      "wms_movements": {
+        "rows": 5725,
+        "sha256": "015278911288891b0082cd647106bbb4d6a14ca8d9d4524287bcb38a487d5a90"
+      },
+      "wms_native_attempts": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_native_requests": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_order_cancellations": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_order_cancelled_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_order_lines": {
+        "rows": 32,
+        "sha256": "e5eee8dd88200d9be6b45c9abff8fb7c876246f84dba2f7fa3dcea113fa3d27d"
+      },
+      "wms_orders": {
+        "rows": 32,
+        "sha256": "4cea8c26c53566601a4683d5d13cae9e466ec9848e26bbec48774cc80aff738f"
+      },
+      "wms_outbox": {
+        "rows": 5823,
+        "sha256": "f1464afd03b32684a24d6d56de174262ee3416fa2c04286ef2d8144762dc0ba6"
+      },
+      "wms_package_closures": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_package_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_packages": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_products": {
+        "rows": 33,
+        "sha256": "661e9cbb46e89e96335acd9d2f79a5ecf795d8724bc4336dd27c486f412cfb0f"
+      },
+      "wms_receipt_cancellations": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_receipt_cancelled_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_receipt_evidence": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_receipt_lines": {
+        "rows": 2,
+        "sha256": "a817a877a72a27d2f8b7c5b36c6f2e8ed74ccc4a0c964588c3050cf459e3facb"
+      },
+      "wms_receipts": {
+        "rows": 1,
+        "sha256": "9af53bfc9d5ab66657f27fc7529dc3c7837ed7a743b00ba28bf47677ab5acf94"
+      },
+      "wms_resource_versions": {
+        "rows": 198,
+        "sha256": "5bb2ef7f8f706715ab980df5228c0c9f769cf73f81784a62ecfe6fd5050fed4c"
+      },
+      "wms_return_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_schema_migrations": {
+        "rows": 35,
+        "sha256": "52eaafb873827618f7411c0290d437d66331e0baabb08cc2dee3d4eeb72c2389"
+      },
+      "wms_serial_batches": {
+        "rows": 5725,
+        "sha256": "869472110746d732f940e2c0390cd3072f01113dbb2007befabfc599216b4a8a"
+      },
+      "wms_serial_heads": {
+        "rows": 32,
+        "sha256": "297b9b2e5aadacdda9ea30340d51bfa4a82176efd6e287b81c5cda2ac3710561"
+      },
+      "wms_serial_modes": {
+        "rows": 33,
+        "sha256": "ecae78ce111fdf5fd1fe35a9cf6949e8d96ffb649be8ff5d5e8ea7bb43718206"
+      },
+      "wms_serial_observations": {
+        "rows": 5725,
+        "sha256": "fa086c4130ec2d641f0ff3cec5593e4fe2b4004a5172fd5636f9f56ecc9d808d"
+      },
+      "wms_serial_pending_checks": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_serial_steps": {
+        "rows": 7709,
+        "sha256": "e7b5be92e48a01973df9ccd20ec921da9d00a78ce26997785ea62f4ab35cf402"
+      },
+      "wms_serial_units": {
+        "rows": 2048,
+        "sha256": "54020e3760653e22d99976bdaddb34b24a4d2cf73cc06fc24fe351fc2283c597"
+      },
+      "wms_shipment_evidence": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_split_orders": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_stock": {
+        "rows": 80,
+        "sha256": "9b0fdec18cd1184d25a31a1302294c7ff397646e09d61428ef7b5ae3e0f7f54d"
+      },
+      "wms_stock_ledger": {
+        "rows": 80,
+        "sha256": "48f0d80607415b98a1921e83ee80c67180130e92778c3f5abf341c428de922a1"
+      },
+      "wms_stock_reserved": {
+        "rows": 32,
+        "sha256": "d729840522575cf2f51ce6e98d84fb6bda8078608ff05db42e3c13bca54c4c4a"
+      },
+      "wms_transfer_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_transfer_loss_records": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_transfers": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_unit_observations": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_unit_pack_changes": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_warehouses": {
+        "rows": 2,
+        "sha256": "d2b0a952ef1375ac27f5bb45901a2d469717774216278f77f658c36e8cc2bca4"
+      },
+      "wms_workspaces": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      }
+    }
+  },
+  "limits": [
+    "Explicit native executable identified by SHA-256; optimization profile requires separate build provenance. Shared development host, loopback HTTP, one PostgreSQL primary; not production image, crash/failover, deployed, scanner-device, native receiver or facility qualification.",
+    "Opening counts are synthetic complete observed sets; the recorded serial pattern and distinct-label counts describe the active population, not whole-facility capacity."
+  ]
+}
