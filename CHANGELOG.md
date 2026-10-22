@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.3.1 — 2026-10-22
+
+**Highlights**
+
+- **Faster serial saves.** Each save now checks serial custody only for the products it touches, not every serial unit in the warehouse. The native serial latency profile now meets its 1,000ms p95 target (772ms, from 1,242ms), and throughput more than doubled (18.8 moves/s, from 8.3).
+- **Behavior change.** Custody damage confined to one product, which only a database guard bypass can create, now blocks saves for that product only, not the whole warehouse. Full reconciliation still reports it.
+
+**All changes**
+
 - Check serial custody per (warehouse, SKU) at commit in append-only migration 035, instead of rescanning every serial unit in the warehouse on every save. Each custody equation and place reference involves one SKU. Every mutation that can change custody now queues its SKU: SKU-bearing rows, the old and new places of changed serial units, package closures and receipts through the SKUs that reference them, and transfer losses through their original line. Location changes keep the warehouse-wide check. A new differential test shows the per-SKU checks together give exactly the warehouse-wide verdict on clean data and on five kinds of deliberate damage. It fails if the per-SKU check is disabled. On the retained 16,000-label fixture (8 SKUs) the commit-time check takes 18–24ms against 100–192ms. The optimized native serial profile now passes its 1,000ms action-p95 limit at 772ms (1,242ms before), with 18.8 against 8.3 moves/s. **Behavior change:** custody damage confined to one SKU, which only a guard bypass can create, now blocks commits for that SKU only, not the whole warehouse; full reconciliation still reports it.
 
 ## 0.3.0 — 2026-10-22
