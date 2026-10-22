@@ -1,6 +1,6 @@
 {
   "name": "@stateset/warehouse-tui",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Warehouse terminal operations over the canonical StateSet WMS API",
   "license": "MIT OR Apache-2.0",
   "type": "module",

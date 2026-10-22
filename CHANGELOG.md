@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## 0.3.0 — 2026-10-22
+
+**Highlights**
+
+- **Warehouse terminal for the floor.** A keyboard- and scanner-first terminal client with an operations board, work queues, guided receiving, picking, packing, transfers, returns, quarantine and exception handling, readable reviews of every save, and safe recovery after lost connections. Ghostty/Kitty terminals also get visual views: flow, stock by bin, floor plans and barcodes.
+- **Partial and package fulfillment you can finish.** Partly shipped orders stay visible, with an exact review of remaining work and the choice to continue picking, return staged stock or close the remainder.
+- **Faster full serial reconciliation.** Checking every serial label in a warehouse is now done in a few large passes instead of one lookup per label. At 16,000 labels it takes about 4 seconds instead of 39–54 seconds, with identical results. This fixes the timeout that failed the 2026-10-21 release gate.
+- **Cheaper serial saves and reads.** Repeated validation work is shared within each save and each read. Every original rule still applies (migrations 030–034).
+- **Release tooling.** A runnable live-browser suite, storage and network preflight for the release gate, full-history source auditing and retained dependency license notices.
+
+Known limits: the serial native latency profile still misses its 1,000ms p95 target (measured 1,242ms at 2,048 labels); the cause and a proposed fix are in [performance](docs/performance.md#known-serial-write-bottleneck--2026-10-22). Production deployment, scanner hardware and physical facility acceptance remain unqualified.
+
+**All changes**
+
 - Evaluate serial input-class validity in set form during reconciliation. Append-only migration 034 adds `wms_serial_command_targets`, which resolves each command's original target rows once with the exact conversion-error outcome of `wms_serial_inputs_match_command`; every other original predicate runs once across all classes behind the same malformed-JSON guards. The original matcher, write guards and standalone checks are unchanged. A new differential test compares every input-class verdict with the original matcher across 40 malformed, conversion, target, quantity, command and product cases, and fails when a predicate is removed. On freshly seeded ignored scale corpora, matcher calls fall from 2,004 to eight command resolutions and move-corpus reconciliation takes 3.6–4.1s against 3.9–4.7s for the original, with identical JSON verdicts. On the same database the original takes 38.6–53.9s on the 16,000-label corpus against 3.9–4.1s, so its plan depends on table statistics; the earlier 7.8–8.3s measurement used a different database.
 - Resolve final serial reconciliation in set form under the unchanged ten-second SQL deadline. Expand each original step array and observation once, check uncovered labels with one anti-join, resolve historical count places and re-observed count labels with latest-revision passes equivalent to `wms_serial_at_version`, and hash-join head and batch verdicts instead of rescanning snapshot-local sets per event. String-only step coverage keeps the exact original `@>` membership. On retained ignored scale corpora (16,000 labels across growing counts; 2,000 single-label moves), `wms_serial_at_version` calls fall from 80,000 to zero and complete reconciliation takes 5.0–5.5s against 7.8–8.3s for the original, with parity on the move corpus and identical JSON verdicts. The shared host was heavily loaded during measurement; the original also passed these corpora on some runs, so they do not reproduce the 2026-10-21 gate failure on their own.
 - Dispatch ordinary count/move serial targets directly in migration 033, preserving exact original target rows and bigint conversion errors. Envelopes with extra quantity or line fields retain the original general resolver, including its inactive-branch conversion failures. Differential tests use the immutable predecessor target resolver.
