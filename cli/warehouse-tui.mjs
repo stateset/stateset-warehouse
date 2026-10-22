@@ -298,12 +298,12 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
       const board = new OperationsBoard(client, journal, scope, session, { intervalMs: refreshMs }); board.paused = boardPaused;
       await board.refresh({ verifySession: false });
       const action = await ui.menu('WMS operations center', [
-        ['Record observed warehouse work', 'work'], ['Planned work', 'planned'], ['Inventory', 'stocks'], ['Products', 'products'], ['Bins', 'locations'], ['Orders', 'orders'], ['Receiving / returns', 'receipts'], ['Original order and shipment review', 'order-detail'], ['Original receiving record', 'receipt-detail'], ['Lots and holds', 'lots'], ['Facility transfers', 'transfers'], ['Serial custody', 'serials'], ['Serial history', 'serial-history'], ['Exceptions', 'exceptions'], ['Retained history', 'history'], ['Reconciliation', 'reconciliation'], ['Operations', 'operations'], ['Original request recovery', 'recovery'], ['iCommerce interop', 'interop'], ['Select facility', 'warehouse'], ['Work queues', 'queues'], ['Visual operations / labels', 'visual'],
+        ['Record observed warehouse work', 'work'], ['Inventory', 'stocks'], ['Products', 'products'], ['Bins', 'locations'], ['Orders', 'orders'], ['Receiving / returns', 'receipts'], ['Original order and shipment review', 'order-detail'], ['Original receiving record', 'receipt-detail'], ['Lots and holds', 'lots'], ['Facility transfers', 'transfers'], ['Serial custody', 'serials'], ['Serial history', 'serial-history'], ['Exceptions', 'exceptions'], ['Retained history', 'history'], ['Reconciliation', 'reconciliation'], ['Operations', 'operations'], ['Original request recovery', 'recovery'], ['iCommerce interop', 'interop'], ['Select facility', 'warehouse'], ['Work queues', 'queues'], ['Visual operations / labels', 'visual'], ['Planned work: putaway, batch picks, counts, replenishment', 'planned'],
       ], {
         context: () => board.context({ columns: ui.columns }), tickMs: 5000, onTick: state => board.tick(state),
         localActions: { r: () => board.refresh(), z: () => { board.togglePause(); boardPaused = board.paused; } },
         compactHint: ['i stock · o orders · w work · t queues', 'r refresh · z auto on/off · v info · ? · q'],
-        sections: { 1: 'WORK & INVENTORY', 10: 'TRACEABILITY & CONTROL', 17: 'OPERATIONS & RECOVERY' },
+        sections: { 1: 'WORK & INVENTORY', 9: 'TRACEABILITY & CONTROL', 16: 'OPERATIONS & RECOVERY' },
         shortcuts: { i: 'stocks', o: 'orders', w: 'work', c: 'recovery', t: 'queues', m: 'visual', ...Object.fromEntries(Object.keys(laneShortcuts).map(key => [key, `lane:${key}`])) },
         hint: ['i inventory · o orders · w work · t queues · c recovery', 'r refresh · z pause/resume · / search · v context · ? help · q exit'],
       });
