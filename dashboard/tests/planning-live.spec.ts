@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("real browser and Postgres run putaway, batch picking, counts, labels and carrier labels", async ({
+test("real browser and Postgres run putaway, batch picking, blind cycle counts and ZPL labels", async ({
   page,
 }) => {
   test.setTimeout(150000);
