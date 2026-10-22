@@ -1,22 +1,27 @@
 # StateSet Warehouse
 
-Warehouse execution and physical inventory authority for StateSet. **Sync is the OMS; Warehouse is the WMS; Freight is the TMS.**
+An open warehouse management system (WMS) for physical inventory: receiving, putaway, picking, packing, shipping, returns, counts, transfers between facilities, lots and serial numbers. In the StateSet stack, **Sync is the OMS, Warehouse is the WMS and Freight is the TMS.**
 
-[Desktop preview](docs/screenshots/desktop.png) · [Mobile preview](docs/screenshots/mobile.png) · [Architecture](docs/architecture.md) · [Verification evidence](docs/evidence.md) · [API contract](docs/api.md) · [Native OMS/TMS adapters](docs/native-integrations.md) · [Operations and restore](docs/operations.md) · [Release qualification](docs/release-qualification.md)
+Built with Rust (Axum, Tokio, SQLx) on PostgreSQL, with a React/TypeScript dashboard, a terminal client for warehouse floors and a native MCP server for AI agents.
 
-Rust 1.90+, Axum, Tokio, SQLx/Postgres, React, TypeScript and Vite, following the existing StateSet services and dashboards.
+![Desktop dashboard](docs/screenshots/desktop.png)
 
-The [2026-10-21 development qualification](docs/qualification/development-serial-deferred-20261021-v1/verification.json) passes **751 checks**, archive restore across 50 tables and 32 migrations, hardened-container checks, and the full untracked crash/traffic workload. Serial crash recovery and five-minute rotating traffic complete, but **the full gate fails** when final serial API reconciliation exceeds its unchanged SQL timeout. A separate native run also misses the 1,000ms action-p95 target at 1,242.537ms. See [current evidence and remaining work](docs/evidence.md#deferred-serial-validation-development-candidate--2026-10-21); production qualification and A+ remain unclaimed.
+## Why it is different
 
-The [dated 0.2.0 software release](docs/qualification/release-20261019-icommerce-tui-v1/summary.json) passed all ten stages on its frozen 2026-10-19 source: **331 Rust, 74 Python, 13 terminal and 170 browser checks**. It includes pinned iCommerce crate interoperability, the warehouse TUI, populated archive restore and both full image/crash workloads. Production, deployed-client and physical facility acceptance remain separate.
+- **Inventory cannot drift silently.** Every stock change is an immutable movement, written in the same transaction as the command, its event and its outbox message. PostgreSQL rejects any commit where stock, reservations, receipts or serial custody disagree with that history.
+- **Nothing is invented.** Quantities are whole units, labels are stored exactly as scanned, and missing or ambiguous evidence blocks work instead of being guessed.
+- **Safe retries.** Every command carries a request ID. Retrying after a lost response returns the original result; it never applies the change twice.
+- **Independent proof.** `GET /v1/warehouses/{id}/reconciliation` rebuilds every balance from full history and reports any disagreement.
 
-Version 0.2.0 includes [iCommerce crate interoperability](docs/icommerce.md), a [warehouse terminal](cli/README.md), and [open-source release preparation](docs/open-source-release.md). The repository remains private; packages and images have not been published.
+## Status
 
-The development terminal also provides [Kitty graphics visual operations](docs/visual-console.md): flow, physical/reserved stock by bin, explicitly configured floor plans, and exact-SKU barcode/photo previews with complete text fallback.
+| | |
+|---|---|
+| Latest qualified release | **0.2.0** (2026-10-19): the complete [release gate](docs/release-qualification.md) passed on frozen source. |
+| Development (`main`) | Fixes the serial reconciliation timeout that failed the [2026-10-21 gate](docs/evidence.md#deferred-serial-validation-development-candidate--2026-10-21). The complete gate has not yet been re-run on this source. |
+| Not yet qualified | Production deployment, scanner hardware, physical facility acceptance and managed failover. See [evidence and limits](docs/evidence.md). |
 
-The development terminal adds a Ghostty operations board with idle read-only refresh, snapshot age, stale-read retention and direct work lanes. Compact inventory keeps exact quantities visible, and pane resizing preserves input and reading position. Original-request recovery retains exclusive checkpoint positions and existing 0.2.0 journals. The partial/package lane keeps mixed fulfillment visible after handoff, with exact remaining-work reviews and continued allocation, picking and recovery. The latest [targeted terminal verification](docs/qualification/development-partial-fulfillment-20261020/verification.json) passes 101 checks, including real API/PostgreSQL and terminal workflows. See [terminal navigation](cli/README.md#navigation-and-views) and [upgrade and recovery instructions](cli/README.md#recovery). These follow-ups have separate targeted checks; the dated release report above applies to its original frozen 0.2.0 source.
-
-The [2026-10-20 source-release review](docs/open-source-readiness-20261020.md) records **331 Rust, 90 Python, 101 terminal and 170 browser checks passing**, full-history source auditing, original browser dependency notices, and follow-up fixes. **That candidate's complete gate failed:** serial crash recovery did not regain database readiness. The [dated evidence](docs/qualification/source-candidate-20261020/readiness.json) retains all failures and launch blockers; it does not replace the qualified 0.2.0 release above.
+New here? Start with the [documentation map](docs/README.md).
 
 ## Run
 
@@ -69,7 +74,16 @@ Open **http://127.0.0.1:8088**. Localhost is a secure browser context; use HTTPS
 - Normalized operational rows, database-enforced movement/reservation/receipt proofs, and append-only movement/activity history with cursor pagination and archived record details.
 - Tenant-wide Operations view for delivery queues, uncertain native requests and warehouse exceptions, with bounded consistent snapshots, explicit stale/offline status, current-evidence exports and administrator Prometheus metrics with tested alert policies.
 
-Quantities are whole **each** units. Partial receipts, picks, shipments and physical customer returns are supported. Reviewed whole case, inner-pack and pallet conversions retain each quantities and the original pack definition through saves and recovery; see [pack units](docs/api.md#reviewed-pack-units). Serial command admission, literal-label collection/recovery and source-checked identity reviews are locally software qualified; the [serial contract](docs/api.md#serial-command-admission) and [evidence](docs/evidence.md) describe the measured scope and remaining cost/acceptance work. Fractional measured units and carrier purchasing are not implemented. Lot expiry requires an exact time with a UTC offset; date-only label interpretation needs an explicitly reviewed facility policy. Quarantine is warehouse-local and does not implement a tenant-wide recall. Partial-order cancellation closes the entire unshipped remainder; it does not purchase transport, issue refunds or cancel the upstream commercial order automatically. Multiple physical handoffs remain held in the current single-event native OMS connection; they never create an invented aggregate carrier or fulfillment event. Replenishment rules are reviewed per plan rather than a scheduled background policy. Return authorization consumes allowance across retained RMAs. Cancelling an unreceived remainder releases only that exact line/lot quantity; received returns remain consumed. Refunds are not implemented. Do not use the demo as operational inventory.
+### Not implemented
+
+- Fractional measured units (weight, length); quantities are whole **each** units. Reviewed case, inner-pack and pallet conversions are supported; see [pack units](docs/api.md#reviewed-pack-units).
+- Carrier rate shopping and label purchasing (the TMS owns transport), refunds and automated quality disposition.
+- Scheduled replenishment; replenishment is reviewed per plan.
+- Tenant-wide recalls; quarantine is per warehouse.
+- Multiple physical handoffs per order in the native OMS connection; they are held rather than merged into an invented event.
+- Date-only expiry labels without a reviewed facility policy; expiry needs an exact time with a UTC offset.
+
+Partial-order cancellation closes the whole unshipped remainder; it does not purchase transport, refund or cancel the upstream commercial order. Serial tracking is software qualified locally; see the [serial design guide](docs/serial-design.md) and [serial contract](docs/api.md#serial-command-admission). Do not use the demo as operational inventory.
 
 ## Real workspaces
 

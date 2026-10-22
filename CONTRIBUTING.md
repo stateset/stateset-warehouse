@@ -2,7 +2,7 @@
 
 Contributions are welcome under **MIT OR Apache-2.0**, at the recipient's option. By submitting a contribution, you represent that you have the right to license it under those terms. Retain third-party attribution and do not introduce incompatible source or generated assets.
 
-Start with the [architecture](docs/architecture.md), [API contract](docs/api.md) and [verification instructions](README.md#verify). Use Rust 1.90+, Node.js 22.12+ and an isolated PostgreSQL database whose name contains `test`. Never use real inventory or external production integrations for tests.
+Start with the [documentation map](docs/README.md), [architecture](docs/architecture.md), [API contract](docs/api.md) and [verification instructions](README.md#verify). Before changing serial tracking, read the [serial design guide](docs/serial-design.md). Use Rust 1.90+, Node.js 22.12+ and an isolated PostgreSQL database whose name contains `test`. Never use real inventory or external production integrations for tests.
 
 ```bash
 npm --prefix dashboard ci
