@@ -1,5 +1,11 @@
 # Workload qualification
 
+## Known serial write bottleneck — 2026-10-22
+
+Every committed command that touches a warehouse with serial-controlled SKUs queues one warehouse-wide custody check (migration 032, `kind='scope'`). At commit, `wms_serial_scope_current_valid` and `wms_serial_scope_transit_valid` re-derive custody for **every** serial unit in that warehouse while the warehouse write lock is held. Measured directly on retained synthetic corpora on the shared host: **34–57ms** at 2,000 labels and **102–136ms** at 16,000 labels per commit. The event source check is about **6ms** and the tenant mode check about **9–11ms**, roughly constant. Because writes serialize per warehouse, eight concurrent operators queue behind this cost. That matches the measured growth of serial save p95 with label count: 1,207.636ms write-attempt p95 at 2,048 labels (native profile) and 1,908–3,954ms action p95 at 16,000 labels (image profiles).
+
+The proposed fix queues custody checks per `(warehouse, SKU)` for SKU-bearing rows and for both the old and new place of each changed serial unit, and keeps warehouse-wide checks for SKU-less mutations (package closures, receipts, locations, loss records). Event insertion would then stop queuing a warehouse-wide scan. One behavior would change: custody damage in an unrelated SKU, introduced only by bypassing guards, would no longer block writes to other SKUs. Full reconciliation would still report it. This change is not yet implemented. It needs differential tests against the current guard on damaged fixtures before it can ship.
+
 ## Deferred serial validation candidate — 2026-10-21
 
 Migrations 031–032 and the bounded read changes preserve complete original-source checks while sharing repeated work. Printable ASCII identifiers take an equivalent scalar validation path; other text retains the original Unicode rules. Transaction-owned dirty keys deduplicate complete event, custody and mode checks. They contain no saved validity result, cannot be altered by ordinary DML, rearm after an explicit constraint flush, and must be empty after commit. Selected units share validation of their actual original events. Current and observation pages select bounded records before decoding event metadata; reconciliation passes only the exact event fields used by each effect predicate.
