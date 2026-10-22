@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-22T17:05:05.332862+00:00",
+  "filesystems": {
+    "workspace": {
+      "total_bytes": 997682339840,
+      "used_bytes": 870150205440,
+      "available_bytes": 76777177088
+    },
+    "artifacts": {
+      "total_bytes": 997682339840,
+      "used_bytes": 870150205440,
+      "available_bytes": 76777177088
+    },
+    "temporary": {
+      "total_bytes": 997682339840,
+      "used_bytes": 870150205440,
+      "available_bytes": 76777177088
+    }
+  },
+  "linux_pressure": {
+    "cpu": "some avg10=49.45 avg60=46.02 avg300=44.99 total=91339921470\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0\n",
+    "io": "some avg10=26.41 avg60=24.05 avg300=25.44 total=301109797288\nfull avg10=0.47 avg60=1.56 avg300=3.07 total=221068279598\n",
+    "memory": "some avg10=0.17 avg60=2.09 avg300=4.58 total=4251924944\nfull avg10=0.15 avg60=1.65 avg300=3.63 total=2472669445\n"
+  },
+  "available_memory_bytes": 9334734848,
+  "scope": "Local process host observations; no environment, credentials or process inventory",
+  "limit": "Observations do not establish failure causation, Docker daemon storage capacity or production readiness",
+  "ok": true,
+  "minimum_free_gib": 5,
+  "required_available_bytes": 5368709120,
+  "reasons": [],
+  "storage_policy": "Headroom floor, not a complete build/fixture capacity estimate"
+}

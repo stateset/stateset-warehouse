@@ -1,0 +1,292 @@
+{
+  "schema_version": 1,
+  "scope": "software_release_gate_verification",
+  "release": "0.3.0",
+  "tag": "v0.3.0",
+  "release_commit": "adb43c8c1c3365ecf7e147de325134751324928a",
+  "gate_result": "passed",
+  "gate_release_revision_field": "unrecorded-working-tree",
+  "commit_binding": {
+    "method": "Each gated software input's SHA-256 recomputed from `git show adb43c8:<path>`",
+    "inputs": 471,
+    "aggregate_sha256": "bcad8082b75ef25c641042e64a7ce2761941d0c98fa0d18a6b40705a4b3a951f",
+    "mismatches": 0,
+    "note": "The gate ran from a working tree without .git, so it recorded `unrecorded-working-tree`; this byte comparison binds those inputs to the tagged commit."
+  },
+  "profile": {
+    "products": 500,
+    "open_orders": 500,
+    "bins": 100,
+    "lots": 2,
+    "operators": 8,
+    "replicas": 2,
+    "sustained_seconds": 300,
+    "serial_units_per_sku_lot": 16,
+    "serial_labels": 16000
+  },
+  "attempts": [
+    {
+      "attempt": 1,
+      "directory": "gate-20261022-attempt1-failed",
+      "source": "edbef9e",
+      "profile": "default",
+      "result": "failed",
+      "reason": "software_checks: differential test compared resolvers with unequal plan-cache histories; fixed in 24594ab",
+      "stages": [
+        {
+          "stage": "prerequisites",
+          "status": "passed"
+        },
+        {
+          "stage": "software_checks",
+          "status": "failed"
+        }
+      ]
+    },
+    {
+      "attempt": 2,
+      "directory": "gate-20261022-attempt2-failed-storage",
+      "source": "24594ab",
+      "profile": "default",
+      "result": "failed",
+      "reason": "image_resilience preflight: 4.6 GiB free, 5 GiB required; WMS-owned leftovers removed with approval",
+      "stages": [
+        {
+          "stage": "prerequisites",
+          "status": "passed"
+        },
+        {
+          "stage": "software_checks",
+          "status": "passed"
+        },
+        {
+          "stage": "observability_rules",
+          "status": "passed"
+        },
+        {
+          "stage": "release_builds",
+          "status": "passed"
+        },
+        {
+          "stage": "standard_workload",
+          "status": "passed"
+        },
+        {
+          "stage": "archive_restore",
+          "status": "passed"
+        },
+        {
+          "stage": "live_browsers",
+          "status": "passed"
+        },
+        {
+          "stage": "production_container",
+          "status": "passed"
+        },
+        {
+          "stage": "image_resilience",
+          "status": "failed"
+        }
+      ]
+    },
+    {
+      "attempt": 3,
+      "directory": "gate-20261022-attempt3-stopped-for-version-bump",
+      "source": "24594ab",
+      "profile": "default",
+      "result": "stopped",
+      "reason": "Stopped during software_checks so the 0.3.0 version bump could be gated",
+      "stages": [
+        {
+          "stage": "prerequisites",
+          "status": "passed"
+        },
+        {
+          "stage": "software_checks",
+          "status": "failed"
+        }
+      ]
+    },
+    {
+      "attempt": 4,
+      "directory": "gate-20261022-attempt4-failed-stale-notices",
+      "source": "afcf74e (pre-amend)",
+      "profile": "default",
+      "result": "failed",
+      "reason": "software_checks: dashboard notices recorded the pre-bump lockfile SHA-256; regenerated and amended into adb43c8",
+      "stages": [
+        {
+          "stage": "prerequisites",
+          "status": "passed"
+        },
+        {
+          "stage": "software_checks",
+          "status": "failed"
+        }
+      ]
+    },
+    {
+      "attempt": 5,
+      "directory": "gate-20261022-attempt5-passed-default-profile",
+      "source": "adb43c8",
+      "profile": "default",
+      "result": "passed",
+      "reason": "All ten stages at the default profile (100 products, 3,200 serial labels, 60 s); not used for the tag because it is narrower than the release profile",
+      "stages": [
+        {
+          "stage": "prerequisites",
+          "status": "passed"
+        },
+        {
+          "stage": "software_checks",
+          "status": "passed"
+        },
+        {
+          "stage": "observability_rules",
+          "status": "passed"
+        },
+        {
+          "stage": "release_builds",
+          "status": "passed"
+        },
+        {
+          "stage": "standard_workload",
+          "status": "passed"
+        },
+        {
+          "stage": "archive_restore",
+          "status": "passed"
+        },
+        {
+          "stage": "live_browsers",
+          "status": "passed"
+        },
+        {
+          "stage": "production_container",
+          "status": "passed"
+        },
+        {
+          "stage": "image_resilience",
+          "status": "passed"
+        },
+        {
+          "stage": "stable_source_inputs",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "attempt": 6,
+      "directory": "gate-20261022-attempt6-full-failed-host-load",
+      "source": "adb43c8",
+      "profile": "full",
+      "result": "failed",
+      "reason": "software_checks: persistence_acceptance 503 at host load 47-51 on 8 CPUs",
+      "stages": [
+        {
+          "stage": "prerequisites",
+          "status": "passed"
+        },
+        {
+          "stage": "software_checks",
+          "status": "failed"
+        }
+      ]
+    },
+    {
+      "attempt": 7,
+      "directory": "gate-20261022-attempt7-full-failed-browser-crash",
+      "source": "adb43c8",
+      "profile": "full",
+      "result": "failed",
+      "reason": "live_browsers: Chromium renderer crash (\"Page crashed\") under host memory pressure; 20/21 passed",
+      "stages": [
+        {
+          "stage": "prerequisites",
+          "status": "passed"
+        },
+        {
+          "stage": "software_checks",
+          "status": "passed"
+        },
+        {
+          "stage": "observability_rules",
+          "status": "passed"
+        },
+        {
+          "stage": "release_builds",
+          "status": "passed"
+        },
+        {
+          "stage": "standard_workload",
+          "status": "passed"
+        },
+        {
+          "stage": "archive_restore",
+          "status": "passed"
+        },
+        {
+          "stage": "live_browsers",
+          "status": "failed"
+        }
+      ]
+    },
+    {
+      "attempt": 8,
+      "directory": "gate-20261022-attempt8-full",
+      "source": "adb43c8",
+      "profile": "full",
+      "result": "passed",
+      "reason": "This bundle",
+      "stages": [
+        {
+          "stage": "prerequisites",
+          "status": "passed"
+        },
+        {
+          "stage": "software_checks",
+          "status": "passed"
+        },
+        {
+          "stage": "observability_rules",
+          "status": "passed"
+        },
+        {
+          "stage": "release_builds",
+          "status": "passed"
+        },
+        {
+          "stage": "standard_workload",
+          "status": "passed"
+        },
+        {
+          "stage": "archive_restore",
+          "status": "passed"
+        },
+        {
+          "stage": "live_browsers",
+          "status": "passed"
+        },
+        {
+          "stage": "production_container",
+          "status": "passed"
+        },
+        {
+          "stage": "image_resilience",
+          "status": "passed"
+        },
+        {
+          "stage": "stable_source_inputs",
+          "status": "passed"
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "Synthetic fixtures on a shared, uncontrolled host; no facility SLO or capacity claim",
+    "Production deployment, deployed identity/native/MCP clients, scanner devices, physical facility acceptance and managed failover remain separate",
+    "Hosted CI did not run (GitHub billing); PostgreSQL 16 runtime checks ran only inside the image stages",
+    "The separate native serial latency profile (1,000 ms p95 target) was not part of this gate and remains open",
+    "Repository remains private; no packages or images are published"
+  ]
+}

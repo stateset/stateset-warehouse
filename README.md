@@ -17,9 +17,9 @@ Built with Rust (Axum, Tokio, SQLx) on PostgreSQL, with a React/TypeScript dashb
 
 | | |
 |---|---|
-| Latest qualified release | **0.2.0** (2026-10-19): the complete [release gate](docs/release-qualification.md) passed on frozen source. |
-| Development (`main`) | Fixes the serial reconciliation timeout that failed the [2026-10-21 gate](docs/evidence.md#deferred-serial-validation-development-candidate--2026-10-21). The complete gate has not yet been re-run on this source. |
-| Not yet qualified | Production deployment, scanner hardware, physical facility acceptance and managed failover. See [evidence and limits](docs/evidence.md). |
+| Latest qualified release | **0.3.0** (2026-10-22): the complete [release gate](docs/release-qualification.md) passed at the full profile: 500 products, 16,000 serial labels, eight operators, API and PostgreSQL crash recovery, and final reconciliation on both replicas. [Evidence](docs/qualification/release-20261022-v0.3.0/verification.json). |
+| Previous release | **0.2.0** (2026-10-19). |
+| Not yet qualified | Production deployment, scanner hardware, physical facility acceptance and managed failover. The separate native serial latency target (1,000ms p95) is still missed. See [evidence and limits](docs/evidence.md). |
 
 New here? Start with the [documentation map](docs/README.md).
 

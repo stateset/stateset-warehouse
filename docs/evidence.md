@@ -1,5 +1,11 @@
 # Implementation evidence
 
+## 0.3.0 qualification — 2026-10-22
+
+The [0.3.0 complete gate](qualification/release-20261022-v0.3.0/summary.json) passed all ten stages on the tagged source. The run used the full profile: 500 products, 500 open orders, 100 bins, two lots, eight operators, two API replicas, 300-second image workloads and 16,000 serial labels. The untracked image workload completed **4,694 moves with exact replays** (15.618 moves/s, 662.249ms action p95). The serial workload completed **1,689 moves with exact replays** across 256 distinct timed labels (5.605 moves/s, 1,930.575ms action p95). Both had zero unexpected errors and zero conflicts. Final full reconciliation passed on both replicas; that is the check that exceeded its SQL deadline on 2026-10-21. API and PostgreSQL crash recovery preserved every table fingerprint.
+
+The gate ran from a working tree without `.git`, so it recorded `unrecorded-working-tree`. [The verification record](qualification/release-20261022-v0.3.0/verification.json) binds all 471 gated inputs byte for byte to tag `v0.3.0` (`adb43c8`). It also lists all eight attempts that day. Attempts 6 and 7 failed under shared-host overload (load ~50, then a browser renderer crash under memory pressure). Attempt 5 passed only the narrower default profile and was not used for the tag. The separate native latency target, deployed clients and physical acceptance remain open.
+
 ## Deferred serial validation development candidate — 2026-10-21
 
 The [frozen development evidence](qualification/development-serial-deferred-20261021-v1/verification.json) records **341 Rust, 116 Python, 124 terminal with zero skips, 149 offline browser and 21 live browser checks: 751 passed**. Migrations 031–032 share complete serial checks through transaction-owned dirty keys and preserve the original Unicode identifier rules. Bounded reads share original event decoding. Dirty keys contain no validity verdict, reject ordinary mutation, rearm after a constraint flush and must be empty after commit.
