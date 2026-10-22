@@ -300,6 +300,10 @@ impl Store {
                 "033_serial_target_dispatch",
                 include_str!("../migrations/033_serial_target_dispatch.sql"),
             ),
+            (
+                "034_serial_command_target_sets",
+                include_str!("../migrations/034_serial_command_target_sets.sql"),
+            ),
         ] {
             let digest = format!("{:x}", Sha256::digest(sql.as_bytes()));
             let old: Option<String> =

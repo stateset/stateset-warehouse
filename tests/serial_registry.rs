@@ -135,6 +135,12 @@ async fn schema() -> Transaction<'static, Postgres> {
         .execute(&mut *tx)
         .await
         .expect("exact direct and general serial command targets");
+    sqlx::raw_sql(include_str!(
+        "../migrations/034_serial_command_target_sets.sql"
+    ))
+    .execute(&mut *tx)
+    .await
+    .expect("shared command target rows with original conversion outcomes");
     tx
 }
 

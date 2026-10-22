@@ -21,15 +21,91 @@ WITH required_events AS MATERIALIZED (
    OR e.payload ?| ARRAY['serial_heads','serial_steps','serial_inputs'])
 ), input_classes AS MATERIALIZED (
  SELECT DISTINCT warehouse_id,command,inputs FROM required_events WHERE direct
-), input_sources AS MATERIALIZED (
+), input_candidates AS MATERIALIZED (
  -- The exact target-command set is defined by wms_serial_targets in migration
  -- 021. Outside that set an empty observation has no target to validate; all
- -- nonempty or target-bearing inputs still use the complete original matcher.
- SELECT warehouse_id,command,inputs,CASE
-  WHEN inputs='[]'::jsonb AND COALESCE(command->>'type','') NOT IN(
+ -- nonempty or target-bearing inputs use the complete original predicates of
+ -- wms_serial_inputs_match_command (migration 023), evaluated below in set
+ -- form. CASE guards keep malformed JSON from reaching any array operation
+ -- that the original returns false before.
+ SELECT row_number() OVER () AS iid,warehouse_id,command,inputs,
+  CASE WHEN inputs='[]'::jsonb AND COALESCE(command->>'type','') NOT IN(
    'count_stock','move_stock','receive','pick','unpick','create_return','pack_shipment',
-   'dispatch_transfer','receive_transfer','record_transfer_loss','reverse_transfer_loss') THEN true
-  ELSE wms_serial_inputs_match_command($1,warehouse_id,command,inputs) END AS ok FROM input_classes
+   'dispatch_transfer','receive_transfer','record_transfer_loss','reverse_transfer_loss') THEN true END AS untargeted,
+  CASE WHEN jsonb_typeof(inputs) IS DISTINCT FROM 'array' THEN false ELSE jsonb_array_length(inputs)<=100 END AS bounded
+ FROM input_classes
+), command_classes AS MATERIALIZED (
+ -- Target rows depend only on the command. Resolve them once per command
+ -- that the original would resolve (a bounded input array), with its exact
+ -- conversion-error outcome; NULL rows make every class of that command false.
+ SELECT d.warehouse_id,d.command,wms_serial_command_targets($1,d.warehouse_id,d.command) AS target_rows
+ FROM (SELECT DISTINCT warehouse_id,command FROM input_candidates WHERE untargeted IS NULL AND bounded) d
+), candidate_targets AS MATERIALIZED (
+ SELECT i.iid,c.target_rows FROM input_candidates i
+ JOIN command_classes c ON c.warehouse_id=i.warehouse_id AND (c.command IS NULL)=(i.command IS NULL) AND COALESCE(c.command,'null'::jsonb)=COALESCE(i.command,'null'::jsonb)
+ WHERE i.untargeted IS NULL AND i.bounded
+), target_rows AS MATERIALIZED (
+ SELECT c.iid,q.target,q.sku,q.each_quantity,q.allow_zero
+ FROM candidate_targets c
+ CROSS JOIN LATERAL jsonb_to_recordset(COALESCE(c.target_rows,'[]'::jsonb)) AS q(target JSONB,sku TEXT,each_quantity BIGINT,allow_zero BOOLEAN)
+), duplicate_targets AS MATERIALIZED (
+ -- Each original target is one declaration.
+ SELECT DISTINCT iid FROM target_rows GROUP BY iid,target HAVING count(*)>1
+), controlled_targets AS MATERIALIZED (
+ SELECT q.*,EXISTS(SELECT 1 FROM wms_products p WHERE p.tenant=$1 AND p.warehouse_id=i.warehouse_id
+  AND p.sku=q.sku AND p.data->'serial_controlled'='true'::jsonb) AS product_valid
+ FROM target_rows q JOIN input_candidates i ON i.iid=q.iid
+ JOIN wms_serial_modes m ON m.tenant=$1 AND m.sku=q.sku AND m.controlled
+), input_entries AS MATERIALIZED (
+ SELECT c.iid,entry.doc,
+  CASE WHEN jsonb_typeof(doc) IS DISTINCT FROM 'object' THEN true
+   WHEN NOT doc ?& ARRAY['target','sku','serials'] OR doc-ARRAY['target','sku','serials']<>'{}'::jsonb
+    OR jsonb_typeof(doc->'target') IS DISTINCT FROM 'array'
+    OR jsonb_typeof(doc->'sku') IS DISTINCT FROM 'string'
+    OR jsonb_typeof(doc->'serials') IS DISTINCT FROM 'array' THEN true
+   ELSE jsonb_array_length(doc->'target')>3 OR NOT wms_serial_text(doc->>'sku') END AS malformed
+ FROM candidate_targets c JOIN input_candidates i ON i.iid=c.iid
+ CROSS JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(i.inputs)='array' THEN i.inputs ELSE '[]'::jsonb END) AS entry(doc)
+), entry_shapes AS MATERIALIZED (
+ SELECT iid,bool_or(malformed) AS malformed,
+  sum(CASE WHEN NOT malformed THEN jsonb_array_length(doc->'serials') END) AS labels
+ FROM input_entries GROUP BY iid
+), entry_members AS MATERIALIZED (
+ -- Expand members only for entries whose shape check passed.
+ SELECT e.iid,e.doc->>'sku' AS sku,'target' AS kind,member.value
+ FROM input_entries e CROSS JOIN LATERAL jsonb_array_elements(CASE WHEN e.malformed THEN '[]'::jsonb ELSE e.doc->'target' END) AS member(value)
+ UNION ALL
+ SELECT e.iid,e.doc->>'sku','serial',member.value
+ FROM input_entries e CROSS JOIN LATERAL jsonb_array_elements(CASE WHEN e.malformed THEN '[]'::jsonb ELSE e.doc->'serials' END) AS member(value)
+), member_faults AS MATERIALIZED (
+ SELECT DISTINCT iid FROM entry_members
+ WHERE jsonb_typeof(value) IS DISTINCT FROM 'string' OR NOT wms_serial_text(value#>>'{}')
+), duplicate_entries AS MATERIALIZED (
+ SELECT DISTINCT iid FROM input_entries GROUP BY iid,doc->'target' HAVING count(*)>1
+ UNION
+ SELECT DISTINCT iid FROM entry_members WHERE kind='serial' GROUP BY iid,sku,value HAVING count(*)>1
+), observed_inputs AS MATERIALIZED (
+ SELECT e.iid,e.doc->'target' AS target,e.doc->>'sku' AS sku,jsonb_array_length(e.doc->'serials') AS quantity
+ FROM input_entries e JOIN entry_shapes s ON s.iid=e.iid AND NOT s.malformed
+), unmatched_inputs AS MATERIALIZED (
+ -- Every observation names one declared target with its exact quantity, and
+ -- every controlled declared target is observed for a serial product.
+ SELECT DISTINCT i.iid FROM observed_inputs i LEFT JOIN controlled_targets q ON q.iid=i.iid AND q.target=i.target AND q.sku=i.sku
+  AND q.each_quantity=i.quantity AND (q.each_quantity>0 OR q.allow_zero)
+ WHERE q.sku IS NULL
+ UNION
+ SELECT DISTINCT q.iid FROM controlled_targets q LEFT JOIN observed_inputs i ON i.iid=q.iid AND i.target=q.target AND i.sku=q.sku
+ WHERE NOT q.product_valid OR i.sku IS NULL
+), input_sources AS MATERIALIZED (
+ SELECT i.warehouse_id,i.command,i.inputs,CASE WHEN i.untargeted THEN true
+  WHEN NOT i.bounded THEN false
+  ELSE COALESCE(c.target_rows IS NOT NULL
+   AND dt.iid IS NULL
+   AND NOT COALESCE(s.malformed,false) AND COALESCE(s.labels,0)<=10000
+   AND mf.iid IS NULL AND de.iid IS NULL AND um.iid IS NULL,false) END AS ok
+ FROM input_candidates i LEFT JOIN candidate_targets c ON c.iid=i.iid LEFT JOIN entry_shapes s ON s.iid=i.iid
+ LEFT JOIN duplicate_targets dt ON dt.iid=i.iid LEFT JOIN member_faults mf ON mf.iid=i.iid
+ LEFT JOIN duplicate_entries de ON de.iid=i.iid LEFT JOIN unmatched_inputs um ON um.iid=i.iid
 ), command_sources AS MATERIALIZED (
  SELECT warehouse_id,command,CASE WHEN bool_or(ok) THEN
   (SELECT COALESCE(array_agg(sku ORDER BY sku),ARRAY[]::text[]) FROM wms_serial_event_skus($1,warehouse_id,command))
