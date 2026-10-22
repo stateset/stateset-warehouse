@@ -1,0 +1,24 @@
+{
+  "ok": false,
+  "scope": "initial combined software checks before bounded independent audit statements",
+  "failed_test": "reads::bounded_pages_validate_2048_identity_count_sources_at_normal_sql_timeouts",
+  "failure_excerpt": [
+    "failures:",
+    "",
+    "---- reads::bounded_pages_validate_2048_identity_count_sources_at_normal_sql_timeouts stdout ----",
+    "",
+    "thread 'reads::bounded_pages_validate_2048_identity_count_sources_at_normal_sql_timeouts' panicked at tests/serial_admission.rs:95:71:",
+    "independent source, identity, history and physical equations: Database(PgDatabaseError { severity: Error, code: \"57014\", message: \"canceling statement due to statement timeout\", detail: None, hint: None, position: None, where: Some(\"SQL statement \\\"SELECT n>10000 OR EXISTS(SELECT 1 FROM jsonb_array_elements(inputs) AS entry(doc)\\n  CROSS JOIN LATERAL jsonb_array_elements(doc->'target') AS member(value)\\n  WHERE jsonb_typeof(value) IS DISTINCT FROM 'string' OR NOT wms_serial_text(value#>>'{}'))\\n  OR EXISTS(SELECT 1 FROM jsonb_array_elements(inputs) AS entry(doc)\\n  CROSS JOIN LATERAL jsonb_array_elements(doc->'serials') AS member(value)\\n  WHERE jsonb_typeof(value) IS DISTINCT FROM 'string' OR NOT wms_serial_text(value#>>'{}'))\\\"\\nPL/pgSQL function wms_serial_inputs_match_command(text,text,jsonb,jsonb) line 20 at IF\\nPL/pgSQL function wms_serial_event_inputs_bound(text,text,text) line 7 at IF\\nSQL statement \\\"SELECT (SELECT EXISTS(SELECT 1 FROM wms_events e JOIN wms_serial_batches b ON b.tenant=o.tenant AND b.sku=o.sku AND b.version=o.sku_version AND b.event_id=o.event_id AND b.warehouse_id=o.warehouse_id\\n WHERE e.id=o.event_id AND e.tenant=o.tenant AND e.warehouse_id=o.warehouse_id AND wms_serial_batch_original(b)\\n AND original_payload->'serial_inputs'->(o.ordinal-1)=jsonb_build_object('target',o.target,'sku',o.sku,'serials',o.serials)\\n AND wms_serial_event_inputs_bound(o.tenant,o.warehouse_id,o.event_id)))\\\"\\nPL/pgSQL function wms_serial_observation_bound(wms_serial_observations) line 6 at RETURN\\nSQL statement \\\"SELECT EXISTS(SELECT 1 FROM wms_serial_observations obs WHERE obs.tenant=s.tenant AND obs.warehouse_id=s.warehouse_id\\n  AND obs.event_id=s.event_id AND obs.sku=s.sku AND obs.target=s.target AND obs.serials @> jsonb_build_array(s.serial)\\n  AND wms_serial_observation_bound(obs))\\\"\\nPL/pgSQL function wms_serial_step_semantic_valid(wms_serial_steps) line 17 at SQL statement\\nSQL statement \\\"SELECT (SELECT EXISTS(SELECT 1 FROM wms_events e JOIN wms_commands c ON c.tenant=e.tenant AND c.warehouse_id=e.warehouse_id AND c.request_id=original_payload->>'request_id'\\n JOIN wms_serial_batches b ON b.tenant=s.tenant AND b.sku=s.sku AND b.version=s.sku_version AND b.event_id=s.event_id AND b.warehouse_id=s.warehouse_id AND b.warehouse_version=s.warehouse_version\\n WHERE e.id=s.event_id AND e.tenant=s.tenant AND e.warehouse_id=s.warehouse_id AND e.version=s.warehouse_version\\n AND original_payload->>'actor'=s.actor AND c.actor=s.actor AND original_payload->>'occurred_at'=s.recorded_at\\n AND original_payload->'result'=c.result AND wms_serial_batch_original(b)\\n AND original_payload->'serial_steps'->(s.ordinal-1)=to_jsonb(s)-'tenant' AND wms_serial_step_semantic_valid(s)\\n AND (s.revision=1 OR EXISTS(SELECT 1 FROM wms_serial_steps previous\\n  WHERE previous.tenant=s.tenant AND previous.sku=s.sku AND previous.serial=s.serial AND previous.revision=s.previous_revision\\n  AND previous.lot=s.lot AND previous.after_place=s.before_place AND previous.sku_version<s.sku_version))))\\\"\\nPL/pgSQL function wms_serial_step_bound(wms_serial_steps) line 6 at RETURN\\nSQL function \\\"wms_serial_unit_bound\\\" statement 1\"), schema: None, table: None, column: None, data_type: None, constraint: None, file: Some(\"postgres.c\"), line: Some(3130), routine: Some(\"ProcessInterrupts\") })",
+    "note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
+    "",
+    "",
+    "failures:",
+    "    reads::bounded_pages_validate_2048_identity_count_sources_at_normal_sql_timeouts",
+    "",
+    "test result: FAILED. 32 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 347.52s",
+    "",
+    "error: test failed, to rerun pass `--test serial_admission`"
+  ],
+  "raw_log_sha256": "9720e81174313035865e79b3ada63d1c0f35406dfaa74faae7a8cc4f84deddd5",
+  "observation": "The three authenticated pages and complete production reconciliation passed before the additional legacy all-label query timed out. The failure is retained; the corrected test checks every original unit in bounded statements at the unchanged SQL deadline."
+}

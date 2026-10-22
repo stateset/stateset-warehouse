@@ -1,0 +1,6 @@
+{
+  "facts": {
+    "replica": 1
+  },
+  "stage": "exact_replay_verified"
+}

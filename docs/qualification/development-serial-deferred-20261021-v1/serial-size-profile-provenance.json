@@ -1,0 +1,6 @@
+{
+  "binary_sha256": "a27b9560c2979d7183b36c453ebe15a80eceb0ee69b916456cf615374aa8362c",
+  "profile": "debug native diagnostic",
+  "software_inputs_sha256": "1dda414df1344d7c5894cfade765eaa1ee047384137089de4c46f286d51efb73",
+  "concurrent_work": "offline browser contract suite on this shared host"
+}

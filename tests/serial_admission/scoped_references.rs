@@ -41,7 +41,7 @@ async fn compare(
     .await
     .expect("original reference flags and collations");
     let new_refs: Value = sqlx::query_scalar(&reference_map(
-        include_str!("../../migrations/029_serial_scope_source_sets.sql"),
+        include_str!("../../migrations/030_serial_scope_custody_counts.sql"),
         true,
     ))
     .bind(tenant)

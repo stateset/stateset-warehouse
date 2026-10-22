@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-21T21:26:48.864219+00:00",
+  "scope": "development hardening and component verification; A+ acceptance remains unmet",
+  "result": "component_checks_passed_performance_and_release_acceptance_unmet",
+  "production_qualified": false,
+  "complete_release_gate_passed": false,
+  "single_combined_software_check_script_passed": false,
+  "source_revision": null,
+  "revision_limit": "Git metadata is unavailable in this workspace; source and artifact SHA-256 values identify the reviewed files.",
+  "changes": [
+    "Migration 030 reuses complete serial reference-class multiplicities for stock, staging and package equations, retaining source checks and byte-exact metadata.",
+    "Current, lineage and observation pages use the existing complete read-source event validator without extending SQL deadlines.",
+    "Rotating serial workload measures actual coverage per operator and checks closed-form literal custody, including wraparound, odd final moves and recovered labels.",
+    "Predeclared latency, throughput and coverage limits reject failed measurements; the release gate requires rotating traffic and full per-operator coverage.",
+    "The same real PostgreSQL browser workflow is available independently through scripts/live-browser-checks.sh.",
+    "Command dialog, original-request error handling and shared UI components were extracted from App.tsx, reducing that file by 505 lines."
+  ],
+  "checks": {
+    "rust_ordinary_passed": 135,
+    "postgres_unique_passed": 204,
+    "postgres_accounting": "183 passed in the original combined run, 20 remaining registry/startup checks passed separately, and the failed new large-page audit passed in a nine-test reads rerun; eight repeated reads checks are not double-counted.",
+    "python_passed": 112,
+    "terminal_passed": 124,
+    "terminal_skipped": 0,
+    "terminal_real_api_and_pty": true,
+    "offline_browser_passed": 149,
+    "live_postgres_browser_passed": 21,
+    "formatting_passed": true,
+    "clippy_all_targets_passed": true,
+    "dashboard_production_build_passed": true,
+    "shell_syntax_passed": true,
+    "archive_restore_passed": true,
+    "migrations_restored": 30,
+    "actual_21_to_30_upgrade_passed": true,
+    "serial_profiles_passed_units": [
+      512,
+      2048
+    ]
+  },
+  "retained_failures": [
+    "The first 2048-identity current-page diagnostic timed out before switching to the existing read-source validator.",
+    "The initial combined software script stopped on its new test's additional monolithic legacy all-unit audit. Pages and production reconciliation had passed. Every original unit is now checked in bounded statements within one read-only snapshot, at unchanged deadlines. Existing 512-unit and damaged-source legacy event comparisons remain.",
+    "The 300-second serial workload failed its predeclared 1000ms p95 threshold; throughput and full observed per-operator coverage passed. Independent final custody proof was not reached after the performance rejection.",
+    "The complete release attempt stopped at the unchanged 5GiB storage prerequisite; subsequent stages did not run in that attempt."
+  ],
+  "serial_300s": {
+    "accepted": false,
+    "products": 32,
+    "lots_per_product": 2,
+    "serial_units_per_bin_lot": 32,
+    "total_seeded_labels": 2048,
+    "active_labels": 512,
+    "operators": 8,
+    "api_replicas": 2,
+    "committed_moves": 2172,
+    "exact_cross_replica_replays": 2172,
+    "moves_per_second": 7.209,
+    "action_p95_ms": 1408.48,
+    "acceptance": {
+      "ok": false,
+      "limits": {
+        "max_action_p95_ms": 1000.0,
+        "min_moves_per_second": 5.0,
+        "min_serial_coverage": 1.0
+      },
+      "failures": [
+        "action p95 exceeds the predeclared limit"
+      ],
+      "observed_serial_coverage_per_operator": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "scope": "Synthetic workload acceptance; unset latency/throughput limits establish no facility SLO"
+    },
+    "final_independent_proof_completed": false
+  },
+  "limits": [
+    "Measurements used synthetic data, debug native processes, loopback networking and an uncontrolled shared host with concurrent checks; they establish no facility SLO or causal comparative improvement.",
+    "The earlier 60-second run has its own binary/script hashes and passed its complete independent proof; it is not the final 300-second run or a release qualification.",
+    "A complete 2048-label count still took 148.55 seconds; observation-page reads took 8.61\u20138.67 seconds in the retained diagnostic. Bulk serial capacity remains unresolved.",
+    "Docker access initially failed and later succeeded on recheck; insufficient disk headroom still prevents the complete gate.",
+    "Production image resilience, hosted CI execution, deployed WorkOS/OMS/TMS acceptance and physical warehouse/scanner trials have not been qualified by this work.",
+    "Large reviewed count sessions and multiple-handoff native OMS support remain unavailable."
+  ],
+  "source_changes_after_input_snapshot": [
+    "tests/serial_admission/reads.rs"
+  ],
+  "source_input_count": 254,
+  "artifacts": [
+    {
+      "path": "archive-restore.json",
+      "sha256": "53002067c439b17b92d45fb1cbc9664c93907fb492f9609ce776005fd3bb2dbe"
+    },
+    {
+      "path": "archive-restore.log",
+      "sha256": "9162fe687725972600bd5a52f74c5170b0eef295a5fdbb61fcdf3ab9c5df5547"
+    },
+    {
+      "path": "clippy-after-audit-checks.log",
+      "sha256": "945725a23fb6c0a17e18ef5b69e404a4957f598ddf33efa5f58844f1fb7e42d1"
+    },
+    {
+      "path": "clippy-checks.log",
+      "sha256": "c9a30c610cd81771f5080fe5ea970309cb57abb5d810f001339c67232916b081"
+    },
+    {
+      "path": "docker-access-recheck.log",
+      "sha256": "1c2d2d9e72f13e075f896af5cf8445d73ba10ae23cd0d9cc6358170d31198543"
+    },
+    {
+      "path": "earlier-60s-cycles.jsonl",
+      "sha256": "02b897dd2307599b6be1763ff8d8676a2aff009860728467e996736fc85b1040"
+    },
+    {
+      "path": "earlier-60s-serial-traffic.json",
+      "sha256": "51d3872aac8076f8736c45fcdf8d151949e7ddf9686e180bad40c2e847230e70"
+    },
+    {
+      "path": "initial-software-check-failure.json",
+      "sha256": "9f1fae273811c2a5b9525109fbfcc5295ede7207e48c3529313892b55f1c9fc0"
+    },
+    {
+      "path": "initial-software-checks.log",
+      "sha256": "096ec54f5943458173300078752fa7644a969952e968c0b0d1e6a88eeaf95892"
+    },
+    {
+      "path": "live-browser-checks.log",
+      "sha256": "8cdb90df965871fa60fe51d3e3d4aaaa25f8772e4fcb3f56680a46b2b1820e60"
+    },
+    {
+      "path": "offline-browser-checks.log",
+      "sha256": "b4a66247fda66a43c7e15ce3ee8d92dae7c684b95548bf8972d58e771ea075e3"
+    },
+    {
+      "path": "python-checks.log",
+      "sha256": "683abbbf894996aa0c89cb8f3171cec624a808f78d89e172ea386a5c0cb1ef28"
+    },
+    {
+      "path": "release-attempt-summary.json",
+      "sha256": "6d2374f01326b5579c42ea9fe7cdc8c6ea5ff97db07cc714736deb4fa5414b2c"
+    },
+    {
+      "path": "release-host-preflight.json",
+      "sha256": "da316c3050d3bae72b27761f6a7aeb29af4e29acd6b50da67a72958bad784106"
+    },
+    {
+      "path": "remaining-postgres-checks.log",
+      "sha256": "f8dffb326a34ed403e2e61ecb6759ac1745af2974423da026a2be8e76951a5d1"
+    },
+    {
+      "path": "rust-unit-checks.log",
+      "sha256": "7f48bad270f53ffb83bcaee69c94132c938e8f7ac1c4ccb9c069d8e6143875c8"
+    },
+    {
+      "path": "serial-profile-after.json",
+      "sha256": "166fa63af55ca1799c040fd5316438312008234b5fd906dab9a6d7d7f226ba2f"
+    },
+    {
+      "path": "serial-profile-before.json",
+      "sha256": "f70dbcd20ef3ccc11a568c4b310d0f6a234f7958b320d1099e8d24f0ba3cf919"
+    },
+    {
+      "path": "serial-read-checks.log",
+      "sha256": "c86794f5da1d845b0d5b0ae1b4e22fa5753503d0d5d8478cc36a86eada8657b1"
+    },
+    {
+      "path": "serial-traffic-300s-cycles.jsonl",
+      "sha256": "a3481bb21a104359a6ecac4d802c9925ee888802f8be6397843e703b4ce576d8"
+    },
+    {
+      "path": "serial-traffic-300s-failed.json",
+      "sha256": "c1c7652aeb22c8ac1dd0ec01ee3735f1cedd324aff85866da640fb174f565d81"
+    },
+    {
+      "path": "source-inputs.json",
+      "sha256": "f6ef4b56ccb80724bc1e74546fbb88df33d55f4e3514988092c68de4addc37ff"
+    }
+  ]
+}

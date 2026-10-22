@@ -284,6 +284,22 @@ impl Store {
                 "029_serial_scope_source_sets",
                 include_str!("../migrations/029_serial_scope_source_sets.sql"),
             ),
+            (
+                "030_serial_scope_custody_counts",
+                include_str!("../migrations/030_serial_scope_custody_counts.sql"),
+            ),
+            (
+                "031_serial_ascii_validation",
+                include_str!("../migrations/031_serial_ascii_validation.sql"),
+            ),
+            (
+                "032_serial_deferred_check_sets",
+                include_str!("../migrations/032_serial_deferred_check_sets.sql"),
+            ),
+            (
+                "033_serial_target_dispatch",
+                include_str!("../migrations/033_serial_target_dispatch.sql"),
+            ),
         ] {
             let digest = format!("{:x}", Sha256::digest(sql.as_bytes()));
             let old: Option<String> =

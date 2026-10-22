@@ -8,9 +8,10 @@ def require(condition, message):
         raise AssertionError(message)
 
 
-def serial_proof(tables, accepted, products, lots, units, moves, bins, recovery_requests=()):
+def serial_proof(tables, accepted, products, lots, units, moves, bins, recovery_requests=(), pattern="fixed"):
     """Rebuild exact literal custody independently of stored guard booleans."""
     events = {e["id"]: e for e in tables["wms_events"]}
+    require(pattern in ("fixed", "rotating"), "Unknown serial traffic pattern")
     by_request = {e["payload"]["request_id"]: e for e in events.values()}
     require(
         len(by_request) == len(events) == len(accepted),
@@ -53,7 +54,18 @@ def serial_proof(tables, accepted, products, lots, units, moves, bins, recovery_
             for n in range(units):
                 key = (sku, f"Load-{i:05}-Lot-{lot:03}-Unit-{n:05}")
                 expected_keys.add(key)
-                count = moves[i] if lot == 0 and n == 0 and i < len(moves) else 0
+                count = 0
+                if i < len(moves):
+                    if pattern == "fixed":
+                        count = moves[i] if lot == 0 and n == 0 else 0
+                    else:
+                        # Independent closed-form expectation; do not derive
+                        # expected custody from the observed steps or scheduler.
+                        pairs, remainder = divmod(moves[i], 2)
+                        cycles, offset = divmod(pairs, lots * units)
+                        position = lot * units + n
+                        count = 2 * (cycles + int(position < offset))
+                        count += int(bool(remainder) and position == offset)
                 if key == recovery_key:
                     count += len(recovery_requests)
                 place = {
@@ -70,9 +82,10 @@ def serial_proof(tables, accepted, products, lots, units, moves, bins, recovery_
                 )
                 chain = sorted(by_unit[key], key=lambda s: s["revision"])
                 if key == recovery_key and recovery_requests:
-                    require([s["event_id"] for s in chain[-2:]] == recovery_events,
+                    recovered = [s for s in chain if s["event_id"] in recovery_events]
+                    require([s["event_id"] for s in recovered] == recovery_events,
                             "Serial recovery steps do not belong to the two original requests")
-                    for returning, step in enumerate(chain[-2:]):
+                    for returning, step in enumerate(recovered):
                         require(step["before_place"] == {
                             "status": "on_hand", "warehouse_id": "wh-main",
                             "location": f"BIN-{(i + returning) % bins:05}"}
@@ -176,6 +189,11 @@ def serial_proof(tables, accepted, products, lots, units, moves, bins, recovery_
         "batches": len(tables["wms_serial_batches"]),
         "global_heads": len(heads),
         "timed_moves": sum(moves),
+        "serial_pattern": pattern,
+        "distinct_timed_labels": sum(
+            min((count + 1) // 2, lots * units) if pattern == "rotating" else int(count > 0)
+            for count in moves
+        ),
         "recovered_moves_outside_timed_interval": len(recovery_requests),
         "recovery_request_ids": list(recovery_requests),
         "all_literal_custody_revisions_original_steps_observations_and_heads_match": True,

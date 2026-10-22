@@ -1,0 +1,426 @@
+{
+  "recorded_at": "2026-10-22T00:10:05.984760+00:00",
+  "frozen_software_inputs": 468,
+  "all_current_inputs_match": true,
+  "scope": "Local synthetic development checks; no production A+ claimed",
+  "native_acceptance": {
+    "ok": false,
+    "reason": "p95 exceeds original 1000ms limit",
+    "p95_ms": 1242.537,
+    "moves": 2505,
+    "moves_per_second": 8.329,
+    "errors": 0,
+    "conflicts": 0,
+    "labels_per_operator": [
+      64,
+      64,
+      64,
+      64,
+      64,
+      64,
+      64,
+      64
+    ],
+    "independent_final_proof": "not_run_after_performance_rejection",
+    "separate_post_failure_literal_proof": {
+      "ok": true,
+      "identities": 2048,
+      "steps": 4553,
+      "distinct_timed_labels": 512,
+      "scope": "read-only independent literal proof; does not replace skipped full HTTP final-proof stage or failed latency acceptance"
+    }
+  },
+  "software_attempt": {
+    "rust_passed": 341,
+    "python_passed": 112,
+    "terminal_passed": 124,
+    "terminal_skipped": 0,
+    "offline_browser_passed": 148,
+    "offline_browser_failed": 1,
+    "failed_case": "warehouse status pagination uses independent bounded snapshots and rejects incomplete status",
+    "failure": "initial Warehouse overview not visible at unchanged 5000ms assertion; trace retained privately",
+    "targeted_repetitions_passed": 5,
+    "live_browser_passed": 21,
+    "overall_software_attempt": "failed (retained standalone attempt)",
+    "complete_release_gate_rerun": "failed"
+  },
+  "restore": {
+    "ok": true,
+    "migrations": 32,
+    "total_tables": 50,
+    "durable_nonempty_tables": 49,
+    "pending_check_table_empty": true
+  },
+  "production_container": {
+    "ok": true,
+    "image": "sha256:5cc190ec10b0eed91f325f2751ccfbda2175e0e0394e543a2f33ba94cad8442e"
+  },
+  "rejected_experiments": [
+    {
+      "change": "JSONPath array validation shortcut",
+      "reason": "slower than unchanged original; removed before final freeze"
+    },
+    {
+      "change": "scope grouping on serialized JSON only",
+      "reason": "modest diagnostic benefit, insufficient to resolve measured latency target; not applied to source"
+    }
+  ],
+  "host_limit": "Shared host. Pressure and timing variation observed; sole causation or controlled speedup not established.",
+  "release_gate_result": "failed",
+  "production_qualified": false,
+  "overall_a_plus_claimed": false,
+  "release_revision": "unrecorded-working-tree",
+  "prior_development_evidence": "../development-hardening-20261021/verification.json",
+  "gate_harness_correction": {
+    "changed_software_inputs": [
+      "scripts/crash_journal.py",
+      "scripts/qualify-release.sh",
+      "scripts/test_crash_journal.py"
+    ],
+    "previous_run": "interrupted-gate-v5/summary.json",
+    "reason": "Stopped by the agent with SIGTERM after finding the obsolete 49-table final assertion; that assertion had not yet run. The schema has 50 tables. The corrected gate compares complete names against the restored inventory and requires exact empty pending-check fingerprints.",
+    "application_binary_and_migrations_changed": false,
+    "focused_crash_journal_and_inventory_checks_passed": 13
+  },
+  "remaining_acceptance": [
+    "Complete release gate failed at final serial API reconciliation: HTTP 503 after the unchanged 10-second SQL timeout. Serial full proof and stable_source_inputs stage did not complete; see failure-context.json and unchanged summary.json.",
+    "The fixed native 300-second profile failed its 1000ms p95 limit (1242.537ms); full coverage, throughput and zero-error checks passed.",
+    "Deployed WorkOS identity and membership lifecycle",
+    "Deployed OMS/Freight and actual MCP client qualification",
+    "Physical facility and scanner-device acceptance",
+    "Organization-hosted CI execution and controlled facility-capacity measurement"
+  ],
+  "software_gate_counts": {
+    "rust": 341,
+    "python": 116,
+    "terminal": 124,
+    "terminal_skipped": 0,
+    "offline_browsers": 149,
+    "live_browsers": 21,
+    "total": 751
+  },
+  "integrity_audit": {
+    "software_inputs_unchanged": 468,
+    "gate_artifact_hashes_verified": 18,
+    "native_binary_sha256": "b5c1a82e5b80f07cf7d3eda585359a7af6371dd1e87930c0122b302f8ce37c7c",
+    "historical_evidence_overwritten": false
+  },
+  "artifacts": [
+    {
+      "path": "archive_restore.json",
+      "sha256": "08e2a7ecedac7c86ee0840d75a273d593426d588839e0f912157dac1fca36dfc"
+    },
+    {
+      "path": "archive_restore.log",
+      "sha256": "f956d68279289c8ec2b06d8849781972132fde71356499f41aea75eb64f391c7"
+    },
+    {
+      "path": "dependency-licenses.json",
+      "sha256": "746edc7bad659e8183f829ad39276c7568ff5a33210747ac42479bc9e4f61cd8"
+    },
+    {
+      "path": "failure-context.json",
+      "sha256": "241f205f426d57349894fdaa7d373393ed73dd06feab24b13c17d0f7716f735f"
+    },
+    {
+      "path": "frozen-software-inputs.json",
+      "sha256": "772f1a3f101ce9b1a7cb7ec07aa85171e63948f3bebb91c5c903155d1ccfcdb9"
+    },
+    {
+      "path": "frozen-software-source.tar.gz",
+      "sha256": "ad121f2f54727b7ea337ccc9aaa109a6b4e4fd9f9b478f3025febb6cbdb18cf4"
+    },
+    {
+      "path": "function-cost-diagnostic.json",
+      "sha256": "65f6ef659a658958165ac435872b77ea2e925e1dc3fb0c732a8d5bb69a7f9038"
+    },
+    {
+      "path": "host-preflight.json",
+      "sha256": "8bd57a005e95ca4f8bcd9a7d29c39786608933d598f55e0f09eb13cf8bf12cc6"
+    },
+    {
+      "path": "image_resilience.json",
+      "sha256": "42bdd8f64df3d2e64be4cf6b29f60b52f2f84da8ad78d98bbe8719269d878634"
+    },
+    {
+      "path": "image_resilience.log",
+      "sha256": "66131e2ed160883f7bc9a46c3a6bb89f2df7bc280ec0d501ef9cc67379a31e5b"
+    },
+    {
+      "path": "interrupted-gate-v5/dependency-licenses.json",
+      "sha256": "746edc7bad659e8183f829ad39276c7568ff5a33210747ac42479bc9e4f61cd8"
+    },
+    {
+      "path": "interrupted-gate-v5/host-preflight.json",
+      "sha256": "e3939618d52dba5254de746bd254138aaed7234d9c8e30c0b6e9becda6419b2b"
+    },
+    {
+      "path": "interrupted-gate-v5/prerequisites.log",
+      "sha256": "e94793f874e4673a5bfde6ce8604774d0722670f589f90b0930ef95b202409cf"
+    },
+    {
+      "path": "interrupted-gate-v5/software_checks.log",
+      "sha256": "826744195dc62b74176ba584490ceea87c614132f3339f8c5916e80e8dd573b5"
+    },
+    {
+      "path": "interrupted-gate-v5/source-inputs-before.json",
+      "sha256": "ee689ad2f48516660f21666bc1a06074cb9c8dc8972d8d4a5eef97d554fe33be"
+    },
+    {
+      "path": "interrupted-gate-v5/summary.json",
+      "sha256": "1f362217d9f5544efc11137286707438a7f1d94895b50f8ad3dda9c30af61cdd"
+    },
+    {
+      "path": "interrupted-gate-v5/tool-versions.json",
+      "sha256": "fb353776fcb627064e6ae049b0f4af0fa62007cc594ca9b5063098dd9946e8b5"
+    },
+    {
+      "path": "live_browsers.log",
+      "sha256": "935478e7390d0b3c16b3a1b44e217f7b7d9f4bfae47399233975ced43ee04bca"
+    },
+    {
+      "path": "native-300s-acceptance-failed.json",
+      "sha256": "131268fc759a9e2715dfc2dbcd45335723b201997c49c8a88780fd5d3e5606c2"
+    },
+    {
+      "path": "native-300s-cycle-samples.jsonl",
+      "sha256": "8aff31e251bfbffa43cdb58134368d57d0187b2b44af2aaae428ca8bfbd47e9e"
+    },
+    {
+      "path": "native-build-provenance.json",
+      "sha256": "7da2277710d57cc3a8fee6344f3a48f6fa57f2c2bfe4f7bbbecf4da4e4ba60e2"
+    },
+    {
+      "path": "native-host-before.json",
+      "sha256": "39b75a40fa89ebd6013d74efba490280c7540fe89006d6e0ca17e500d0ae8b73"
+    },
+    {
+      "path": "native-post-failure-literal-proof.json",
+      "sha256": "11d5f99ef6d8638372db612d577a861f5108b21b67e12319d3044c39a98cbb03"
+    },
+    {
+      "path": "observability_rules.json",
+      "sha256": "cf4fbd15622480efc3017ba20b61ef1fb0f2082e1e5a4f97bad501f5b1b11048"
+    },
+    {
+      "path": "observability_rules.log",
+      "sha256": "6ea89889bde1dea45385eded927b4b88c7b45fc33c61084d5897a674a470d9ee"
+    },
+    {
+      "path": "offline-targeted-repeat.log",
+      "sha256": "2b78e492b79006c4c3d40c4b5557a9a43cd2fecd08a173c94b73fb248c20f12f"
+    },
+    {
+      "path": "prerequisites.log",
+      "sha256": "f34a6d2e17ce6c3232e8bd9b0aa055f97856f2a890b6a0a65ef0b00061cdfbc3"
+    },
+    {
+      "path": "production_container.json",
+      "sha256": "b6b23e8147bb64d06e48d49949abdb2d42152c5855ba7c08752431842e5229be"
+    },
+    {
+      "path": "production_container.log",
+      "sha256": "a95fd98b43bebf84d252e470fe18c4227a09af164312b1eed5669f50c7d1c248"
+    },
+    {
+      "path": "qualification-network-review.json",
+      "sha256": "d4efb39e1b27730c233b767907eb7288991012b320c3c5023296bdf8374fde93"
+    },
+    {
+      "path": "release_builds.log",
+      "sha256": "00b0244362856a745d2ce81d37800f434a7b9cb0649f213373023cb9810324ac"
+    },
+    {
+      "path": "serial-crash-journal/api_sigkill/000-prepared.json",
+      "sha256": "d56112006c6ef7f5e2a6a5d17b7d71edc96752f6857fbe35e4e2c72bc1d0a92e"
+    },
+    {
+      "path": "serial-crash-journal/api_sigkill/001-baseline_captured.json",
+      "sha256": "fa69d5f064d09e845e18391994390de5bf621886ad22550bb7200fce89446d1a"
+    },
+    {
+      "path": "serial-crash-journal/api_sigkill/002-barrier_planned.json",
+      "sha256": "32ba51d83460afcbceb006849fba298fbdfdb557141c364f9a0441dda4304fc0"
+    },
+    {
+      "path": "serial-crash-journal/api_sigkill/003-barrier_installed.json",
+      "sha256": "9b82e77090d1ef2619de3ec91007e4a3356752643cc5159d807a46d58a811947"
+    },
+    {
+      "path": "serial-crash-journal/api_sigkill/004-original_send_requested.json",
+      "sha256": "ffa3d7294444adc6249299476b79b20ac3461b7e6a62598fd678da93abf56081"
+    },
+    {
+      "path": "serial-crash-journal/api_sigkill/005-writer_blocked.json",
+      "sha256": "62cd207c93f208208f8b47d19ea39c93e6c94c8313160e0b2c11d226d42c196a"
+    },
+    {
+      "path": "serial-crash-journal/api_sigkill/006-fault_requested.json",
+      "sha256": "c772a4008f7d2aaea7be882af23f6412fefc44a2cb9136e533d6de9344f38e59"
+    },
+    {
+      "path": "serial-crash-journal/api_sigkill/007-interrupted_response_observed.json",
+      "sha256": "956e9f6f616a353a0199b7907a5d6de508bec2de74d2b108142838a34047c63a"
+    },
+    {
+      "path": "serial-crash-journal/api_sigkill/008-fault_verified.json",
+      "sha256": "6649d1e832f06ae89c44939e263a63acd39bdeae3ffc2ecb1ac1ad0da3e4cb4e"
+    },
+    {
+      "path": "serial-crash-journal/api_sigkill/009-barrier_removed.json",
+      "sha256": "0d5097fa6b6f736c767c43fdd47cf4279ef880b22163815d7edf8d2af59bb336"
+    },
+    {
+      "path": "serial-crash-journal/api_sigkill/010-rollback_verified.json",
+      "sha256": "724ee82a1a1ab0ab2441d84cb46da36f8be8797f18c4a9ac805af72c2c067599"
+    },
+    {
+      "path": "serial-crash-journal/api_sigkill/011-original_absent.json",
+      "sha256": "cf38afda3f48d61a6cda1c5f2252041c435a9bb0e514fb82ee97e2965e32e3f1"
+    },
+    {
+      "path": "serial-crash-journal/api_sigkill/012-original_recovery_requested.json",
+      "sha256": "de8da06debb399f2b666883540320002812b2b973e4d7d6bdaebbf4cae09c117"
+    },
+    {
+      "path": "serial-crash-journal/api_sigkill/013-original_committed.json",
+      "sha256": "902333dba96a9425a60d31b81f59fb6ba7567926b6fbc5845f050365300f42f3"
+    },
+    {
+      "path": "serial-crash-journal/api_sigkill/014-exact_replay_verified.json",
+      "sha256": "952c90d591e707517a34c35aa63f894739f0ce4d352691f69d07bc2198b8a918"
+    },
+    {
+      "path": "serial-crash-journal/api_sigkill/015-completed.json",
+      "sha256": "08cff9fecc53b9c808ec0ad50966a1a41c5fbd442d19aee2d9066e3e28c77245"
+    },
+    {
+      "path": "serial-crash-journal/postgres_sigkill/000-prepared.json",
+      "sha256": "e9e504636192cc4dc6181c33643a5cb85d627dfc8b3de0d281d8f3d9dfdfa16f"
+    },
+    {
+      "path": "serial-crash-journal/postgres_sigkill/001-baseline_captured.json",
+      "sha256": "d6696b49ddf326a07f2a0e37cc80d407e69b86ccc3d158c9af84a767d39317cb"
+    },
+    {
+      "path": "serial-crash-journal/postgres_sigkill/002-barrier_planned.json",
+      "sha256": "e5c852bf60ec0df60f4e40dd524b33837f4a809229a975c0262c9af679077305"
+    },
+    {
+      "path": "serial-crash-journal/postgres_sigkill/003-barrier_installed.json",
+      "sha256": "9b82e77090d1ef2619de3ec91007e4a3356752643cc5159d807a46d58a811947"
+    },
+    {
+      "path": "serial-crash-journal/postgres_sigkill/004-original_send_requested.json",
+      "sha256": "5c8df0d726d84674a15e891776dc033a32f64cafb35c7d8cab19c64f71b26a12"
+    },
+    {
+      "path": "serial-crash-journal/postgres_sigkill/005-writer_blocked.json",
+      "sha256": "86b134c1474f6445d142364dd641faee672161816a94ac8a71d80398a0469ce9"
+    },
+    {
+      "path": "serial-crash-journal/postgres_sigkill/006-fault_requested.json",
+      "sha256": "f66aae1983134b2800b5286826cd8b41da646a4ac13cfa6a1e65de5fcdc531d3"
+    },
+    {
+      "path": "serial-crash-journal/postgres_sigkill/007-interrupted_response_observed.json",
+      "sha256": "cefdd21bb598f3aedb11121c179a6fe4c5e8aa004c3f5f7e6a2633c4a80f526b"
+    },
+    {
+      "path": "serial-crash-journal/postgres_sigkill/008-fault_verified.json",
+      "sha256": "6649d1e832f06ae89c44939e263a63acd39bdeae3ffc2ecb1ac1ad0da3e4cb4e"
+    },
+    {
+      "path": "serial-crash-journal/postgres_sigkill/009-rollback_verified.json",
+      "sha256": "724ee82a1a1ab0ab2441d84cb46da36f8be8797f18c4a9ac805af72c2c067599"
+    },
+    {
+      "path": "serial-crash-journal/postgres_sigkill/010-barrier_removed.json",
+      "sha256": "0d5097fa6b6f736c767c43fdd47cf4279ef880b22163815d7edf8d2af59bb336"
+    },
+    {
+      "path": "serial-crash-journal/postgres_sigkill/011-original_absent.json",
+      "sha256": "cf38afda3f48d61a6cda1c5f2252041c435a9bb0e514fb82ee97e2965e32e3f1"
+    },
+    {
+      "path": "serial-crash-journal/postgres_sigkill/012-original_recovery_requested.json",
+      "sha256": "e0849c51d8aff2e0d01f7c935479f65fee4c1f04cf30498cd62ab8057e0cc073"
+    },
+    {
+      "path": "serial-crash-journal/postgres_sigkill/013-original_committed.json",
+      "sha256": "488285041bc861ff5bf9380af3966d97d5846707cd1f13f833ef359fe85dabe6"
+    },
+    {
+      "path": "serial-crash-journal/postgres_sigkill/014-exact_replay_verified.json",
+      "sha256": "7302a47568d3b1750414f0ba287e72fa73b8e799e7518d2c48f73f5f140dd687"
+    },
+    {
+      "path": "serial-crash-journal/postgres_sigkill/015-completed.json",
+      "sha256": "08cff9fecc53b9c808ec0ad50966a1a41c5fbd442d19aee2d9066e3e28c77245"
+    },
+    {
+      "path": "serial-size-profile-provenance.json",
+      "sha256": "c0dd73a5ae5108a419d8866fe807ac3a9deee689f40daf0f06e44286fcfde4bf"
+    },
+    {
+      "path": "serial-size-profile.json",
+      "sha256": "ab099e8dab3a0c259331ff0787d3e047a4a73d305a9406e2ec7110a2ec5c2aaa"
+    },
+    {
+      "path": "single-write-diagnostic.json",
+      "sha256": "f6a02a2b8a368ffbd7b2f554c56c6998e6b40dc601a0a774a83fc27a40e718b2"
+    },
+    {
+      "path": "software_checks.log",
+      "sha256": "715e7b59df5fa750ce6d186c3660fa7b8551c7c1c8bcafb7501cf7c2ffd35ca3"
+    },
+    {
+      "path": "source-inputs-before.json",
+      "sha256": "5d2ddb4b0e7c6b441b2cdfed35764a30ae5ee44d54bb206f0b90a4f930a1318b"
+    },
+    {
+      "path": "standalone-container.json",
+      "sha256": "1c6d8f6b2e1f18fd4a51c1d147346d40e4bbd03ebbd6f48599d9796b9bfd2681"
+    },
+    {
+      "path": "standalone-live-browser.log",
+      "sha256": "9d60c8c724c8d2aed53795a9036cc8ca8fcd00a0a6ab34b9b8ae8ed52048b121"
+    },
+    {
+      "path": "standalone-restore.json",
+      "sha256": "d120030c6190c133a15b73625447af0e9a6ea94c74f674f231200b4ad7217a77"
+    },
+    {
+      "path": "standalone-software-failed.log",
+      "sha256": "f763187c59d837c069cdc2dcf53ef9d9dba19238118443c4e8d76fc7d4407199"
+    },
+    {
+      "path": "standalone-software-inputs-v5.json",
+      "sha256": "1dda414df1344d7c5894cfade765eaa1ee047384137089de4c46f286d51efb73"
+    },
+    {
+      "path": "standard_workload.json",
+      "sha256": "ebc2b0522e0c8274672eeb63320020fcf679d0a3636195aa2fdfc536d6006bda"
+    },
+    {
+      "path": "standard_workload.log",
+      "sha256": "de3ca670ead9fe049b809894d476e0208e654a514cd84eed2e0464943255b976"
+    },
+    {
+      "path": "summary.json",
+      "sha256": "67ad27225e51333f1e2b856e3e7753bf5db00b32b73397d5d27ede020c4f6b54"
+    },
+    {
+      "path": "table-inventory-regressions.log",
+      "sha256": "da788987b3bc66ec408cab9bc24b77537c4d72026c8748727727a2219aa44e53"
+    },
+    {
+      "path": "tool-versions.json",
+      "sha256": "fb353776fcb627064e6ae049b0f4af0fa62007cc594ca9b5063098dd9946e8b5"
+    },
+    {
+      "path": "unapplied-grouping-trial.log",
+      "sha256": "666183ea42c3cd1fa35d0b18e719e3268d4855562b765063579690380eba8c25"
+    }
+  ]
+}

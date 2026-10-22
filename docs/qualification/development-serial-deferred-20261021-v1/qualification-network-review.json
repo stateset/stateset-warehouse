@@ -1,0 +1,12 @@
+{
+  "recorded_at": "2026-10-21T22:26:39.880418+00:00",
+  "scope": "read-only local qualification network admission review",
+  "selected_subnets": [
+    "10.246.211.0/24",
+    "10.246.212.0/24",
+    "10.246.213.0/24"
+  ],
+  "overlap_checked_against_docker_ipam_and_host_routes": true,
+  "existing_networks_unchanged": true,
+  "limit": "Review precedes allocation; Docker still enforces actual subnet availability at creation."
+}

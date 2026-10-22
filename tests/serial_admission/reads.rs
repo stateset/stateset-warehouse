@@ -51,6 +51,105 @@ fn sku() -> Vec<(&'static str, String)> {
     vec![("sku", "SERIAL".into())]
 }
 
+pub(super) async fn verify_large_original_pages(f: &Fixture, first: &str, units: i64) {
+    let app = app(f);
+    let facts = f.facts().await;
+    for (path, query, expected_total) in [
+        (
+            "/v1/serials",
+            vec![("sku", "SERIAL".into()), ("limit", "50".into())],
+            units,
+        ),
+        (
+            "/v1/serial-history",
+            vec![
+                ("sku", "SERIAL".into()),
+                ("serial", first.into()),
+                ("limit", "50".into()),
+            ],
+            1,
+        ),
+        (
+            "/v1/serial-observations",
+            vec![("sku", "SERIAL".into()), ("limit", "50".into())],
+            units,
+        ),
+    ] {
+        let (status, page) = get(&app, path, &query).await;
+        assert_eq!(status, 200, "{path}: {page}");
+        assert_eq!(page["page_source_ok"], true, "{path}: {page}");
+        assert_eq!(page["total_records"], expected_total);
+        assert_eq!(
+            page["items"]
+                .as_array()
+                .expect("bounded original records")
+                .len(),
+            expected_total.min(50) as usize
+        );
+    }
+    assert_eq!(
+        f.facts().await,
+        facts,
+        "large source reads changed evidence"
+    );
+}
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL"]
+async fn bounded_pages_validate_2048_identity_count_sources_at_normal_sql_timeouts() {
+    let f = Fixture::new().await;
+    f.catalog().await;
+    let labels: Vec<String> = (0..2048).map(|n| format!("Large-{n:04}")).collect();
+    let refs: Vec<&str> = labels.iter().map(String::as_str).collect();
+    count(&f, &refs, "Complete synthetic 2048-identity source").await;
+    verify_large_original_pages(&f, refs[0], 2048).await;
+    let report = f
+        .store
+        .reconciliation(&f.who.tenant, "wh-main")
+        .await
+        .expect("complete production reconciliation at the normal SQL deadline");
+    assert_eq!(report["ok"], true, "{report}");
+    assert_eq!(report["serials"]["source_ok"], true);
+    assert_eq!(report["serials"]["physical_ok"], true);
+
+    // Preparing an unchanged complete count must validate the shared original
+    // event once, while retaining every selected label and the normal timeout.
+    count(&f, &refs, "Unchanged complete 2048-identity recount").await;
+    let observations: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM wms_serial_observations WHERE tenant=$1 AND jsonb_array_length(serials)=2048",
+    )
+    .bind(&f.who.tenant)
+    .fetch_one(&f.store.pool)
+    .await
+    .expect("both complete original observations retained");
+    assert_eq!(observations, 2);
+
+    // Independently check every projection with the original standalone unit
+    // predicate. A single all-label SELECT repeats the entire original count
+    // source for each unit and exceeds the SQL deadline; bounded statements
+    // retain every label and the normal timeout in one read-only snapshot.
+    // The 512-unit and damaged-source tests retain the complete legacy event
+    // oracle; production reconciliation above also checks complete event sets.
+    let mut tx = f.store.pool.begin().await.expect("independent audit");
+    sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+        .execute(&mut *tx)
+        .await
+        .expect("one stable read-only audit snapshot");
+    for batch in labels.chunks(16) {
+        let (found, valid): (i64, bool) = sqlx::query_as(
+            "SELECT count(*),COALESCE(bool_and(wms_serial_unit_bound(u) AND wms_serial_place_references_valid(u.tenant,u.sku,u.lot,u.place)),false) FROM wms_serial_units u WHERE tenant=$1 AND sku='SERIAL' AND serial=ANY($2)",
+        )
+        .bind(&f.who.tenant)
+        .bind(batch)
+        .fetch_one(&mut *tx)
+        .await
+        .expect("bounded original unit predicates at the unchanged deadline");
+        assert_eq!(found, batch.len() as i64);
+        assert!(valid, "original source failed for {batch:?}");
+    }
+    tx.commit().await.expect("read-only audit complete");
+}
+
 #[tokio::test]
 #[ignore = "requires isolated PostgreSQL"]
 async fn current_and_lineage_reads_bind_literal_cursors_tenant_roles_and_mcp() {

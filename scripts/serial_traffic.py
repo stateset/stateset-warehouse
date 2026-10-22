@@ -19,6 +19,7 @@ import urllib.parse
 
 from resilience_probe import Probe, require
 from serial_traffic_proof import serial_proof
+import traffic_policy
 
 
 class NativeSerialProbe(Probe):
@@ -209,7 +210,11 @@ class NativeSerialProbe(Probe):
             self.args.serial_units,
             self.moves,
             self.args.bins,
+            pattern=self.args.serial_pattern,
         )
+        require(serials["distinct_timed_labels"] == sum(
+            self.phase_evidence["sustained_http"]["serial_distinct_labels_per_operator"]),
+            "Observed serial coverage differs from independent literal custody proof")
         before = self.fingerprints()
         for i, (actor, token) in enumerate(self.operators):
             own = next(s for s in self.accepted.values() if s["actor"] == actor)
@@ -270,12 +275,14 @@ class NativeSerialProbe(Probe):
                 "production_qualified": False,
                 "qualification": "development native serial HTTP traffic",
                 "binary_sha256": hashlib.sha256(self.binary.read_bytes()).hexdigest(),
+                "binary_path": str(self.binary),
                 "script_sha256": {
                     p: hashlib.sha256(Path(p).read_bytes()).hexdigest()
                     for p in [
                         "scripts/resilience_probe.py",
                         "scripts/serial_traffic.py",
                         "scripts/serial_traffic_proof.py",
+                        "scripts/traffic_policy.py",
                         "scripts/serial-traffic-native.sh",
                     ]
                 },
@@ -289,8 +296,8 @@ class NativeSerialProbe(Probe):
                 "phases": self.phase_evidence,
                 "independent_proof": proof,
                 "limits": [
-                    "Debug native binary, shared development host, loopback HTTP, one PostgreSQL primary; not production image, crash/failover, deployed, scanner-device, native receiver or facility qualification.",
-                    "Opening counts are disclosed synthetic complete observed sets; traffic moves one fixed literal identity per independent operator/SKU.",
+                    "Explicit native executable identified by SHA-256; optimization profile requires separate build provenance. Shared development host, loopback HTTP, one PostgreSQL primary; not production image, crash/failover, deployed, scanner-device, native receiver or facility qualification.",
+                    "Opening counts are synthetic complete observed sets; the recorded serial pattern and distinct-label counts describe the active population, not whole-facility capacity.",
                 ],
             }
             (self.root / "serial-traffic.json").write_text(
@@ -330,6 +337,8 @@ def main():
     parser.add_argument("--bins", type=int, default=8)
     parser.add_argument("--open-orders", type=int, default=8)
     parser.add_argument("--serial-units", type=int, default=16)
+    parser.add_argument("--serial-pattern", choices=("fixed", "rotating"), default="rotating")
+    traffic_policy.arguments(parser)
     args = parser.parse_args()
     args.review_mode = "resources"
     args.traffic_model = "independent-operators"

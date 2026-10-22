@@ -1,0 +1,32 @@
+{
+  "ok": true,
+  "scope": "Separate read-only literal custody proof after failed performance acceptance; not the skipped full HTTP final-proof stage",
+  "performance_acceptance_remains_failed": true,
+  "original_failure_report_sha256": "131268fc759a9e2715dfc2dbcd45335723b201997c49c8a88780fd5d3e5606c2",
+  "proof": {
+    "ok": true,
+    "literal_units": 2048,
+    "steps": 4553,
+    "observations": 2569,
+    "batches": 2569,
+    "global_heads": 32,
+    "timed_moves": 2505,
+    "serial_pattern": "rotating",
+    "distinct_timed_labels": 512,
+    "recovered_moves_outside_timed_interval": 0,
+    "recovery_request_ids": [],
+    "all_literal_custody_revisions_original_steps_observations_and_heads_match": true
+  },
+  "tables_sha256": {
+    "wms_events": "8b94f55a7ae294db7aeb6919a0e6c1e189e19a694da621e3135bd97eb79e0790",
+    "wms_serial_units": "963a7c8dc1f21deef177320b829b36a61a4be79ecfc55da30d63bf06a2960501",
+    "wms_serial_steps": "4ad1f9cfc53e36802e6142792c86f5578c27e9661faae2c439a80eaf9601d346",
+    "wms_serial_observations": "ce1ecbc68aa6796614711b82b4703038f478035b2bf77923693a35ab3ae2e3b8",
+    "wms_serial_heads": "461cddf997d36ea91de1cb2cf444dfc69ea98aea8813b52dba977f220fa1b10c",
+    "wms_serial_batches": "a84119e08d6f499f54109ca223138b82b98796d1afd89fe3151f79e1620a41b2"
+  },
+  "limits": [
+    "No HTTP final reconciliation or cross-actor replay checks in this separate diagnostic",
+    "Does not replace the unchanged failed 1000ms p95 acceptance result"
+  ]
+}

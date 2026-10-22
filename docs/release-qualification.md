@@ -1,12 +1,18 @@
 # One reproducible software release gate
 
-## Source-release candidate on hold — 2026-10-20
+## Deferred serial validation candidate on hold — 2026-10-21
 
-The [latest development gate](qualification/source-candidate-20261020/summary.json) on `93490ce2f09471c1b116575b460b77fc004f7e59` **failed**. Eight stages passed, including 331 Rust, 90 Python, 101 terminal checks with zero skips, 170 browser checks, populated archive restore and the production container. The untracked image profile passed with 7,868 moves and exact replays. The serial profile failed to regain API database readiness after the deliberate PostgreSQL crash; it did not complete sustained traffic or final independent proof. The final `stable_source_inputs` stage did not run. A [separate post-failure check](qualification/source-candidate-20261020/software-input-verification.json) verifies that all 444 software inputs remain unchanged, without converting the gate into a pass.
+The [latest frozen development gate](qualification/development-serial-deferred-20261021-v1/summary.json) passes eight stages, including **751 checks**, exact archive restoration across 50 tables and 32 migrations, and the hardened production container. The complete untracked image workload passes. Serial API/PostgreSQL crash recovery and the fixed 300-second rotating workload complete, but final serial API reconciliation exceeds its unchanged ten-second SQL deadline and returns 503. `image_resilience` fails; `stable_source_inputs` is not run.
+
+The [failure context](qualification/development-serial-deferred-20261021-v1/failure-context.json) verifies both retained serial crash journals and separately confirms all 468 software inputs are unchanged. The [supplement](qualification/development-serial-deferred-20261021-v1/verification.json) also preserves the failed native latency acceptance, exact source archive, earlier standalone browser failure and interrupted gate. The working tree has no asserted Git revision; no new version, package or image publication is claimed. Final reconciliation, the native p95 target, deployed integrations and physical acceptance remain open.
+
+## Previous source-release candidate on hold — 2026-10-20
+
+The [dated development gate](qualification/source-candidate-20261020/summary.json) on `93490ce2f09471c1b116575b460b77fc004f7e59` **failed**. Eight stages passed, including 331 Rust, 90 Python, 101 terminal checks with zero skips, 170 browser checks, populated archive restore and the production container. The untracked image profile passed with 7,868 moves and exact replays. The serial profile failed to regain API database readiness after the deliberate PostgreSQL crash; it did not complete sustained traffic or final independent proof. The final `stable_source_inputs` stage did not run. A [separate post-failure check](qualification/source-candidate-20261020/software-input-verification.json) verifies that all 444 software inputs remain unchanged, without converting the gate into a pass.
 
 The [readiness review](open-source-readiness-20261020.md) records source/history scanning, original dependency notices, fresh-checkout builds and six retained failed attempts. Severe host I/O/memory stalls were observed around the last failures; sole causation has not been established. Repeat the complete gate with sufficient isolated runner resources and obtain actual hosted execution before treating the candidate as qualified. The repository remains private, existing version tags retain their original meanings, and no packages or images have been published.
 
-## Current 0.2.0 qualification — 2026-10-19
+## Dated 0.2.0 qualification — 2026-10-19
 
 The [0.2.0 complete gate](qualification/release-20261019-icommerce-tui-v1/summary.json) and [independent audit](qualification/release-20261019-icommerce-tui-v1/independent-audit.json) pass on frozen source44, including 331 Rust, 74 Python, 13 terminal and 170 browser checks. Both full 300-second image profiles, final serial reconciliation, populated archive restore and four API/PostgreSQL crash recoveries pass. Durable original-request checkpoints precede each fault. Earlier failed attempts remain retained. Deployed identity/native/MCP-client and physical facility acceptance remain separate.
 
@@ -52,6 +58,10 @@ If an API fails the existing 60-second database-readiness deadline, the resilien
 The [development host-check evidence](qualification/host-preflight-20261020-v1/verification.json) records the regression checks and actual low-storage rejection. It does not qualify the serial workload or change the six earlier failed runs.
 
 ## Required stages
+
+The real browser stage delegates to `scripts/live-browser-checks.sh`. It can also be run with `bash scripts/local-postgres.sh bash scripts/live-browser-checks.sh` for development verification without Docker. It builds the API/dashboard, checks an explicit test database identity, reserves distinct loopback port candidates, starts only owned API processes and retains private evidence. Its success is not a substitute for the complete release gate.
+
+Serial image traffic defaults to rotating labels/lots and the complete gate requires every operator to exercise its full configured population. Observed coverage must match independent literal custody reconstruction. Optional workload p95/throughput limits must be set before the run; see [workload policy](performance.md#development-qualification-changes--2026-10-21).
 
 | Stage | Executed proof |
 |---|---|

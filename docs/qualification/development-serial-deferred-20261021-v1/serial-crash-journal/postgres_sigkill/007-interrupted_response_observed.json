@@ -1,0 +1,8 @@
+{
+  "facts": {
+    "response": {
+      "http_status": 503
+    }
+  },
+  "stage": "interrupted_response_observed"
+}

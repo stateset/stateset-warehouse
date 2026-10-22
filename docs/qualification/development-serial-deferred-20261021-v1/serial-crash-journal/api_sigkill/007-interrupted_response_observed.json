@@ -1,0 +1,8 @@
+{
+  "facts": {
+    "response": {
+      "transport_error": "RemoteDisconnected"
+    }
+  },
+  "stage": "interrupted_response_observed"
+}

@@ -78,7 +78,10 @@ for wms_api in "$wms_api_a" "$wms_api_b"; do
     --env "WMS_API_KEYS_JSON=$(cat "$wms_root/credentials.json")" \
     "$wms_image" >> "$wms_root/api-containers.ids"
 done
-python3 scripts/resilience_probe.py --artifacts "$wms_root" --run "$wms_run" \
+wms_traffic_options=()
+if [[ -n "${WMS_RESILIENCE_MAX_P95_MS:-}" ]]; then wms_traffic_options+=(--max-action-p95-ms "$WMS_RESILIENCE_MAX_P95_MS"); fi
+if [[ -n "${WMS_RESILIENCE_MIN_MOVES_PER_SECOND:-}" ]]; then wms_traffic_options+=(--min-moves-per-second "$WMS_RESILIENCE_MIN_MOVES_PER_SECOND"); fi
+python3 scripts/resilience_probe.py --artifacts "$wms_root" --run "$wms_run" "${wms_traffic_options[@]}" \
   --postgres "$wms_pg" --api "$wms_api_a" --api "$wms_api_b" \
   --seconds "${WMS_RESILIENCE_SECONDS:-60}" \
   --review-mode "${WMS_RESILIENCE_REVIEW_MODE:-resources}" \
@@ -86,4 +89,6 @@ python3 scripts/resilience_probe.py --artifacts "$wms_root" --run "$wms_run" \
   --products "${WMS_RESILIENCE_PRODUCTS:-100}" \
   --open-orders "${WMS_RESILIENCE_OPEN_ORDERS:-100}" \
   --lots "${WMS_RESILIENCE_LOTS:-2}" --bins "${WMS_RESILIENCE_BINS:-20}" \
-  --serial-units "${WMS_RESILIENCE_SERIAL_UNITS:-0}"
+  --serial-units "${WMS_RESILIENCE_SERIAL_UNITS:-0}" \
+  --serial-pattern "${WMS_RESILIENCE_SERIAL_PATTERN:-rotating}" \
+  --min-serial-coverage "${WMS_RESILIENCE_MIN_SERIAL_COVERAGE:-1}"

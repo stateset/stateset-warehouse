@@ -91,9 +91,49 @@ impl Fixture {
             .expect("complete original source reconciliation");
         assert_eq!(report["ok"], true, "{report}");
         assert_eq!(report["serials"]["source_ok"], true);
-        let ok: bool=sqlx::query_scalar("SELECT wms_serial_scope_current_valid($1,'wh-main') AND wms_serial_scope_transit_valid($1,'wh-main') AND NOT EXISTS(SELECT 1 FROM wms_serial_heads h WHERE tenant=$1 AND NOT wms_serial_head_bound(h)) AND NOT EXISTS(SELECT 1 FROM wms_serial_units u WHERE tenant=$1 AND NOT wms_serial_unit_bound(u)) AND NOT EXISTS(SELECT 1 FROM wms_events e WHERE tenant=$1 AND NOT wms_serial_event_valid(e.tenant,e.warehouse_id,e.id))")
-            .bind(&self.who.tenant).fetch_one(&self.store.pool).await.expect("independent source, identity, history and physical equations");
+        // The legacy scalar oracle repeats a complete observed input set for
+        // each unit. Audit every row in bounded statements under one snapshot,
+        // retaining the product timeout and the unchanged original predicates.
+        let mut tx = self.store.pool.begin().await.expect("independent audit");
+        sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+            .execute(&mut *tx)
+            .await
+            .expect("one original-source snapshot");
+        let ok: bool=sqlx::query_scalar("SELECT wms_serial_scope_current_valid($1,'wh-main') AND wms_serial_scope_transit_valid($1,'wh-main') AND NOT EXISTS(SELECT 1 FROM wms_serial_heads h WHERE tenant=$1 AND NOT wms_serial_head_bound(h))")
+            .bind(&self.who.tenant).fetch_one(&mut *tx).await.expect("independent review and physical equations");
         assert!(ok);
+        let total: i64 =
+            sqlx::query_scalar("SELECT count(*) FROM wms_serial_units WHERE tenant=$1")
+                .bind(&self.who.tenant)
+                .fetch_one(&mut *tx)
+                .await
+                .expect("complete identity population");
+        let mut checked = 0;
+        while checked < total {
+            let (found, valid): (i64, bool) = sqlx::query_as("SELECT count(*),COALESCE(bool_and(wms_serial_unit_bound(u::wms_serial_units)),false) FROM (SELECT * FROM wms_serial_units WHERE tenant=$1 ORDER BY sku,serial LIMIT 16 OFFSET $2) u")
+                .bind(&self.who.tenant).bind(checked).fetch_one(&mut *tx).await.expect("every original unit source");
+            assert!(found > 0 && valid);
+            checked += found;
+        }
+        assert_eq!(checked, total);
+        let events: Vec<(String, String)> = sqlx::query_as(
+            "SELECT warehouse_id,id FROM wms_events WHERE tenant=$1 ORDER BY warehouse_id,version",
+        )
+        .bind(&self.who.tenant)
+        .fetch_all(&mut *tx)
+        .await
+        .expect("every original event");
+        for (warehouse, event) in events {
+            let valid: bool = sqlx::query_scalar("SELECT wms_serial_event_valid($1,$2,$3)")
+                .bind(&self.who.tenant)
+                .bind(warehouse)
+                .bind(event)
+                .fetch_one(&mut *tx)
+                .await
+                .expect("complete standalone original event proof");
+            assert!(valid);
+        }
+        tx.commit().await.expect("read-only source audit complete");
     }
 }
 fn observed(target: &[&str], serials: &[&str]) -> Vec<Input> {

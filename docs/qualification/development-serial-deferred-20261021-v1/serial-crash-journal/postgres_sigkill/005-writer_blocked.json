@@ -1,0 +1,13 @@
+{
+  "facts": {
+    "evidence": {
+      "blocker_pid": 4547,
+      "lock_classid": "180121",
+      "lock_objid": "153729044",
+      "wait_event": "advisory",
+      "writer_application": "wms-serial-after-write-1792626815-c83833b6",
+      "writer_pid": 85
+    }
+  },
+  "stage": "writer_blocked"
+}

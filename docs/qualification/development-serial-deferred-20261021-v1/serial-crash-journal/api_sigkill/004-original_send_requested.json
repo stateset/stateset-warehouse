@@ -1,0 +1,6 @@
+{
+  "facts": {
+    "replica": 0
+  },
+  "stage": "original_send_requested"
+}

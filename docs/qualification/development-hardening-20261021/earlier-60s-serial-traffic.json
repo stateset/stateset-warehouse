@@ -1,0 +1,364 @@
+{
+  "ok": true,
+  "synthetic": true,
+  "production_qualified": false,
+  "qualification": "development native serial HTTP traffic",
+  "binary_sha256": "99de394db40ddffb06317d40621e1c60134f505c5c7234391abdb16104abb843",
+  "script_sha256": {
+    "scripts/resilience_probe.py": "87f45311494e5e62fab95decf6e03a89a8aa1a3fdfd6b33ff0a391ebbe069456",
+    "scripts/serial_traffic.py": "225e38fdd591e12e88c5e39edc217e3c579ac2d2ac4cabae8f7ecdb89117a88f",
+    "scripts/serial_traffic_proof.py": "fbf40276356a5992fd3c15a78d8ec81bc8b1913b612b1ff42061784583b1485e",
+    "scripts/serial-traffic-native.sh": "7b68d905dd844ccc53824de578ab985480957ab644838dbd9b0fe097181674bd"
+  },
+  "cycle_samples": {
+    "path": "cycle-samples.jsonl",
+    "sha256": "02b897dd2307599b6be1763ff8d8676a2aff009860728467e996736fc85b1040"
+  },
+  "postgres_version": "12.22 (Ubuntu 12.22-0ubuntu0.20.04.4)",
+  "phases": {
+    "seed": {
+      "method": "authenticated actual HTTP commands only; opening counts are disclosed synthetic fixtures",
+      "seconds": 4.183,
+      "operational_products": 8,
+      "additional_recovery_product": 1,
+      "storage_bins": 8,
+      "lots_per_product": 2,
+      "opening_bin_lot_balances": 16,
+      "opening_each_per_balance": 16,
+      "serial_units_per_bin_lot": 16,
+      "open_orders": 8,
+      "allocated_orders": 4,
+      "commands_before_recovery_lifecycle": 46,
+      "expected_setup_commands": 46,
+      "observed_setup_commands": 46,
+      "independent_setup_command_count_matches": true,
+      "excluded_from_sustained_timing": true
+    },
+    "sustained_http": {
+      "requested_seconds": 60,
+      "review_mode": "resources",
+      "traffic_model": "independent-operators",
+      "client_schedule": "independent continuous client loops without think time or an operator barrier",
+      "serial_units_per_bin_lot": 16,
+      "serial_pattern": "rotating",
+      "serial_distinct_labels_per_operator": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "serial_current_source_reads": 806,
+      "serial_current_source_latency": {
+        "samples": 806,
+        "p50_ms": 15.438,
+        "p95_ms": 24.546,
+        "p99_ms": 32.198,
+        "max_ms": 89.085
+      },
+      "measurement_limit": "Authenticated loopback HTTP and JSON processing; Python clients open HTTP connections per request; browser rendering, human timing and physical scanner input are excluded",
+      "elapsed_seconds": 60.234,
+      "replicas": 2,
+      "distinct_operator_identities": 4,
+      "rounds": null,
+      "committed_moves": 806,
+      "exact_cross_replica_replays": 806,
+      "definite_stale_conflicts": 0,
+      "unexpected_errors": 0,
+      "committed_moves_per_second": 13.381,
+      "action_latency": {
+        "samples": 806,
+        "p50_ms": 288.626,
+        "p95_ms": 364.897,
+        "p99_ms": 422.499,
+        "max_ms": 974.575
+      },
+      "action_latency_scope": "command submission from the client's cached review through committed write and its own validated post-commit full warehouse refresh and, when enabled, exact literal serial source/custody review; initial review and subsequent exact replay excluded",
+      "throughput_scope": "all completed client cycles, including initial reviews, physical commands, post-commit refreshes when enabled, conflicts and exact cross-replica replays; replay is not another physical move",
+      "http_write_attempt_latency": {
+        "samples": 806,
+        "p50_ms": 244.088,
+        "p95_ms": 309.855,
+        "p99_ms": 372.589,
+        "max_ms": 923.136
+      },
+      "frozen_replay_latency": {
+        "samples": 806,
+        "p50_ms": 2.939,
+        "p95_ms": 4.832,
+        "p99_ms": 9.53,
+        "max_ms": 17.424
+      },
+      "operational_snapshot_latency": {
+        "samples": 810,
+        "p50_ms": 27.454,
+        "p95_ms": 44.599,
+        "p99_ms": 56.212,
+        "max_ms": 67.755
+      },
+      "shared_round_snapshot_reads": 0,
+      "independent_post_commit_stock_visibility_verified": true,
+      "snapshot_coverage": "exact configured catalog SKU set and every seeded order ID/state, with completed history permitted",
+      "operators": [
+        {
+          "actor": "operator:serial-0",
+          "commits": 202,
+          "stale_conflicts": 0,
+          "exact_replays": 202,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 202,
+          "snapshot_reads": 203
+        },
+        {
+          "actor": "operator:serial-1",
+          "commits": 201,
+          "stale_conflicts": 0,
+          "exact_replays": 201,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 201,
+          "snapshot_reads": 202
+        },
+        {
+          "actor": "operator:serial-2",
+          "commits": 201,
+          "stale_conflicts": 0,
+          "exact_replays": 201,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 201,
+          "snapshot_reads": 202
+        },
+        {
+          "actor": "operator:serial-3",
+          "commits": 202,
+          "stale_conflicts": 0,
+          "exact_replays": 202,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 202,
+          "snapshot_reads": 203
+        }
+      ]
+    }
+  },
+  "independent_proof": {
+    "ok": true,
+    "commands": 852,
+    "physical_and_reserved_equations_recomputed": true,
+    "atomic_original_actors_results_commands_verified": true,
+    "cross_actor_and_tenant_isolation": true,
+    "complete_serial_proof": {
+      "ok": true,
+      "literal_units": 256,
+      "steps": 1062,
+      "observations": 822,
+      "batches": 822,
+      "global_heads": 8,
+      "timed_moves": 806,
+      "serial_pattern": "rotating",
+      "distinct_timed_labels": 128,
+      "recovered_moves_outside_timed_interval": 0,
+      "recovery_request_ids": [],
+      "all_literal_custody_revisions_original_steps_observations_and_heads_match": true
+    },
+    "final_table_fingerprints": {
+      "wms_activity": {
+        "rows": 852,
+        "sha256": "8b52746bda7bd5bc30209f4999b7438a4255b4407b3718427df3993cb13b8fb3"
+      },
+      "wms_admin_audit": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_allocations": {
+        "rows": 4,
+        "sha256": "261e72b148c9bfdf3dc83e5e3f92ea9d810523e80618719f0eae56e6dde4d1bb"
+      },
+      "wms_commands": {
+        "rows": 852,
+        "sha256": "f23c9f23e041cf13ae7ccc6a1ff7b9e64b8a9de1ee674f6f5133730678b4e2fb"
+      },
+      "wms_delivery_attempts": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_events": {
+        "rows": 852,
+        "sha256": "b7c0638e05c53cf17de604a2d05707ef85138483702cc5c1ce5d0e0608213342"
+      },
+      "wms_exceptions": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_locations": {
+        "rows": 12,
+        "sha256": "1c6b2d5d0af3b69b1f473b88d74cf9d94c971c74f7bc901396d2511cc423bfd3"
+      },
+      "wms_lot_changes": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_lot_decisions": {
+        "rows": 4,
+        "sha256": "919ccc4b360b236fd01ee52321fa2b926ec5e1434b6d42a45950b9fb4d444fb1"
+      },
+      "wms_lot_enforcement": {
+        "rows": 2,
+        "sha256": "93913cea8505cc1e249446971f145ffb2faa290f250977b7c09f997daae0ce73"
+      },
+      "wms_movements": {
+        "rows": 822,
+        "sha256": "5889c6880267cf7a639c610546b8ea668b1ae1a2952dc8529facf7edc3cdbd38"
+      },
+      "wms_native_attempts": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_native_requests": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_order_cancellations": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_order_cancelled_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_order_lines": {
+        "rows": 8,
+        "sha256": "e4ad9ef9aa0ef34797bf9e3339ace80660381506875c914563357e2cd0760874"
+      },
+      "wms_orders": {
+        "rows": 8,
+        "sha256": "b644bbd0f3fdf296aaf268d14ea84f7c8e357300540266fa2e1f5fbc381204fb"
+      },
+      "wms_outbox": {
+        "rows": 852,
+        "sha256": "b700db6580289564f9ab07cbec077a817478aa5adcb703a58c5ef661a527f7ca"
+      },
+      "wms_package_closures": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_package_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_packages": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_products": {
+        "rows": 9,
+        "sha256": "3db070d69f511ba64d7cf9b53ec64d66aa37ed41dbb360fee23434e6dd01818d"
+      },
+      "wms_receipt_cancellations": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_receipt_cancelled_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_receipt_evidence": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_receipt_lines": {
+        "rows": 2,
+        "sha256": "32a7f3910ca414134f3f47ccb5aecd6fa074435813f1dcbd8e6edfcd03a5a874"
+      },
+      "wms_receipts": {
+        "rows": 1,
+        "sha256": "435661112a9c412b5ddf9593e682134de9fda13da761a0feb633520a486c3d62"
+      },
+      "wms_resource_versions": {
+        "rows": 62,
+        "sha256": "5226ebdc6660a270daaf6b914aee52d65c5a92366674bd83b3b0b45fe35a4310"
+      },
+      "wms_return_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_schema_migrations": {
+        "rows": 30,
+        "sha256": "bfbbd374c5a50257f1ecba973eed9365956f28648ae4b09ae51dd1eb41faabcf"
+      },
+      "wms_serial_batches": {
+        "rows": 822,
+        "sha256": "e4c35975c4b440c91acf0c5751bca65d1314e02cf7033e6857ff03317022d9f3"
+      },
+      "wms_serial_heads": {
+        "rows": 8,
+        "sha256": "c94072a668df621d061b321fa294ccf3d17f2b4e20d33bc3d706caef14433a6e"
+      },
+      "wms_serial_modes": {
+        "rows": 9,
+        "sha256": "6771dfa5ce95c722f2c2e8c5d33645c41959a32f997325fbc7fc3d91534babfb"
+      },
+      "wms_serial_observations": {
+        "rows": 822,
+        "sha256": "720f4b431aca2ec19e22b09dac38245b326ee0b1c3637f65f6aeeb4dbba15639"
+      },
+      "wms_serial_steps": {
+        "rows": 1062,
+        "sha256": "7254a7dccace5b03903f00f615ff070e42f382cce5a1e6d988124f8ff1b7135d"
+      },
+      "wms_serial_units": {
+        "rows": 256,
+        "sha256": "ae967a0fc206a928fa8c6f9d496c0f0c714e79074a518c20ba9c90feee98466d"
+      },
+      "wms_shipment_evidence": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_split_orders": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_stock": {
+        "rows": 24,
+        "sha256": "993628e4ba909e6f3436c5b7ff9c91c4e234297f077ef4c4de09d51a279b000e"
+      },
+      "wms_stock_ledger": {
+        "rows": 24,
+        "sha256": "ef774038bbd54ac2ae713bac74eb364108404bfda63379cf1f30385f7feb41aa"
+      },
+      "wms_stock_reserved": {
+        "rows": 8,
+        "sha256": "b2ab93518aa6f0d671935e027e36b90959c1e1c54c96d7936c7913d4a0cad2e7"
+      },
+      "wms_transfer_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_transfer_loss_records": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_transfers": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_unit_observations": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_unit_pack_changes": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_warehouses": {
+        "rows": 2,
+        "sha256": "f48285d3492168590e7d93345912e0bcffa6c6bfb1b48021906b23553109c285"
+      },
+      "wms_workspaces": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      }
+    }
+  },
+  "limits": [
+    "Debug native binary, shared development host, loopback HTTP, one PostgreSQL primary; not production image, crash/failover, deployed, scanner-device, native receiver or facility qualification.",
+    "Opening counts are synthetic complete observed sets; the recorded serial pattern and distinct-label counts describe the active population, not whole-facility capacity."
+  ]
+}

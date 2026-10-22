@@ -100,6 +100,41 @@ async fn schema() -> Transaction<'static, Postgres> {
     .execute(&mut *tx)
     .await
     .expect("statement-local serial source sets");
+    let predecessor = include_str!("../migrations/029_serial_scope_source_sets.sql");
+    let start = predecessor
+        .find("CREATE OR REPLACE FUNCTION wms_serial_scope_current_valid")
+        .expect("immutable v29 scope");
+    let end = start + predecessor[start..].find("$$;").expect("scope body") + 3;
+    sqlx::raw_sql(&predecessor[start..end].replacen(
+        "wms_serial_scope_current_valid(",
+        "wms_serial_scope_v29_oracle(",
+        1,
+    ))
+    .execute(&mut *tx)
+    .await
+    .expect("independent predecessor in private schema");
+    sqlx::raw_sql(include_str!(
+        "../migrations/030_serial_scope_custody_counts.sql"
+    ))
+    .execute(&mut *tx)
+    .await
+    .expect("complete serial custody multiplicities");
+    sqlx::raw_sql(include_str!(
+        "../migrations/031_serial_ascii_validation.sql"
+    ))
+    .execute(&mut *tx)
+    .await
+    .expect("literal ASCII subset with original Unicode fallback");
+    sqlx::raw_sql(include_str!(
+        "../migrations/032_serial_deferred_check_sets.sql"
+    ))
+    .execute(&mut *tx)
+    .await
+    .expect("complete deferred source and custody check sets");
+    sqlx::raw_sql(include_str!("../migrations/033_serial_target_dispatch.sql"))
+        .execute(&mut *tx)
+        .await
+        .expect("exact direct and general serial command targets");
     tx
 }
 
@@ -249,6 +284,92 @@ async fn raw_unit_event(
 
 async fn raw_count_observation(c: &mut PgConnection, version: i64, serials: &[&str]) {
     raw_count_fixture(c, version, serials, &[], true, true).await;
+}
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL"]
+async fn deferred_check_keys_deduplicate_rearm_and_cannot_be_erased_by_raw_dml() {
+    async fn pending(c: &mut PgConnection) -> i64 {
+        sqlx::query_scalar("SELECT count(*) FROM wms_serial_pending_checks")
+            .fetch_one(c)
+            .await
+            .expect("actual pending validation keys")
+    }
+    let mut tx = schema().await;
+    controlled_catalog(&mut tx).await;
+    assert_eq!(pending(&mut tx).await, 0);
+    raw_unit_event(&mut tx, 1, None, "A", None).await;
+    sqlx::raw_sql("UPDATE wms_stock SET on_hand=on_hand; UPDATE wms_stock SET on_hand=on_hand")
+        .execute(&mut *tx)
+        .await
+        .expect("repeated physical scope mutations");
+    assert_eq!(
+        pending(&mut tx).await,
+        4,
+        "one event, one physical scope and original mode selections"
+    );
+    for statement in [
+        "INSERT INTO wms_serial_pending_checks VALUES('forged','scope','main')",
+        "DELETE FROM wms_serial_pending_checks",
+        "UPDATE wms_serial_pending_checks SET key=key",
+    ] {
+        rejected(&mut tx, statement, "23514").await;
+        assert_eq!(
+            pending(&mut tx).await,
+            4,
+            "DML altered pending source checks"
+        );
+    }
+    // PostgreSQL rejects TRUNCATE with pending constraint events before it
+    // reaches our statement trigger. Neither rejection may discard any key.
+    rejected(&mut tx, "TRUNCATE wms_serial_pending_checks", "55006").await;
+    assert_eq!(pending(&mut tx).await, 4);
+    sqlx::raw_sql("SET CONSTRAINTS ALL IMMEDIATE; SET CONSTRAINTS ALL DEFERRED")
+        .execute(&mut *tx)
+        .await
+        .expect("complete original event and custody validation");
+    assert_eq!(pending(&mut tx).await, 0);
+    rejected(&mut tx, "TRUNCATE wms_serial_pending_checks", "23514").await;
+    raw_unit_event(&mut tx, 2, Some("A"), "B", None).await;
+    assert_eq!(
+        pending(&mut tx).await,
+        4,
+        "work after validation must enqueue again"
+    );
+    raw_unit_event(&mut tx, 3, Some("B"), "A", None).await;
+    assert_eq!(
+        pending(&mut tx).await,
+        5,
+        "two original events share one final scope and mode selections"
+    );
+    sqlx::raw_sql("SET CONSTRAINTS ALL IMMEDIATE; SET CONSTRAINTS ALL DEFERRED")
+        .execute(&mut *tx)
+        .await
+        .expect("earlier events retain later current projections in the same transaction");
+    assert_eq!(pending(&mut tx).await, 0);
+    rejected(
+        &mut tx,
+        "UPDATE wms_stock SET on_hand=on_hand+1 WHERE location='A'",
+        "23514",
+    )
+    .await;
+    assert_eq!(
+        pending(&mut tx).await,
+        0,
+        "savepoint rollback removed only its new keys"
+    );
+    sqlx::query("SET CONSTRAINTS ALL IMMEDIATE")
+        .execute(&mut *tx)
+        .await
+        .expect("immediate constraint mode");
+    rejected(
+        &mut tx,
+        "UPDATE wms_stock SET on_hand=on_hand+1 WHERE location='A'",
+        "23514",
+    )
+    .await;
+    assert_eq!(pending(&mut tx).await, 0);
+    tx.rollback().await.expect("remove owned raw fixture");
 }
 
 // Explicit raw sources let forensic cases omit a projection/head write while
@@ -658,7 +779,7 @@ async fn serial_event_cannot_omit_missing_units_or_relabel_an_unchanged_count_wi
             error.as_database_error().and_then(|e| e.code()).as_deref(),
             Some("23514")
         );
-        assert!(error.to_string().contains("Original serial event"));
+        assert!(error.to_string().contains("Original serial source event"));
         sqlx::query("ROLLBACK TO SAVEPOINT omitted_serial_effect")
             .execute(&mut *tx)
             .await

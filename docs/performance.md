@@ -1,5 +1,49 @@
 # Workload qualification
 
+## Deferred serial validation candidate — 2026-10-21
+
+Migrations 031–032 and the bounded read changes preserve complete original-source checks while sharing repeated work. Printable ASCII identifiers take an equivalent scalar validation path; other text retains the original Unicode rules. Transaction-owned dirty keys deduplicate complete event, custody and mode checks. They contain no saved validity result, cannot be altered by ordinary DML, rearm after an explicit constraint flush, and must be empty after commit. Selected units share validation of their actual original events. Current and observation pages select bounded records before decoding event metadata; reconciliation passes only the exact event fields used by each effect predicate.
+
+The frozen debug diagnostic passes complete 512- and 2,048-label counts, original replays and read proofs at unchanged SQL deadlines. The 2,048-label count took **12.315 seconds**. Its two initial current-page reads took **5.420–5.612 seconds**, observation-page reads **3.468–4.857 seconds**, history reads **1.102–1.279 seconds**, and full reconciliations **2.396–2.782 seconds**. The browser contract suite was running concurrently on this shared host. These measurements do not establish a controlled speedup over the earlier 148.55-second count or consistently interactive bulk-count performance.
+
+The separate optimized native acceptance run retained the predeclared 300-second window, 32 products, two lots, 2,048 total labels, 16 bins, 32 orders, eight operators and two API replicas. It completed **2,505 moves and exact replays**, **8.329 moves/s**, with zero unexpected errors or conflicts. Every operator exercised all 64 eligible labels: **512 active labels** overall. It **failed** the unchanged **1,000ms action-p95 limit**, measuring **1,242.537ms**; write-attempt p95 was **1,207.636ms**, operational refresh p95 **27.398ms**, and serial-source review p95 **29.414ms**. The five-moves/s minimum and full-coverage requirements passed. No other build or test suite from this task ran during its timed window; the host remained shared and uncontrolled.
+
+Performance rejection stopped that run before its full final HTTP proof. A separate read-only audit of the retained database subsequently verified all **2,048 literal identities**, **4,553 steps**, **2,569 observations/batches**, and **32 global heads** against the independent model. That narrower audit does not replace the skipped HTTP reconciliation and cross-actor replay checks, or convert the failed latency acceptance into a pass.
+
+The [complete frozen release gate failed](qualification/development-serial-deferred-20261021-v1/summary.json) at final serial API reconciliation. Its untracked image workload passes **4,672 moves/replays**, **15.549 moves/s**, **648.940ms action p95**, and complete independent proof. Serial setup takes **493.5 seconds** for 500 products, 100 bins, two lots, 500 orders and 16,000 labels. Both serial crash recoveries complete; the fixed 300-second rotating workload logs at least **1,307 moves** with matching replays and no conflicts. Final reconciliation then hits the unchanged ten-second SQL limit in `wms_serial_at_version`, returning 503. No final serial metrics/coverage report or complete independent literal proof is produced. See [failure details](qualification/development-serial-deferred-20261021-v1/failure-context.json). No optional image latency/throughput limits were set; those profiles cannot qualify the separate native target. The shared host remains uncontrolled, and this timeout does not establish its sole cause.
+
+To reproduce the optimized native profile with the same acceptance limits, use a fresh evidence directory and record the build's source inputs and compiler version alongside the binary SHA-256 emitted by the harness:
+
+```bash
+CARGO_INCREMENTAL=0 cargo build --locked --release --bin stateset-warehouse
+WMS_SERIAL_TRAFFIC_BINARY="$PWD/target/release/stateset-warehouse" \
+WMS_SERIAL_TRAFFIC_SECONDS=300 \
+WMS_SERIAL_TRAFFIC_PRODUCTS=32 WMS_SERIAL_TRAFFIC_BINS=16 \
+WMS_SERIAL_TRAFFIC_OPEN_ORDERS=32 WMS_SERIAL_TRAFFIC_LOTS=2 \
+WMS_SERIAL_TRAFFIC_UNITS=32 WMS_SERIAL_TRAFFIC_CLIENTS=8 \
+WMS_SERIAL_TRAFFIC_PATTERN=rotating WMS_SERIAL_TRAFFIC_MIN_COVERAGE=1 \
+WMS_SERIAL_TRAFFIC_MAX_P95_MS=1000 WMS_SERIAL_TRAFFIC_MIN_MOVES_PER_SECOND=5 \
+WMS_KEEP_TEST_DB=1 bash scripts/local-postgres.sh bash scripts/serial-traffic-native.sh
+```
+
+Unset `WMS_SERIAL_TRAFFIC_BINARY` retains the debug-binary default. A native executable's path and digest alone do not establish its optimization profile; retain actual build provenance. This native profile does not qualify the production image, crash recovery, a deployed integration or a physical facility.
+
+## Development qualification changes — 2026-10-21
+
+Serial traffic now defaults to `rotating`: each operator moves one label out and back, then advances through all labels and lots for its assigned SKU. Exact replays keep the same label, lot, request and actor. Reports count labels actually reviewed after successful saves; an independent closed-form custody model checks every original label's final position, revision and immutable step chain, including crash-recovery labels later reused by timed traffic. The active population is `operators × lots × serial units`, which can be smaller than the total seeded population.
+
+The complete release gate requires rotating traffic and 100% of that configured label population **for every operator**. Insufficient coverage fails; the harness does not extend the requested interval or reduce the required population after seeing a result. Standalone diagnostics can explicitly select `fixed` to reproduce the older hot-label profile. Historical evidence below retains its original scope.
+
+Optional predeclared limits are `WMS_RESILIENCE_MAX_P95_MS` and `WMS_RESILIENCE_MIN_MOVES_PER_SECOND` for image runs, or `WMS_SERIAL_TRAFFIC_MAX_P95_MS` and `WMS_SERIAL_TRAFFIC_MIN_MOVES_PER_SECOND` for native diagnostics. They apply to the documented save-through-validated-refresh p95 and completed-cycle throughput. Nonfinite/nonpositive limits are rejected. Unset limits establish no facility SLO. Standalone minimum serial coverage defaults to 1 and is configurable through `WMS_RESILIENCE_MIN_SERIAL_COVERAGE` or `WMS_SERIAL_TRAFFIC_MIN_COVERAGE`; the complete gate fixes it at 1.
+
+Migration 030 shares the complete reference-class counts across physical, staged and package equations, retaining byte-exact metadata distinctions and all original reference checks. `examples/serial_profile.rs` compares the immutable v29 scope predicate against the current predicate in seven interleaved original/current/original samples on identical rows. These read-only costs do not establish write-throughput improvements. Selected serial pages now use the existing complete snapshot-local read validator, retaining current-source, original-event and historical-count checks.
+
+The development diagnostic retains the original 2,048-identity page timeout and a subsequent successful run at unchanged SQL deadlines. In the successful run, two current-page reads took 1.84–2.07 seconds, unit-history reads 0.41–0.50 seconds, and observation-page reads 8.61–8.67 seconds. Creating that complete count took 148.55 seconds. Large complete counts and observation pages therefore remain capacity limits; passing their correctness checks does not establish interactive bulk-count performance. These are synthetic measurements on an uncontrolled shared host.
+
+The 300-second native run with 32 SKUs, two lots, 2,048 total labels, eight operators and two API replicas completed 2,172 moves/replays at 7.209 moves/s. Every operator exercised all 64 eligible labels (512 active labels overall), with zero reported errors/conflicts. It **failed** the predeclared 1,000ms action-p95 limit: measured p95 was 1,408.480ms. Write-attempt p95 was 1,319.011ms, operational refresh p95 89.041ms, and serial-source review p95 32.302ms. Throughput and observed coverage limits passed, but the performance rejection stopped the run before its final independent custody proof. Concurrent development checks and the different workload prevent comparison with historical release profiles. The earlier 60-second development run retains its own hashes and successful independent proof; it does not replace this failed acceptance attempt.
+
+See [development verification](qualification/development-hardening-20261021/verification.json) for actual results, retained failures and remaining release blockers.
+
 ## Current 0.2.0 image profiles — 2026-10-19
 
 The [full gate](qualification/release-20261019-icommerce-tui-v1/summary.json) uses the same 500-product / 100-bin / two-lot / 500-order / eight-operator / two-replica profile, with 300 requested seconds per mode. Untracked work records 9,676 moves/replays, 32.232 moves/s and 279.478ms action p95. Serial work records 988 timed moves/replays/source reviews, 3.269 moves/s and 2935.849ms action p95 across 16,000 labels. Both final complete proofs pass at unchanged SQL timeouts with zero errors/conflicts. Serial setup (611.263s) and two recovered crash commands are excluded from throughput. Eight fixed labels move in the timed window. Shared-host results establish no controlled improvement, broad-label capacity or facility SLO. See [limits](qualification/release-20261019-icommerce-tui-v1/qualification-limits.json).

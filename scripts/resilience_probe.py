@@ -21,6 +21,7 @@ from serial_traffic_proof import serial_proof
 from serial_crash_barrier import barrier_sql, literal
 from crash_journal import CrashJournal
 from qualification_host import host_snapshot, write_report
+import traffic_policy
 import uuid
 
 
@@ -102,6 +103,7 @@ class Probe:
                 "scripts/qualification_host.py",
                 "scripts/resilience_probe.py",
                 "scripts/serial_traffic_proof.py",
+                "scripts/traffic_policy.py",
                 "scripts/serial_crash_barrier.py",
                 "scripts/crash_journal.py",
             )
@@ -1032,11 +1034,19 @@ class Probe:
             "interrupted_response": interrupted,
         }
 
+    def serial_target(self, move_number):
+        if (getattr(self.args, "serial_units", 0)
+                and getattr(self.args, "serial_pattern", "fixed") == "rotating"):
+            offset = (move_number // 2) % (self.args.lots * self.args.serial_units)
+            return divmod(offset, self.args.serial_units)
+        return 0, 0
+
     def move_request(self, index, move_number, reviewed):
+        lot, unit = self.serial_target(move_number)
         command = {
             "type": "move_stock",
             "sku": self.sku(index),
-            "lot": self.lot(0),
+            "lot": self.lot(lot),
             "from": self.bin(index) if move_number % 2 == 0 else self.bin(index + 1),
             "to": self.bin(index + 1) if move_number % 2 == 0 else self.bin(index),
             "quantity": 1,
@@ -1059,14 +1069,15 @@ class Probe:
             }
         if getattr(self.args, "serial_units", 0):
             request["serial_inputs"] = [{"target": [], "sku": self.sku(index),
-                                         "serials": [self.serial_id(index, 0, 0)]}]
+                                         "serials": [self.serial_id(index, lot, unit)]}]
         return request
 
     def serial_visibility(self, index, move_number, base, token):
         if not getattr(self.args, "serial_units", 0):
             return None
         started = time.monotonic()
-        sku, label = self.sku(index), self.serial_id(index, 0, 0)
+        lot, unit = self.serial_target(move_number)
+        sku, label = self.sku(index), self.serial_id(index, lot, unit)
         query = urllib.parse.urlencode({"sku": sku, "serial": label, "limit": 1})
         status, page = self.http(base, "GET", "/v1/serials?" + query, token)
         destination = self.bin(index + 1) if move_number % 2 == 0 else self.bin(index)
@@ -1076,7 +1087,7 @@ class Probe:
                 "Post-commit literal serial source review failed")
         item = page["items"][0]
         require(item.get("sku") == sku and item.get("serial") == label
-                and item.get("lot") == self.lot(0) and item.get("source_ok") is True
+                and item.get("lot") == self.lot(lot) and item.get("source_ok") is True
                 and item.get("place") == {"status": "on_hand", "warehouse_id": "wh-main", "location": destination},
                 "Post-commit serial identity or exact custody is invisible")
         return (time.monotonic() - started) * 1000
@@ -1120,9 +1131,9 @@ class Probe:
                 # hide this client's exact source/destination custody change.
                 stock = {(s["sku"], s["lot"], s["location"]): s["on_hand"] for s in reviewed["stocks"]}
                 require(
-                    stock.get((self.sku(index), self.lot(0), self.bin(index)), 0)
+                    stock.get((self.sku(index), request["command"]["lot"], self.bin(index)), 0)
                     == self.opening_quantity() - (move_number + 1) % 2
-                    and stock.get((self.sku(index), self.lot(0), self.bin(index + 1)), 0)
+                    and stock.get((self.sku(index), request["command"]["lot"], self.bin(index + 1)), 0)
                     == (move_number + 1) % 2,
                     "Post-commit snapshot did not expose the client's physical movement",
                 )
@@ -1145,6 +1156,8 @@ class Probe:
                 "replay_latency": (time.monotonic() - replay_started) * 1000,
                 "serial_latency": serial_latency,
                 "request_id": request["request_id"],
+                "serial_label": request.get("serial_inputs", [{}])[0].get("serials", [None])[0],
+                "lot": request["command"]["lot"],
                 "action_started_monotonic": started,
                 "cycle_ended_monotonic": time.monotonic(),
             }
@@ -1163,7 +1176,7 @@ class Probe:
         results = [
             {"actor": actor, "commits": 0, "stale_conflicts": 0, "exact_replays": 0,
              "initial_snapshot_reads": 0, "post_commit_refreshes": 0,
-             "latencies": [], "attempt_latencies": [], "snapshot_latencies": [], "replay_latencies": [], "serial_latencies": []}
+             "latencies": [], "attempt_latencies": [], "snapshot_latencies": [], "replay_latencies": [], "serial_latencies": [], "serial_labels": set()}
             for actor, _ in self.operators
         ]
         last_update = started
@@ -1182,6 +1195,7 @@ class Probe:
             result["replay_latencies"].append(sample["replay_latency"])
             if sample["serial_latency"] is not None:
                 result["serial_latencies"].append(sample["serial_latency"])
+                result["serial_labels"].add(sample["serial_label"])
 
         def progress():
             print(
@@ -1257,6 +1271,11 @@ class Probe:
             "traffic_model": self.args.traffic_model,
             "client_schedule": "independent continuous client loops without think time or an operator barrier" if independent else "one full snapshot shared by all clients at each concurrent round barrier",
             "serial_units_per_bin_lot": getattr(self.args, "serial_units", 0),
+            "serial_pattern": getattr(self.args, "serial_pattern", "fixed") if getattr(self.args, "serial_units", 0) else None,
+            "serial_distinct_labels_per_operator": [len(r["serial_labels"]) for r in results] if getattr(self.args, "serial_units", 0) else [],
+            "serial_labels_available_per_operator": (
+                self.args.lots * self.args.serial_units if getattr(self.args, "serial_pattern", "fixed") == "rotating" else 1
+            ) if getattr(self.args, "serial_units", 0) else 0,
             "serial_current_source_reads": sum(len(r["serial_latencies"]) for r in results),
             "serial_current_source_latency": latency_summary([v for r in results for v in r["serial_latencies"]]),
             "measurement_limit": "Authenticated loopback HTTP and JSON processing; Python clients open HTTP connections per request; browser rendering, human timing and physical scanner input are excluded",
@@ -1283,11 +1302,15 @@ class Probe:
             "independent_post_commit_stock_visibility_verified": independent,
             "snapshot_coverage": "exact configured catalog SKU set and every seeded order ID/state, with completed history permitted",
             "operators": [
-                {**{k: v for k, v in r.items() if not isinstance(v, list)},
+                {**{k: v for k, v in r.items() if not isinstance(v, (list, set))},
                  "snapshot_reads": len(r["snapshot_latencies"])}
                 for r in results
             ],
         }
+
+        policy = traffic_policy.evaluate(self.phase_evidence["sustained_http"], self.args)
+        self.phase_evidence["sustained_http"]["acceptance"] = policy
+        require(policy["ok"], "; ".join(policy["failures"]))
 
     def independent_proof(self):
         print(
@@ -1370,13 +1393,14 @@ class Probe:
             "Total opening plus received minus shipped custody changed",
         )
         for i, count in enumerate(self.moves):
+            lot, _ = self.serial_target(count - 1)
             require(
-                actual[(self.sku(i), self.lot(0), self.bin(i))][0]
+                actual[(self.sku(i), self.lot(lot), self.bin(i))][0]
                 == self.opening_quantity() - count % 2,
                 "Per-operator source bin conservation failed",
             )
             require(
-                actual.get((self.sku(i), self.lot(0), self.bin(i + 1)), (0, 0))[0]
+                actual.get((self.sku(i), self.lot(lot), self.bin(i + 1)), (0, 0))[0]
                 == count % 2,
                 "Per-operator destination bin conservation failed",
             )
@@ -1495,7 +1519,11 @@ class Probe:
             tables["wms_events"] = events
             literal_proof = serial_proof(tables, self.accepted, self.args.products,
                                          self.args.lots, self.args.serial_units, self.moves, self.args.bins,
-                                         self.serial_recovery_requests)
+                                         self.serial_recovery_requests,
+                                         pattern=getattr(self.args, "serial_pattern", "fixed"))
+            require(literal_proof["distinct_timed_labels"] == sum(
+                self.phase_evidence["sustained_http"]["serial_distinct_labels_per_operator"]),
+                "Observed serial coverage differs from independent literal custody proof")
         return {
             "serial_identity_proof": literal_proof,
             "physical_recomputed_from_append_only_movements": True,
@@ -1674,6 +1702,9 @@ def main():
     parser.add_argument("--lots", type=int, default=2)
     parser.add_argument("--bins", type=int, default=20)
     parser.add_argument("--serial-units", type=int, default=0, help="0 retains untracked traffic; otherwise literal each IDs per opening bin/lot")
+    parser.add_argument("--serial-pattern", choices=("fixed", "rotating"), default="rotating",
+                        help="Rotate each out-and-back pair through every label and lot per operator")
+    traffic_policy.arguments(parser)
     args = parser.parse_args()
     require(
         re.fullmatch(r"[0-9]+-[0-9a-f]{8}", args.run), "Invalid ownership run identity"

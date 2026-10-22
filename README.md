@@ -6,7 +6,9 @@ Warehouse execution and physical inventory authority for StateSet. **Sync is the
 
 Rust 1.90+, Axum, Tokio, SQLx/Postgres, React, TypeScript and Vite, following the existing StateSet services and dashboards.
 
-The [current local software release](docs/qualification/release-20261019-icommerce-tui-v1/summary.json) passes all ten stages on version `0.2.0`: **331 Rust, 74 Python, 13 terminal and 170 browser checks**. It includes pinned iCommerce crate interoperability, the warehouse TUI, populated archive restore and both full image/crash workloads. Production, deployed-client and physical facility acceptance remain separate.
+The [2026-10-21 development qualification](docs/qualification/development-serial-deferred-20261021-v1/verification.json) passes **751 checks**, archive restore across 50 tables and 32 migrations, hardened-container checks, and the full untracked crash/traffic workload. Serial crash recovery and five-minute rotating traffic complete, but **the full gate fails** when final serial API reconciliation exceeds its unchanged SQL timeout. A separate native run also misses the 1,000ms action-p95 target at 1,242.537ms. See [current evidence and remaining work](docs/evidence.md#deferred-serial-validation-development-candidate--2026-10-21); production qualification and A+ remain unclaimed.
+
+The [dated 0.2.0 software release](docs/qualification/release-20261019-icommerce-tui-v1/summary.json) passed all ten stages on its frozen 2026-10-19 source: **331 Rust, 74 Python, 13 terminal and 170 browser checks**. It includes pinned iCommerce crate interoperability, the warehouse TUI, populated archive restore and both full image/crash workloads. Production, deployed-client and physical facility acceptance remain separate.
 
 Version 0.2.0 includes [iCommerce crate interoperability](docs/icommerce.md), a [warehouse terminal](cli/README.md), and [open-source release preparation](docs/open-source-release.md). The repository remains private; packages and images have not been published.
 
@@ -14,7 +16,7 @@ The development terminal also provides [Kitty graphics visual operations](docs/v
 
 The development terminal adds a Ghostty operations board with idle read-only refresh, snapshot age, stale-read retention and direct work lanes. Compact inventory keeps exact quantities visible, and pane resizing preserves input and reading position. Original-request recovery retains exclusive checkpoint positions and existing 0.2.0 journals. The partial/package lane keeps mixed fulfillment visible after handoff, with exact remaining-work reviews and continued allocation, picking and recovery. The latest [targeted terminal verification](docs/qualification/development-partial-fulfillment-20261020/verification.json) passes 101 checks, including real API/PostgreSQL and terminal workflows. See [terminal navigation](cli/README.md#navigation-and-views) and [upgrade and recovery instructions](cli/README.md#recovery). These follow-ups have separate targeted checks; the dated release report above applies to its original frozen 0.2.0 source.
 
-The [2026-10-20 source-release review](docs/open-source-readiness-20261020.md) records **331 Rust, 90 Python, 101 terminal and 170 browser checks passing**, full-history source auditing, original browser dependency notices, and follow-up fixes. **The complete development release gate remains held:** serial crash recovery failed in the latest repeat. The [dated evidence](docs/qualification/source-candidate-20261020/readiness.json) retains all failures and launch blockers; this candidate does not replace the qualified 0.2.0 release above.
+The [2026-10-20 source-release review](docs/open-source-readiness-20261020.md) records **331 Rust, 90 Python, 101 terminal and 170 browser checks passing**, full-history source auditing, original browser dependency notices, and follow-up fixes. **That candidate's complete gate failed:** serial crash recovery did not regain database readiness. The [dated evidence](docs/qualification/source-candidate-20261020/readiness.json) retains all failures and launch blockers; it does not replace the qualified 0.2.0 release above.
 
 ## Run
 
@@ -100,6 +102,14 @@ Run the required live Postgres suite against a separate database with `test` in 
 ```bash
 WMS_TEST_DATABASE_URL=postgres://warehouse:warehouse@127.0.0.1:5548/warehouse_test bash scripts/check.sh --postgres
 ```
+
+Run the same real API/PostgreSQL browser suite used by release qualification without Docker:
+
+```bash
+WMS_CHROME_PATH=/opt/google/chrome/chrome bash scripts/local-postgres.sh bash scripts/live-browser-checks.sh
+```
+
+The runner builds the API/dashboard, starts two owned local workspaces on available ports, and retains browser evidence privately. Select an installed Chromium path; omit `WMS_CHROME_PATH` when Playwright's browser is installed. This checks browser workflows, not container/crash or physical-device acceptance.
 
 The live suite includes persistence, concurrency, HTTP warehouse lifecycle, native API recovery, conditional OMS receiver races and database guard tests. Explicit invocation fails without a database; default `cargo test` marks these tests ignored. The default check runs domain, authorization, native contract and offline browser tests. CI is configured to run both live database and live browser checks; the previous hosted run was blocked by organization billing/spending limits. Check the new commit’s run independently.
 

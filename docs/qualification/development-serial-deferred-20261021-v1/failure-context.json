@@ -1,0 +1,231 @@
+{
+  "release_gate_result": "failed",
+  "failed_stage": "image_resilience",
+  "failure": "Serial final API reconciliation returned 503 after the unchanged 10-second statement deadline",
+  "postgres_excerpt": [
+    "2026-10-22 00:09:02.644 UTC [514] ERROR:  canceling statement due to statement timeout",
+    "2026-10-22 00:09:02.644 UTC [514] CONTEXT:  SQL function \"wms_serial_at_version\" statement 1"
+  ],
+  "api_excerpt": [
+    "2026-10-22T00:09:02.652111Z ERROR warehouse_http{method=GET route=\"/v1/warehouses/{warehouse}/reconciliation\" request_id=\"80b84630-5b09-4496-8ceb-70d8d49981c5\"}: stateset_warehouse::persistence: warehouse database operation failed error=error returned from database: canceling statement due to statement timeout",
+    "2026-10-22T00:09:02.658508Z ERROR warehouse_http{method=GET route=\"/v1/warehouses/{warehouse}/reconciliation\" request_id=\"80b84630-5b09-4496-8ceb-70d8d49981c5\"}: tower_http::trace::on_failure: response failed classification=Status code: 503 Service Unavailable latency=11790 ms"
+  ],
+  "timed_serial_moves_last_logged": 1307,
+  "timed_count_is_lower_bound": true,
+  "timed_final_report_written": false,
+  "serial_final_independent_literal_proof": "not_run_after_API_reconciliation_failure",
+  "serial_configuration": {
+    "products": 500,
+    "bins": 100,
+    "lots_per_product": 2,
+    "orders": 500,
+    "serial_units_per_bin_lot": 16,
+    "total_seeded_labels": 16000,
+    "operators": 8,
+    "replicas": 2,
+    "requested_seconds": 300,
+    "pattern": "rotating",
+    "required_coverage": 1,
+    "optional_latency_and_throughput_limits_set": false
+  },
+  "serial_crash_journal_post_run_verification": {
+    "api_sigkill": {
+      "checkpoints": 16,
+      "stages": [
+        "prepared",
+        "baseline_captured",
+        "barrier_planned",
+        "barrier_installed",
+        "original_send_requested",
+        "writer_blocked",
+        "fault_requested",
+        "interrupted_response_observed",
+        "fault_verified",
+        "barrier_removed",
+        "rollback_verified",
+        "original_absent",
+        "original_recovery_requested",
+        "original_committed",
+        "exact_replay_verified",
+        "completed"
+      ],
+      "baseline_table_count": 50,
+      "manifest": {
+        "private_checkpoints": [
+          {
+            "path": "crash-journal/api_sigkill/000-prepared.json",
+            "sha256": "d56112006c6ef7f5e2a6a5d17b7d71edc96752f6857fbe35e4e2c72bc1d0a92e"
+          },
+          {
+            "path": "crash-journal/api_sigkill/001-baseline_captured.json",
+            "sha256": "fa69d5f064d09e845e18391994390de5bf621886ad22550bb7200fce89446d1a"
+          },
+          {
+            "path": "crash-journal/api_sigkill/002-barrier_planned.json",
+            "sha256": "32ba51d83460afcbceb006849fba298fbdfdb557141c364f9a0441dda4304fc0"
+          },
+          {
+            "path": "crash-journal/api_sigkill/003-barrier_installed.json",
+            "sha256": "9b82e77090d1ef2619de3ec91007e4a3356752643cc5159d807a46d58a811947"
+          },
+          {
+            "path": "crash-journal/api_sigkill/004-original_send_requested.json",
+            "sha256": "ffa3d7294444adc6249299476b79b20ac3461b7e6a62598fd678da93abf56081"
+          },
+          {
+            "path": "crash-journal/api_sigkill/005-writer_blocked.json",
+            "sha256": "62cd207c93f208208f8b47d19ea39c93e6c94c8313160e0b2c11d226d42c196a"
+          },
+          {
+            "path": "crash-journal/api_sigkill/006-fault_requested.json",
+            "sha256": "c772a4008f7d2aaea7be882af23f6412fefc44a2cb9136e533d6de9344f38e59"
+          },
+          {
+            "path": "crash-journal/api_sigkill/007-interrupted_response_observed.json",
+            "sha256": "956e9f6f616a353a0199b7907a5d6de508bec2de74d2b108142838a34047c63a"
+          },
+          {
+            "path": "crash-journal/api_sigkill/008-fault_verified.json",
+            "sha256": "6649d1e832f06ae89c44939e263a63acd39bdeae3ffc2ecb1ac1ad0da3e4cb4e"
+          },
+          {
+            "path": "crash-journal/api_sigkill/009-barrier_removed.json",
+            "sha256": "0d5097fa6b6f736c767c43fdd47cf4279ef880b22163815d7edf8d2af59bb336"
+          },
+          {
+            "path": "crash-journal/api_sigkill/010-rollback_verified.json",
+            "sha256": "724ee82a1a1ab0ab2441d84cb46da36f8be8797f18c4a9ac805af72c2c067599"
+          },
+          {
+            "path": "crash-journal/api_sigkill/011-original_absent.json",
+            "sha256": "cf38afda3f48d61a6cda1c5f2252041c435a9bb0e514fb82ee97e2965e32e3f1"
+          },
+          {
+            "path": "crash-journal/api_sigkill/012-original_recovery_requested.json",
+            "sha256": "de8da06debb399f2b666883540320002812b2b973e4d7d6bdaebbf4cae09c117"
+          },
+          {
+            "path": "crash-journal/api_sigkill/013-original_committed.json",
+            "sha256": "902333dba96a9425a60d31b81f59fb6ba7567926b6fbc5845f050365300f42f3"
+          },
+          {
+            "path": "crash-journal/api_sigkill/014-exact_replay_verified.json",
+            "sha256": "952c90d591e707517a34c35aa63f894739f0ce4d352691f69d07bc2198b8a918"
+          },
+          {
+            "path": "crash-journal/api_sigkill/015-completed.json",
+            "sha256": "08cff9fecc53b9c808ec0ad50966a1a41c5fbd442d19aee2d9066e3e28c77245"
+          }
+        ],
+        "contains_credentials": false
+      },
+      "rollback_facts": {},
+      "completed_facts": {}
+    },
+    "postgres_sigkill": {
+      "checkpoints": 16,
+      "stages": [
+        "prepared",
+        "baseline_captured",
+        "barrier_planned",
+        "barrier_installed",
+        "original_send_requested",
+        "writer_blocked",
+        "fault_requested",
+        "interrupted_response_observed",
+        "fault_verified",
+        "rollback_verified",
+        "barrier_removed",
+        "original_absent",
+        "original_recovery_requested",
+        "original_committed",
+        "exact_replay_verified",
+        "completed"
+      ],
+      "baseline_table_count": 50,
+      "manifest": {
+        "private_checkpoints": [
+          {
+            "path": "crash-journal/postgres_sigkill/000-prepared.json",
+            "sha256": "e9e504636192cc4dc6181c33643a5cb85d627dfc8b3de0d281d8f3d9dfdfa16f"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/001-baseline_captured.json",
+            "sha256": "d6696b49ddf326a07f2a0e37cc80d407e69b86ccc3d158c9af84a767d39317cb"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/002-barrier_planned.json",
+            "sha256": "e5c852bf60ec0df60f4e40dd524b33837f4a809229a975c0262c9af679077305"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/003-barrier_installed.json",
+            "sha256": "9b82e77090d1ef2619de3ec91007e4a3356752643cc5159d807a46d58a811947"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/004-original_send_requested.json",
+            "sha256": "5c8df0d726d84674a15e891776dc033a32f64cafb35c7d8cab19c64f71b26a12"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/005-writer_blocked.json",
+            "sha256": "86b134c1474f6445d142364dd641faee672161816a94ac8a71d80398a0469ce9"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/006-fault_requested.json",
+            "sha256": "f66aae1983134b2800b5286826cd8b41da646a4ac13cfa6a1e65de5fcdc531d3"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/007-interrupted_response_observed.json",
+            "sha256": "cefdd21bb598f3aedb11121c179a6fe4c5e8aa004c3f5f7e6a2633c4a80f526b"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/008-fault_verified.json",
+            "sha256": "6649d1e832f06ae89c44939e263a63acd39bdeae3ffc2ecb1ac1ad0da3e4cb4e"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/009-rollback_verified.json",
+            "sha256": "724ee82a1a1ab0ab2441d84cb46da36f8be8797f18c4a9ac805af72c2c067599"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/010-barrier_removed.json",
+            "sha256": "0d5097fa6b6f736c767c43fdd47cf4279ef880b22163815d7edf8d2af59bb336"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/011-original_absent.json",
+            "sha256": "cf38afda3f48d61a6cda1c5f2252041c435a9bb0e514fb82ee97e2965e32e3f1"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/012-original_recovery_requested.json",
+            "sha256": "e0849c51d8aff2e0d01f7c935479f65fee4c1f04cf30498cd62ab8057e0cc073"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/013-original_committed.json",
+            "sha256": "488285041bc861ff5bf9380af3966d97d5846707cd1f13f833ef359fe85dabe6"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/014-exact_replay_verified.json",
+            "sha256": "7302a47568d3b1750414f0ba287e72fa73b8e799e7518d2c48f73f5f140dd687"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/015-completed.json",
+            "sha256": "08cff9fecc53b9c808ec0ad50966a1a41c5fbd442d19aee2d9066e3e28c77245"
+          }
+        ],
+        "contains_credentials": false
+      },
+      "rollback_facts": {},
+      "completed_facts": {}
+    }
+  },
+  "source_verification": {
+    "performed_separately_after_failure": true,
+    "software_inputs_unchanged": 468,
+    "does_not_replace_not_run_stable_source_inputs_stage": true
+  },
+  "resource_retention": {
+    "requested": false,
+    "owned_containers_volumes_network_removed": true,
+    "private_logs_and_crash_checkpoints_retained": true,
+    "exact_final_database_available": false
+  },
+  "host_limit": "Shared uncontrolled host; timeout observed, sole cause not established"
+}

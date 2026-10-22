@@ -1,0 +1,351 @@
+{
+  "scope": "single operator diagnostic on cloned synthetic database, not acceptance",
+  "write_ms": [
+    201.9169129198417,
+    106.9441280560568,
+    119.93307794909924,
+    101.75412299577147,
+    101.3633799739182,
+    89.31346097961068,
+    228.78035705070943,
+    70.61958604026586
+  ],
+  "functions": [
+    {
+      "funcname": "wms_serial_scope_current_valid",
+      "calls": 8,
+      "total_time": 194.688,
+      "self_time": 191.971
+    },
+    {
+      "funcname": "wms_serial_event_valid_read_source",
+      "calls": 16,
+      "total_time": 169.334,
+      "self_time": 92.17
+    },
+    {
+      "funcname": "wms_serial_inputs_match_command",
+      "calls": 24,
+      "total_time": 84.582,
+      "self_time": 84.582
+    },
+    {
+      "funcname": "wms_serial_validate_pending",
+      "calls": 32,
+      "total_time": 355.476,
+      "self_time": 32.363
+    },
+    {
+      "funcname": "wms_serial_scope_transit_valid",
+      "calls": 8,
+      "total_time": 29.608,
+      "self_time": 29.608
+    },
+    {
+      "funcname": "wms_serial_batch_original",
+      "calls": 64,
+      "total_time": 26.141,
+      "self_time": 26.141
+    },
+    {
+      "funcname": "wms_serial_modes_original_for_scope",
+      "calls": 16,
+      "total_time": 24.686,
+      "self_time": 24.686
+    },
+    {
+      "funcname": "wms_lot_required",
+      "calls": 792,
+      "total_time": 19.602,
+      "self_time": 19.602
+    },
+    {
+      "funcname": "wms_lot_event_valid",
+      "calls": 8,
+      "total_time": 15.494,
+      "self_time": 12.795
+    },
+    {
+      "funcname": "wms_check_stock",
+      "calls": 32,
+      "total_time": 12.627,
+      "self_time": 12.627
+    },
+    {
+      "funcname": "wms_serial_fact_check",
+      "calls": 16,
+      "total_time": 28.969,
+      "self_time": 12.442
+    },
+    {
+      "funcname": "wms_serial_place_valid",
+      "calls": 192,
+      "total_time": 12.217,
+      "self_time": 12.217
+    },
+    {
+      "funcname": "wms_serial_scope_commit",
+      "calls": 24,
+      "total_time": 11.865,
+      "self_time": 11.077
+    },
+    {
+      "funcname": "wms_serial_head_bound",
+      "calls": 24,
+      "total_time": 26.013,
+      "self_time": 10.749
+    },
+    {
+      "funcname": "wms_serial_enqueue_fact",
+      "calls": 24,
+      "total_time": 9.462,
+      "self_time": 9.26
+    },
+    {
+      "funcname": "wms_serial_event_inputs_bound",
+      "calls": 16,
+      "total_time": 56.364,
+      "self_time": 8.96
+    },
+    {
+      "funcname": "wms_bump_resource",
+      "calls": 32,
+      "total_time": 8.187,
+      "self_time": 7.54
+    },
+    {
+      "funcname": "wms_track_resources",
+      "calls": 16,
+      "total_time": 12.332,
+      "self_time": 4.142
+    },
+    {
+      "funcname": "wms_serial_step_effect_valid",
+      "calls": 16,
+      "total_time": 13.461,
+      "self_time": 3.834
+    },
+    {
+      "funcname": "wms_lot_targets",
+      "calls": 16,
+      "total_time": 2.698,
+      "self_time": 2.698
+    },
+    {
+      "funcname": "wms_apply_movement",
+      "calls": 8,
+      "total_time": 1.79,
+      "self_time": 1.79
+    },
+    {
+      "funcname": "wms_serial_pending_guard",
+      "calls": 112,
+      "total_time": 1.337,
+      "self_time": 1.337
+    },
+    {
+      "funcname": "wms_serial_on_hand",
+      "calls": 32,
+      "total_time": 1.217,
+      "self_time": 1.217
+    },
+    {
+      "funcname": "wms_serial_unit_identity",
+      "calls": 8,
+      "total_time": 0.763,
+      "self_time": 0.763
+    },
+    {
+      "funcname": "wms_lot_forward_guard",
+      "calls": 8,
+      "total_time": 0.744,
+      "self_time": 0.744
+    },
+    {
+      "funcname": "wms_revision_guard",
+      "calls": 32,
+      "total_time": 0.647,
+      "self_time": 0.647
+    },
+    {
+      "funcname": "wms_lot_event_guard",
+      "calls": 8,
+      "total_time": 15.976,
+      "self_time": 0.482
+    },
+    {
+      "funcname": "wms_serial_head_identity",
+      "calls": 8,
+      "total_time": 0.413,
+      "self_time": 0.413
+    },
+    {
+      "funcname": "wms_track_count_review",
+      "calls": 8,
+      "total_time": 0.346,
+      "self_time": 0.346
+    }
+  ],
+  "slowest_statements": [
+    {
+      "ms": 654.682,
+      "statement": "statement: CREATE DATABASE wms_serial_profile_test_09baf5977366 TEMPLATE wms_serial_load_test_f18b5a820bad"
+    },
+    {
+      "ms": 101.209,
+      "statement": "statement: COMMIT"
+    },
+    {
+      "ms": 62.195,
+      "statement": "statement: COMMIT"
+    },
+    {
+      "ms": 60.917,
+      "statement": "statement: COMMIT"
+    },
+    {
+      "ms": 50.613,
+      "statement": "statement: COMMIT"
+    },
+    {
+      "ms": 44.605,
+      "statement": "statement: COMMIT"
+    },
+    {
+      "ms": 43.254,
+      "statement": "statement: COMMIT"
+    },
+    {
+      "ms": 40.863,
+      "statement": "statement: COMMIT"
+    },
+    {
+      "ms": 34.368,
+      "statement": "statement: COMMIT"
+    },
+    {
+      "ms": 32.649,
+      "statement": "execute sqlx_s_31: WITH selected AS MATERIALIZED (SELECT u.* FROM jsonb_to_recordset($2) AS k(sku TEXT,serial TEXT) JOIN wms_serial_units u ON u.tenant=$1 AND u.sku=k.sku AND u.ser"
+    },
+    {
+      "ms": 20.287,
+      "statement": "execute sqlx_s_31: WITH selected AS MATERIALIZED (SELECT u.* FROM jsonb_to_recordset($2) AS k(sku TEXT,serial TEXT) JOIN wms_serial_units u ON u.tenant=$1 AND u.sku=k.sku AND u.ser"
+    },
+    {
+      "ms": 17.464,
+      "statement": "bind sqlx_s_18: SELECT data FROM wms_movements WHERE tenant=$1 AND warehouse_id=$2 ORDER BY seq DESC LIMIT 100"
+    },
+    {
+      "ms": 15.74,
+      "statement": "execute sqlx_s_27: SELECT wms_serial_inputs_match_command($1,$2,$3,$4)"
+    },
+    {
+      "ms": 15.371,
+      "statement": "statement: SELECT coalesce(json_agg(t),'[]') FROM(SELECT funcname,calls,total_time,self_time FROM pg_stat_user_functions ORDER BY self_time DESC)t"
+    },
+    {
+      "ms": 11.314,
+      "statement": "execute sqlx_s_31: WITH selected AS MATERIALIZED (SELECT u.* FROM jsonb_to_recordset($2) AS k(sku TEXT,serial TEXT) JOIN wms_serial_units u ON u.tenant=$1 AND u.sku=k.sku AND u.ser"
+    },
+    {
+      "ms": 10.591,
+      "statement": "execute sqlx_s_31: WITH selected AS MATERIALIZED (SELECT u.* FROM jsonb_to_recordset($2) AS k(sku TEXT,serial TEXT) JOIN wms_serial_units u ON u.tenant=$1 AND u.sku=k.sku AND u.ser"
+    },
+    {
+      "ms": 9.227,
+      "statement": "bind sqlx_s_26: SELECT sku FROM wms_serial_event_skus($1,$2,$3) ORDER BY sku"
+    },
+    {
+      "ms": 9.181,
+      "statement": "bind sqlx_s_9: SELECT NOT EXISTS(SELECT 1 FROM wms_unit_pack_changes p WHERE tenant=$1 AND warehouse_id=$2 AND sku=ANY($3) AND (version>$4 OR NOT wms_unit_pack_original(p)))"
+    },
+    {
+      "ms": 8.338,
+      "statement": "execute sqlx_s_31: WITH selected AS MATERIALIZED (SELECT u.* FROM jsonb_to_recordset($2) AS k(sku TEXT,serial TEXT) JOIN wms_serial_units u ON u.tenant=$1 AND u.sku=k.sku AND u.ser"
+    },
+    {
+      "ms": 8.116,
+      "statement": "execute sqlx_s_41: INSERT INTO wms_serial_units AS u(tenant,sku,serial,lot,revision,place,last_event_id) SELECT $1,k.sku,k.serial,k.lot,k.revision,k.after_place,$3 FROM jsonb_to_re"
+    },
+    {
+      "ms": 7.983,
+      "statement": "bind sqlx_s_9: SELECT NOT EXISTS(SELECT 1 FROM wms_lot_changes h WHERE h.tenant=$1 AND h.warehouse_id=$2 AND h.sku=ANY($3) AND NOT COALESCE(wms_lot_change_valid(h.tenant,h.warehous"
+    },
+    {
+      "ms": 7.809,
+      "statement": "execute sqlx_s_31: WITH selected AS MATERIALIZED (SELECT u.* FROM jsonb_to_recordset($2) AS k(sku TEXT,serial TEXT) JOIN wms_serial_units u ON u.tenant=$1 AND u.sku=k.sku AND u.ser"
+    },
+    {
+      "ms": 7.12,
+      "statement": "execute sqlx_s_29: SELECT NOT EXISTS(SELECT 1 FROM wms_serial_heads h WHERE h.tenant=$1 AND h.sku=ANY($2) AND NOT wms_serial_head_bound(h))"
+    },
+    {
+      "ms": 7.068,
+      "statement": "execute sqlx_s_27: SELECT wms_serial_inputs_match_command($1,$2,$3,$4)"
+    },
+    {
+      "ms": 6.788,
+      "statement": "bind sqlx_s_26: SELECT sku FROM wms_serial_event_skus($1,$2,$3) ORDER BY sku"
+    },
+    {
+      "ms": 6.457,
+      "statement": "execute sqlx_s_31: WITH selected AS MATERIALIZED (SELECT u.* FROM jsonb_to_recordset($2) AS k(sku TEXT,serial TEXT) JOIN wms_serial_units u ON u.tenant=$1 AND u.sku=k.sku AND u.ser"
+    },
+    {
+      "ms": 6.227,
+      "statement": "execute sqlx_s_31: WITH selected AS MATERIALIZED (SELECT u.* FROM jsonb_to_recordset($2) AS k(sku TEXT,serial TEXT) JOIN wms_serial_units u ON u.tenant=$1 AND u.sku=k.sku AND u.ser"
+    },
+    {
+      "ms": 6.107,
+      "statement": "statement: SELECT row_to_json(t) FROM(SELECT sku,serial,lot,place FROM wms_serial_units WHERE tenant='resilience-test' AND place->>'status'='on_hand' ORDER BY sku,serial LIMIT 1)t"
+    },
+    {
+      "ms": 5.827,
+      "statement": "execute sqlx_s_30: SELECT EXISTS(SELECT 1 FROM jsonb_to_recordset($2) AS k(sku TEXT,serial TEXT) WHERE NOT EXISTS(SELECT 1 FROM wms_serial_units u WHERE u.tenant=$1 AND u.sku=k.sku"
+    },
+    {
+      "ms": 5.386,
+      "statement": "execute sqlx_s_30: SELECT EXISTS(SELECT 1 FROM jsonb_to_recordset($2) AS k(sku TEXT,serial TEXT) WHERE NOT EXISTS(SELECT 1 FROM wms_serial_units u WHERE u.tenant=$1 AND u.sku=k.sku"
+    },
+    {
+      "ms": 5.281,
+      "statement": "execute sqlx_s_30: SELECT EXISTS(SELECT 1 FROM jsonb_to_recordset($2) AS k(sku TEXT,serial TEXT) WHERE NOT EXISTS(SELECT 1 FROM wms_serial_units u WHERE u.tenant=$1 AND u.sku=k.sku"
+    },
+    {
+      "ms": 4.965,
+      "statement": "execute sqlx_s_30: SELECT EXISTS(SELECT 1 FROM jsonb_to_recordset($2) AS k(sku TEXT,serial TEXT) WHERE NOT EXISTS(SELECT 1 FROM wms_serial_units u WHERE u.tenant=$1 AND u.sku=k.sku"
+    },
+    {
+      "ms": 4.408,
+      "statement": "execute sqlx_s_30: SELECT EXISTS(SELECT 1 FROM jsonb_to_recordset($2) AS k(sku TEXT,serial TEXT) WHERE NOT EXISTS(SELECT 1 FROM wms_serial_units u WHERE u.tenant=$1 AND u.sku=k.sku"
+    },
+    {
+      "ms": 4.375,
+      "statement": "bind sqlx_s_26: SELECT sku FROM wms_serial_event_skus($1,$2,$3) ORDER BY sku"
+    },
+    {
+      "ms": 4.199,
+      "statement": "bind sqlx_s_26: SELECT sku FROM wms_serial_event_skus($1,$2,$3) ORDER BY sku"
+    },
+    {
+      "ms": 4.087,
+      "statement": "execute sqlx_s_30: SELECT EXISTS(SELECT 1 FROM jsonb_to_recordset($2) AS k(sku TEXT,serial TEXT) WHERE NOT EXISTS(SELECT 1 FROM wms_serial_units u WHERE u.tenant=$1 AND u.sku=k.sku"
+    },
+    {
+      "ms": 4.078,
+      "statement": "bind sqlx_s_20: SELECT data || '{\"lines\":[],\"allocations\":[]}'::jsonb AS data FROM wms_orders WHERE tenant=$1 AND warehouse_id=$2 AND (status NOT IN('shipped','cancelled','closed_p"
+    },
+    {
+      "ms": 3.921,
+      "statement": "execute sqlx_s_36: INSERT INTO wms_stock VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(tenant,warehouse_id,sku,lot,location) DO UPDATE SET on_hand=EXCLUDED.on_hand,reserved=EXCLUDED.res"
+    },
+    {
+      "ms": 3.643,
+      "statement": "execute sqlx_s_27: SELECT wms_serial_inputs_match_command($1,$2,$3,$4)"
+    },
+    {
+      "ms": 3.529,
+      "statement": "execute sqlx_s_30: SELECT EXISTS(SELECT 1 FROM jsonb_to_recordset($2) AS k(sku TEXT,serial TEXT) WHERE NOT EXISTS(SELECT 1 FROM wms_serial_units u WHERE u.tenant=$1 AND u.sku=k.sku"
+    }
+  ]
+}

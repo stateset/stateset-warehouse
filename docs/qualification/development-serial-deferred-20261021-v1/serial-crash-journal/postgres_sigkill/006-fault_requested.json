@@ -1,0 +1,7 @@
+{
+  "facts": {
+    "container": "wms-resilience-pg-1792626815-c83833b6",
+    "signal": "KILL"
+  },
+  "stage": "fault_requested"
+}

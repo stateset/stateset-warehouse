@@ -1,0 +1,10 @@
+{
+  "facts": {
+    "result": {
+      "entity_id": "BIN-00000 \u2192 BIN-00099",
+      "type": "inventory.moved",
+      "version": 2365
+    }
+  },
+  "stage": "original_committed"
+}

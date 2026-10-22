@@ -291,68 +291,11 @@ wms_release_workload() {
     ./target/release/examples/workload
 }
 
-wms_release_wait_api() {
-  local wms_base="$1" wms_pid="$2"
-  for ((wms_try=0;wms_try<60;wms_try++)); do
-    kill -0 "$wms_pid" 2>/dev/null || { echo 'Owned qualification API exited before readiness.' >&2; return 1; }
-    if curl --max-time 2 --silent --fail --output /dev/null "$wms_base/ready"; then return 0; fi
-    sleep 1
-  done
-  echo 'Owned qualification API did not become ready.' >&2
-  return 1
-}
-
 wms_release_live_browsers() {
-  python3 - <<'PY'
-import os, socket
-for name in ("WMS_RELEASE_DEMO_PORT", "WMS_RELEASE_SCANNER_PORT"):
-    with socket.socket() as probe:
-        probe.bind(("127.0.0.1", int(os.environ[name])))
-PY
-  wms_release_runtime="$(mktemp -d /tmp/stateset-wms-release-runtime.XXXXXXXX)"
-  python3 - "$wms_release_runtime" <<'PY'
-import pathlib, sys
-directory = pathlib.Path(sys.argv[1]).resolve()
-if any((parent / ".env").exists() for parent in (directory,) + tuple(directory.parents)):
-    raise SystemExit("Live qualification runtime must not inherit an ambient .env file")
-PY
-  ln -s "$wms_release_repository/dashboard" "$wms_release_runtime/dashboard"
-  WMS_SCANNER_OPERATOR_TOKEN="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
-  WMS_SCANNER_COUNTER_TOKEN="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
-  export WMS_SCANNER_OPERATOR_TOKEN WMS_SCANNER_COUNTER_TOKEN
-  wms_release_scanner_keys="$(python3 - <<'PY'
-import json, os
-print(json.dumps({os.environ["WMS_SCANNER_OPERATOR_TOKEN"]: {"tenant":"scanner-qualification","actor":"qualification:operator","role":"admin"},
-                  os.environ["WMS_SCANNER_COUNTER_TOKEN"]: {"tenant":"scanner-qualification","actor":"qualification:counter","role":"admin"}}))
-PY
-)"
-  (
-    cd "$wms_release_runtime"
-    unset WMS_WORKOS_JSON WMS_OMS_WEBHOOK_URL WMS_OMS_WEBHOOK_TOKEN WMS_TMS_WEBHOOK_URL WMS_TMS_WEBHOOK_TOKEN WMS_WEBHOOK_TENANT
-    # Each owned API intentionally receives its own isolated process environment.
-    # shellcheck disable=SC2030
-    export DATABASE_URL="$WMS_TEST_DATABASE_URL" WMS_DEMO=true WMS_BIND="127.0.0.1:$WMS_RELEASE_DEMO_PORT" WMS_NATIVE_INTEGRATIONS_JSON='{}'
-    exec "$wms_release_repository/target/debug/stateset-warehouse"
-  ) > "$wms_release_root/raw/demo-api.log" 2>&1 &
-  wms_release_api_pid=$!
-  (
-    cd "$wms_release_runtime"
-    unset WMS_WORKOS_JSON WMS_OMS_WEBHOOK_URL WMS_OMS_WEBHOOK_TOKEN WMS_TMS_WEBHOOK_URL WMS_TMS_WEBHOOK_TOKEN WMS_WEBHOOK_TENANT
-    # The demo process's environment must not propagate into the real scanner API.
-    # shellcheck disable=SC2031
-    export DATABASE_URL="$WMS_TEST_DATABASE_URL" WMS_DEMO=false WMS_BIND="127.0.0.1:$WMS_RELEASE_SCANNER_PORT" WMS_NATIVE_INTEGRATIONS_JSON='{}' WMS_API_KEYS_JSON="$wms_release_scanner_keys"
-    exec "$wms_release_repository/target/debug/stateset-warehouse"
-  ) > "$wms_release_root/raw/scanner-api.log" 2>&1 &
-  wms_release_scanner_pid=$!
-  wms_release_wait_api "http://127.0.0.1:$WMS_RELEASE_DEMO_PORT" "$wms_release_api_pid"
-  wms_release_wait_api "http://127.0.0.1:$WMS_RELEASE_SCANNER_PORT" "$wms_release_scanner_pid"
-  (
-    cd dashboard
-    WMS_BROWSER_URL="http://127.0.0.1:$WMS_RELEASE_DEMO_PORT" \
-      WMS_SCANNER_BROWSER_URL="http://127.0.0.1:$WMS_RELEASE_SCANNER_PORT" \
-      npx playwright test --project=live-postgres --output "$wms_release_root/live-browser-results"
-  )
-  wms_release_stop_apis
+  WMS_BROWSER_ARTIFACT_DIR="$wms_release_root/live-browser-checks" \
+    WMS_BROWSER_DEMO_PORT="$WMS_RELEASE_DEMO_PORT" \
+    WMS_BROWSER_SCANNER_PORT="$WMS_RELEASE_SCANNER_PORT" \
+    bash scripts/live-browser-checks.sh
 }
 
 wms_release_restore() {
@@ -373,6 +316,7 @@ wms_release_resilience() {
   WMS_RESILIENCE_IMAGE="$(cat "$wms_release_root/container/image.id")" \
     WMS_QUALIFICATION_SUBNET="${WMS_RELEASE_SERIAL_SUBNET:-}" \
     WMS_RESILIENCE_SERIAL_UNITS="${WMS_RELEASE_SERIAL_UNITS:-16}" \
+    WMS_RESILIENCE_SERIAL_PATTERN=rotating WMS_RESILIENCE_MIN_SERIAL_COVERAGE=1 \
     WMS_RESILIENCE_ARTIFACT_DIR="$wms_release_root/serial-resilience" bash scripts/resilience-rehearsal.sh
 }
 
@@ -386,7 +330,7 @@ wms_release_stable_inputs() {
   python3 - "$wms_release_root" <<'PY'
 import hashlib, json, pathlib, sys
 sys.path.insert(0, "scripts")
-from crash_journal import verify_journal
+from crash_journal import verify_journal, verify_table_inventory
 root = pathlib.Path(sys.argv[1])
 container = json.loads((root / "container/container-qualification.json").read_text())
 resilience = json.loads((root / "resilience/resilience.json").read_text())
@@ -397,8 +341,16 @@ assert container["ok"] is True and resilience["ok"] is True and restore["ok"] is
 assert serial["ok"] is True and serial["independent_proof"]["serial_identity_proof"]["ok"] is True
 assert serial["phases"]["sustained_http"]["serial_units_per_bin_lot"] >= 2
 assert serial["phases"]["sustained_http"]["serial_current_source_reads"] == serial["phases"]["sustained_http"]["committed_moves"]
+traffic = serial["phases"]["sustained_http"]
+assert traffic["serial_pattern"] == "rotating" and traffic["acceptance"]["ok"] is True
+assert traffic["acceptance"]["limits"]["min_serial_coverage"] == 1
+assert len(traffic["serial_distinct_labels_per_operator"]) == traffic["distinct_operator_identities"]
+assert all(n == traffic["serial_labels_available_per_operator"] for n in traffic["serial_distinct_labels_per_operator"])
+assert sum(traffic["serial_distinct_labels_per_operator"]) == serial["independent_proof"]["serial_identity_proof"]["distinct_timed_labels"]
 assert serial["independent_proof"]["serial_identity_proof"]["recovered_moves_outside_timed_interval"] == 2
 for folder, report in (("resilience", resilience), ("serial-resilience", serial)):
+    verify_table_inventory(report["independent_proof"]["final_table_fingerprints"],
+                           restore["verification"]["table_evidence"])
     for phase in ("api_sigkill", "postgres_sigkill"):
         evidence = report["phases"][phase]
         checkpoints = verify_journal(root / folder, evidence["crash_journal"], phase)
@@ -420,7 +372,9 @@ for phase in ("api_sigkill", "postgres_sigkill"):
     assert evidence["barrier_stage"] == "after_serial_custody_history_event_receipt_before_outbox_commit"
     assert evidence["serial_after_write_barrier"]["owned_fault_trigger_removed"] is True
     assert evidence["serial_after_write_barrier"]["blocking_evidence"]["wait_event"] == "advisory"
-    assert len(evidence["all_table_fingerprints_unchanged"]) == 49
+    verify_table_inventory(evidence["all_table_fingerprints_unchanged"],
+                           restore["verification"]["table_evidence"])
+assert restore["verification"]["serial_pending_checks_empty_before_and_after_restore_and_continuation"] is True
 assert workload["configured_thresholds_passed"] is True and workload["proof"]["independent_reconciliation"] is True
 assert container["image_id"] == resilience["image_id"] == (root / "container/image.id").read_text().strip()
 assert container["source_inputs_sha256"] == resilience["image_source_inputs_sha256"], "Image source identities differ across proofs"

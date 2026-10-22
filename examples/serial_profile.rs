@@ -194,8 +194,45 @@ impl Fixture {
     }
     async fn plans(&self) -> Result<Value> {
         let mut plans = serde_json::Map::new();
+        // Compare complete scope predicates on identical committed rows. The
+        // immutable predecessor is installed only in this rolled-back session.
+        let mut tx = self.store.pool.begin().await?;
+        let previous = include_str!("../migrations/029_serial_scope_source_sets.sql");
+        let start = previous
+            .find("CREATE OR REPLACE FUNCTION wms_serial_scope_current_valid")
+            .ok_or("Missing original scope declaration")?;
+        let end = start + previous[start..].find("$$;").ok_or("Missing scope body")? + 3;
+        let oracle = previous[start..end].replacen(
+            "wms_serial_scope_current_valid(",
+            "wms_serial_profile_scope_v29(",
+            1,
+        );
+        sqlx::raw_sql(&oracle).execute(&mut *tx).await?;
+        let mut comparisons = vec![];
+        for _ in 0..7 {
+            let mut sample = serde_json::Map::new();
+            for (phase, function) in [
+                ("original_before_ms", "wms_serial_profile_scope_v29"),
+                ("candidate_ms", "wms_serial_scope_current_valid"),
+                ("original_after_ms", "wms_serial_profile_scope_v29"),
+            ] {
+                let start = Instant::now();
+                let valid: bool = sqlx::query_scalar(&format!("SELECT {function}($1,'wh-main')"))
+                    .bind(&self.who.tenant)
+                    .fetch_one(&mut *tx)
+                    .await?;
+                require(valid, "Complete scope comparison rejected valid custody")?;
+                sample.insert(phase.into(), json!(start.elapsed().as_secs_f64() * 1000.0));
+            }
+            comparisons.push(sample);
+        }
+        tx.rollback().await?;
+        plans.insert("scope_comparison".into(), json!({
+            "samples": comparisons,
+            "scope": "Interleaved complete v29/current/v29 predicates on identical rows; shared host, read cost only, not write throughput"
+        }));
         for (name,sql) in [
-            ("birth_event_source","SELECT wms_serial_event_valid(e.tenant,e.warehouse_id,e.id) FROM wms_events e WHERE tenant=$1 AND payload->'command'->>'type'='count_stock'"),
+            ("birth_event_read_source","SELECT wms_serial_event_valid_read_source(e.tenant,e.warehouse_id,e.id) FROM wms_events e WHERE tenant=$1 AND payload->'command'->>'type'='count_stock'"),
             ("selected_current_sources","SELECT wms_serial_unit_bound(u) FROM wms_serial_units u WHERE tenant=$1 AND sku='PROFILE' ORDER BY serial LIMIT 50"),
             ("physical_scope","SELECT wms_serial_scope_current_valid($1,'wh-main')"),
         ]{let plan:Value=sqlx::query_scalar(&format!("EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON) {sql}")).bind(&self.who.tenant).fetch_one(&self.store.pool).await?;plans.insert(name.into(),plan);}

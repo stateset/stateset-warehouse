@@ -69,7 +69,11 @@ async fn table_contents(pool: &sqlx::PgPool) -> Value {
             .fetch_one(&mut *tx)
             .await
             .expect("original table rows");
-        result.insert(name, data);
+        if name == "wms_serial_pending_checks" {
+            assert_eq!(data, json!([]), "transient validation keys survived commit");
+        } else {
+            result.insert(name, data);
+        }
     }
     tx.commit().await.expect("read-only evidence complete");
     Value::Object(result)
@@ -149,12 +153,22 @@ async fn populated_21_upgrade_to_current_preserves_every_data_table_and_original
             role: "admin".into(),
         },
     };
+    // Current admission shares selected event proofs. Seed the actual v21
+    // schema using its unchanged original validator through a temporary naming
+    // adapter; remove the adapter before the upgrade boundary. No newer
+    // predicate, table, index or migration is installed in the predecessor.
+    sqlx::raw_sql("CREATE FUNCTION wms_serial_event_valid_read_source(t TEXT,w TEXT,eid TEXT) RETURNS BOOLEAN LANGUAGE SQL STABLE AS $$ SELECT wms_serial_event_valid(t,w,eid) $$")
+        .execute(&f.store.pool).await.expect("predecessor-only source adapter");
     f.store
         .provision(&f.who.tenant, false)
         .await
         .expect("owned original workspace");
     f.catalog().await;
     let (original,saved)=f.execute(json!({"type":"count_stock","sku":"SERIAL","lot":"LOT","location":"A","counted":2,"reason":"Original case-sensitive observations on schema21"}),observed(&[],&["Original","original"])).await;
+    sqlx::query("DROP FUNCTION wms_serial_event_valid_read_source(TEXT,TEXT,TEXT)")
+        .execute(&f.store.pool)
+        .await
+        .expect("restore pristine v21 schema before upgrade");
     // The predecessor has no migration25 read component. Prove its real
     // schema21 facts with the retained predecessor-compatible complete query;
     // the current Store/API query is exercised after the actual upgrade.
@@ -193,11 +207,11 @@ async fn populated_21_upgrade_to_current_preserves_every_data_table_and_original
     f.store.pool.close().await;
     f.store = Store::connect(target.as_str())
         .await
-        .expect("actual application upgrade21→29");
+        .expect("actual application upgrade21→33");
     assert_eq!(
         table_contents(&f.store.pool).await,
         before,
-        "migrations22–29 changed existing application data"
+        "migrations22–33 changed existing application data"
     );
     let old_rows:Value=sqlx::query_scalar("SELECT jsonb_agg(to_jsonb(m) ORDER BY name) FROM wms_schema_migrations m WHERE name<'022_serial_restore_search_path'").fetch_one(&f.store.pool).await.expect("original21 ledger remains intact");
     assert_eq!(old_rows, ledger);
@@ -205,7 +219,7 @@ async fn populated_21_upgrade_to_current_preserves_every_data_table_and_original
         .fetch_one(&f.store.pool)
         .await
         .expect("upgraded ledger count");
-    assert_eq!(count, 29);
+    assert_eq!(count, 33);
     f.proof().await;
     f.execute(
         json!({"type":"move_stock","sku":"SERIAL","lot":"LOT","from":"A","to":"B","quantity":1}),
@@ -217,7 +231,7 @@ async fn populated_21_upgrade_to_current_preserves_every_data_table_and_original
         .store
         .execute(&f.who, "wh-main", &original)
         .await
-        .expect("original schema21 request after new29 source sets");
+        .expect("original schema21 request after new30 custody counts");
     assert_eq!(replay["replayed"], true);
     assert_eq!(replay["result"], saved["result"]);
     assert_eq!(table_contents(&f.store.pool).await, later);
@@ -242,5 +256,5 @@ async fn populated_21_upgrade_to_current_preserves_every_data_table_and_original
     f.store.pool.close().await;
     // Keep the uniquely named source/upgrade database with the owning isolated
     // server's evidence; no pre-existing database or inventory is altered.
-    eprintln!("Retained owned schema21→29 upgrade database {name}; all{}data tables and{}original ledger rows unchanged, exact replay preserved",before.as_object().expect("original table evidence").len(),ledger.as_array().expect("original migration evidence").len());
+    eprintln!("Retained owned schema21→33 upgrade database {name}; all{}data tables and{}original ledger rows unchanged, exact replay preserved",before.as_object().expect("original table evidence").len(),ledger.as_array().expect("original migration evidence").len());
 }

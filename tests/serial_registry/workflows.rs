@@ -128,6 +128,19 @@ async fn record(c: &mut PgConnection, event: Event) -> String {
         .bind(&event.id).bind(event.warehouse).bind(warehouse_version).bind(payload).execute(&mut *c).await.expect("complete immutable original command event");
     sqlx::query("INSERT INTO wms_commands(tenant,warehouse_id,request_id,actor,digest,result) VALUES('serial-test',$1,$2,'synthetic:admin',$3,$4)")
         .bind(event.warehouse).bind(request_id).bind("0".repeat(64)).bind(result).execute(&mut *c).await.expect("raw attributed receipt, not HTTP byte proof");
+    // Compare every facility after each raw workflow mutation, including
+    // deliberately invalid custody, before deferred guards accept or reject it.
+    // This exercises on-hand, staged/package, shipped, missing and transit/loss
+    // predicates against the immutable predecessor with the same original rows.
+    let outcomes: Vec<(String, Option<bool>, Option<bool>)> = sqlx::query_as(
+        "SELECT warehouse_id,wms_serial_scope_v29_oracle(tenant,warehouse_id),wms_serial_scope_current_valid(tenant,warehouse_id) FROM wms_warehouses WHERE tenant='serial-test'",
+    )
+    .fetch_all(&mut *c)
+    .await
+    .expect("complete custody predicate differential");
+    for (warehouse, original, current) in outcomes {
+        assert_eq!(current, original, "custody verdict changed at {warehouse}");
+    }
     event.id
 }
 

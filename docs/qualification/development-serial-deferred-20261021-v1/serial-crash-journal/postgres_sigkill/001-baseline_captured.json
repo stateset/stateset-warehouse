@@ -1,0 +1,207 @@
+{
+  "facts": {
+    "fingerprints": {
+      "wms_activity": {
+        "rows": 2364,
+        "sha256": "687ebc9a024a59e9b70c647f3b75c7205622f5143875d233eb1348219a40a238"
+      },
+      "wms_admin_audit": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_allocations": {
+        "rows": 253,
+        "sha256": "d808b591c1de863e7f3c9d834b15881c76ab2c7cc7669f7dd818752302d083cd"
+      },
+      "wms_commands": {
+        "rows": 2364,
+        "sha256": "5cf3e9c1380c0f723ee4c5e4c516174ed6b56bd43b7787bb1e391b38a6fffab3"
+      },
+      "wms_delivery_attempts": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_events": {
+        "rows": 2364,
+        "sha256": "b51fbaae761fb39089fb0fc22d05e93ff33ec798a0ccfc465172f3f2ba3bde2d"
+      },
+      "wms_exceptions": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_locations": {
+        "rows": 104,
+        "sha256": "552a6c243e5d598af02d0dc98f3b477adf61df9cc65ef2cbe57c0604a1ce205e"
+      },
+      "wms_lot_changes": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_lot_decisions": {
+        "rows": 256,
+        "sha256": "7d33fce5b8bd204eab736ab21887a7338031794a24bdade2de5aaa48036ee595"
+      },
+      "wms_lot_enforcement": {
+        "rows": 2,
+        "sha256": "93913cea8505cc1e249446971f145ffb2faa290f250977b7c09f997daae0ce73"
+      },
+      "wms_movements": {
+        "rows": 1008,
+        "sha256": "9d9c380c3148325ee0ccd0a82e44c3e0f826b6eca0dde7a8e4f268aa5ff4bbb2"
+      },
+      "wms_native_attempts": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_native_requests": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_order_cancellations": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_order_cancelled_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_order_lines": {
+        "rows": 503,
+        "sha256": "753739f3c0b3ee981f404fb80ee6e08e5365d11b48318a5b12539cebe37b0bfb"
+      },
+      "wms_orders": {
+        "rows": 502,
+        "sha256": "499c8c6f847d9122d73a20cd02bf205b470e1709042625d9e3edeee83c4cce6e"
+      },
+      "wms_outbox": {
+        "rows": 2366,
+        "sha256": "f2ef1da8b6b1f3aecef5b291f542d0b0d87db07abfa038786d4dc7f82faf7f2f"
+      },
+      "wms_package_closures": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_package_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_packages": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_products": {
+        "rows": 501,
+        "sha256": "e7b6065c569c90ce78b7b3afc3e9891bd3fc36ab733c4464da399783f0838415"
+      },
+      "wms_receipt_cancellations": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_receipt_cancelled_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_receipt_evidence": {
+        "rows": 2,
+        "sha256": "914a03e9f1b2f9cf71470150bb54b3d52010847b1d928a8b46f1648287c9134a"
+      },
+      "wms_receipt_lines": {
+        "rows": 2,
+        "sha256": "24776df605beecf6f771b42b3b2d5dd5c290e5d621f0d6bf4b7c0960cb648648"
+      },
+      "wms_receipts": {
+        "rows": 1,
+        "sha256": "3b62284fb6060d99a41c8c3e141ea582c9a0aecd11ad27996282d2a1ecdbb6cc"
+      },
+      "wms_resource_versions": {
+        "rows": 2613,
+        "sha256": "a2581d5f4dce0ddfdca7d9168611f847fb9efdc5cb411c80f7618c9d513da44a"
+      },
+      "wms_return_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_schema_migrations": {
+        "rows": 32,
+        "sha256": "a2a7af54de9bbd71b3e765d79d98440be6ca887fadd18e90b356fa9fad0574df"
+      },
+      "wms_serial_batches": {
+        "rows": 1001,
+        "sha256": "e459ececcaff5f60ea35f7355ff7126fe2de9da5e47d354e25f02ff37050d01f"
+      },
+      "wms_serial_heads": {
+        "rows": 500,
+        "sha256": "cbbe1daea5ce7388b893da76ea071e4ecd3b5ec027c08568f1f2f1cff269e192"
+      },
+      "wms_serial_modes": {
+        "rows": 501,
+        "sha256": "d652b52ce453ff14ffeedf0098647652b18df4f02b1c09f2ad0a9d061c3f4868"
+      },
+      "wms_serial_observations": {
+        "rows": 1001,
+        "sha256": "9d727174093aec5559c890346369de4297fe21ecb6e358772fd0e13f53beecf9"
+      },
+      "wms_serial_pending_checks": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_serial_steps": {
+        "rows": 16001,
+        "sha256": "fa744d77eeebccbb3f5ba2f78b99b3034163c66e18860ac6c495b3ff92c7bbed"
+      },
+      "wms_serial_units": {
+        "rows": 16000,
+        "sha256": "987501fc38fe0dce57539d9194262cbfcb604fa9bfbedb5c2d7b81c4179d245e"
+      },
+      "wms_shipment_evidence": {
+        "rows": 1,
+        "sha256": "f50c1c9fea70e4db3eaabf203b947ded3d819f837b06628df95d0a115f34fd27"
+      },
+      "wms_split_orders": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_stock": {
+        "rows": 1004,
+        "sha256": "c274749f73ce36781e98555d29b57bebbeca9711c4135df26562f143c6e77e9d"
+      },
+      "wms_stock_ledger": {
+        "rows": 1004,
+        "sha256": "55fca9325292b462de1875e651baac3464eb001f4b7be2691e5c881ed44b12fd"
+      },
+      "wms_stock_reserved": {
+        "rows": 502,
+        "sha256": "56585020520e40cf9e772081d0c3ec226342698781108d04bdbcd868ad663634"
+      },
+      "wms_transfer_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_transfer_loss_records": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_transfers": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_unit_observations": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_unit_pack_changes": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_warehouses": {
+        "rows": 2,
+        "sha256": "04a3776cfb39f41a8de2d7243da0c1e05e6539c0614d416fad69d57bbaedb0ae"
+      },
+      "wms_workspaces": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      }
+    }
+  },
+  "stage": "baseline_captured"
+}

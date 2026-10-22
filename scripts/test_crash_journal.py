@@ -10,8 +10,58 @@ import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
-from crash_journal import CrashJournal, verify_journal
+from crash_journal import CrashJournal, verify_journal, verify_table_inventory
 from resilience_probe import Probe
+
+
+class CrashTableInventoryTests(unittest.TestCase):
+    def setUp(self):
+        self.restored = {f"wms_fixture_{n}": {"rows": n + 1, "sha256": "a" * 64}
+                         for n in range(49)}
+        self.restored["wms_serial_pending_checks"] = {
+            "rows": 0, "sha256": hashlib.sha256(b"[]").hexdigest()}
+        self.crashed = deepcopy(self.restored)
+        self.crashed["wms_fixture_0"] = {"rows": 27, "sha256": "b" * 64}
+
+    def test_complete_inventory_uses_actual_names_instead_of_a_fixed_count(self):
+        verify_table_inventory(self.crashed, self.restored)
+        self.crashed["wms_new_history"] = {"rows": 2, "sha256": "c" * 64}
+        self.restored["wms_new_history"] = {"rows": 1, "sha256": "d" * 64}
+        verify_table_inventory(self.crashed, self.restored)
+
+    def test_missing_extra_and_same_count_substituted_tables_are_rejected(self):
+        for variant in ("missing", "extra", "substituted"):
+            with self.subTest(variant=variant):
+                damaged = deepcopy(self.crashed)
+                if variant != "extra":
+                    damaged.pop("wms_fixture_0")
+                if variant != "missing":
+                    damaged["wms_unexpected"] = {"rows": 0, "sha256": "a" * 64}
+                with self.assertRaisesRegex(AssertionError, "inventories differ"):
+                    verify_table_inventory(damaged, self.restored)
+
+    def test_pending_checks_require_zero_rows_and_the_exact_empty_digest(self):
+        for side in ("crash", "restore"):
+            for item in ({"rows": 1, "sha256": "a" * 64},
+                         {"rows": 0, "sha256": "a" * 64}):
+                with self.subTest(side=side, item=item):
+                    crashed, restored = deepcopy(self.crashed), deepcopy(self.restored)
+                    (crashed if side == "crash" else restored)["wms_serial_pending_checks"] = item
+                    with self.assertRaisesRegex(AssertionError, "must be empty"):
+                        verify_table_inventory(crashed, restored)
+
+    def test_malformed_or_omitted_inventory_cannot_count_as_complete(self):
+        for item in ({"rows": -1, "sha256": "a" * 64},
+                     {"rows": False, "sha256": "a" * 64},
+                     {"rows": 0, "sha256": "invalid"}, {"rows": 0}, None):
+            with self.subTest(item=item):
+                damaged = deepcopy(self.crashed)
+                damaged["wms_fixture_0"] = item
+                with self.assertRaisesRegex(AssertionError, "Invalid table fingerprint"):
+                    verify_table_inventory(damaged, self.restored)
+        for damaged in (None, {}, []):
+            with self.assertRaisesRegex(AssertionError, "inventories differ"):
+                verify_table_inventory(damaged, self.restored)
 
 
 class CrashJournalTests(unittest.TestCase):

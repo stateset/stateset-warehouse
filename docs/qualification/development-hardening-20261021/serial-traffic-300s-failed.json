@@ -1,0 +1,190 @@
+{
+  "ok": false,
+  "error": "action p95 exceeds the predeclared limit",
+  "phases": {
+    "seed": {
+      "method": "authenticated actual HTTP commands only; opening counts are disclosed synthetic fixtures",
+      "seconds": 37.614,
+      "operational_products": 32,
+      "additional_recovery_product": 1,
+      "storage_bins": 16,
+      "lots_per_product": 2,
+      "opening_bin_lot_balances": 64,
+      "opening_each_per_balance": 32,
+      "serial_units_per_bin_lot": 32,
+      "open_orders": 32,
+      "allocated_orders": 16,
+      "commands_before_recovery_lifecycle": 162,
+      "expected_setup_commands": 162,
+      "observed_setup_commands": 162,
+      "independent_setup_command_count_matches": true,
+      "excluded_from_sustained_timing": true
+    },
+    "sustained_http": {
+      "requested_seconds": 300,
+      "review_mode": "resources",
+      "traffic_model": "independent-operators",
+      "client_schedule": "independent continuous client loops without think time or an operator barrier",
+      "serial_units_per_bin_lot": 32,
+      "serial_pattern": "rotating",
+      "serial_distinct_labels_per_operator": [
+        64,
+        64,
+        64,
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "serial_labels_available_per_operator": 64,
+      "serial_current_source_reads": 2172,
+      "serial_current_source_latency": {
+        "samples": 2172,
+        "p50_ms": 17.091,
+        "p95_ms": 32.302,
+        "p99_ms": 45.369,
+        "max_ms": 102.701
+      },
+      "measurement_limit": "Authenticated loopback HTTP and JSON processing; Python clients open HTTP connections per request; browser rendering, human timing and physical scanner input are excluded",
+      "elapsed_seconds": 301.298,
+      "replicas": 2,
+      "distinct_operator_identities": 8,
+      "rounds": null,
+      "committed_moves": 2172,
+      "exact_cross_replica_replays": 2172,
+      "definite_stale_conflicts": 0,
+      "unexpected_errors": 0,
+      "committed_moves_per_second": 7.209,
+      "action_latency": {
+        "samples": 2172,
+        "p50_ms": 1059.311,
+        "p95_ms": 1408.48,
+        "p99_ms": 2112.986,
+        "max_ms": 3207.187
+      },
+      "action_latency_scope": "command submission from the client's cached review through committed write and its own validated post-commit full warehouse refresh and, when enabled, exact literal serial source/custody review; initial review and subsequent exact replay excluded",
+      "throughput_scope": "all completed client cycles, including initial reviews, physical commands, post-commit refreshes when enabled, conflicts and exact cross-replica replays; replay is not another physical move",
+      "http_write_attempt_latency": {
+        "samples": 2172,
+        "p50_ms": 985.601,
+        "p95_ms": 1319.011,
+        "p99_ms": 2017.183,
+        "max_ms": 3091.072
+      },
+      "frozen_replay_latency": {
+        "samples": 2172,
+        "p50_ms": 3.219,
+        "p95_ms": 6.835,
+        "p99_ms": 11.618,
+        "max_ms": 96.027
+      },
+      "operational_snapshot_latency": {
+        "samples": 2180,
+        "p50_ms": 51.407,
+        "p95_ms": 89.041,
+        "p99_ms": 117.138,
+        "max_ms": 217.576
+      },
+      "shared_round_snapshot_reads": 0,
+      "independent_post_commit_stock_visibility_verified": true,
+      "snapshot_coverage": "exact configured catalog SKU set and every seeded order ID/state, with completed history permitted",
+      "operators": [
+        {
+          "actor": "operator:serial-0",
+          "commits": 272,
+          "stale_conflicts": 0,
+          "exact_replays": 272,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 272,
+          "snapshot_reads": 273
+        },
+        {
+          "actor": "operator:serial-1",
+          "commits": 271,
+          "stale_conflicts": 0,
+          "exact_replays": 271,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 271,
+          "snapshot_reads": 272
+        },
+        {
+          "actor": "operator:serial-2",
+          "commits": 272,
+          "stale_conflicts": 0,
+          "exact_replays": 272,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 272,
+          "snapshot_reads": 273
+        },
+        {
+          "actor": "operator:serial-3",
+          "commits": 271,
+          "stale_conflicts": 0,
+          "exact_replays": 271,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 271,
+          "snapshot_reads": 272
+        },
+        {
+          "actor": "operator:serial-4",
+          "commits": 272,
+          "stale_conflicts": 0,
+          "exact_replays": 272,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 272,
+          "snapshot_reads": 273
+        },
+        {
+          "actor": "operator:serial-5",
+          "commits": 271,
+          "stale_conflicts": 0,
+          "exact_replays": 271,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 271,
+          "snapshot_reads": 272
+        },
+        {
+          "actor": "operator:serial-6",
+          "commits": 272,
+          "stale_conflicts": 0,
+          "exact_replays": 272,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 272,
+          "snapshot_reads": 273
+        },
+        {
+          "actor": "operator:serial-7",
+          "commits": 271,
+          "stale_conflicts": 0,
+          "exact_replays": 271,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 271,
+          "snapshot_reads": 272
+        }
+      ],
+      "acceptance": {
+        "ok": false,
+        "limits": {
+          "max_action_p95_ms": 1000.0,
+          "min_moves_per_second": 5.0,
+          "min_serial_coverage": 1.0
+        },
+        "failures": [
+          "action p95 exceeds the predeclared limit"
+        ],
+        "observed_serial_coverage_per_operator": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "scope": "Synthetic workload acceptance; unset latency/throughput limits establish no facility SLO"
+      }
+    }
+  }
+}

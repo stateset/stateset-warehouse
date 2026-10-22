@@ -93,3 +93,20 @@ def verify_journal(root, manifest, phase):
             or hashlib.sha256(wire.encode()).hexdigest() != original["http_body_sha256"]):
         raise AssertionError("Crash journal original HTTP body mismatch")
     return records
+
+
+def verify_table_inventory(fingerprints, restored_tables):
+    """Require the archive's complete table inventory and no committed dirty keys."""
+    if (not isinstance(fingerprints, dict) or not isinstance(restored_tables, dict)
+            or not restored_tables or set(fingerprints) != set(restored_tables)):
+        raise AssertionError("Crash and restore table inventories differ")
+    for inventory in (fingerprints, restored_tables):
+        for item in inventory.values():
+            if (not isinstance(item, dict) or set(item) != {"rows", "sha256"}
+                    or type(item["rows"]) is not int or item["rows"] < 0
+                    or not isinstance(item["sha256"], str)
+                    or not re.fullmatch(r"[0-9a-f]{64}", item["sha256"])):
+                raise AssertionError("Invalid table fingerprint")
+        if inventory.get("wms_serial_pending_checks") != {
+                "rows": 0, "sha256": hashlib.sha256(b"[]").hexdigest()}:
+            raise AssertionError("Committed serial pending checks must be empty")

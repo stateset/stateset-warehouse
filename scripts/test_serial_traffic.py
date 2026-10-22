@@ -53,6 +53,24 @@ class SerialClient(legacy.SimulatedProbe):
 class SerialSchedulingTests(unittest.TestCase):
     run_probe = legacy.ResilienceTrafficTests.run_probe
 
+    def test_short_rotating_run_retains_observed_coverage_and_fails_acceptance(self):
+        class TwoMoveClient(SerialClient):
+            def reviewed_move(self, index, move_number, *args):
+                if move_number >= 2:
+                    return None
+                return super().reviewed_move(index, move_number, *args)
+
+        p = TwoMoveClient()
+        p.args.serial_pattern = "rotating"
+        p.args.lots = 1
+        p.args.min_serial_coverage = 1
+        with self.assertRaisesRegex(AssertionError, "required serial population"):
+            self.run_probe(p)
+        report = p.phase_evidence["sustained_http"]
+        self.assertFalse(report["acceptance"]["ok"])
+        self.assertEqual(report["serial_labels_available_per_operator"], 2)
+        self.assertTrue(any(n < 2 for n in report["serial_distinct_labels_per_operator"]))
+
     # Reuse the independent scheduler clock, not the parent protocol cases.
     def test_serial_clients_replay_the_same_label_and_validate_each_visible_save(self):
         p = SerialClient()
@@ -97,7 +115,8 @@ class SerialSchedulingTests(unittest.TestCase):
                 self.assertEqual(p.replays["token-0"], 0)
 
 
-def history(recovery=False):
+def history(recovery=False, moves=None, lots=1, units=2, pattern="fixed"):
+    moves = [1, 0] if moves is None else moves
     tables = {
         name: []
         for name in [
@@ -112,7 +131,7 @@ def history(recovery=False):
     accepted = {}
     current = {}
 
-    def event(sku, version, labels, location, command=None):
+    def event(sku, version, labels, location, command=None, lot="LOT-000"):
         eid = f"{sku}-{version}"
         steps = []
         for n, label in enumerate(labels, 1):
@@ -122,7 +141,7 @@ def history(recovery=False):
                 "tenant": "resilience-test",
                 "sku": sku,
                 "serial": label,
-                "lot": "LOT-000",
+                "lot": lot,
                 "revision": rev,
                 "previous_revision": None if rev == 1 else rev - 1,
                 "sku_version": version,
@@ -145,7 +164,7 @@ def history(recovery=False):
             current[(sku, label)] = {
                 "sku": sku,
                 "serial": label,
-                "lot": "LOT-000",
+                "lot": lot,
                 "revision": rev,
                 "place": deepcopy(step["after_place"]),
                 "last_event_id": eid,
@@ -192,33 +211,81 @@ def history(recovery=False):
             "actor": "actor",
         }
 
+    versions = [0, 0]
     for i in range(2):
-        event(
-            f"LOAD-{i:05}",
-            1,
-            [f"Load-{i:05}-Lot-000-Unit-{n:05}" for n in range(2)],
-            f"BIN-{i:05}",
-        )
-    event("LOAD-00000", 2, ["Load-00000-Lot-000-Unit-00000"], "BIN-00001")
-    if recovery:
+        for lot in range(lots):
+            versions[i] += 1
+            event(f"LOAD-{i:05}", versions[i],
+                  [f"Load-{i:05}-Lot-{lot:03}-Unit-{n:05}" for n in range(units)],
+                  f"BIN-{i:05}", lot=f"LOT-{lot:03}")
+
+    def recover():
         for returning in range(2):
-            event("LOAD-00001", 2 + returning, ["Load-00001-Lot-000-Unit-00001"],
+            versions[1] += 1
+            event("LOAD-00001", versions[1], [f"Load-00001-Lot-000-Unit-{units-1:05}"],
                   f"BIN-{returning:05}",
                   {"type": "move_stock", "sku": "LOAD-00001", "lot": "LOT-000",
                    "from": f"BIN-{1-returning:05}", "to": f"BIN-{returning:05}", "quantity": 1})
+
+    if recovery and pattern == "rotating":
+        recover()
+    for i, count in enumerate(moves):
+        for move in range(count):
+            # Enumerate out-and-back pairs independently from Probe's selector.
+            labels = [(lot, unit) for lot in range(lots) for unit in range(units)]
+            lot, unit = labels[(move // 2) % len(labels)] if pattern == "rotating" else (0, 0)
+            versions[i] += 1
+            event(f"LOAD-{i:05}", versions[i], [f"Load-{i:05}-Lot-{lot:03}-Unit-{unit:05}"],
+                  f"BIN-{(i + (move + 1) % 2) % 2:05}", lot=f"LOT-{lot:03}")
+    if recovery and pattern == "fixed":
+        recover()
     tables["wms_serial_units"] = list(current.values())
     tables["wms_serial_heads"] = [
-        {
-            "sku": f"LOAD-{i:05}",
-            "version": 2 if i == 0 else (3 if recovery else 1),
-            "last_event_id": f"LOAD-{i:05}-{2 if i==0 else (3 if recovery else 1)}",
-        }
-        for i in range(2)
+        {"sku": f"LOAD-{i:05}", "version": version,
+         "last_event_id": f"LOAD-{i:05}-{version}"}
+        for i, version in enumerate(versions)
     ]
     return tables, accepted
 
 
 class SerialEvidenceTests(unittest.TestCase):
+    def test_rotating_population_covers_lots_wraparound_and_odd_final_moves(self):
+        for moves in ([0, 0], [1, 3], [11, 12], [25, 31]):
+            with self.subTest(moves=moves):
+                tables, accepted = history(moves=moves, lots=2, units=3, pattern="rotating")
+                proof = serial_proof(tables, accepted, 2, 2, 3, moves, 2, pattern="rotating")
+                self.assertTrue(proof["ok"])
+                self.assertEqual(proof["distinct_timed_labels"],
+                                 sum(min((n + 1) // 2, 6) for n in moves))
+
+    def test_rotating_recovery_label_can_move_again_after_both_crashes(self):
+        tables, accepted = history(recovery=True, moves=[17, 19], lots=2, units=3, pattern="rotating")
+        proof = serial_proof(tables, accepted, 2, 2, 3, [17, 19], 2,
+                             ["LOAD-00001-3", "LOAD-00001-4"], pattern="rotating")
+        self.assertEqual(proof["recovered_moves_outside_timed_interval"], 2)
+        self.assertEqual(proof["distinct_timed_labels"], 12)
+
+    def test_fixed_label_history_cannot_pass_as_rotating_coverage(self):
+        tables, accepted = history(moves=[8, 8])
+        with self.assertRaises(AssertionError):
+            serial_proof(tables, accepted, 2, 1, 2, [8, 8], 2, pattern="rotating")
+
+    def test_rotating_requests_keep_pairs_exact_across_lots_and_wraparound(self):
+        probe = SerialClient()
+        probe.args.serial_pattern = "rotating"
+        probe.args.serial_units = 2
+        probe.args.lots = 2
+        review = {"version": 0, "resource_versions": {}}
+        expected = [(0, 0), (0, 1), (1, 0), (1, 1), (0, 0)]
+        for pair, (lot, unit) in enumerate(expected):
+            outbound = probe.move_request(0, pair * 2, review)
+            inbound = probe.move_request(0, pair * 2 + 1, review)
+            self.assertEqual(outbound["serial_inputs"], inbound["serial_inputs"])
+            self.assertEqual(outbound["serial_inputs"][0]["serials"], [probe.serial_id(0, lot, unit)])
+            self.assertEqual(outbound["command"]["lot"], probe.lot(lot))
+            self.assertEqual(outbound["command"]["from"], inbound["command"]["to"])
+            self.assertEqual(outbound["command"]["to"], inbound["command"]["from"])
+
     def test_recovered_original_serial_moves_are_separate_from_timed_traffic(self):
         tables, accepted = history(recovery=True)
         ids = ["LOAD-00001-2", "LOAD-00001-3"]

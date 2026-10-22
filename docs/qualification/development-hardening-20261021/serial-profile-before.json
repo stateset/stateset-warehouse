@@ -1,0 +1,315 @@
+{
+  "cases": [
+    {
+      "moves": {
+        "all_original_commands_replayed": 12,
+        "evidence": {
+          "batches": 9,
+          "commands": 12,
+          "events": 12,
+          "heads": [
+            {
+              "last_event_id": "c7a67e98-eb17-4df0-b269-374807a650c8",
+              "sku": "PROFILE",
+              "tenant": "serial-profile-20476600-2ec4-4c6e-b999-e50d93761498",
+              "version": 9
+            }
+          ],
+          "observations": 9,
+          "outbox": 12,
+          "steps": 520,
+          "units": 512,
+          "warehouse": 12
+        },
+        "single_unit_move_milliseconds": [
+          71.32922599999999,
+          121.509233,
+          61.782579999999996,
+          86.56470900000001,
+          56.190152,
+          63.66349,
+          71.57369,
+          66.015561
+        ]
+      },
+      "ok": true,
+      "query_plans": {
+        "birth_event_source": [
+          {
+            "Execution Time": 2674.264,
+            "Plan": {
+              "Actual Loops": 1,
+              "Actual Rows": 1,
+              "Actual Startup Time": 2674.228,
+              "Actual Total Time": 2674.243,
+              "Alias": "e",
+              "Exact Heap Blocks": 3,
+              "Filter": "(((payload -> 'command'::text) ->> 'type'::text) = 'count_stock'::text)",
+              "Local Dirtied Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Written Blocks": 0,
+              "Lossy Heap Blocks": 0,
+              "Node Type": "Bitmap Heap Scan",
+              "Parallel Aware": false,
+              "Plan Rows": 1,
+              "Plan Width": 1,
+              "Plans": [
+                {
+                  "Actual Loops": 1,
+                  "Actual Rows": 12,
+                  "Actual Startup Time": 0.008,
+                  "Actual Total Time": 0.008,
+                  "Index Cond": "(tenant = 'serial-profile-20476600-2ec4-4c6e-b999-e50d93761498'::text)",
+                  "Index Name": "wms_events_tenant_warehouse_id_version_key",
+                  "Local Dirtied Blocks": 0,
+                  "Local Hit Blocks": 0,
+                  "Local Read Blocks": 0,
+                  "Local Written Blocks": 0,
+                  "Node Type": "Bitmap Index Scan",
+                  "Parallel Aware": false,
+                  "Parent Relationship": "Outer",
+                  "Plan Rows": 2,
+                  "Plan Width": 0,
+                  "Shared Dirtied Blocks": 0,
+                  "Shared Hit Blocks": 1,
+                  "Shared Read Blocks": 0,
+                  "Shared Written Blocks": 0,
+                  "Startup Cost": 0.00,
+                  "Temp Read Blocks": 0,
+                  "Temp Written Blocks": 0,
+                  "Total Cost": 4.16
+                }
+              ],
+              "Recheck Cond": "(tenant = 'serial-profile-20476600-2ec4-4c6e-b999-e50d93761498'::text)",
+              "Relation Name": "wms_events",
+              "Rows Removed by Filter": 11,
+              "Rows Removed by Index Recheck": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Hit Blocks": 41690,
+              "Shared Read Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Startup Cost": 4.16,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0,
+              "Total Cost": 9.77
+            },
+            "Planning Time": 0.138,
+            "Triggers": []
+          }
+        ],
+        "physical_scope": [
+          {
+            "Execution Time": 5.202,
+            "Plan": {
+              "Actual Loops": 1,
+              "Actual Rows": 1,
+              "Actual Startup Time": 5.191,
+              "Actual Total Time": 5.192,
+              "Local Dirtied Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Written Blocks": 0,
+              "Node Type": "Result",
+              "Parallel Aware": false,
+              "Plan Rows": 1,
+              "Plan Width": 1,
+              "Shared Dirtied Blocks": 0,
+              "Shared Hit Blocks": 43,
+              "Shared Read Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Startup Cost": 0.00,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0,
+              "Total Cost": 0.26
+            },
+            "Planning Time": 0.767,
+            "Triggers": []
+          }
+        ],
+        "scope_comparison": {
+          "samples": [
+            {
+              "candidate_ms": 5.8062640000000005,
+              "original_after_ms": 7.431242,
+              "original_before_ms": 7.252228000000001
+            },
+            {
+              "candidate_ms": 6.578139999999999,
+              "original_after_ms": 7.195863999999999,
+              "original_before_ms": 7.453751
+            },
+            {
+              "candidate_ms": 4.607962000000001,
+              "original_after_ms": 7.393562999999999,
+              "original_before_ms": 7.322081
+            },
+            {
+              "candidate_ms": 6.305657,
+              "original_after_ms": 7.293858999999999,
+              "original_before_ms": 22.070871999999998
+            },
+            {
+              "candidate_ms": 6.470562,
+              "original_after_ms": 7.309175000000001,
+              "original_before_ms": 6.874223
+            },
+            {
+              "candidate_ms": 6.428472999999999,
+              "original_after_ms": 6.983372,
+              "original_before_ms": 7.106871
+            },
+            {
+              "candidate_ms": 5.4598390000000006,
+              "original_after_ms": 7.173049,
+              "original_before_ms": 7.468967
+            }
+          ],
+          "scope": "Interleaved complete v29/current/v29 predicates on identical rows; shared host, read cost only, not write throughput"
+        },
+        "selected_current_sources": [
+          {
+            "Execution Time": 340.109,
+            "Plan": {
+              "Actual Loops": 1,
+              "Actual Rows": 50,
+              "Actual Startup Time": 3.495,
+              "Actual Total Time": 340.069,
+              "Local Dirtied Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Written Blocks": 0,
+              "Node Type": "Limit",
+              "Parallel Aware": false,
+              "Plan Rows": 50,
+              "Plan Width": 13,
+              "Plans": [
+                {
+                  "Actual Loops": 1,
+                  "Actual Rows": 50,
+                  "Actual Startup Time": 3.494,
+                  "Actual Total Time": 340.020,
+                  "Alias": "u",
+                  "Index Cond": "((tenant = 'serial-profile-20476600-2ec4-4c6e-b999-e50d93761498'::text) AND (sku = 'PROFILE'::text))",
+                  "Index Name": "wms_serial_units_pkey",
+                  "Local Dirtied Blocks": 0,
+                  "Local Hit Blocks": 0,
+                  "Local Read Blocks": 0,
+                  "Local Written Blocks": 0,
+                  "Node Type": "Index Scan",
+                  "Parallel Aware": false,
+                  "Parent Relationship": "Outer",
+                  "Plan Rows": 512,
+                  "Plan Width": 13,
+                  "Relation Name": "wms_serial_units",
+                  "Rows Removed by Index Recheck": 0,
+                  "Scan Direction": "Forward",
+                  "Shared Dirtied Blocks": 0,
+                  "Shared Hit Blocks": 4665,
+                  "Shared Read Blocks": 0,
+                  "Shared Written Blocks": 0,
+                  "Startup Cost": 0.27,
+                  "Temp Read Blocks": 0,
+                  "Temp Written Blocks": 0,
+                  "Total Cost": 206.89
+                }
+              ],
+              "Shared Dirtied Blocks": 0,
+              "Shared Hit Blocks": 4665,
+              "Shared Read Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Startup Cost": 0.27,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0,
+              "Total Cost": 20.45
+            },
+            "Planning Time": 0.262,
+            "Triggers": []
+          }
+        ]
+      },
+      "reads_at_birth": {
+        "current_page": {
+          "milliseconds": [
+            1642.474434,
+            1487.613559
+          ]
+        },
+        "full_reconciliation": {
+          "milliseconds": [
+            478.379642,
+            461.466707
+          ]
+        },
+        "observation_page": {
+          "milliseconds": [
+            1923.481077,
+            1986.9609110000001
+          ]
+        },
+        "unit_history": {
+          "milliseconds": [
+            1359.406888,
+            1313.2298950000002
+          ]
+        }
+      },
+      "reads_with_history": {
+        "current_page": {
+          "milliseconds": [
+            2229.297173,
+            2320.54822
+          ]
+        },
+        "full_reconciliation": {
+          "milliseconds": [
+            592.6351060000001,
+            592.5993560000001
+          ]
+        },
+        "observation_page": {
+          "milliseconds": [
+            2220.770525,
+            2783.207391
+          ]
+        },
+        "unit_history": {
+          "milliseconds": [
+            2285.7127419999997,
+            2248.641973
+          ]
+        }
+      },
+      "seed": {
+        "complete_count_ms": 10171.318519,
+        "registered_units": 512
+      },
+      "stage": "complete",
+      "tenant": "serial-profile-20476600-2ec4-4c6e-b999-e50d93761498",
+      "units": 512
+    },
+    {
+      "error": "Read /v1/serials?sku=PROFILE&limit=50 failed503 Service Unavailable: {\"error\":\"Database operation unavailable; retry with the same request ID\"}",
+      "ok": false,
+      "seed": {
+        "complete_count_ms": 122996.337025,
+        "registered_units": 2048
+      },
+      "stage": "reads_at_birth",
+      "tenant": "serial-profile-9547f220-e24e-4d61-894d-d6f10024c8b0",
+      "units": 2048
+    }
+  ],
+  "ok": false,
+  "postgres_version": "12.22 (Ubuntu 12.22-0ubuntu0.20.04.4)",
+  "production_qualified": false,
+  "samples_per_read": 2,
+  "schema_version": 1,
+  "scope": "Actual Store transactions and authenticated in-process API router costs, excluding TCP/browser/device and sustained capacity. Uncontrolled shared host; no comparative causal claim.",
+  "single_unit_moves_per_fixture": 8,
+  "sizes": [
+    512,
+    2048
+  ],
+  "synthetic": true
+}

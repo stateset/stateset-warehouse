@@ -8,6 +8,29 @@ use crate::{
 };
 use serde_json::{json, Value};
 use sqlx::{PgConnection, Row};
+
+// Each bounded selection shares its complete original event proof within this
+// statement's snapshot. Retain the exact latest projection/step join separately;
+// missing events fail closed. Callers supply only static SQL, never user text.
+fn selected_sources_sql(selection: &str) -> String {
+    format!(
+        r#"WITH selected AS MATERIALIZED ({selection}),
+    events AS MATERIALIZED (
+      SELECT e.id,e.warehouse_id,wms_serial_event_valid_read_source(e.tenant,e.warehouse_id,e.id) AS ok
+      FROM wms_events e JOIN (SELECT DISTINCT last_event_id FROM selected) k ON k.last_event_id=e.id
+      WHERE e.tenant=$1
+    ) SELECT u.sku,u.serial,u.lot,u.place,u.revision,
+      COALESCE(e.ok,false) AND EXISTS(
+        SELECT 1 FROM wms_serial_steps s WHERE s.tenant=u.tenant AND s.sku=u.sku AND s.serial=u.serial
+        AND s.lot=u.lot AND s.revision=u.revision AND s.event_id=u.last_event_id
+        AND s.after_place=u.place AND s.warehouse_id=e.warehouse_id
+      ) AND NOT EXISTS(
+        SELECT 1 FROM wms_serial_steps later WHERE later.tenant=u.tenant AND later.sku=u.sku
+        AND later.serial=u.serial AND later.revision>u.revision
+      ) AS source_ok
+    FROM selected u LEFT JOIN events e ON e.id=u.last_event_id ORDER BY u.sku,u.serial"#
+    )
+}
 use std::collections::BTreeMap;
 
 #[derive(Default)]
@@ -126,8 +149,12 @@ pub(crate) async fn admit(
                 "Original serial evidence lacks its current projection; identity writes held",
             ));
         }
-        let rows=sqlx::query("SELECT u.sku,u.serial,u.lot,u.place,u.revision,wms_serial_unit_bound(u) AS source_ok FROM jsonb_to_recordset($2) AS k(sku TEXT,serial TEXT) JOIN wms_serial_units u ON u.tenant=$1 AND u.sku=k.sku AND u.serial=k.serial ORDER BY u.sku,u.serial")
-            .bind(t).bind(json!(keys)).fetch_all(&mut *c).await?;
+        let sql = selected_sources_sql("SELECT u.* FROM jsonb_to_recordset($2) AS k(sku TEXT,serial TEXT) JOIN wms_serial_units u ON u.tenant=$1 AND u.sku=k.sku AND u.serial=k.serial");
+        let rows = sqlx::query(&sql)
+            .bind(t)
+            .bind(json!(keys))
+            .fetch_all(&mut *c)
+            .await?;
         for row in rows {
             selected.insert(
                 (row.get::<String, _>("sku"), row.get::<String, _>("serial")),
@@ -143,7 +170,7 @@ pub(crate) async fn admit(
         _ => None,
     };
     if let Some(predicate) = predicate {
-        let sql=format!("SELECT sku,serial,lot,place,revision,wms_serial_unit_bound(u) AS source_ok FROM wms_serial_units u WHERE tenant=$1 AND sku=ANY($2) AND place->>'warehouse_id'=$3 AND ({predicate}) ORDER BY sku,serial LIMIT 10001");
+        let sql = selected_sources_sql(&format!("SELECT * FROM wms_serial_units WHERE tenant=$1 AND sku=ANY($2) AND place->>'warehouse_id'=$3 AND ({predicate}) ORDER BY sku,serial LIMIT 10001"));
         let rows = sqlx::query(&sql)
             .bind(t)
             .bind(&skus)

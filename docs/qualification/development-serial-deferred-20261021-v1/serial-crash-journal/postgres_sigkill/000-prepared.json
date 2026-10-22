@@ -1,0 +1,30 @@
+{
+  "facts": {
+    "actor": "operator:resilience-1",
+    "http_body": "{\"request_id\":\"c8e95cac-a9ad-477d-b31e-b2019e04dac9\",\"expected_version\":2364,\"command\":{\"type\":\"move_stock\",\"sku\":\"LOAD-00499\",\"lot\":\"LOT-000\",\"from\":\"BIN-00000\",\"to\":\"BIN-00099\",\"quantity\":1},\"serial_inputs\":[{\"target\":[],\"sku\":\"LOAD-00499\",\"serials\":[\"Load-00499-Lot-000-Unit-00015\"]}]}",
+    "http_body_sha256": "5a6b66cdc6eb32a72ff35520e8f85ee3864eb79c753a209a13b5fb0b35d64693",
+    "original_request": {
+      "command": {
+        "from": "BIN-00000",
+        "lot": "LOT-000",
+        "quantity": 1,
+        "sku": "LOAD-00499",
+        "to": "BIN-00099",
+        "type": "move_stock"
+      },
+      "expected_version": 2364,
+      "request_id": "c8e95cac-a9ad-477d-b31e-b2019e04dac9",
+      "serial_inputs": [
+        {
+          "serials": [
+            "Load-00499-Lot-000-Unit-00015"
+          ],
+          "sku": "LOAD-00499",
+          "target": []
+        }
+      ]
+    },
+    "run": "1792626815-c83833b6"
+  },
+  "stage": "prepared"
+}

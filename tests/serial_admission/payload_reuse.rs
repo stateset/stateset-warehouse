@@ -173,6 +173,7 @@ async fn full_512unit_birth_move_and_unchanged_count_keep_standalone_guards_and_
     let labels: Vec<String> = (0..512).map(|n| format!("Burst-{n:04}")).collect();
     let refs: Vec<&str> = labels.iter().map(String::as_str).collect();
     let (birth,saved)=f.execute(json!({"type":"count_stock","sku":"SERIAL","lot":"LOT","location":"A","counted":512,"reason":"Complete synthetic512unit burst"}),observed(&[],&refs)).await;
+    super::reads::verify_large_original_pages(&f, refs[0], 512).await;
     f.execute(
         json!({"type":"move_stock","sku":"SERIAL","lot":"LOT","from":"A","to":"B","quantity":1}),
         observed(&[], &[refs[0]]),

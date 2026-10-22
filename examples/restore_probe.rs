@@ -157,6 +157,12 @@ async fn table_evidence(store: &Store) -> Result<Value> {
         )?;
         let sql = format!("SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),'[]'::jsonb) FROM public.\"{name}\" t");
         let rows: Value = sqlx::query_scalar(&sql).fetch_one(&mut *tx).await?;
+        if name == "wms_serial_pending_checks" {
+            require(
+                rows == json!([]),
+                "Committed serial validation keys must be empty",
+            )?;
+        }
         tables.insert(
             name,
             json!({"rows":rows.as_array().ok_or("Invalid evidence rows")?.len(),"sha256":format!("{:x}",Sha256::digest(serde_json::to_vec(&rows)?))}),
@@ -2839,13 +2845,21 @@ async fn verify(manifest_path: &str, report_path: &str) -> Result<()> {
         .filter_map(|(name, e)| (e["rows"].as_u64() == Some(0)).then_some(name.clone()))
         .collect();
     require(
-        empty_tables.is_empty(),
-        "Every WMS table must have nonempty recovery-point evidence",
+        empty_tables == ["wms_serial_pending_checks"],
+        "Every durable WMS table must be populated; only transaction-local serial validation keys must be empty",
     )?;
     report["operational_history_post_restore_recovery"] = history_recovery;
     report["recovery_point_table_count"] = json!(table_rows.len());
     report["recovery_point_nonempty_table_count"] = json!(table_rows.len() - empty_tables.len());
     report["recovery_point_empty_tables"] = json!(empty_tables);
+    let pending: i64 = sqlx::query_scalar("SELECT count(*) FROM wms_serial_pending_checks")
+        .fetch_one(&store.pool)
+        .await?;
+    require(
+        pending == 0,
+        "Post-restore commands left serial validation keys",
+    )?;
+    report["serial_pending_checks_empty_before_and_after_restore_and_continuation"] = json!(true);
     report["nonempty_serial_tables_restored"] = json!([
         "wms_serial_modes",
         "wms_serial_heads",
