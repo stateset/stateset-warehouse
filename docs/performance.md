@@ -1,5 +1,21 @@
 # Workload qualification
 
+Measured throughput and latency for StateSet Warehouse, and how to reproduce them. All numbers are synthetic workloads on a shared, uncontrolled 8-CPU host, so read them as engineering signals, not capacity guarantees or facility SLOs. The dated record below is newest first and includes failed runs.
+
+## At a glance
+
+| Workload | Result | Source |
+|---|---|---|
+| 500 products, 8 operators, 2 API replicas, 300 s, whole-unit stock | 4,694 moves with exact replays, 15.6 moves/s, **662ms** action p95 | [0.3.0 gate](qualification/release-20261022-v0.3.0/image_resilience.json) |
+| Same, plus 16,000 serial labels | 1,689 moves with exact replays, 5.6 moves/s, **1,931ms** action p95 | [0.3.0 gate](qualification/release-20261022-v0.3.0/image_serial_resilience.json) (before migration 035) |
+| Optimized native binary, 8 operators, 2,048 serial labels, 300 s, 1,000ms p95 limit | 5,661 moves, 18.8 moves/s, **772ms** action p95: passes | [after migration 035](performance/native-serial-sku-scope-035.json) (1,242ms and failing before) |
+| Full serial reconciliation at 16,000 labels | about **4 s**, inside the 10 s statement limit | scale test (39–54 s before set-form reconciliation) |
+| Commit-time serial custody check at 16,000 labels | **18–24ms** per save | migration 035 (100–192ms before) |
+
+"Action latency" runs from submitting a save until the client has validated its own full refresh afterwards, so it includes a complete warehouse read. Writes to one warehouse are serialized, so latency rises with the number of operators working in the same warehouse at once.
+
+**Not yet measured:** real-warehouse volumes (millions of events, many facilities), managed PostgreSQL, and anything with real scanners or networks.
+
 ## Known serial write bottleneck — 2026-10-22
 
 Every committed command that touches a warehouse with serial-controlled SKUs queues one warehouse-wide custody check (migration 032, `kind='scope'`). At commit, `wms_serial_scope_current_valid` and `wms_serial_scope_transit_valid` re-derive custody for **every** serial unit in that warehouse while the warehouse write lock is held. Measured directly on retained synthetic corpora on the shared host: **34–57ms** at 2,000 labels and **102–136ms** at 16,000 labels per commit. The event source check is about **6ms** and the tenant mode check about **9–11ms**, roughly constant. Because writes serialize per warehouse, eight concurrent operators queue behind this cost. That matches the measured growth of serial save p95 with label count: 1,207.636ms write-attempt p95 at 2,048 labels (native profile) and 1,908–3,954ms action p95 at 16,000 labels (image profiles).

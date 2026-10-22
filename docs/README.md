@@ -33,6 +33,7 @@ Pick the row that matches what you are doing.
 
 | Read | For |
 |---|---|
+| [Deploying to production](production.md) | Step-by-step checklist: container, configuration, health, monitoring, backups, go-live, upgrades. |
 | [Operations and restore](operations.md) | Facilities, deployment, backup and restore into a fresh database. |
 | [Observability](observability.md) | Operations snapshots, Prometheus metrics and alert policies. |
 | [Resilience](resilience.md) | Sustained HTTP traffic with forced API/PostgreSQL crashes and recovery. |

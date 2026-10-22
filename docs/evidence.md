@@ -1,5 +1,30 @@
 # Implementation evidence
 
+This page records what has been proven about StateSet Warehouse, how, and what hasn't been proven yet. The summary comes first; the dated runs below it are the full record, newest first, including every failed attempt.
+
+## At a glance
+
+**Proven in software** (synthetic data, local runs):
+
+| Claim | Latest evidence |
+|---|---|
+| Every stock change, reservation, receipt and serial unit can be rebuilt from immutable history, and the database rejects commits that disagree | [0.3.0 gate](qualification/release-20261022-v0.3.0/verification.json): final reconciliation passes on both API replicas |
+| Retrying a lost request returns the original result, never a second change | 0.3.0 gate: thousands of exact cross-replica replays per workload, zero mismatches |
+| API and PostgreSQL crashes mid-write lose or duplicate nothing | 0.3.0 gate: every table fingerprint unchanged after each forced crash |
+| A backup restores to an identical database | 0.3.0 gate: archive restore with every table fingerprint and migration digest matching |
+| Full serial reconciliation stays inside its 10-second limit at 16,000 labels | 0.3.0 gate; the 16,000-label scale fixture takes about 4s, from 39–54s before |
+| Serial saves meet a 1,000ms p95 with eight concurrent operators | [native profile after migration 035](performance/native-serial-sku-scope-035.json): 772ms (unreleased 0.3.1 work) |
+| The public source and its history contain no unreviewed secrets, and dependencies are permissively licensed | [source audit](qualification/release-20261022-v0.3.0/source-audit-report.json) and [license review](qualification/release-20261022-v0.3.0/source-license-review.json) |
+
+**Not yet proven:**
+
+- Production deployment, deployed identity (WorkOS), native OMS/TMS and MCP clients.
+- Real scanner hardware and a signed [physical facility acceptance](facility-acceptance.md).
+- Managed database failover, cross-region availability and real-warehouse capacity. All measurements so far are synthetic, on a shared host.
+- Hosted CI on GitHub (blocked by account billing).
+
+**Reproduce:** run the complete gate with the [release profile](release-qualification.md#run-the-release-profile).
+
 ## 0.3.0 qualification — 2026-10-22
 
 The [0.3.0 complete gate](qualification/release-20261022-v0.3.0/summary.json) passed all ten stages on the tagged source. The run used the full profile: 500 products, 500 open orders, 100 bins, two lots, eight operators, two API replicas, 300-second image workloads and 16,000 serial labels. The untracked image workload completed **4,694 moves with exact replays** (15.618 moves/s, 662.249ms action p95). The serial workload completed **1,689 moves with exact replays** across 256 distinct timed labels (5.605 moves/s, 1,930.575ms action p95). Both had zero unexpected errors and zero conflicts. Final full reconciliation passed on both replicas; that is the check that exceeded its SQL deadline on 2026-10-21. API and PostgreSQL crash recovery preserved every table fingerprint.

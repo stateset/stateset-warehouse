@@ -1,5 +1,53 @@
 # Warehouse execution boundaries
 
+## The big picture
+
+Every client (the browser dashboard, the warehouse terminal, AI agents over MCP, and the OMS) sends the same canonical commands to one API. Each command runs in a single PostgreSQL transaction that writes the business change, its immutable history and its outgoing messages together. The database itself refuses to commit anything whose history doesn't add up.
+
+```mermaid
+flowchart LR
+  subgraph Clients
+    D[Dashboard]
+    T[Terminal]
+    M[MCP agents]
+    O[OMS adapter]
+  end
+  Clients -->|"request_id + expected version"| A[API<br/>auth: tenant, actor, role]
+  A --> R{Same request_id<br/>already committed?}
+  R -->|yes| X[Return the original result]
+  R -->|no| L[Lock the warehouse row]
+  L --> P[Domain reducer<br/>validates and plans the change]
+  P --> W["One transaction:<br/>changed rows + movements + event<br/>+ command receipt + outbox"]
+  W --> C{Deferred database checks<br/>stock = history, reservations,<br/>receipts, serial custody}
+  C -->|pass| K[Commit]
+  C -->|fail| B[Roll back everything]
+  K --> Q[Outbox worker] --> E[OMS / TMS / webhooks]
+```
+
+**Four ideas carry the whole design:**
+
+1. **History is the source of truth.** Balances are caches of an append-only movement ledger. `GET /v1/warehouses/{id}/reconciliation` rebuilds them from scratch, independently of the cached rows.
+2. **The database enforces the rules, not just the application.** Deferred constraint triggers re-check each commit, so a bug in the API, or a direct SQL write, can't leave inventory inconsistent.
+3. **Every write is retry-safe.** A `request_id` is bound to its actor and exact payload. Retrying after a lost response returns the stored result; it never applies the change twice.
+4. **Nothing is guessed.** Quantities are whole units, labels are kept exactly as scanned, and missing or ambiguous evidence blocks work instead of being filled in.
+
+**Where to find each part:**
+
+| Concern | Code |
+|---|---|
+| HTTP routes, authentication, headers | `src/api.rs`, `src/auth.rs` |
+| Command types and the pure state reducer | `src/domain.rs` |
+| Transaction, locking, receipts, migrations, reconciliation | `src/persistence.rs`, `src/store.rs` |
+| Resource versions (which concurrent writes conflict) | `src/concurrency.rs` |
+| Serial tracking | `src/serials.rs`, `src/serial_*.rs`, `migrations/021`–`035`; see the [serial design guide](serial-design.md) |
+| Lots, expiry, quarantine and lot tracing | `src/lot_control.rs`, `src/lot_store.rs`, `src/lot_trace.rs` |
+| Transfers, packages, returns, receipts, shipments | `src/transfers.rs`, `src/split_fulfillment.rs`, `src/returns.rs`, `src/receipts.rs`, `src/shipments.rs` |
+| Outbox delivery and integrations | `src/integrations.rs`, `src/native*.rs`, `src/oms_*.rs` |
+| MCP server | `src/mcp.rs` |
+| Schema and database guards | `migrations/` (append-only; digests are checked at startup) |
+
+The sections below are the detailed contract.
+
 ## Source evidence and ownership
 
 `stateset-sync-server` is the OMS. It owns commercial orders and orchestration. `src/domain/warehouse_os.rs` and `src/services/warehouseos.rs` show its existing WarehouseOS adapter; this is a third-party contract, not an existing native StateSet WMS connector.

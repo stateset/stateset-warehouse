@@ -6,6 +6,21 @@ The [0.3.0 complete gate](qualification/release-20261022-v0.3.0/summary.json) pa
 
 The gate ran from a working tree without `.git`, so it recorded `unrecorded-working-tree`. [The verification record](qualification/release-20261022-v0.3.0/verification.json) binds all 471 gated inputs byte for byte to tag `v0.3.0` (`adb43c8`). It also lists all eight attempts that day. Attempts 6 and 7 failed under shared-host overload (load ~50, then a browser renderer crash under memory pressure). Attempt 5 passed only the narrower default profile and was not used for the tag. The separate native latency target, deployed clients and physical acceptance remain open.
 
+## Run the release profile
+
+Version tags are qualified at this profile. The script's defaults (100 products, 60 seconds, four clients, 3,200 serial labels) are a quicker check and do not qualify a release. Bump every version file and regenerate dashboard notices **before** the run, because they are gated inputs.
+
+```bash
+WMS_RESILIENCE_PRODUCTS=500 WMS_RESILIENCE_OPEN_ORDERS=500 \
+WMS_RESILIENCE_BINS=100 WMS_RESILIENCE_LOTS=2 \
+WMS_RESILIENCE_SECONDS=300 WMS_RESILIENCE_CLIENTS=8 \
+WMS_RELEASE_SERIAL_UNITS=16 \
+WMS_RELEASE_ARTIFACT_DIR=/tmp/warehouse-release-profile-run \
+  bash scripts/local-postgres.sh bash scripts/qualify-release.sh
+```
+
+Before tagging, confirm in `publish/image_serial_resilience.json` that the run had 500 products, 16,000 serial units and 300 requested seconds. On a shared host, start only when the load average is below the CPU count and at least 8 GB of memory is free; overload produces failures unrelated to the source.
+
 ## Deferred serial validation candidate on hold — 2026-10-21
 
 The [latest frozen development gate](qualification/development-serial-deferred-20261021-v1/summary.json) passes eight stages, including **751 checks**, exact archive restoration across 50 tables and 32 migrations, and the hardened production container. The complete untracked image workload passes. Serial API/PostgreSQL crash recovery and the fixed 300-second rotating workload complete, but final serial API reconciliation exceeds its unchanged ten-second SQL deadline and returns 503. `image_resilience` fails; `stable_source_inputs` is not run.
