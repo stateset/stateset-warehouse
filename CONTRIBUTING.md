@@ -15,6 +15,8 @@ Use `cargo fmt --package stateset-warehouse`, because `cargo fmt --all` also ref
 
 Production code must not panic on request input or stored data. `unwrap` is denied outside tests by a crate-level lint. Use `expect` only for internal invariants the code itself establishes, such as fixed schemas, values it serialized itself or input validated just before, and name the invariant in the message. Return an `Error` for anything a client or the database can cause.
 
+Database functions and triggers are defined by append-only migrations, and later migrations often redefine earlier functions. Read the current definitions in `schema/current-functions.sql`. After adding a migration, regenerate that file with `WMS_UPDATE_SQL_CATALOG=1 bash scripts/local-postgres.sh cargo test --locked --test sql_catalog -- --ignored`; the check fails if it is stale.
+
 Keep inventory writes in the canonical command transaction. Preserve authenticated tenant/actor scope, original request identity, physical observations, immutable receipts, version fences, movement/reservation equations and append-only history. Add meaningful tests for changed invariants and failure paths. A UI or MCP adapter must not create an independent inventory writer.
 
 Describe the concrete behavior change, relevant checks and remaining limits in a pull request. Use synthetic examples. Do not commit secrets, dumps, private qualification artifacts, build output or dependency caches. Follow [security reporting](SECURITY.md) for vulnerabilities.
