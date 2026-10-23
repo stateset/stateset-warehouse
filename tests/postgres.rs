@@ -1828,3 +1828,64 @@ async fn lot_original_eligibility_rejects_a_forged_event_type_with_unchanged_com
         .expect("restore original event and all trigger guards before assertion");
     assert!(!valid,"eligibility evidence must bind its original semantic event type, not just its command and unchanged balances");
 }
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL"]
+async fn startup_refuses_a_database_migrated_by_a_newer_release() {
+    use sqlx::{postgres::PgConnectOptions, Connection};
+    let url = std::env::var("WMS_TEST_DATABASE_URL").expect("explicit isolated test server");
+    let mut target = reqwest::Url::parse(&url).expect("test database URI");
+    assert!(target.path().contains("test"));
+    let name = format!(
+        "wms_newer_schema_test_{}",
+        stateset_warehouse::domain::id().replace('-', "")
+    );
+    assert!(name.len() <= 63);
+    let options: PgConnectOptions = url.parse().expect("test server options");
+    let mut admin = sqlx::PgConnection::connect_with(&options.clone().database("postgres"))
+        .await
+        .expect("owned test database administrator");
+    sqlx::query(&format!(
+        "CREATE DATABASE {name} TEMPLATE template0 ENCODING 'UTF8'"
+    ))
+    .execute(&mut admin)
+    .await
+    .expect("fresh owned database");
+    target.set_path(&format!("/{name}"));
+    let store = stateset_warehouse::store::Store::connect(target.as_str())
+        .await
+        .expect("current release migrates an empty database");
+    sqlx::query("INSERT INTO wms_schema_migrations(name,digest) VALUES('999_from_a_newer_release','synthetic')")
+        .execute(&store.pool)
+        .await
+        .expect("synthetic newer ledger row");
+    let before: i64 = sqlx::query_scalar("SELECT count(*) FROM wms_schema_migrations")
+        .fetch_one(&store.pool)
+        .await
+        .expect("ledger count");
+    store.pool.close().await;
+    let refused = stateset_warehouse::store::Store::connect(target.as_str()).await;
+    let error = refused
+        .err()
+        .expect("an older binary must refuse a newer schema");
+    assert_eq!(error.status, 503);
+    assert!(
+        error.message.contains("999_from_a_newer_release"),
+        "{}",
+        error.message
+    );
+    // Nothing was applied or recorded by the refused start.
+    let mut check = sqlx::PgConnection::connect(target.as_str())
+        .await
+        .expect("inspect");
+    let after: i64 = sqlx::query_scalar("SELECT count(*) FROM wms_schema_migrations")
+        .fetch_one(&mut check)
+        .await
+        .expect("ledger count");
+    assert_eq!(after, before);
+    check.close().await.expect("closed");
+    sqlx::query(&format!("DROP DATABASE {name}"))
+        .execute(&mut admin)
+        .await
+        .expect("remove owned database");
+}
