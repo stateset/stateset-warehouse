@@ -441,7 +441,7 @@ Body (all optional): `from` (receiving bins), `skus`, `zone` (preferred zone for
 5. any empty storage bin (`empty_bin`);
 6. if none of those exist, a bin already holding other SKUs, the fewest first (`mixed_sku_bin`). Set `allow_mixed: false` to turn this off.
 
-Ties go to the lowest bin code. Stock with no eligible bin is listed under `unplaced`. There is **no bin capacity model**, so confirm that the stock physically fits. `serial_labels_required` marks tasks that need the serial review.
+Ties go to the first bin in natural order, with numbers compared numerically (`A-2` before `A-10`), the same order batch picking walks. Stock with no eligible bin is listed under `unplaced`. There is **no bin capacity model**, so confirm that the stock physically fits. `serial_labels_required` marks tasks that need the serial review.
 
 ### Batch picking
 

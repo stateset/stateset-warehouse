@@ -134,7 +134,7 @@ pub fn plan(state: &State, request: &PlanRequest) -> domain::Result<Value> {
             .map(|l| l.zone.as_str())
             .collect();
         let allow_mixed = request.allow_mixed.unwrap_or(true);
-        let mut best: Option<(Reason, usize, &str)> = None;
+        let mut best: Option<(Reason, usize, crate::batch_pick::NaturalKey, &str)> = None;
         for bin in &storage {
             let items = occupied.get(bin.code.as_str());
             let mut skus = 0;
@@ -159,13 +159,19 @@ pub fn plan(state: &State, request: &PlanRequest) -> domain::Result<Value> {
                 _ => Reason::Empty,
             };
             // Strongest reason first; for mixed bins the fewest SKUs; then the
-            // lowest bin code for a stable walk.
-            let key = (reason, skus, bin.code.as_str());
-            if best.is_none_or(|b| key < b) {
+            // first bin in natural walk order (A-2 before A-10), as in batch
+            // picking.
+            let key = (
+                reason,
+                skus,
+                crate::batch_pick::natural_key(&bin.code),
+                bin.code.as_str(),
+            );
+            if best.as_ref().is_none_or(|b| key < *b) {
                 best = Some(key);
             }
         }
-        let Some((reason, _, to)) = best else {
+        let Some((reason, _, _, to)) = best else {
             unplaced.push(json!({"sku":stock.sku,"lot":stock.lot,"from":stock.location,"quantity":quantity,"reason":"no_eligible_storage_bin"}));
             continue;
         };

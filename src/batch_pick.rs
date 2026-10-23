@@ -45,8 +45,11 @@ fn priority_rank(priority: &str) -> u8 {
     }
 }
 
+/// A bin code split into text and number runs, comparable in walk order.
+pub type NaturalKey = Vec<(u8, u64, String)>;
+
 /// Bin codes compare with embedded numbers as numbers: A-2 before A-10.
-pub fn natural_key(code: &str) -> Vec<(u8, u64, String)> {
+pub fn natural_key(code: &str) -> NaturalKey {
     let mut parts = vec![];
     let mut chars = code.chars().peekable();
     while let Some(&c) = chars.peek() {
