@@ -1,6 +1,6 @@
-import { CommandForm, ModalFrame, type FormSpec } from "./CommandDialog";
+import { CommandForm, ModalFrame } from "./CommandDialog";
 import { ApiError, provesStaleCommandDidNotCommit } from "./commandRecovery";
-import { Badge, Empty, Metric, Section, Status, label } from "./WarehouseUi";
+import { Badge, Empty, Section, Status, label } from "./WarehouseUi";
 import type { WarehouseAuth } from "./Auth";
 import {
   useCallback,
@@ -12,15 +12,7 @@ import {
 import NativePanel from "./NativePanel";
 import ScannerPanel from "./ScannerPanel";
 import OperationsPanel from "./OperationsPanel";
-import ReplenishmentPanel from "./ReplenishmentPanel";
-import {
-  BatchPickPanel,
-  CycleCountPanel,
-  LabelPrintPanel,
-  PutawayPanel,
-} from "./PlanningPanels";
-import LotControlsPanel from "./LotControlsPanel";
-import LotTracePanel from "./LotTracePanel";
+import { BatchPickPanel } from "./PlanningPanels";
 import {
   availability,
   availabilityLabel,
@@ -34,9 +26,14 @@ import { reviewedVersions } from "./concurrency";
 import { deriveProofView, type ReconciliationProof } from "./proofView";
 import ActivityTab from "./ActivityTab";
 import { fmt, when } from "./format";
+import type { Modal, Tab } from "./uiTypes";
+import InventoryTab from "./InventoryTab";
+import OverviewTab from "./OverviewTab";
+import ReceivingTab from "./ReceivingTab";
+import LocationsTab from "./LocationsTab";
+import ExceptionsTab from "./ExceptionsTab";
 import {
   Activity as ActivityIcon,
-  ArrowDownLeft,
   ArrowDownToLine,
   ArrowRight,
   ArrowUpRight,
@@ -82,7 +79,6 @@ import type {
   WarehouseState,
   UnitInput,
 } from "./types";
-import UnitPacksPanel from "./UnitPacksPanel";
 import { validUnitInputs } from "./unitInputs";
 import {
   serialCommands,
@@ -91,27 +87,8 @@ import {
   type SerialTarget,
 } from "./serialInputs";
 import SerialObservationForm from "./SerialObservationForm";
-import SerialTracePanel from "./SerialTracePanel";
 import type { SerialInput } from "./types";
 
-type Tab =
-  | "overview"
-  | "inventory"
-  | "receiving"
-  | "fulfillment"
-  | "locations"
-  | "exceptions"
-  | "activity"
-  | "integrations"
-  | "scanner"
-  | "operations"
-  | "transfers";
-type Modal =
-  | FormSpec
-  | { order: string }
-  | { receipt: string }
-  | { help: true }
-  | null;
 type HistoryState = {
   [K in HistoryKind]?: {
     items: HistoryData[K][];
@@ -1786,257 +1763,18 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
           </div>
 
           {tab === "overview" && (
-            <>
-              <div className="metrics">
-                <Metric
-                  label="Units on hand"
-                  value={fmt(totals.onHand)}
-                  icon={Boxes}
-                  note={`${s.products.length} SKUs across ${s.locations.length} locations`}
-                />
-                <Metric
-                  label="Available in storage"
-                  value={fmt(
-                    availableStorage.reduce(
-                      (n, b) => n + b.on_hand - b.reserved,
-                      0,
-                    ),
-                  )}
-                  icon={Package}
-                  note={`${fmt(
-                    totals.reserved,
-                  )} units reserved across the floor`}
-                />
-                <Metric
-                  label="Orders in progress"
-                  value={fmt(totals.active)}
-                  icon={PackageCheck}
-                  note={`${
-                    s.orders.filter((o) => o.status === "packed").length
-                  } packed and ready for handoff`}
-                />
-                <Metric
-                  label="Needs attention"
-                  value={fmt(openExceptions.length + lowStock.length)}
-                  icon={AlertTriangle}
-                  note={`${openExceptions.length} open issues · ${lowStock.length} low-stock SKUs`}
-                  attention
-                />
-              </div>
-              <div className="overview-grid">
-                <Section
-                  title="Fulfillment flow"
-                  detail="Current work across the warehouse"
-                  action={
-                    <button
-                      className="text-btn"
-                      onClick={() => navigate("fulfillment")}
-                    >
-                      View orders <ArrowUpRight size={15} />
-                    </button>
-                  }
-                >
-                  <div className="flow">
-                    {[
-                      {
-                        status: "pending",
-                        title: "To allocate",
-                        icon: ClipboardCheck,
-                      },
-                      { status: "allocated", title: "To pick", icon: Box },
-                      {
-                        status: "picked",
-                        title: "To pack",
-                        icon: PackageCheck,
-                      },
-                      { status: "packed", title: "To hand off", icon: Truck },
-                    ].map((f, i) => (
-                      <div className="flow-step" key={f.status}>
-                        <button
-                          onClick={() => {
-                            navigate("fulfillment");
-                            setFilter(f.status);
-                          }}
-                        >
-                          <span className={`flow-icon step-${i}`}>
-                            <f.icon size={20} />
-                          </span>
-                          <strong>
-                            {fmt(
-                              s.orders.filter((o) =>
-                                f.status === "allocated"
-                                  ? ["allocated", "picking"].includes(o.status)
-                                  : o.status === f.status,
-                              ).length,
-                            )}
-                          </strong>
-                          <span>{f.title}</span>
-                        </button>
-                        {i < 3 && (
-                          <ChevronRight className="flow-arrow" size={18} />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flow-footer">
-                    <span>
-                      <span className="live-dot" />
-                      From reservation to physical handoff
-                    </span>
-                    <span>
-                      {s.orders.filter((o) => o.status === "shipped").length}{" "}
-                      completed
-                    </span>
-                  </div>
-                </Section>
-                <section className="warehouse-card">
-                  <div className="warehouse-card-top">
-                    <span className="warehouse-code">{s.warehouse.code}</span>
-                    <Badge tone={reconciliation?.ok ? "green" : "red"}>
-                      <span className="live-dot" />
-                      {reconciliation?.ok
-                        ? "Operational balances checked"
-                        : "Balances require review"}
-                    </Badge>
-                  </div>
-                  <h2>{s.warehouse.name}</h2>
-                  <p>
-                    <MapPin size={14} />
-                    {s.warehouse.city}
-                  </p>
-                  <div className="warehouse-map" aria-hidden="true">
-                    <span className="map-dock" />
-                    <div>
-                      {Array.from({ length: 24 }, (_, i) => (
-                        <i key={i} className={i % 7 === 0 ? "map-empty" : ""} />
-                      ))}
-                    </div>
-                    <span className="map-route" />
-                    <span className="map-point" />
-                  </div>
-                  <div className="warehouse-card-foot">
-                    <span>
-                      {s.locations.filter((l) => l.kind === "storage").length}{" "}
-                      storage bins
-                    </span>
-                    <button
-                      className="text-btn"
-                      onClick={() => navigate("locations")}
-                    >
-                      Explore locations <ArrowUpRight size={14} />
-                    </button>
-                  </div>
-                </section>
-              </div>
-              <div className="overview-grid bottom-grid">
-                <Section
-                  title="Active orders"
-                  detail="The next moves on your warehouse floor"
-                  action={
-                    <button
-                      className="text-btn"
-                      onClick={() => navigate("fulfillment")}
-                    >
-                      All orders <ArrowUpRight size={15} />
-                    </button>
-                  }
-                >
-                  {orderTable(
-                    s.orders
-                      .filter(
-                        (o) =>
-                          !["shipped", "cancelled", "closed_partial"].includes(
-                            o.status,
-                          ),
-                      )
-                      .slice(0, 5),
-                  )}
-                </Section>
-                <div className="right-stack">
-                  <Section
-                    title="Attention queue"
-                    action={
-                      <span className="count-pill">
-                        {openExceptions.length + lowStock.length}
-                      </span>
-                    }
-                  >
-                    <div className="attention-list">
-                      {openExceptions.slice(0, 2).map((e) => (
-                        <button
-                          key={e.id}
-                          onClick={() => navigate("exceptions")}
-                        >
-                          <span className="attention-icon">
-                            <AlertTriangle size={17} />
-                          </span>
-                          <div>
-                            <strong>{e.category}</strong>
-                            <p>{e.detail}</p>
-                          </div>
-                          <ChevronRight size={16} />
-                        </button>
-                      ))}
-                      {lowStock.slice(0, 2).map((p) => (
-                        <button
-                          key={p.sku}
-                          onClick={() => {
-                            navigate("inventory");
-                            setSearch(p.sku);
-                          }}
-                        >
-                          <span className="attention-icon muted">
-                            <Boxes size={17} />
-                          </span>
-                          <div>
-                            <strong>{p.name}</strong>
-                            <p>
-                              Below reorder point of {p.reorder_point} units
-                            </p>
-                          </div>
-                          <ChevronRight size={16} />
-                        </button>
-                      ))}
-                      {!openExceptions.length && !lowStock.length && (
-                        <div className="all-clear">
-                          <CheckCheck size={22} />
-                          No open issues. Your floor is clear.
-                        </div>
-                      )}
-                    </div>
-                  </Section>
-                  <Section title="Latest movements">
-                    <div className="recent-movements">
-                      {s.movements
-                        .slice(-3)
-                        .reverse()
-                        .map((m) => (
-                          <div key={m.id}>
-                            <span className={`movement-icon ${m.kind}`}>
-                              <ArrowDownLeft size={16} />
-                            </span>
-                            <div>
-                              <strong>{m.sku}</strong>
-                              <small>
-                                {label(m.kind)} · {m.to ?? "Carrier handoff"}
-                              </small>
-                            </div>
-                            <b>
-                              {fmt(m.quantity)}
-                              <small>units</small>
-                            </b>
-                          </div>
-                        ))}
-                      {!s.movements.length && (
-                        <p className="muted-text">
-                          Your first stock movement will appear here.
-                        </p>
-                      )}
-                    </div>
-                  </Section>
-                </div>
-              </div>
-            </>
+            <OverviewTab
+              availableStorage={availableStorage}
+              lowStock={lowStock}
+              navigate={navigate}
+              openExceptions={openExceptions}
+              orderTable={orderTable}
+              reconciliation={reconciliation}
+              s={s}
+              setFilter={setFilter}
+              setSearch={setSearch}
+              totals={totals}
+            />
           )}
 
           {tab !== "overview" && (
@@ -2231,205 +1969,21 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                 </div>
               )}
               {tab === "inventory" && (
-                <>
-                  {canWork && (
-                    <ReplenishmentPanel
-                      key={s.warehouse.id}
-                      state={s}
-                      role={session.identity.role}
-                      disabled={disabled}
-                      request={request}
-                      onSubmit={submit}
-                    />
-                  )}
-                  {canWork && (
-                    <CycleCountPanel
-                      key={`counts-${s.warehouse.id}`}
-                      state={s}
-                      disabled={disabled}
-                      request={request}
-                      onSubmit={submit}
-                    />
-                  )}
-                  <LabelPrintPanel
-                    key={`labels-${s.warehouse.id}`}
-                    state={s}
-                    request={request}
-                  />
-                  <SerialTracePanel
-                    key={`serial-${s.warehouse.id}`}
-                    state={s}
-                    request={request}
-                  />
-                  <UnitPacksPanel
-                    key={s.warehouse.id}
-                    state={s}
-                    role={session.identity.role}
-                    disabled={disabled}
-                    request={request}
-                    onSubmit={submit}
-                  />
-                  <LotControlsPanel
-                    key={s.warehouse.id}
-                    state={s}
-                    role={session.identity.role}
-                    disabled={disabled}
-                    request={request}
-                    onSubmit={submit}
-                  />
-                  <LotTracePanel
-                    key={`${session.identity.tenant}:${session.identity.actor}`}
-                    state={s}
-                    disabled={disabled}
-                    request={request}
-                  />
-                  <div className="inventory-summary">
-                    <span>
-                      <i className="legend-dot" />
-                      {s.products.length} catalog products
-                    </span>
-                    <span>{fmt(totals.onHand)} physical units</span>
-                    <span>{fmt(totals.reserved)} reserved units</span>
-                    <span>{lowStock.length} below reorder point</span>
-                  </div>
-                  <Section
-                    title="Stock by location"
-                    detail="Physical on-hand includes receiving and staged goods. Allocation requires unreserved storage stock with an available lot."
-                  >
-                    <div className="table-scroll">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>Product</th>
-                            <th>Location / lot</th>
-                            <th>On hand</th>
-                            <th>Reserved</th>
-                            <th>Unreserved</th>
-                            <th>Lot availability</th>
-                            <th>Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {s.stocks
-                            .filter((b) =>
-                              matches(
-                                b.sku,
-                                b.location,
-                                b.lot,
-                                s.products.find((p) => p.sku === b.sku)?.name,
-                              ),
-                            )
-                            .sort(
-                              (a, b) =>
-                                a.sku.localeCompare(b.sku) ||
-                                a.location.localeCompare(b.location),
-                            )
-                            .map((b) => (
-                              <tr key={[b.sku, b.lot, b.location].join("|")}>
-                                <td>
-                                  <div className="product-cell">
-                                    <span className="product-thumb">
-                                      <Package size={20} />
-                                    </span>
-                                    <div>
-                                      <strong>
-                                        {
-                                          s.products.find(
-                                            (p) => p.sku === b.sku,
-                                          )?.name
-                                        }
-                                      </strong>
-                                      <span className="subline mono">
-                                        {b.sku}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td>
-                                  <span className="bin-tag">{b.location}</span>
-                                  <span className="subline mono">{b.lot}</span>
-                                </td>
-                                <td className="mono strong">
-                                  {fmt(b.on_hand)}
-                                </td>
-                                <td className="mono">{fmt(b.reserved)}</td>
-                                <td className="mono">
-                                  {fmt(b.on_hand - b.reserved)}
-                                </td>
-                                <td>
-                                  {
-                                    availabilityLabel[
-                                      availability(
-                                        s,
-                                        b.sku,
-                                        b.lot,
-                                        availabilityTime,
-                                      )
-                                    ]
-                                  }
-                                </td>
-                                <td>
-                                  <div className="row-actions">
-                                    {canWork && b.location !== "STAGE-01" && (
-                                      <button
-                                        className="mini-btn"
-                                        disabled={
-                                          disabled || b.on_hand === b.reserved
-                                        }
-                                        onClick={() => moveStock(b)}
-                                      >
-                                        Move
-                                      </button>
-                                    )}
-                                    {admin && b.location !== "STAGE-01" && (
-                                      <button
-                                        className="mini-btn"
-                                        disabled={disabled}
-                                        onClick={() => countStock(b)}
-                                      >
-                                        Count
-                                      </button>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                      {!s.stocks.length && (
-                        <Empty
-                          title="No stock recorded yet"
-                          detail="Create a product and receipt, then receive goods into the warehouse."
-                        />
-                      )}
-                    </div>
-                  </Section>
-                  <Section
-                    title="Product catalog"
-                    detail="Products can exist before their first physical receipt."
-                  >
-                    <div className="catalog-grid">
-                      {s.products
-                        .filter((p) => matches(p.sku, p.name, p.category))
-                        .map((p) => (
-                          <div key={p.sku}>
-                            <span className="product-thumb">
-                              <Package size={21} />
-                            </span>
-                            <div>
-                              <strong>{p.name}</strong>
-                              <small>
-                                {p.sku} · {p.category}
-                              </small>
-                              <small>
-                                Reorder below {p.reorder_point} each
-                              </small>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  </Section>
-                </>
+                <InventoryTab
+                  admin={admin}
+                  availabilityTime={availabilityTime}
+                  canWork={canWork}
+                  countStock={countStock}
+                  disabled={disabled}
+                  lowStock={lowStock}
+                  matches={matches}
+                  moveStock={moveStock}
+                  request={request}
+                  s={s}
+                  session={session}
+                  submit={submit}
+                  totals={totals}
+                />
               )}
               {tab === "fulfillment" && canWork && (
                 <BatchPickPanel
@@ -2461,288 +2015,37 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                 </Section>
               )}
               {tab === "receiving" && (
-                <>
-                  {canWork && (
-                    <PutawayPanel
-                      key={`putaway-${s.warehouse.id}`}
-                      state={s}
-                      disabled={disabled}
-                      request={request}
-                      onSubmit={submit}
-                    />
-                  )}
-                  <div className="inventory-summary">
-                    <span>{totals.receiving} inbound receipts open</span>
-                    <span>
-                      {fmt(
-                        s.stocks
-                          .filter((b) =>
-                            s.locations.some(
-                              (l) =>
-                                l.code === b.location && l.kind === "receiving",
-                            ),
-                          )
-                          .reduce((n, b) => n + b.on_hand, 0),
-                      )}{" "}
-                      units awaiting putaway
-                    </span>
-                  </div>
-                  <Section
-                    title="Inbound receipts"
-                    detail="Receive against an expected line, then move the goods to storage."
-                  >
-                    <div className="table-scroll">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>Receipt / supplier</th>
-                            <th>Lines</th>
-                            <th>Received / expected</th>
-                            <th>Status</th>
-                            <th>Created</th>
-                            <th />
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {s.receipts
-                            .filter(
-                              (r) =>
-                                (filter === "all" || r.status === filter) &&
-                                matches(r.reference, r.supplier),
-                            )
-                            .slice()
-                            .reverse()
-                            .map((r) => (
-                              <tr key={r.id}>
-                                <td>
-                                  <button
-                                    className="table-link"
-                                    onClick={() => setModal({ receipt: r.id })}
-                                  >
-                                    {r.reference}
-                                  </button>
-                                  <span className="subline">{r.supplier}</span>
-                                </td>
-                                <td>{r.lines.length}</td>
-                                <td>
-                                  <span className="mono">
-                                    {fmt(
-                                      r.lines.reduce(
-                                        (n, l) => n + l.received,
-                                        0,
-                                      ),
-                                    )}{" "}
-                                    <span className="muted-text">
-                                      /{" "}
-                                      {fmt(
-                                        r.lines.reduce(
-                                          (n, l) => n + l.quantity,
-                                          0,
-                                        ),
-                                      )}
-                                    </span>
-                                  </span>
-                                  <div className="progress-track">
-                                    <span
-                                      style={{
-                                        width: `${
-                                          (100 *
-                                            r.lines.reduce(
-                                              (n, l) => n + l.received,
-                                              0,
-                                            )) /
-                                          r.lines.reduce(
-                                            (n, l) => n + l.quantity,
-                                            0,
-                                          )
-                                        }%`,
-                                      }}
-                                    />
-                                  </div>
-                                </td>
-                                <td>
-                                  <Status value={r.status} />
-                                </td>
-                                <td className="muted-text">
-                                  {when(r.created_at)}
-                                </td>
-                                <td>
-                                  <button
-                                    className="mini-btn"
-                                    onClick={() => setModal({ receipt: r.id })}
-                                  >
-                                    {["received", "cancelled"].includes(
-                                      r.status,
-                                    )
-                                      ? "View receipt"
-                                      : "Receive goods"}
-                                    <ChevronRight size={14} />
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                      {!s.receipts.length && (
-                        <Empty
-                          title="Your receiving dock is clear"
-                          detail="Schedule an inbound receipt to begin."
-                        />
-                      )}
-                    </div>
-                    {historyControl("receipts")}
-                  </Section>
-                </>
+                <ReceivingTab
+                  canWork={canWork}
+                  disabled={disabled}
+                  filter={filter}
+                  historyControl={historyControl}
+                  matches={matches}
+                  request={request}
+                  s={s}
+                  setModal={setModal}
+                  submit={submit}
+                  totals={totals}
+                />
               )}
               {tab === "locations" && (
-                <div className="locations-grid">
-                  {s.locations
-                    .filter((l) => matches(l.code, l.zone, l.kind))
-                    .map((l) => {
-                      const stock = s.stocks.filter(
-                        (b) => b.location === l.code,
-                      );
-                      return (
-                        <section key={l.code} className="location-card">
-                          <div>
-                            <span className={`location-icon ${l.kind}`}>
-                              <Warehouse size={23} />
-                            </span>
-                            <Badge
-                              tone={l.kind === "storage" ? "green" : "blue"}
-                            >
-                              {l.kind}
-                            </Badge>
-                          </div>
-                          <h2>{l.code}</h2>
-                          <p>{l.zone}</p>
-                          <dl>
-                            <div>
-                              <dt>Physical units</dt>
-                              <dd>
-                                {fmt(stock.reduce((n, b) => n + b.on_hand, 0))}
-                              </dd>
-                            </div>
-                            <div>
-                              <dt>SKUs in stock</dt>
-                              <dd>
-                                {
-                                  new Set(
-                                    stock
-                                      .filter((b) => b.on_hand > 0)
-                                      .map((b) => b.sku),
-                                  ).size
-                                }
-                              </dd>
-                            </div>
-                            <div>
-                              <dt>Reserved</dt>
-                              <dd>
-                                {fmt(stock.reduce((n, b) => n + b.reserved, 0))}
-                              </dd>
-                            </div>
-                          </dl>
-                          <button
-                            className="text-btn"
-                            onClick={() => {
-                              navigate("inventory");
-                              setSearch(l.code);
-                            }}
-                          >
-                            View stock <ArrowRight size={14} />
-                          </button>
-                        </section>
-                      );
-                    })}
-                </div>
+                <LocationsTab
+                  matches={matches}
+                  navigate={navigate}
+                  s={s}
+                  setSearch={setSearch}
+                />
               )}
               {tab === "exceptions" && (
-                <Section
-                  title="Warehouse exceptions"
-                  detail="Resolution records preserve the issue, evidence, and responsible operator."
-                >
-                  <div className="exception-list">
-                    {s.exceptions
-                      .filter(
-                        (e) =>
-                          (filter === "all" || e.status === filter) &&
-                          matches(e.category, e.detail, e.resolution),
-                      )
-                      .map((e) => (
-                        <article key={e.id}>
-                          <span className={`exception-symbol ${e.status}`}>
-                            <AlertTriangle size={20} />
-                          </span>
-                          <div className="exception-content">
-                            <div>
-                              <h3>{e.category}</h3>
-                              <Status value={e.status} />
-                            </div>
-                            <p>{e.detail}</p>
-                            <small>
-                              {when(e.created_at)} · {e.actor}{" "}
-                              {e.order_id && (
-                                <>
-                                  ·{" "}
-                                  <button
-                                    className="table-link"
-                                    onClick={() =>
-                                      setModal({ order: e.order_id! })
-                                    }
-                                  >
-                                    {s.orders.find((o) => o.id === e.order_id)
-                                      ?.reference ?? e.order_id}
-                                  </button>
-                                </>
-                              )}
-                            </small>
-                            {e.resolution && (
-                              <div className="resolution">
-                                <CheckCheck size={16} />
-                                {e.resolution}
-                                <small>{e.resolved_by}</small>
-                              </div>
-                            )}
-                          </div>
-                          {e.status === "open" && canWork && (
-                            <button
-                              className="btn"
-                              disabled={disabled}
-                              onClick={() =>
-                                setModal({
-                                  title: "Resolve exception",
-                                  subtitle:
-                                    "Record what was checked or corrected. Resolution does not change inventory quantities.",
-                                  fields: [
-                                    {
-                                      name: "resolution",
-                                      label: "Resolution evidence",
-                                      type: "textarea",
-                                    },
-                                  ],
-                                  submit: "Resolve issue",
-                                  build: (d) => ({
-                                    type: "resolve_exception",
-                                    exception_id: e.id,
-                                    ...d,
-                                  }),
-                                })
-                              }
-                            >
-                              Resolve <ArrowRight size={14} />
-                            </button>
-                          )}
-                        </article>
-                      ))}
-                    {!s.exceptions.length && (
-                      <Empty
-                        title="No warehouse exceptions"
-                        detail="Report observed issues here so they can be tracked and resolved."
-                      />
-                    )}
-                  </div>
-                  {historyControl("exceptions")}
-                </Section>
+                <ExceptionsTab
+                  canWork={canWork}
+                  disabled={disabled}
+                  filter={filter}
+                  historyControl={historyControl}
+                  matches={matches}
+                  s={s}
+                  setModal={setModal}
+                />
               )}
               {tab === "activity" && (
                 <ActivityTab
