@@ -170,7 +170,7 @@ impl Store {
             .execute(&mut *tx)
             .await?;
         sqlx::query("CREATE TABLE IF NOT EXISTS wms_schema_migrations(name TEXT PRIMARY KEY,digest TEXT NOT NULL,applied_at TIMESTAMPTZ NOT NULL DEFAULT now())").execute(&mut *tx).await?;
-        for (name, sql) in [
+        let migrations = [
             ("001_initial", include_str!("../migrations/001_initial.sql")),
             (
                 "002_relational_execution",
@@ -316,7 +316,27 @@ impl Store {
                 "037_carrier_labels",
                 include_str!("../migrations/037_carrier_labels.sql"),
             ),
-        ] {
+        ];
+        // A database migrated by a newer release has ledger rows this binary
+        // does not know. Refuse to start before applying anything: an older
+        // release would otherwise run without the newer release's rules.
+        let known: Vec<&str> = migrations.iter().map(|(name, _)| *name).collect();
+        let unknown: Vec<String> = sqlx::query_scalar(
+            "SELECT name FROM wms_schema_migrations WHERE NOT (name = ANY($1)) ORDER BY name",
+        )
+        .bind(&known)
+        .fetch_all(&mut *tx)
+        .await?;
+        if !unknown.is_empty() {
+            return Err(Error::new(
+                503,
+                format!(
+                    "Database was migrated by a newer release ({}); deploy that release or restore a pre-upgrade backup",
+                    unknown.join(", ")
+                ),
+            ));
+        }
+        for (name, sql) in migrations {
             let digest = format!("{:x}", Sha256::digest(sql.as_bytes()));
             let old: Option<String> =
                 sqlx::query_scalar("SELECT digest FROM wms_schema_migrations WHERE name=$1")

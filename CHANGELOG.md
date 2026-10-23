@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Startup refuses a database migrated by a newer release.** If the migration ledger contains a migration this binary doesn't know, startup stops before applying anything, naming the unknown migrations. An older release can therefore never run against a newer schema without that release's rules. Roll back by restoring the pre-upgrade backup instead.
 - **Planning.** Every plan below reserves and moves nothing. Each task is the exact canonical command, with its reviewed versions, confirmed through the normal command journal.
   - Directed putaway: same lot, then same SKU, then a requested or SKU zone, then any empty bin. There is no capacity model.
   - Batch picking: up to 50 orders per walk, stops in natural bin order and one tote per order. Blocked orders and unavailable lots are reported, not planned.
