@@ -393,7 +393,10 @@ impl NativeIntegrations {
         let conditional = connection
             .and_then(|c| c.oms.as_ref())
             .is_some_and(|c| c.shipment_writeback == ShipmentWriteback::ConditionalV1);
-        json!({"oms":{"configured":connection.is_some_and(|c|c.oms.is_some()),"read_contract":"GET /v1/tenants/{tenant}/orders","shipment_writeback":if conditional{"conditional_v1"}else{"held_missing_remote_precondition"}},"tms":{"configured":connection.is_some_and(|c|c.tms.is_some()),"write_contract":"POST /v1/sync/import","behavior":"source_verified_planned_load","requires_operator_transport_plan":true}})
+        json!({
+            "oms":{"configured":connection.is_some_and(|c|c.oms.is_some()),"read_contract":"GET /v1/tenants/{tenant}/orders","shipment_writeback":if conditional{"conditional_v1"}else{"held_missing_remote_precondition"}},
+            "tms":{"configured":connection.is_some_and(|c|c.tms.is_some()),"write_contract":"POST /v1/sync/import","behavior":"source_verified_planned_load","requires_operator_transport_plan":true}
+        })
     }
     pub async fn list_orders(&self, tenant: &str, page: u32) -> Result<OmsOrderPage> {
         if page == 0 {
@@ -688,9 +691,14 @@ impl NativeIntegrations {
         }
         text(&order.carrier, "Handoff carrier", 240)?;
         text(&order.handoff_reference, "Physical handoff reference", 240)?;
-        Ok(
-            json!({"state":"held","reason":OMS_WRITEBACK_HOLD,"source_revision":current.updated_at,"path":format!("/v1/tenants/{}/orders/{source}/fulfillment",c.tenant_id),"idempotency_key":format!("wms-fulfillment-{:x}",Sha256::digest(format!("{tenant}\0{warehouse}\0{event_id}").as_bytes())),"payload":{"status":"FULFILLED","netsuiteCashSaleId":null,"fulfillmentData":{"source":"stateset-warehouse","tenant":tenant,"warehouse_id":warehouse,"warehouse_order_id":order.id,"event_id":event_id,"carrier":order.carrier,"handoff_reference":order.handoff_reference,"handed_off_at":order.shipped_at,"lines":order.lines}}}),
-        )
+        Ok(json!({
+            "state":"held",
+            "reason":OMS_WRITEBACK_HOLD,
+            "source_revision":current.updated_at,
+            "path":format!("/v1/tenants/{}/orders/{source}/fulfillment",c.tenant_id),
+            "idempotency_key":format!("wms-fulfillment-{:x}",Sha256::digest(format!("{tenant}\0{warehouse}\0{event_id}").as_bytes())),
+            "payload":{"status":"FULFILLED","netsuiteCashSaleId":null,"fulfillmentData":{"source":"stateset-warehouse","tenant":tenant,"warehouse_id":warehouse,"warehouse_order_id":order.id,"event_id":event_id,"carrier":order.carrier,"handoff_reference":order.handoff_reference,"handed_off_at":order.shipped_at,"lines":order.lines}}
+        }))
     }
     /// There is deliberately no HTTP mutation in this method.
     pub async fn dispatch_oms_shipment(

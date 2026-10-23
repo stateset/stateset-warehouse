@@ -57,8 +57,21 @@ pub(crate) async fn create_mode(
     else {
         return Ok(());
     };
-    let actual: bool = sqlx::query_scalar("INSERT INTO wms_serial_modes(tenant,sku,controlled,source_warehouse_id,source_event_id) VALUES($1,$2,$3,CASE WHEN $3 THEN $4 END,CASE WHEN $3 THEN $5 END) ON CONFLICT(tenant,sku) DO UPDATE SET sku=EXCLUDED.sku RETURNING controlled")
-        .bind(t).bind(sku).bind(serial_controlled).bind(w).bind(eid).fetch_one(&mut *c).await?;
+    let actual: bool = sqlx::query_scalar(
+        "INSERT INTO wms_serial_modes(tenant,sku,controlled,source_warehouse_id,source_event_id)
+        VALUES($1,$2,$3,CASE WHEN $3 THEN $4 END,CASE WHEN $3 THEN $5 END)
+        ON CONFLICT(tenant,sku) DO
+        UPDATE
+        SET sku=EXCLUDED.sku
+        RETURNING controlled",
+    )
+    .bind(t)
+    .bind(sku)
+    .bind(serial_controlled)
+    .bind(w)
+    .bind(eid)
+    .fetch_one(&mut *c)
+    .await?;
     if actual != *serial_controlled {
         return Err(Error::new(422, "Serial mode must match this tenant/SKU's original catalog choice; existing inventory cannot be relabelled"));
     }
@@ -141,8 +154,25 @@ pub(crate) async fn admit(
         // A missing projection is not a new identity when retained original
         // observations/history already name it. Keep these bounded point
         // checks under the global SKU locks; do not manufacture a new birth.
-        let missing: bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM jsonb_to_recordset($2) AS k(sku TEXT,serial TEXT) WHERE NOT EXISTS(SELECT 1 FROM wms_serial_units u WHERE u.tenant=$1 AND u.sku=k.sku AND u.serial=k.serial) AND (EXISTS(SELECT 1 FROM wms_serial_steps s WHERE s.tenant=$1 AND s.sku=k.sku AND s.serial=k.serial) OR EXISTS(SELECT 1 FROM wms_serial_observations o WHERE o.tenant=$1 AND o.sku=k.sku AND o.serials @> jsonb_build_array(k.serial))))")
-            .bind(t).bind(json!(keys)).fetch_one(&mut *c).await?;
+        let missing: bool = sqlx::query_scalar(
+            "SELECT EXISTS(
+            SELECT 1
+            FROM jsonb_to_recordset($2) AS k(sku TEXT,serial TEXT)
+            WHERE NOT EXISTS(
+            SELECT 1
+            FROM wms_serial_units u
+            WHERE u.tenant=$1 AND u.sku=k.sku AND u.serial=k.serial) AND (EXISTS(
+            SELECT 1
+            FROM wms_serial_steps s
+            WHERE s.tenant=$1 AND s.sku=k.sku AND s.serial=k.serial) OR EXISTS(
+            SELECT 1
+            FROM wms_serial_observations o
+            WHERE o.tenant=$1 AND o.sku=k.sku AND o.serials @> jsonb_build_array(k.serial))))",
+        )
+        .bind(t)
+        .bind(json!(keys))
+        .fetch_one(&mut *c)
+        .await?;
         if missing {
             return Err(Error::new(
                 503,
@@ -205,7 +235,10 @@ pub(crate) async fn admit(
             place: decode(row.try_get("place")?)?,
         });
     }
-    let groups=sqlx::query("SELECT sku,lot,place->>'status' AS status,place->>'location' AS location,place->>'order_id' AS order_id,place->>'line_id' AS line_id,place->>'allocation_location' AS allocation_location,place->>'package_id' AS package_id,count(*)::bigint AS quantity FROM wms_serial_units WHERE tenant=$1 AND sku=ANY($2) AND place->>'warehouse_id'=$3 AND place->>'status' IN('on_hand','staged') GROUP BY sku,lot,place->>'status',place->>'location',place->>'order_id',place->>'line_id',place->>'allocation_location',place->>'package_id'")
+    let groups=sqlx::query("SELECT sku,lot,place->>'status' AS status,place->>'location' AS location,place->>'order_id' AS order_id,place->>'line_id' AS line_id,place->>'allocation_location' AS allocation_location,place->>'package_id' AS package_id,count(*)::bigint AS quantity
+        FROM wms_serial_units
+        WHERE tenant=$1 AND sku=ANY($2) AND place->>'warehouse_id'=$3 AND place->>'status' IN('on_hand','staged')
+        GROUP BY sku,lot,place->>'status',place->>'location',place->>'order_id',place->>'line_id',place->>'allocation_location',place->>'package_id'")
         .bind(t).bind(&skus).bind(w).fetch_all(c).await?;
     for row in groups {
         let sku: String = row.try_get("sku")?;
@@ -305,8 +338,18 @@ impl Prepared {
             .iter()
             .map(|(sku, version)| json!({"sku":sku,"version":version}))
             .collect();
-        let updated=sqlx::query("UPDATE wms_serial_heads h SET version=h.version+1,last_event_id=$3 FROM jsonb_to_recordset($2) AS k(sku TEXT,version BIGINT) WHERE h.tenant=$1 AND h.sku=k.sku AND h.version=k.version")
-            .bind(t).bind(json!(&heads)).bind(eid).execute(&mut *c).await?.rows_affected();
+        let updated = sqlx::query(
+            "UPDATE wms_serial_heads h
+            SET version=h.version+1,last_event_id=$3
+            FROM jsonb_to_recordset($2) AS k(sku TEXT,version BIGINT)
+            WHERE h.tenant=$1 AND h.sku=k.sku AND h.version=k.version",
+        )
+        .bind(t)
+        .bind(json!(&heads))
+        .bind(eid)
+        .execute(&mut *c)
+        .await?
+        .rows_affected();
         if updated != self.heads.len() as u64 {
             return Err(Error::new(
                 503,
@@ -331,20 +374,62 @@ impl Prepared {
                 .heads
                 .get(&change.sku)
                 .ok_or_else(|| Error::new(503, "Serial change exceeds its admitted SKU scope"))?;
-            steps.push(json!({"sku":change.sku,"serial":change.serial,"lot":change.lot,"revision":old.unwrap_or(0)+1,"previous_revision":old,"sku_version":version+1,"warehouse_id":w,"warehouse_version":after.version,"event_id":eid,"ordinal":index+1,"target":change.target,"before_place":change.before,"after_place":change.after,"actor":actor,"recorded_at":after.quality_time().to_rfc3339()}));
+            steps.push(json!({
+                "sku":change.sku,
+                "serial":change.serial,
+                "lot":change.lot,
+                "revision":old.unwrap_or(0)+1,
+                "previous_revision":old,
+                "sku_version":version+1,
+                "warehouse_id":w,
+                "warehouse_version":after.version,
+                "event_id":eid,
+                "ordinal":index+1,
+                "target":change.target,
+                "before_place":change.before,
+                "after_place":change.after,
+                "actor":actor,
+                "recorded_at":after.quality_time().to_rfc3339()
+            }));
         }
         if !steps.is_empty() {
-            let n=sqlx::query("INSERT INTO wms_serial_units AS u(tenant,sku,serial,lot,revision,place,last_event_id) SELECT $1,k.sku,k.serial,k.lot,k.revision,k.after_place,$3 FROM jsonb_to_recordset($2) AS k(sku TEXT,serial TEXT,lot TEXT,revision BIGINT,after_place JSONB) ORDER BY k.sku,k.serial ON CONFLICT(tenant,sku,serial) DO UPDATE SET revision=EXCLUDED.revision,place=EXCLUDED.place,last_event_id=EXCLUDED.last_event_id WHERE u.revision=EXCLUDED.revision-1 AND u.lot=EXCLUDED.lot")
+            let n=sqlx::query("INSERT INTO wms_serial_units AS u(tenant,sku,serial,lot,revision,place,last_event_id)
+                SELECT $1,k.sku,k.serial,k.lot,k.revision,k.after_place,$3
+                FROM jsonb_to_recordset($2) AS k(sku TEXT,serial TEXT,lot TEXT,revision BIGINT,after_place JSONB)
+                ORDER BY k.sku,k.serial
+                ON CONFLICT(tenant,sku,serial) DO
+                UPDATE
+                SET revision=EXCLUDED.revision,place=EXCLUDED.place,last_event_id=EXCLUDED.last_event_id
+                WHERE u.revision=EXCLUDED.revision-1 AND u.lot=EXCLUDED.lot")
                 .bind(t).bind(json!(&steps)).bind(eid).execute(&mut *c).await?.rows_affected();
             if n != steps.len() as u64 {
                 return Err(Error::new(503,"Original serial revision changed during persistence; retry the original request"));
             }
-            sqlx::query("INSERT INTO wms_serial_steps SELECT $1,k.* FROM jsonb_to_recordset($2) AS k(sku TEXT,serial TEXT,lot TEXT,revision BIGINT,previous_revision BIGINT,sku_version BIGINT,warehouse_id TEXT,warehouse_version BIGINT,event_id TEXT,ordinal INTEGER,target JSONB,before_place JSONB,after_place JSONB,actor TEXT,recorded_at TEXT) ORDER BY k.ordinal")
+            sqlx::query("INSERT INTO wms_serial_steps
+                SELECT $1,k.*
+                FROM jsonb_to_recordset($2) AS k(sku TEXT,serial TEXT,lot TEXT,revision BIGINT,previous_revision BIGINT,sku_version BIGINT,warehouse_id TEXT,warehouse_version BIGINT,event_id TEXT,ordinal INTEGER,target JSONB,before_place JSONB,after_place JSONB,actor TEXT,recorded_at TEXT)
+                ORDER BY k.ordinal")
                 .bind(t).bind(json!(&steps)).execute(&mut *c).await?;
         }
-        let inputs: Vec<_>=request.serial_inputs.iter().enumerate().map(|(i,input)|json!({"ordinal":i+1,"sku":input.sku,"target":input.target,"serials":input.serials,"sku_version":self.heads[&input.sku]+1})).collect();
+        let inputs: Vec<_> = request
+            .serial_inputs
+            .iter()
+            .enumerate()
+            .map(|(i, input)| {
+                json!({
+                    "ordinal":i+1,
+                    "sku":input.sku,
+                    "target":input.target,
+                    "serials":input.serials,
+                    "sku_version":self.heads[&input.sku]+1
+                })
+            })
+            .collect();
         if !inputs.is_empty() {
-            sqlx::query("INSERT INTO wms_serial_observations SELECT $1,$2,$3,k.ordinal,k.sku,k.sku_version,k.target,k.serials FROM jsonb_to_recordset($4) AS k(ordinal INTEGER,sku TEXT,sku_version BIGINT,target JSONB,serials JSONB) ORDER BY k.ordinal")
+            sqlx::query("INSERT INTO wms_serial_observations
+                SELECT $1,$2,$3,k.ordinal,k.sku,k.sku_version,k.target,k.serials
+                FROM jsonb_to_recordset($4) AS k(ordinal INTEGER,sku TEXT,sku_version BIGINT,target JSONB,serials JSONB)
+                ORDER BY k.ordinal")
                 .bind(t).bind(w).bind(eid).bind(json!(inputs)).execute(c).await?;
         }
         let heads: BTreeMap<_, _> = self

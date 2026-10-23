@@ -420,7 +420,20 @@ pub fn project(
         .iter()
         .filter(|(code, _)| page.after.as_deref().is_none_or(|after| **code > after))
         .collect::<Vec<_>>();
-    let shown = all.iter().take(limit).map(|(code, (bin, on_hand, reserved, positions))| json!({"code": code, "zone": bin.zone, "kind": bin.kind, "on_hand_each": on_hand.to_string(), "reserved_each": reserved.to_string(), "lot_positions": positions})).collect::<Vec<_>>();
+    let shown = all
+        .iter()
+        .take(limit)
+        .map(|(code, (bin, on_hand, reserved, positions))| {
+            json!({
+                "code": code,
+                "zone": bin.zone,
+                "kind": bin.kind,
+                "on_hand_each": on_hand.to_string(),
+                "reserved_each": reserved.to_string(),
+                "lot_positions": positions
+            })
+        })
+        .collect::<Vec<_>>();
     let next_after = if all.len() > limit {
         all.get(limit - 1).map(|(code, _)| **code)
     } else {
@@ -436,14 +449,36 @@ pub fn project(
                 .iter()
                 .all(|bin| bins.contains_key(bin.code.as_str())) =>
         {
-            json!({"available": true, "revision": assets.revision, "name": layout.name, "unit": layout.unit, "width": layout.width, "height": layout.height, "mapped_bins": layout.bins.len(), "total_bins": bins.len(), "bins": layout.bins.iter().map(|p| {let bin = bins[p.code.as_str()]; json!({"code": p.code, "x": p.x, "y": p.y, "width": p.width, "height": p.height, "on_hand_each": bin.1.to_string(), "reserved_each": bin.2.to_string()})}).collect::<Vec<_>>()})
+            json!({
+                "available": true,
+                "revision": assets.revision,
+                "name": layout.name,
+                "unit": layout.unit,
+                "width": layout.width,
+                "height": layout.height,
+                "mapped_bins": layout.bins.len(),
+                "total_bins": bins.len(),
+                "bins": layout.bins.iter().map(|p| {let bin = bins[p.code.as_str()]; json!({"code": p.code, "x": p.x, "y": p.y, "width": p.width, "height": p.height, "on_hand_each": bin.1.to_string(), "reserved_each": bin.2.to_string()})}).collect::<Vec<_>>()
+            })
         }
         Some(_) => json!({"available": false, "reason": "bin_sources_changed"}),
         None => json!({"available": false, "reason": "not_configured"}),
     };
-    Ok(
-        json!({"schema_version": 1, "tenant": tenant, "warehouse_id": state.warehouse.id, "warehouse_name": state.warehouse.name, "version": state.version.to_string(), "captured_at": crate::domain::now(), "source_ok": true, "unit": "each", "flow": FLOW.iter().map(|status| json!({"status": status, "orders": state.orders.iter().filter(|o| o.status == *status).count().to_string()})).collect::<Vec<_>>(), "open_exceptions": state.exceptions.iter().filter(|e| e.status == "open").count().to_string(), "stock": {"on_hand_each": physical.to_string(), "reserved_each": reserved.to_string()}, "bins": {"items": shown, "total": bins.len(), "next_after": next_after}, "floor_plan": plan}),
-    )
+    Ok(json!({
+        "schema_version": 1,
+        "tenant": tenant,
+        "warehouse_id": state.warehouse.id,
+        "warehouse_name": state.warehouse.name,
+        "version": state.version.to_string(),
+        "captured_at": crate::domain::now(),
+        "source_ok": true,
+        "unit": "each",
+        "flow": FLOW.iter().map(|status| json!({"status": status, "orders": state.orders.iter().filter(|o| o.status == *status).count().to_string()})).collect::<Vec<_>>(),
+        "open_exceptions": state.exceptions.iter().filter(|e| e.status == "open").count().to_string(),
+        "stock": {"on_hand_each": physical.to_string(), "reserved_each": reserved.to_string()},
+        "bins": {"items": shown, "total": bins.len(), "next_after": next_after},
+        "floor_plan": plan
+    }))
 }
 
 async fn overview(
@@ -518,9 +553,25 @@ async fn product(
             (Value::Null, "unavailable")
         }
     };
-    Ok(Json(
-        json!({"schema_version": 1, "demo": app.demo, "tenant": identity.tenant, "image_scope": image_scope(&identity, &warehouse), "warehouse_id": warehouse, "version": state.version.to_string(), "captured_at": crate::domain::now(), "source_ok": true, "sku": product.sku, "name": product.name, "category": product.category, "serial_controlled": product.serial_controlled, "expiry_required": product.expiry_required, "reorder_point_each": product.reorder_point.to_string(), "label": {"value": product.sku, "unit": "each", "symbology": if product.sku.bytes().all(|b| (32..=126).contains(&b)) && product.sku.len() <= 80 {Some("code128")} else {None}}, "image": image, "image_status": image_status}),
-    ))
+    Ok(Json(json!({
+        "schema_version": 1,
+        "demo": app.demo,
+        "tenant": identity.tenant,
+        "image_scope": image_scope(&identity, &warehouse),
+        "warehouse_id": warehouse,
+        "version": state.version.to_string(),
+        "captured_at": crate::domain::now(),
+        "source_ok": true,
+        "sku": product.sku,
+        "name": product.name,
+        "category": product.category,
+        "serial_controlled": product.serial_controlled,
+        "expiry_required": product.expiry_required,
+        "reorder_point_each": product.reorder_point.to_string(),
+        "label": {"value": product.sku, "unit": "each", "symbology": if product.sku.bytes().all(|b| (32..=126).contains(&b)) && product.sku.len() <= 80 {Some("code128")} else {None}},
+        "image": image,
+        "image_status": image_status
+    })))
 }
 async fn image(
     State(app): State<App>,

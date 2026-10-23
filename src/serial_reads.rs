@@ -174,7 +174,10 @@ async fn read(app: App, i: Identity, q: PageQuery, view: View) -> Result<Json<Va
             return Err(Error::new(404, "Warehouse not found"));
         }
     }
-    let head=sqlx::query("SELECT m.controlled,wms_serial_mode_original(m) AS mode_ok,h.version,h.last_event_id,CASE WHEN h.sku IS NULL THEN false ELSE wms_serial_head_bound(h) END AS head_ok FROM wms_serial_modes m LEFT JOIN wms_serial_heads h ON h.tenant=m.tenant AND h.sku=m.sku WHERE m.tenant=$1 AND m.sku=$2")
+    let head=sqlx::query("SELECT m.controlled,wms_serial_mode_original(m) AS mode_ok,h.version,h.last_event_id,CASE WHEN h.sku IS NULL THEN false ELSE wms_serial_head_bound(h) END AS head_ok
+        FROM wms_serial_modes m
+        LEFT JOIN wms_serial_heads h ON h.tenant=m.tenant AND h.sku=m.sku
+        WHERE m.tenant=$1 AND m.sku=$2")
         .bind(&i.tenant).bind(&q.sku).fetch_optional(&mut *tx).await?.ok_or_else(||Error::new(404,"Product not found"))?;
     if !head.try_get::<bool, _>("controlled")? {
         return Err(Error::new(
@@ -195,11 +198,35 @@ async fn read(app: App, i: Identity, q: PageQuery, view: View) -> Result<Json<Va
     }
     // A retained history row must not disappear merely because its projection
     // was removed. This check is SKU/global, independent of a custody filter.
-    let missing: bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM wms_serial_steps s WHERE s.tenant=$1 AND s.sku=$2 AND ($3::text IS NULL OR s.serial=$3) AND NOT EXISTS(SELECT 1 FROM wms_serial_units u WHERE u.tenant=s.tenant AND u.sku=s.sku AND u.serial=s.serial))")
-        .bind(&i.tenant).bind(&q.sku).bind(&q.serial).fetch_one(&mut *tx).await?;
+    let missing: bool = sqlx::query_scalar(
+        "SELECT EXISTS(
+        SELECT 1
+        FROM wms_serial_steps s
+        WHERE s.tenant=$1 AND s.sku=$2 AND ($3::text IS NULL OR s.serial=$3) AND NOT EXISTS(
+        SELECT 1
+        FROM wms_serial_units u
+        WHERE u.tenant=s.tenant AND u.sku=s.sku AND u.serial=s.serial))",
+    )
+    .bind(&i.tenant)
+    .bind(&q.sku)
+    .bind(&q.serial)
+    .fetch_one(&mut *tx)
+    .await?;
     let missing_observed: bool = if let Some(serial) = &q.serial {
-        sqlx::query_scalar("SELECT NOT EXISTS(SELECT 1 FROM wms_serial_units WHERE tenant=$1 AND sku=$2 AND serial=$3) AND EXISTS(SELECT 1 FROM wms_serial_observations WHERE tenant=$1 AND sku=$2 AND serials @> jsonb_build_array($3::text))")
-            .bind(&i.tenant).bind(&q.sku).bind(serial).fetch_one(&mut *tx).await?
+        sqlx::query_scalar(
+            "SELECT NOT EXISTS(
+            SELECT 1
+            FROM wms_serial_units
+            WHERE tenant=$1 AND sku=$2 AND serial=$3) AND EXISTS(
+            SELECT 1
+            FROM wms_serial_observations
+            WHERE tenant=$1 AND sku=$2 AND serials @> jsonb_build_array($3::text))",
+        )
+        .bind(&i.tenant)
+        .bind(&q.sku)
+        .bind(serial)
+        .fetch_one(&mut *tx)
+        .await?
     } else {
         false
     };
@@ -210,7 +237,12 @@ async fn read(app: App, i: Identity, q: PageQuery, view: View) -> Result<Json<Va
         ));
     }
     let current_source_ok: Option<bool> = if view == View::History {
-        let state=sqlx::query("SELECT wms_serial_unit_bound(u) AND wms_serial_place_references_valid(u.tenant,u.sku,u.lot,u.place) AS ok,u.revision,(SELECT count(*) FROM wms_serial_steps s WHERE s.tenant=u.tenant AND s.sku=u.sku AND s.serial=u.serial) AS steps FROM wms_serial_units u WHERE u.tenant=$1 AND u.sku=$2 AND u.serial=$3")
+        let state=sqlx::query("SELECT wms_serial_unit_bound(u) AND wms_serial_place_references_valid(u.tenant,u.sku,u.lot,u.place) AS ok,u.revision,(
+            SELECT count(*)
+            FROM wms_serial_steps s
+            WHERE s.tenant=u.tenant AND s.sku=u.sku AND s.serial=u.serial) AS steps
+            FROM wms_serial_units u
+            WHERE u.tenant=$1 AND u.sku=$2 AND u.serial=$3")
             .bind(&i.tenant).bind(&q.sku).bind(&q.serial).fetch_optional(&mut *tx).await?.ok_or_else(||Error::new(404,"Serial identity not found"))?;
         Some(
             state.try_get::<bool, _>("ok")?
@@ -280,9 +312,27 @@ async fn read(app: App, i: Identity, q: PageQuery, view: View) -> Result<Json<Va
     };
     let ok = current_source_ok != Some(false) && items.iter().all(|item| item["source_ok"] == true);
     tx.commit().await?;
-    Ok(Json(
-        json!({"schema_version":1,"sku":q.sku,"serial":q.serial,"warehouse_id":q.warehouse_id,"status":q.status,"view":view,"review":version,"sku_version":version,"version_scope":"tenant_sku_identity","head_event_id":head.try_get::<Option<String>,_>("last_event_id")?,"items":items,"total_records":total,"next_cursor":next,"page_source_ok":ok,"current_source_ok":current_source_ok,"source_checks":"original_mode_global_head_and_selected_record_event_sources; full_reconciliation_is_separate","observation_records":"one_literal_label_occurrence_or_explicit_empty_group","page_byte_budget":PAGE_BYTES}),
-    ))
+    Ok(Json(json!({
+        "schema_version":1,
+        "sku":q.sku,
+        "serial":q.serial,
+        "warehouse_id":q.warehouse_id,
+        "status":q.status,
+        "view":view,
+        "review":version,
+        "sku_version":version,
+        "version_scope":"tenant_sku_identity",
+        "head_event_id":head.try_get::<Option<String>,
+        _>("last_event_id")?,
+        "items":items,
+        "total_records":total,
+        "next_cursor":next,
+        "page_source_ok":ok,
+        "current_source_ok":current_source_ok,
+        "source_checks":"original_mode_global_head_and_selected_record_event_sources; full_reconciliation_is_separate",
+        "observation_records":"one_literal_label_occurrence_or_explicit_empty_group",
+        "page_byte_budget":PAGE_BYTES
+    })))
 }
 
 async fn cursor_exists(
@@ -294,11 +344,17 @@ async fn cursor_exists(
 ) -> Result<bool> {
     let status = q.status.map(Status::name);
     Ok(match view {
-        View::Current=>sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM wms_serial_units u WHERE tenant=$1 AND sku=$2 AND serial=$3 AND ($4::text IS NULL OR place->>'warehouse_id'=$4 OR place->>'source_warehouse_id'=$4 OR place->>'destination_warehouse_id'=$4) AND ($5::text IS NULL OR place->>'status'=$5))")
+        View::Current=>sqlx::query_scalar("SELECT EXISTS(
+            SELECT 1
+            FROM wms_serial_units u
+            WHERE tenant=$1 AND sku=$2 AND serial=$3 AND ($4::text IS NULL OR place->>'warehouse_id'=$4 OR place->>'source_warehouse_id'=$4 OR place->>'destination_warehouse_id'=$4) AND ($5::text IS NULL OR place->>'status'=$5))")
             .bind(t).bind(&q.sku).bind(&key[0]).bind(&q.warehouse_id).bind(status).fetch_one(c).await?,
         View::History=>sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM wms_serial_steps WHERE tenant=$1 AND sku=$2 AND serial=$3 AND ($4::text IS NULL OR warehouse_id=$4) AND revision=$5)")
             .bind(t).bind(&q.sku).bind(&q.serial).bind(&q.warehouse_id).bind(number(&key[0],false)?).fetch_one(c).await?,
-        View::Observations=>sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM wms_serial_observations WHERE tenant=$1 AND sku=$2 AND ($3::text IS NULL OR warehouse_id=$3) AND sku_version=$4 AND ordinal=$5 AND (($6=0 AND jsonb_array_length(serials)=0 AND $7::text IS NULL) OR ($6>0 AND $6<=jsonb_array_length(serials) AND ($7::text IS NULL OR serials->>($6-1)=$7))))")
+        View::Observations=>sqlx::query_scalar("SELECT EXISTS(
+            SELECT 1
+            FROM wms_serial_observations
+            WHERE tenant=$1 AND sku=$2 AND ($3::text IS NULL OR warehouse_id=$3) AND sku_version=$4 AND ordinal=$5 AND (($6=0 AND jsonb_array_length(serials)=0 AND $7::text IS NULL) OR ($6>0 AND $6<=jsonb_array_length(serials) AND ($7::text IS NULL OR serials->>($6-1)=$7))))")
             .bind(t).bind(&q.sku).bind(&q.warehouse_id).bind(number(&key[0],false)?).bind(i32::try_from(number(&key[1],false)?).map_err(|_|invalid())?).bind(i32::try_from(number(&key[2],true)?).map_err(|_|invalid())?).bind(&q.serial).fetch_one(c).await?,
     })
 }
@@ -316,7 +372,9 @@ async fn candidates(
     let status = q.status.map(Status::name);
     match view {
         View::Current => {
-            total=sqlx::query_scalar("SELECT count(*) FROM wms_serial_units WHERE tenant=$1 AND sku=$2 AND ($3::text IS NULL OR serial=$3) AND ($4::text IS NULL OR place->>'warehouse_id'=$4 OR place->>'source_warehouse_id'=$4 OR place->>'destination_warehouse_id'=$4) AND ($5::text IS NULL OR place->>'status'=$5)")
+            total=sqlx::query_scalar("SELECT count(*)
+                FROM wms_serial_units
+                WHERE tenant=$1 AND sku=$2 AND ($3::text IS NULL OR serial=$3) AND ($4::text IS NULL OR place->>'warehouse_id'=$4 OR place->>'source_warehouse_id'=$4 OR place->>'destination_warehouse_id'=$4) AND ($5::text IS NULL OR place->>'status'=$5)")
                 .bind(t).bind(&q.sku).bind(&q.serial).bind(&q.warehouse_id).bind(status).fetch_one(&mut *c).await?;
             // As with observations, choose the bounded literal page before
             // joining steps and decoding each distinct original event once.
@@ -330,7 +388,9 @@ async fn candidates(
                 .bind(t).bind(&q.sku).bind(&q.serial).bind(&q.warehouse_id).bind(after.map(|k|number(&k[0],false)).transpose()?.unwrap_or(0)).bind(limit+1).fetch_all(&mut *c).await?;
         }
         View::Observations => {
-            total=sqlx::query_scalar("SELECT COALESCE(sum(CASE WHEN $3::text IS NULL THEN GREATEST(jsonb_array_length(serials),1) ELSE 1 END),0)::bigint FROM wms_serial_observations WHERE tenant=$1 AND sku=$2 AND ($3::text IS NULL OR serials @> jsonb_build_array($3)) AND ($4::text IS NULL OR warehouse_id=$4)")
+            total=sqlx::query_scalar("SELECT COALESCE(sum(CASE WHEN $3::text IS NULL THEN GREATEST(jsonb_array_length(serials),1) ELSE 1 END),0)::bigint
+                FROM wms_serial_observations
+                WHERE tenant=$1 AND sku=$2 AND ($3::text IS NULL OR serials @> jsonb_build_array($3)) AND ($4::text IS NULL OR warehouse_id=$4)")
                 .bind(t).bind(&q.sku).bind(&q.serial).bind(&q.warehouse_id).fetch_one(&mut *c).await?;
             let key = after
                 .map(|k| -> Result<[i64; 3]> {
@@ -380,7 +440,16 @@ async fn checks(
     }
     let mut keys = BTreeMap::new();
     for item in items {
-        keys.entry(item.source_key.clone()).or_insert_with(||json!({"key":item.source_key,"serial":item.data.get("serial").cloned(),"event_id":item.data["event_id"],"revision":item.data["revision"],"sku_version":item.data["sku_version"],"ordinal":item.data["observation_ordinal"]}));
+        keys.entry(item.source_key.clone()).or_insert_with(|| {
+            json!({
+                "key":item.source_key,
+                "serial":item.data.get("serial").cloned(),
+                "event_id":item.data["event_id"],
+                "revision":item.data["revision"],
+                "sku_version":item.data["sku_version"],
+                "ordinal":item.data["observation_ordinal"]
+            })
+        });
     }
     let mut keys: Vec<Value> = keys.into_values().collect();
     if view == View::History {

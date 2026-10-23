@@ -112,7 +112,11 @@ pub(crate) async fn load(
     receipts: &mut [Receipt],
 ) -> crate::store::Result<()> {
     let ids: Vec<_> = receipts.iter().map(|r| r.id.clone()).collect();
-    let rows = sqlx::query("SELECT c.receipt_id,c.reason,c.actor,c.cancelled_at,l.line_id,l.sku,l.lot,l.quantity,l.received,l.cancelled FROM wms_receipt_cancellations c LEFT JOIN wms_receipt_cancelled_lines l ON l.tenant=c.tenant AND l.warehouse_id=c.warehouse_id AND l.receipt_id=c.receipt_id WHERE c.tenant=$1 AND c.warehouse_id=$2 AND c.receipt_id=ANY($3) ORDER BY c.receipt_id,l.line_id")
+    let rows = sqlx::query("SELECT c.receipt_id,c.reason,c.actor,c.cancelled_at,l.line_id,l.sku,l.lot,l.quantity,l.received,l.cancelled
+        FROM wms_receipt_cancellations c
+        LEFT JOIN wms_receipt_cancelled_lines l ON l.tenant=c.tenant AND l.warehouse_id=c.warehouse_id AND l.receipt_id=c.receipt_id
+        WHERE c.tenant=$1 AND c.warehouse_id=$2 AND c.receipt_id=ANY($3)
+        ORDER BY c.receipt_id,l.line_id")
         .bind(tenant).bind(warehouse).bind(ids).fetch_all(&mut *c).await?;
     let mut cancellations = BTreeMap::<String, Cancellation>::new();
     for row in rows {

@@ -23,7 +23,19 @@ impl Connections {
             return Ok(false);
         }
         let mut tx = store.pool.begin().await?;
-        let rows=sqlx::query("SELECT o.id,o.event_id,o.tenant,o.destination,o.attempts,o.recipient_fingerprint,EXISTS(SELECT 1 FROM wms_delivery_attempts a WHERE a.outbox_id=o.id) AS attempted,e.payload FROM wms_outbox o JOIN wms_events e ON e.id=o.event_id WHERE EXISTS (SELECT 1 FROM jsonb_to_recordset($1::jsonb) AS c(tenant text,destination text) WHERE c.tenant=o.tenant AND c.destination=o.destination) AND ((o.status='pending' AND o.due_at<=now()) OR (o.status='delivering' AND o.lease_until<now())) ORDER BY o.due_at,o.id FOR UPDATE OF o SKIP LOCKED LIMIT 1")
+        let rows=sqlx::query("SELECT o.id,o.event_id,o.tenant,o.destination,o.attempts,o.recipient_fingerprint,EXISTS(
+            SELECT 1
+            FROM wms_delivery_attempts a
+            WHERE a.outbox_id=o.id) AS attempted,e.payload
+            FROM wms_outbox o
+            JOIN wms_events e ON e.id=o.event_id
+            WHERE EXISTS (
+            SELECT 1
+            FROM jsonb_to_recordset($1::jsonb) AS c(tenant text,destination text)
+            WHERE c.tenant=o.tenant AND c.destination=o.destination) AND ((o.status='pending' AND o.due_at<=now()) OR (o.status='delivering' AND o.lease_until<now()))
+            ORDER BY o.due_at,o.id FOR
+            UPDATE OF o SKIP LOCKED
+            LIMIT 1")
             .bind(json!(configured)).fetch_all(&mut *tx).await?;
         let row = rows.into_iter().find(|r| {
             let tenant = r.get::<String, _>("tenant");
@@ -46,7 +58,9 @@ impl Connections {
         let fingerprint = format!("{:x}", Sha256::digest(url.as_bytes()));
         let pinned: Option<String> = row.try_get("recipient_fingerprint")?;
         let attempted: bool = row.try_get("attempted")?;
-        sqlx::query("UPDATE wms_delivery_attempts SET outcome='uncertain',detail='Delivery lease expired before its outcome was committed',finished_at=now() WHERE outbox_id=$1 AND outcome='started'").bind(&oid).execute(&mut *tx).await?;
+        sqlx::query("UPDATE wms_delivery_attempts
+            SET outcome='uncertain',detail='Delivery lease expired before its outcome was committed',finished_at=now()
+            WHERE outbox_id=$1 AND outcome='started'").bind(&oid).execute(&mut *tx).await?;
         let hold = match pinned.as_deref() {
             Some("unverified") => Some("Original receiver is unknown for a historical delivery; independent receiver reconciliation is required before recovery"),
             Some(original) if original != fingerprint => Some("Configured receiver differs from the original delivery; restore the original receiver before an audited retry"),
@@ -63,7 +77,9 @@ impl Connections {
         // Count its claimed attempt against the budget before sending again;
         // expiry does not prove the receiver rejected the original event.
         if attempts >= MAX_DELIVERY_ATTEMPTS {
-            sqlx::query("UPDATE wms_outbox SET status='dead_letter',last_error='Automatic delivery attempt limit reached; receiver acceptance is uncertain; review the original event before an audited retry',lease_token=NULL,lease_until=NULL WHERE id=$1")
+            sqlx::query("UPDATE wms_outbox
+                SET status='dead_letter',last_error='Automatic delivery attempt limit reached; receiver acceptance is uncertain; review the original event before an audited retry',lease_token=NULL,lease_until=NULL
+                WHERE id=$1")
                 .bind(&oid).execute(&mut *tx).await?;
             tx.commit().await?;
             return Ok(true);
@@ -120,10 +136,21 @@ impl Connections {
         };
         let delay = 2_i64.pow((attempts + 1).min(10) as u32);
         let mut tx = store.pool.begin().await?;
-        let updated=sqlx::query("UPDATE wms_outbox SET status=$1,last_error=$2,due_at=now()+($3::bigint*interval '1 second'),lease_token=NULL,lease_until=NULL,delivered_at=CASE WHEN $4 THEN now() ELSE delivered_at END WHERE id=$5 AND lease_token=$6 AND status='delivering'")
+        let updated=sqlx::query("UPDATE wms_outbox
+            SET status=$1,last_error=$2,due_at=now()+($3::bigint*interval '1 second'),lease_token=NULL,lease_until=NULL,delivered_at=CASE WHEN $4 THEN now() ELSE delivered_at END
+            WHERE id=$5 AND lease_token=$6 AND status='delivering'")
             .bind(status).bind(&message).bind(delay).bind(delivered).bind(&oid).bind(&lease).execute(&mut *tx).await?.rows_affected();
         if updated == 1 {
-            sqlx::query("UPDATE wms_delivery_attempts SET outcome=$1,detail=$2,finished_at=now() WHERE id=$3 AND outcome='started'").bind(if delivered {"accepted"} else {"failed"}).bind(message).bind(lease).execute(&mut *tx).await?;
+            sqlx::query(
+                "UPDATE wms_delivery_attempts
+                SET outcome=$1,detail=$2,finished_at=now()
+                WHERE id=$3 AND outcome='started'",
+            )
+            .bind(if delivered { "accepted" } else { "failed" })
+            .bind(message)
+            .bind(lease)
+            .execute(&mut *tx)
+            .await?;
         }
         tx.commit().await?;
         Ok(true)

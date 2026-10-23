@@ -21,7 +21,10 @@ pub(crate) async fn source(
     warehouse: &str,
     order_id: &str,
 ) -> Result<(Order, Value)> {
-    let row = sqlx::query("SELECT o.status,o.data->>'shipment_mode' AS shipment_mode,COALESCE(e.document,wms_current_order(o.tenant,o.warehouse_id,o.id)) AS document,e.source_kind,e.event_id,e.source_version,wms_shipment_consistent(o.tenant,o.warehouse_id,o.id) AS ok FROM wms_orders o LEFT JOIN wms_shipment_evidence e ON e.tenant=o.tenant AND e.warehouse_id=o.warehouse_id AND e.order_id=o.id WHERE o.tenant=$1 AND o.warehouse_id=$2 AND o.id=$3")
+    let row = sqlx::query("SELECT o.status,o.data->>'shipment_mode' AS shipment_mode,COALESCE(e.document,wms_current_order(o.tenant,o.warehouse_id,o.id)) AS document,e.source_kind,e.event_id,e.source_version,wms_shipment_consistent(o.tenant,o.warehouse_id,o.id) AS ok
+        FROM wms_orders o
+        LEFT JOIN wms_shipment_evidence e ON e.tenant=o.tenant AND e.warehouse_id=o.warehouse_id AND e.order_id=o.id
+        WHERE o.tenant=$1 AND o.warehouse_id=$2 AND o.id=$3")
         .bind(tenant).bind(warehouse).bind(order_id).fetch_optional(&mut *c).await?
         .ok_or_else(|| Error::new(404,"Warehouse order not found"))?;
     if !["shipped", "partially_shipped", "closed_partial"]
@@ -45,7 +48,10 @@ pub(crate) async fn source(
         .as_deref()
         == Some("packages")
     {
-        let provenance:Value=sqlx::query_scalar("SELECT jsonb_build_object('kind',CASE WHEN count(*)=1 AND $4::boolean THEN 'event' ELSE 'handoff_events' END,'event_id',CASE WHEN count(*)=1 AND $4::boolean THEN min(event_id) ELSE NULL END,'event_ids',jsonb_agg(event_id ORDER BY version),'version',max(version)) FROM wms_package_closures WHERE tenant=$1 AND warehouse_id=$2 AND order_id=$3 AND kind='handed_off'")
+        let provenance:Value=sqlx::query_scalar("SELECT jsonb_build_object('kind',CASE WHEN count(*)=1 AND $4::boolean THEN 'event' ELSE 'handoff_events' END,'event_id',CASE WHEN count(*)=1 AND $4::boolean THEN min(event_id) ELSE NULL END,'event_ids',jsonb_agg(event_id
+            ORDER BY version),'version',max(version))
+            FROM wms_package_closures
+            WHERE tenant=$1 AND warehouse_id=$2 AND order_id=$3 AND kind='handed_off'")
             .bind(tenant).bind(warehouse).bind(order_id).bind(row.try_get::<String,_>("status")?=="shipped").fetch_one(c).await?;
         return Ok((order, provenance));
     }

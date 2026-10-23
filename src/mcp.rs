@@ -422,7 +422,10 @@ fn build_catalog() -> Vec<Definition> {
             "wms_serials",
             "Review bounded current literal serial custody for an exact SKU across the tenant. Preserve the global SKU review and original cursor; destination activity invalidates source pages. Optional warehouse_id includes physical ownership and both original transfer facilities. Source flags validate selected records, not a physical count or full reconciliation.",
             "GET", "/v1/serials", Rights::Any,
-            &[("sku",string()),("serial",string()),("warehouse_id",string()),("status",json!({"type":"string","enum":["on_hand","staged","shipped","in_transit","lost","missing"]})),("after",json!({"type":"string","minLength":1,"maxLength":4096})),("limit",integer(1,100)),("review",integer(0,i64::MAX))],
+            &[("sku",string()),("serial",string()),("warehouse_id",string()),("status",json!({
+                "type":"string",
+                "enum":["on_hand","staged","shipped","in_transit","lost","missing"]
+            })),("after",json!({"type":"string","minLength":1,"maxLength":4096})),("limit",integer(1,100)),("review",integer(0,i64::MAX))],
             None,true,false,true,
         ),
         definition(

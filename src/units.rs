@@ -83,11 +83,28 @@ pub(crate) fn validate(state: &State) -> domain::Result<()> {
     Ok(())
 }
 pub(crate) async fn proof(c: &mut PgConnection, t: &str, w: &str) -> Result<Value> {
-    let row=sqlx::query("SELECT wms_unit_scope_valid($1,$2) AS ok,(SELECT count(*) FROM wms_unit_pack_changes WHERE tenant=$1 AND warehouse_id=$2) AS definitions,(SELECT count(*) FROM wms_unit_observations WHERE tenant=$1 AND warehouse_id=$2) AS observations")
-        .bind(t).bind(w).fetch_one(c).await?;
-    Ok(
-        json!({"ok":row.get::<bool,_>("ok"),"definition_changes":row.get::<i64,_>("definitions"),"quantity_observations":row.get::<i64,_>("observations"),"method":"immutable_definition_and_original_command_each_conversion"}),
+    let row = sqlx::query(
+        "SELECT wms_unit_scope_valid($1,$2) AS ok,(
+        SELECT count(*)
+        FROM wms_unit_pack_changes
+        WHERE tenant=$1 AND warehouse_id=$2) AS definitions,(
+        SELECT count(*)
+        FROM wms_unit_observations
+        WHERE tenant=$1 AND warehouse_id=$2) AS observations",
     )
+    .bind(t)
+    .bind(w)
+    .fetch_one(c)
+    .await?;
+    Ok(json!({
+        "ok":row.get::<bool,
+        _>("ok"),
+        "definition_changes":row.get::<i64,
+        _>("definitions"),
+        "quantity_observations":row.get::<i64,
+        _>("observations"),
+        "method":"immutable_definition_and_original_command_each_conversion"
+    }))
 }
 pub(crate) fn apply(state: &mut State, command: &Command, actor: &str) -> domain::Result<String> {
     let Command::SetUnitPack {
@@ -155,7 +172,14 @@ pub(crate) async fn load(c: &mut PgConnection, t: &str, w: &str, state: &mut Sta
             "Original pack definitions disagree; unit review and new work held",
         ));
     }
-    state.unit_packs=sqlx::query("SELECT jsonb_build_object('id',id,'sku',sku,'code',code,'label',label,'each_per_pack',each_per_pack) AS data FROM (SELECT DISTINCT ON(sku,code) * FROM wms_unit_pack_changes WHERE tenant=$1 AND warehouse_id=$2 AND sku=ANY($3) AND version<=$4 ORDER BY sku,code,version DESC) p WHERE enabled ORDER BY sku,code")
+    state.unit_packs=sqlx::query("SELECT jsonb_build_object('id',id,'sku',sku,'code',code,'label',label,'each_per_pack',each_per_pack) AS data
+        FROM (
+        SELECT DISTINCT ON(sku,code) *
+        FROM wms_unit_pack_changes
+        WHERE tenant=$1 AND warehouse_id=$2 AND sku=ANY($3) AND version<=$4
+        ORDER BY sku,code,version DESC) p
+        WHERE enabled
+        ORDER BY sku,code")
         .bind(t).bind(w).bind(&skus).bind(state.version).fetch_all(&mut *c).await?.into_iter().map(|r|decode(r.get("data"))).collect::<Result<_>>()?;
     validate(state).map_err(|e| Error::new(503, e))?;
     Ok(())
@@ -202,8 +226,19 @@ pub(crate) async fn admit(c: &mut PgConnection, t: &str, w: &str, r: &Request) -
         {
             return Err(Error::new(422,"Original pack count and factor must equal this command's exact each quantity; no rounding or implicit conversion is allowed"));
         }
-        let definition:Option<(String,i64,bool,bool)>=sqlx::query_as("SELECT id,each_per_pack,enabled,wms_unit_pack_original(p) FROM wms_unit_pack_changes p WHERE tenant=$1 AND warehouse_id=$2 AND sku=$3 AND code=$4 ORDER BY version DESC LIMIT 1")
-            .bind(t).bind(w).bind(&input.sku).bind(&input.pack_code).fetch_optional(&mut *c).await?;
+        let definition: Option<(String, i64, bool, bool)> = sqlx::query_as(
+            "SELECT id,each_per_pack,enabled,wms_unit_pack_original(p)
+            FROM wms_unit_pack_changes p
+            WHERE tenant=$1 AND warehouse_id=$2 AND sku=$3 AND code=$4
+            ORDER BY version DESC
+            LIMIT 1",
+        )
+        .bind(t)
+        .bind(w)
+        .bind(&input.sku)
+        .bind(&input.pack_code)
+        .fetch_optional(&mut *c)
+        .await?;
         let Some((id, factor, enabled, valid)) = definition else {
             return Err(Error::new(
                 409,
@@ -232,7 +267,8 @@ pub(crate) async fn persist(
 ) -> Result<()> {
     if let Some(change) = &next.unit_pack_change {
         let p = &change.pack;
-        sqlx::query("INSERT INTO wms_unit_pack_changes(tenant,warehouse_id,id,version,sku,code,label,each_per_pack,enabled,reason,actor,recorded_at,source_event_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)")
+        sqlx::query("INSERT INTO wms_unit_pack_changes(tenant,warehouse_id,id,version,sku,code,label,each_per_pack,enabled,reason,actor,recorded_at,source_event_id)
+            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)")
             .bind(t).bind(w).bind(&p.id).bind(next.version).bind(&p.sku).bind(&p.code).bind(&p.label).bind(p.each_per_pack).bind(change.enabled).bind(&change.reason).bind(&change.actor).bind(next.quality_time().to_rfc3339()).bind(eid).execute(&mut *c).await?;
     }
     for (n, input) in r.unit_inputs.iter().enumerate() {
@@ -240,7 +276,8 @@ pub(crate) async fn persist(
             .pack_quantity
             .checked_mul(input.each_per_pack)
             .ok_or_else(|| Error::new(422, "Converted quantity exceeds the exact range"))?;
-        sqlx::query("INSERT INTO wms_unit_observations(tenant,warehouse_id,event_id,version,ordinal,target,sku,pack_code,definition_id,pack_quantity,each_per_pack,each_quantity) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)")
+        sqlx::query("INSERT INTO wms_unit_observations(tenant,warehouse_id,event_id,version,ordinal,target,sku,pack_code,definition_id,pack_quantity,each_per_pack,each_quantity)
+            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)")
             .bind(t).bind(w).bind(eid).bind(next.version).bind((n+1) as i32).bind(json!(input.target)).bind(&input.sku).bind(&input.pack_code).bind(&input.definition_id).bind(input.pack_quantity).bind(input.each_per_pack).bind(quantity).execute(&mut *c).await?;
     }
     Ok(())
@@ -388,11 +425,41 @@ async fn read_page(
         ));
     }
     let count: i64 = if view == View::Observations {
-        sqlx::query_scalar("SELECT count(*) FROM wms_unit_observations WHERE tenant=$1 AND warehouse_id=$2 AND sku=$3 AND ($4::text IS NULL OR pack_code=$4)").bind(&i.tenant).bind(&w).bind(&q.sku).bind(&q.code).fetch_one(&mut *tx).await?
+        sqlx::query_scalar(
+            "SELECT count(*)
+            FROM wms_unit_observations
+            WHERE tenant=$1 AND warehouse_id=$2 AND sku=$3 AND ($4::text IS NULL OR pack_code=$4)",
+        )
+        .bind(&i.tenant)
+        .bind(&w)
+        .bind(&q.sku)
+        .bind(&q.code)
+        .fetch_one(&mut *tx)
+        .await?
     } else if view == View::History {
-        sqlx::query_scalar("SELECT count(*) FROM wms_unit_pack_changes WHERE tenant=$1 AND warehouse_id=$2 AND sku=$3 AND ($4::text IS NULL OR code=$4)").bind(&i.tenant).bind(&w).bind(&q.sku).bind(&q.code).fetch_one(&mut *tx).await?
+        sqlx::query_scalar(
+            "SELECT count(*)
+            FROM wms_unit_pack_changes
+            WHERE tenant=$1 AND warehouse_id=$2 AND sku=$3 AND ($4::text IS NULL OR code=$4)",
+        )
+        .bind(&i.tenant)
+        .bind(&w)
+        .bind(&q.sku)
+        .bind(&q.code)
+        .fetch_one(&mut *tx)
+        .await?
     } else {
-        sqlx::query_scalar("SELECT count(DISTINCT code) FROM wms_unit_pack_changes WHERE tenant=$1 AND warehouse_id=$2 AND sku=$3 AND ($4::text IS NULL OR code=$4)").bind(&i.tenant).bind(&w).bind(&q.sku).bind(&q.code).fetch_one(&mut *tx).await?
+        sqlx::query_scalar(
+            "SELECT count(DISTINCT code)
+            FROM wms_unit_pack_changes
+            WHERE tenant=$1 AND warehouse_id=$2 AND sku=$3 AND ($4::text IS NULL OR code=$4)",
+        )
+        .bind(&i.tenant)
+        .bind(&w)
+        .bind(&q.sku)
+        .bind(&q.code)
+        .fetch_one(&mut *tx)
+        .await?
     };
     let rows = if view == View::Observations {
         let v = cursor
@@ -404,18 +471,36 @@ async fn read_page(
             .map(|c| c.key[1].parse::<i32>().map_err(|_| page_error()))
             .transpose()?
             .unwrap_or(0);
-        sqlx::query("SELECT to_jsonb(r)-'tenant'||jsonb_build_object('actor',e.payload->'actor','recorded_at',e.payload->'occurred_at','request_id',e.payload->'request_id','command',e.payload->'command','definition_label',p.label,'source_ok',wms_unit_observation_original(r)) AS data FROM wms_unit_observations r JOIN wms_events e ON e.id=r.event_id JOIN wms_unit_pack_changes p ON p.tenant=r.tenant AND p.warehouse_id=r.warehouse_id AND p.id=r.definition_id WHERE r.tenant=$1 AND r.warehouse_id=$2 AND r.sku=$3 AND ($4::text IS NULL OR r.pack_code=$4) AND (r.version,r.ordinal)>($5,$6) ORDER BY r.version,r.ordinal LIMIT $7")
+        sqlx::query("SELECT to_jsonb(r)-'tenant'||jsonb_build_object('actor',e.payload->'actor','recorded_at',e.payload->'occurred_at','request_id',e.payload->'request_id','command',e.payload->'command','definition_label',p.label,'source_ok',wms_unit_observation_original(r)) AS data
+            FROM wms_unit_observations r
+            JOIN wms_events e ON e.id=r.event_id
+            JOIN wms_unit_pack_changes p ON p.tenant=r.tenant AND p.warehouse_id=r.warehouse_id AND p.id=r.definition_id
+            WHERE r.tenant=$1 AND r.warehouse_id=$2 AND r.sku=$3 AND ($4::text IS NULL OR r.pack_code=$4) AND (r.version,r.ordinal)>($5,$6)
+            ORDER BY r.version,r.ordinal
+            LIMIT $7")
             .bind(&i.tenant).bind(&w).bind(&q.sku).bind(&q.code).bind(v).bind(ordinal).bind(limit+1).fetch_all(&mut *tx).await?
     } else if view == View::History {
         let v = cursor
             .as_ref()
             .map(|c| c.key[0].parse::<i64>().expect("validated cursor"))
             .unwrap_or(0);
-        sqlx::query("SELECT to_jsonb(p)-'tenant'||jsonb_build_object('source_ok',wms_unit_pack_original(p)) AS data FROM wms_unit_pack_changes p WHERE tenant=$1 AND warehouse_id=$2 AND sku=$3 AND ($4::text IS NULL OR code=$4) AND version>$5 ORDER BY version LIMIT $6")
+        sqlx::query("SELECT to_jsonb(p)-'tenant'||jsonb_build_object('source_ok',wms_unit_pack_original(p)) AS data
+            FROM wms_unit_pack_changes p
+            WHERE tenant=$1 AND warehouse_id=$2 AND sku=$3 AND ($4::text IS NULL OR code=$4) AND version>$5
+            ORDER BY version
+            LIMIT $6")
             .bind(&i.tenant).bind(&w).bind(&q.sku).bind(&q.code).bind(v).bind(limit+1).fetch_all(&mut *tx).await?
     } else {
         let c = cursor.as_ref().map(|c| c.key[0].as_str()).unwrap_or("");
-        sqlx::query("SELECT to_jsonb(p)-'tenant'||jsonb_build_object('source_ok',wms_unit_pack_original(p)) AS data FROM (SELECT DISTINCT ON(code) * FROM wms_unit_pack_changes WHERE tenant=$1 AND warehouse_id=$2 AND sku=$3 AND ($4::text IS NULL OR code=$4) ORDER BY code,version DESC) p WHERE code COLLATE \"C\">$5 COLLATE \"C\" ORDER BY code COLLATE \"C\" LIMIT $6")
+        sqlx::query("SELECT to_jsonb(p)-'tenant'||jsonb_build_object('source_ok',wms_unit_pack_original(p)) AS data
+            FROM (
+            SELECT DISTINCT ON(code) *
+            FROM wms_unit_pack_changes
+            WHERE tenant=$1 AND warehouse_id=$2 AND sku=$3 AND ($4::text IS NULL OR code=$4)
+            ORDER BY code,version DESC) p
+            WHERE code COLLATE \"C\">$5 COLLATE \"C\"
+            ORDER BY code COLLATE \"C\"
+            LIMIT $6")
             .bind(&i.tenant).bind(&w).bind(&q.sku).bind(&q.code).bind(c).bind(limit+1).fetch_all(&mut *tx).await?
     };
     let items: Vec<Value> = rows
@@ -447,7 +532,17 @@ async fn read_page(
     };
     let ok = items.iter().all(|i| i["source_ok"] == true);
     tx.commit().await?;
-    Ok(Json(
-        json!({"schema_version":1,"warehouse_id":w,"version":version,"sku":q.sku,"code":q.code,"view":view,"items":items,"total_records":count,"next_cursor":next,"page_source_ok":ok,"source_checks":"selected_original_pack_definition_or_quantity_observation_sources"}),
-    ))
+    Ok(Json(json!({
+        "schema_version":1,
+        "warehouse_id":w,
+        "version":version,
+        "sku":q.sku,
+        "code":q.code,
+        "view":view,
+        "items":items,
+        "total_records":count,
+        "next_cursor":next,
+        "page_source_ok":ok,
+        "source_checks":"selected_original_pack_definition_or_quantity_observation_sources"
+    })))
 }

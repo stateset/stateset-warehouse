@@ -27,7 +27,20 @@ pub struct NativeRecord {
 }
 impl NativeRecord {
     pub fn public(&self, replayed: bool) -> Value {
-        json!({"found":true,"request_id":self.request_id,"kind":self.kind,"status":self.status,"order_id":self.order_id,"attempts":self.attempts,"replayed":replayed,"response":self.response,"last_error":self.last_error,"in_progress":self.lease_active,"source_snapshot":self.source_snapshot,"evidence":self.frozen})
+        json!({
+            "found":true,
+            "request_id":self.request_id,
+            "kind":self.kind,
+            "status":self.status,
+            "order_id":self.order_id,
+            "attempts":self.attempts,
+            "replayed":replayed,
+            "response":self.response,
+            "last_error":self.last_error,
+            "in_progress":self.lease_active,
+            "source_snapshot":self.source_snapshot,
+            "evidence":self.frozen
+        })
     }
     pub fn matches(&self, i: &Identity, kind: &str, digest: &str) -> Result<()> {
         if self.actor != i.actor || self.kind != kind || self.digest != digest {
@@ -124,7 +137,11 @@ pub async fn attempts(
     warehouse: &str,
     request: &str,
 ) -> Result<Vec<Value>> {
-    let rows=sqlx::query("SELECT jsonb_build_object('id',id,'outcome',outcome,'detail',detail,'response',response,'started_at',started_at,'finished_at',finished_at) AS evidence FROM wms_native_attempts WHERE tenant=$1 AND warehouse_id=$2 AND request_id=$3 ORDER BY started_at,id LIMIT 100").bind(&i.tenant).bind(warehouse).bind(request).fetch_all(&store.pool).await?;
+    let rows=sqlx::query("SELECT jsonb_build_object('id',id,'outcome',outcome,'detail',detail,'response',response,'started_at',started_at,'finished_at',finished_at) AS evidence
+        FROM wms_native_attempts
+        WHERE tenant=$1 AND warehouse_id=$2 AND request_id=$3
+        ORDER BY started_at,id
+        LIMIT 100").bind(&i.tenant).bind(warehouse).bind(request).fetch_all(&store.pool).await?;
     rows.into_iter()
         .map(|r| Ok(r.try_get("evidence")?))
         .collect()
@@ -205,12 +222,22 @@ pub async fn freeze(
             .order_id
             .ok_or_else(|| Error::new(422, "Transport order identity required"))?;
         ensure_ready(&mut tx, &i.tenant, warehouse, order).await?;
-        let existing:Option<String>=sqlx::query_scalar("SELECT request_id FROM wms_native_requests WHERE tenant=$1 AND warehouse_id=$2 AND kind='tms_transport' AND order_id=$3").bind(&i.tenant).bind(warehouse).bind(order).fetch_optional(&mut *tx).await?;
+        let existing: Option<String> = sqlx::query_scalar(
+            "SELECT request_id
+            FROM wms_native_requests
+            WHERE tenant=$1 AND warehouse_id=$2 AND kind='tms_transport' AND order_id=$3",
+        )
+        .bind(&i.tenant)
+        .bind(warehouse)
+        .bind(order)
+        .fetch_optional(&mut *tx)
+        .await?;
         if existing.is_some() {
             return Err(Error::new(409,"This order already has a transport intent; recover its original request instead of creating another"));
         }
     }
-    sqlx::query("INSERT INTO wms_native_requests(tenant,warehouse_id,request_id,kind,actor,digest,input,expected_version,order_id,source_snapshot,frozen) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)").bind(&i.tenant).bind(warehouse).bind(f.request_id).bind(f.kind).bind(&i.actor).bind(f.digest).bind(f.input).bind(f.expected_version).bind(f.order_id).bind(f.source_snapshot).bind(f.frozen).execute(&mut *tx).await?;
+    sqlx::query("INSERT INTO wms_native_requests(tenant,warehouse_id,request_id,kind,actor,digest,input,expected_version,order_id,source_snapshot,frozen)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)").bind(&i.tenant).bind(warehouse).bind(f.request_id).bind(f.kind).bind(&i.actor).bind(f.digest).bind(f.input).bind(f.expected_version).bind(f.order_id).bind(f.source_snapshot).bind(f.frozen).execute(&mut *tx).await?;
     let result = get(&mut tx, &i.tenant, warehouse, f.request_id, false)
         .await?
         .ok_or_else(|| Error::new(503, "Native intent could not be retained"))?;
@@ -237,7 +264,17 @@ async fn ensure_ready(
             "Transport requires a fully packed warehouse order awaiting physical handoff",
         ));
     }
-    let blocked:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM wms_exceptions WHERE tenant=$1 AND warehouse_id=$2 AND order_id=$3 AND status='open')").bind(tenant).bind(warehouse).bind(order).fetch_one(&mut *c).await?;
+    let blocked: bool = sqlx::query_scalar(
+        "SELECT EXISTS(
+        SELECT 1
+        FROM wms_exceptions
+        WHERE tenant=$1 AND warehouse_id=$2 AND order_id=$3 AND status='open')",
+    )
+    .bind(tenant)
+    .bind(warehouse)
+    .bind(order)
+    .fetch_one(&mut *c)
+    .await?;
     if blocked {
         return Err(Error::new(
             409,
@@ -253,7 +290,9 @@ pub async fn complete_import(
     request: &str,
     response: &Value,
 ) -> Result<NativeRecord> {
-    sqlx::query("UPDATE wms_native_requests SET status='completed',response=$1,order_id=$2,last_error='',updated_at=now() WHERE tenant=$3 AND warehouse_id=$4 AND request_id=$5 AND actor=$6 AND kind='oms_import' AND status<>'completed'").bind(response).bind(response["result"]["entity_id"].as_str()).bind(&i.tenant).bind(warehouse).bind(request).bind(&i.actor).execute(&store.pool).await?;
+    sqlx::query("UPDATE wms_native_requests
+        SET status='completed',response=$1,order_id=$2,last_error='',updated_at=now()
+        WHERE tenant=$3 AND warehouse_id=$4 AND request_id=$5 AND actor=$6 AND kind='oms_import' AND status<>'completed'").bind(response).bind(response["result"]["entity_id"].as_str()).bind(&i.tenant).bind(warehouse).bind(request).bind(&i.actor).execute(&store.pool).await?;
     lookup(store, i, warehouse, request)
         .await?
         .ok_or_else(|| Error::new(503, "Native import receipt unavailable"))
@@ -265,7 +304,9 @@ pub async fn local_conflict(
     request: &str,
     message: &str,
 ) -> Result<()> {
-    sqlx::query("UPDATE wms_native_requests SET status='local_conflict',last_error=$1,updated_at=now() WHERE tenant=$2 AND warehouse_id=$3 AND request_id=$4 AND actor=$5 AND kind='oms_import' AND status<>'completed'").bind(message).bind(&i.tenant).bind(warehouse).bind(request).bind(&i.actor).execute(&store.pool).await?;
+    sqlx::query("UPDATE wms_native_requests
+        SET status='local_conflict',last_error=$1,updated_at=now()
+        WHERE tenant=$2 AND warehouse_id=$3 AND request_id=$4 AND actor=$5 AND kind='oms_import' AND status<>'completed'").bind(message).bind(&i.tenant).bind(warehouse).bind(request).bind(&i.actor).execute(&store.pool).await?;
     Ok(())
 }
 pub enum Claim {
@@ -310,14 +351,32 @@ pub async fn claim_transport(
         // Other inventory work may advance the warehouse after preparation.
         // Recheck the exact order facts rather than block on unrelated writes.
         let prepared = prepared(&record)?;
-        let order=sqlx::query("SELECT reference,source_order_id FROM wms_orders WHERE tenant=$1 AND warehouse_id=$2 AND id=$3").bind(&i.tenant).bind(warehouse).bind(&prepared.order_id).fetch_one(&mut *tx).await?;
+        let order = sqlx::query(
+            "SELECT reference,source_order_id
+            FROM wms_orders
+            WHERE tenant=$1 AND warehouse_id=$2 AND id=$3",
+        )
+        .bind(&i.tenant)
+        .bind(warehouse)
+        .bind(&prepared.order_id)
+        .fetch_one(&mut *tx)
+        .await?;
         if order.try_get::<String, _>("reference")? != prepared.readiness.order_reference
             || order.try_get::<Option<String>, _>("source_order_id")?
                 != prepared.readiness.source_order_ref
         {
             return Err(Error::new(409,"Warehouse order identity changed before first transport send; retained intent needs review"));
         }
-        let lines=sqlx::query("SELECT id,sku,quantity FROM wms_order_lines WHERE tenant=$1 AND warehouse_id=$2 AND order_id=$3").bind(&i.tenant).bind(warehouse).bind(&prepared.order_id).fetch_all(&mut *tx).await?;
+        let lines = sqlx::query(
+            "SELECT id,sku,quantity
+            FROM wms_order_lines
+            WHERE tenant=$1 AND warehouse_id=$2 AND order_id=$3",
+        )
+        .bind(&i.tenant)
+        .bind(warehouse)
+        .bind(&prepared.order_id)
+        .fetch_all(&mut *tx)
+        .await?;
         if lines.len() != prepared.readiness.lines.len()
             || lines.iter().any(|line| {
                 !prepared.readiness.lines.iter().any(|r| {
@@ -330,7 +389,9 @@ pub async fn claim_transport(
             return Err(Error::new(409,"Warehouse order lines changed before first transport send; retained intent needs review"));
         }
     }
-    sqlx::query("UPDATE wms_native_attempts SET outcome='uncertain',detail='Lease expired before outcome was committed; remote acceptance is uncertain',finished_at=now() WHERE tenant=$1 AND warehouse_id=$2 AND request_id=$3 AND outcome='started'").bind(&i.tenant).bind(warehouse).bind(request).execute(&mut *tx).await?;
+    sqlx::query("UPDATE wms_native_attempts
+        SET outcome='uncertain',detail='Lease expired before outcome was committed; remote acceptance is uncertain',finished_at=now()
+        WHERE tenant=$1 AND warehouse_id=$2 AND request_id=$3 AND outcome='started'").bind(&i.tenant).bind(warehouse).bind(request).execute(&mut *tx).await?;
     let lease = domain::id();
     sqlx::query(
         "INSERT INTO wms_native_attempts(id,tenant,warehouse_id,request_id) VALUES($1,$2,$3,$4)",
@@ -341,7 +402,9 @@ pub async fn claim_transport(
     .bind(request)
     .execute(&mut *tx)
     .await?;
-    sqlx::query("UPDATE wms_native_requests SET status='sending',attempts=attempts+1,lease_token=$1,lease_until=now()+interval '30 seconds',updated_at=now() WHERE tenant=$2 AND warehouse_id=$3 AND request_id=$4").bind(&lease).bind(&i.tenant).bind(warehouse).bind(request).execute(&mut *tx).await?;
+    sqlx::query("UPDATE wms_native_requests
+        SET status='sending',attempts=attempts+1,lease_token=$1,lease_until=now()+interval '30 seconds',updated_at=now()
+        WHERE tenant=$2 AND warehouse_id=$3 AND request_id=$4").bind(&lease).bind(&i.tenant).bind(warehouse).bind(request).execute(&mut *tx).await?;
     let record = get(&mut tx, &i.tenant, warehouse, request, false)
         .await?
         .ok_or_else(|| Error::new(503, "Transport claim unavailable"))?;
@@ -365,9 +428,25 @@ pub async fn finish_transport(
         Err(error) => ("uncertain", None, error),
     };
     let mut tx = store.pool.begin().await?;
-    let n=sqlx::query("UPDATE wms_native_requests SET status=$1,response=$2,last_error=$3,lease_token=NULL,lease_until=NULL,updated_at=now() WHERE tenant=$4 AND warehouse_id=$5 AND request_id=$6 AND actor=$7 AND lease_token=$8 AND status='sending' AND kind='tms_transport'").bind(status).bind(&response).bind(&message).bind(&i.tenant).bind(warehouse).bind(request).bind(&i.actor).bind(lease).execute(&mut *tx).await?.rows_affected();
+    let n=sqlx::query("UPDATE wms_native_requests
+        SET status=$1,response=$2,last_error=$3,lease_token=NULL,lease_until=NULL,updated_at=now()
+        WHERE tenant=$4 AND warehouse_id=$5 AND request_id=$6 AND actor=$7 AND lease_token=$8 AND status='sending' AND kind='tms_transport'").bind(status).bind(&response).bind(&message).bind(&i.tenant).bind(warehouse).bind(request).bind(&i.actor).bind(lease).execute(&mut *tx).await?.rows_affected();
     if n == 1 {
-        sqlx::query("UPDATE wms_native_attempts SET outcome=$1,response=$2,detail=$3,finished_at=now() WHERE id=$4 AND outcome='started'").bind(if status=="completed"{"accepted"}else{"uncertain"}).bind(&response).bind(&message).bind(lease).execute(&mut *tx).await?;
+        sqlx::query(
+            "UPDATE wms_native_attempts
+            SET outcome=$1,response=$2,detail=$3,finished_at=now()
+            WHERE id=$4 AND outcome='started'",
+        )
+        .bind(if status == "completed" {
+            "accepted"
+        } else {
+            "uncertain"
+        })
+        .bind(&response)
+        .bind(&message)
+        .bind(lease)
+        .execute(&mut *tx)
+        .await?;
     }
     let result = get(&mut tx, &i.tenant, warehouse, request, false)
         .await?

@@ -10,7 +10,14 @@ use sqlx::{PgConnection, Row};
 
 pub(crate) async fn load(c: &mut PgConnection, t: &str, w: &str, state: &mut State) -> Result<()> {
     let skus: Vec<_> = state.products.iter().map(|p| p.sku.as_str()).collect();
-    let valid: bool = sqlx::query_scalar("SELECT NOT EXISTS(SELECT 1 FROM wms_lot_changes h WHERE h.tenant=$1 AND h.warehouse_id=$2 AND h.sku=ANY($3) AND NOT COALESCE(wms_lot_change_valid(h.tenant,h.warehouse_id,h.version,h.ordinal),false)) AND NOT EXISTS(SELECT 1 FROM wms_products p WHERE p.tenant=$1 AND p.warehouse_id=$2 AND p.sku=ANY($3) AND (COALESCE((p.data->>'expiry_required')::boolean,false) IS DISTINCT FROM wms_lot_required(p.tenant,p.warehouse_id,p.sku,9223372036854775807)))")
+    let valid: bool = sqlx::query_scalar("SELECT NOT EXISTS(
+        SELECT 1
+        FROM wms_lot_changes h
+        WHERE h.tenant=$1 AND h.warehouse_id=$2 AND h.sku=ANY($3) AND NOT COALESCE(wms_lot_change_valid(h.tenant,h.warehouse_id,h.version,h.ordinal),false)) AND NOT EXISTS(
+        SELECT 1
+        FROM wms_products p
+        WHERE p.tenant=$1 AND p.warehouse_id=$2 AND p.sku=ANY($3) AND (COALESCE((p.data->>'expiry_required')::boolean,false) IS DISTINCT
+        FROM wms_lot_required(p.tenant,p.warehouse_id,p.sku,9223372036854775807)))")
         .bind(t).bind(w).bind(&skus).fetch_one(&mut *c).await?;
     if !valid {
         return Err(Error::new(
@@ -18,9 +25,23 @@ pub(crate) async fn load(c: &mut PgConnection, t: &str, w: &str, state: &mut Sta
             "Lot policy source disagrees; availability and new fulfillment held",
         ));
     }
-    state.lot_controls = sqlx::query("SELECT wms_lot_document($1,$2,sku,lot,$4) AS data FROM (SELECT DISTINCT sku,lot FROM wms_lot_changes WHERE tenant=$1 AND warehouse_id=$2 AND sku=ANY($3) AND lot IS NOT NULL AND version<=$4) l ORDER BY sku,lot")
-        .bind(t).bind(w).bind(&skus).bind(state.version).fetch_all(&mut *c).await?
-        .into_iter().map(|r| decode(r.get("data"))).collect::<Result<_>>()?;
+    state.lot_controls = sqlx::query(
+        "SELECT wms_lot_document($1,$2,sku,lot,$4) AS data
+        FROM (
+        SELECT DISTINCT sku,lot
+        FROM wms_lot_changes
+        WHERE tenant=$1 AND warehouse_id=$2 AND sku=ANY($3) AND lot IS NOT NULL AND version<=$4) l
+        ORDER BY sku,lot",
+    )
+    .bind(t)
+    .bind(w)
+    .bind(&skus)
+    .bind(state.version)
+    .fetch_all(&mut *c)
+    .await?
+    .into_iter()
+    .map(|r| decode(r.get("data")))
+    .collect::<Result<_>>()?;
     Ok(())
 }
 
@@ -82,8 +103,18 @@ pub(crate) async fn lock(
         ..
     } = command
     {
-        let source: Option<(String,String)> = sqlx::query_as("SELECT h.source_warehouse_id,l.sku FROM wms_transfers h JOIN wms_transfer_lines l ON l.tenant=h.tenant AND l.transfer_id=h.id WHERE h.tenant=$1 AND h.id=$2 AND h.destination_warehouse_id=$3 AND l.id=$4")
-            .bind(t).bind(transfer_id).bind(&state.warehouse.id).bind(line_id).fetch_optional(&mut *c).await?;
+        let source: Option<(String, String)> = sqlx::query_as(
+            "SELECT h.source_warehouse_id,l.sku
+            FROM wms_transfers h
+            JOIN wms_transfer_lines l ON l.tenant=h.tenant AND l.transfer_id=h.id
+            WHERE h.tenant=$1 AND h.id=$2 AND h.destination_warehouse_id=$3 AND l.id=$4",
+        )
+        .bind(t)
+        .bind(transfer_id)
+        .bind(&state.warehouse.id)
+        .bind(line_id)
+        .fetch_optional(&mut *c)
+        .await?;
         if let Some((w, s)) = source {
             keys.push(serde_json::json!([state.warehouse.id, s]));
             keys.push(serde_json::json!([w, s]));
@@ -105,12 +136,33 @@ pub(crate) async fn persist(c: &mut PgConnection, t: &str, next: &State, eid: &s
 }
 
 pub(crate) async fn decisions(c: &mut PgConnection, t: &str, w: &str, v: i64) -> Result<Value> {
-    Ok(sqlx::query_scalar("SELECT COALESCE(jsonb_agg(wms_lot_decision_document(kind,sku,lot,checked_at,required,document) ORDER BY kind,sku,lot),'[]'::jsonb) FROM wms_lot_decisions WHERE tenant=$1 AND warehouse_id=$2 AND version=$3")
+    Ok(sqlx::query_scalar("SELECT COALESCE(jsonb_agg(wms_lot_decision_document(kind,sku,lot,checked_at,required,document)
+        ORDER BY kind,sku,lot),'[]'::jsonb)
+        FROM wms_lot_decisions
+        WHERE tenant=$1 AND warehouse_id=$2 AND version=$3")
         .bind(t).bind(w).bind(v).fetch_one(c).await?)
 }
 
 pub(crate) async fn proof(c: &mut PgConnection, t: &str, w: &str) -> Result<Value> {
-    Ok(sqlx::query_scalar("SELECT jsonb_build_object('ok',NOT EXISTS(SELECT 1 FROM wms_events e WHERE e.tenant=$1 AND e.warehouse_id=$2 AND NOT COALESCE(wms_lot_event_valid(e.tenant,e.warehouse_id,e.version),false)) AND NOT EXISTS(SELECT 1 FROM wms_lot_changes h WHERE h.tenant=$1 AND h.warehouse_id=$2 AND NOT COALESCE(wms_lot_change_valid(h.tenant,h.warehouse_id,h.version,h.ordinal),false)) AND NOT EXISTS(SELECT 1 FROM wms_lot_decisions d WHERE d.tenant=$1 AND d.warehouse_id=$2 AND NOT COALESCE(wms_lot_decision_valid(d.tenant,d.warehouse_id,d.version,d.kind,d.sku,d.lot),false)), 'baseline_version',(SELECT baseline_version FROM wms_lot_enforcement WHERE tenant=$1 AND warehouse_id=$2),'policy_changes',(SELECT count(*) FROM wms_lot_changes WHERE tenant=$1 AND warehouse_id=$2),'eligibility_decisions',(SELECT count(*) FROM wms_lot_decisions WHERE tenant=$1 AND warehouse_id=$2))")
+    Ok(sqlx::query_scalar("SELECT jsonb_build_object('ok',NOT EXISTS(
+        SELECT 1
+        FROM wms_events e
+        WHERE e.tenant=$1 AND e.warehouse_id=$2 AND NOT COALESCE(wms_lot_event_valid(e.tenant,e.warehouse_id,e.version),false)) AND NOT EXISTS(
+        SELECT 1
+        FROM wms_lot_changes h
+        WHERE h.tenant=$1 AND h.warehouse_id=$2 AND NOT COALESCE(wms_lot_change_valid(h.tenant,h.warehouse_id,h.version,h.ordinal),false)) AND NOT EXISTS(
+        SELECT 1
+        FROM wms_lot_decisions d
+        WHERE d.tenant=$1 AND d.warehouse_id=$2 AND NOT COALESCE(wms_lot_decision_valid(d.tenant,d.warehouse_id,d.version,d.kind,d.sku,d.lot),false)), 'baseline_version',(
+        SELECT baseline_version
+        FROM wms_lot_enforcement
+        WHERE tenant=$1 AND warehouse_id=$2),'policy_changes',(
+        SELECT count(*)
+        FROM wms_lot_changes
+        WHERE tenant=$1 AND warehouse_id=$2),'eligibility_decisions',(
+        SELECT count(*)
+        FROM wms_lot_decisions
+        WHERE tenant=$1 AND warehouse_id=$2))")
         .bind(t).bind(w).fetch_one(c).await?)
 }
 
@@ -129,8 +181,19 @@ pub(crate) async fn prepare_arrival(
     else {
         return Ok(());
     };
-    let row=sqlx::query("SELECT h.source_warehouse_id,h.source_version,l.sku,l.lot,w.version,w.metadata FROM wms_transfers h JOIN wms_transfer_lines l ON l.tenant=h.tenant AND l.transfer_id=h.id JOIN wms_warehouses w ON w.tenant=h.tenant AND w.warehouse_id=h.source_warehouse_id WHERE h.tenant=$1 AND h.id=$2 AND h.destination_warehouse_id=$3 AND l.id=$4")
-        .bind(t).bind(transfer_id).bind(&next.warehouse.id).bind(line_id).fetch_one(&mut *c).await?;
+    let row = sqlx::query(
+        "SELECT h.source_warehouse_id,h.source_version,l.sku,l.lot,w.version,w.metadata
+        FROM wms_transfers h
+        JOIN wms_transfer_lines l ON l.tenant=h.tenant AND l.transfer_id=h.id
+        JOIN wms_warehouses w ON w.tenant=h.tenant AND w.warehouse_id=h.source_warehouse_id
+        WHERE h.tenant=$1 AND h.id=$2 AND h.destination_warehouse_id=$3 AND l.id=$4",
+    )
+    .bind(t)
+    .bind(transfer_id)
+    .bind(&next.warehouse.id)
+    .bind(line_id)
+    .fetch_one(&mut *c)
+    .await?;
     let source_warehouse_id: String = row.try_get("source_warehouse_id")?;
     let sku: String = row.try_get("sku")?;
     let lot: String = row.try_get("lot")?;
@@ -240,7 +303,30 @@ pub async fn page(
     let at = chrono::DateTime::parse_from_rfc3339(&checked_at)
         .map_err(|_| Error::new(503, "Database clock unavailable"))?
         .with_timezone(&chrono::Utc);
-    let rows=sqlx::query("WITH keys AS(SELECT sku,lot FROM wms_stock WHERE tenant=$1 AND warehouse_id=$2 UNION SELECT sku,lot FROM wms_lot_changes WHERE tenant=$1 AND warehouse_id=$2 AND lot IS NOT NULL) SELECT k.sku,k.lot,p.data,(SELECT COALESCE(sum(s.on_hand),0)::bigint FROM wms_stock s WHERE s.tenant=$1 AND s.warehouse_id=$2 AND s.sku=k.sku AND s.lot=k.lot) AS physical,(SELECT COALESCE(sum(s.reserved),0)::bigint FROM wms_stock s WHERE s.tenant=$1 AND s.warehouse_id=$2 AND s.sku=k.sku AND s.lot=k.lot) AS reserved,(SELECT COALESCE(sum(s.on_hand-s.reserved),0)::bigint FROM wms_stock s JOIN wms_locations l ON l.tenant=s.tenant AND l.warehouse_id=s.warehouse_id AND l.code=s.location AND l.kind='storage' WHERE s.tenant=$1 AND s.warehouse_id=$2 AND s.sku=k.sku AND s.lot=k.lot) AS free_storage FROM keys k JOIN wms_products p ON p.tenant=$1 AND p.warehouse_id=$2 AND p.sku=k.sku WHERE ($3::text IS NULL OR k.sku=$3) AND (k.sku,k.lot)>($4,$5) ORDER BY k.sku,k.lot LIMIT $6")
+    let rows=sqlx::query("WITH keys AS(
+        SELECT sku,lot
+        FROM wms_stock
+        WHERE tenant=$1 AND warehouse_id=$2
+        UNION
+        SELECT sku,lot
+        FROM wms_lot_changes
+        WHERE tenant=$1 AND warehouse_id=$2 AND lot IS NOT NULL)
+        SELECT k.sku,k.lot,p.data,(
+        SELECT COALESCE(sum(s.on_hand),0)::bigint
+        FROM wms_stock s
+        WHERE s.tenant=$1 AND s.warehouse_id=$2 AND s.sku=k.sku AND s.lot=k.lot) AS physical,(
+        SELECT COALESCE(sum(s.reserved),0)::bigint
+        FROM wms_stock s
+        WHERE s.tenant=$1 AND s.warehouse_id=$2 AND s.sku=k.sku AND s.lot=k.lot) AS reserved,(
+        SELECT COALESCE(sum(s.on_hand-s.reserved),0)::bigint
+        FROM wms_stock s
+        JOIN wms_locations l ON l.tenant=s.tenant AND l.warehouse_id=s.warehouse_id AND l.code=s.location AND l.kind='storage'
+        WHERE s.tenant=$1 AND s.warehouse_id=$2 AND s.sku=k.sku AND s.lot=k.lot) AS free_storage
+        FROM keys k
+        JOIN wms_products p ON p.tenant=$1 AND p.warehouse_id=$2 AND p.sku=k.sku
+        WHERE ($3::text IS NULL OR k.sku=$3) AND (k.sku,k.lot)>($4,$5)
+        ORDER BY k.sku,k.lot
+        LIMIT $6")
         .bind(&i.tenant).bind(&w).bind(q.sku).bind(&after[0]).bind(&after[1]).bind(limit+1).fetch_all(&mut *tx).await?;
     for row in rows.iter().take(limit as usize) {
         let product: crate::domain::Product = decode(row.try_get("data")?)?;
@@ -262,7 +348,18 @@ pub async fn page(
         } else {
             0
         };
-        items.push(serde_json::json!({"cursor":serde_json::to_string(&[&sku,&lot]).expect("lot cursor"),"sku":sku,"lot":lot,"physical":physical,"reserved":reserved,"unreserved":physical-reserved,"usable":usable,"availability":availability,"expiry_required":state.products.iter().find(|p|p.sku==sku).is_some_and(|p|p.expiry_required),"control":state.lot_controls.iter().find(|c|c.sku==sku && c.lot==lot)}));
+        items.push(serde_json::json!({
+            "cursor":serde_json::to_string(&[&sku,&lot]).expect("lot cursor"),
+            "sku":sku,
+            "lot":lot,
+            "physical":physical,
+            "reserved":reserved,
+            "unreserved":physical-reserved,
+            "usable":usable,
+            "availability":availability,
+            "expiry_required":state.products.iter().find(|p|p.sku==sku).is_some_and(|p|p.expiry_required),
+            "control":state.lot_controls.iter().find(|c|c.sku==sku && c.lot==lot)
+        }));
     }
     let next = if rows.len() > limit as usize {
         items.last().map(|v| v["cursor"].clone())

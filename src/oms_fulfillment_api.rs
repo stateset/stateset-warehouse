@@ -153,7 +153,9 @@ pub async fn claim_fulfillment(
             ));
         }
     }
-    sqlx::query("UPDATE wms_native_attempts SET outcome='uncertain',detail='Lease expired before outcome was committed; remote acceptance is uncertain',finished_at=now() WHERE tenant=$1 AND warehouse_id=$2 AND request_id=$3 AND outcome='started'")
+    sqlx::query("UPDATE wms_native_attempts
+        SET outcome='uncertain',detail='Lease expired before outcome was committed; remote acceptance is uncertain',finished_at=now()
+        WHERE tenant=$1 AND warehouse_id=$2 AND request_id=$3 AND outcome='started'")
         .bind(&i.tenant).bind(warehouse).bind(request).execute(&mut *tx).await?;
     let lease = domain::id();
     sqlx::query(
@@ -165,7 +167,9 @@ pub async fn claim_fulfillment(
     .bind(request)
     .execute(&mut *tx)
     .await?;
-    sqlx::query("UPDATE wms_native_requests SET status='sending',attempts=attempts+1,lease_token=$1,lease_until=now()+interval '30 seconds',updated_at=now() WHERE tenant=$2 AND warehouse_id=$3 AND request_id=$4")
+    sqlx::query("UPDATE wms_native_requests
+        SET status='sending',attempts=attempts+1,lease_token=$1,lease_until=now()+interval '30 seconds',updated_at=now()
+        WHERE tenant=$2 AND warehouse_id=$3 AND request_id=$4")
         .bind(&lease).bind(&i.tenant).bind(warehouse).bind(request).execute(&mut *tx).await?;
     let value=sqlx::query("SELECT *,COALESCE(lease_until>now(),false) AS lease_active FROM wms_native_requests WHERE tenant=$1 AND warehouse_id=$2 AND request_id=$3")
         .bind(&i.tenant).bind(warehouse).bind(request).fetch_one(&mut *tx).await?;
@@ -214,7 +218,9 @@ pub async fn finish_fulfillment(
         Ok((value, Acknowledgement::Fulfilled)) => ("completed", Some(value), String::new()),
         Err(error) => ("uncertain", None, error),
     };
-    let n=sqlx::query("UPDATE wms_native_requests SET status=$1,response=$2,last_error=$3,lease_token=NULL,lease_until=NULL,updated_at=now() WHERE tenant=$4 AND warehouse_id=$5 AND request_id=$6 AND actor=$7 AND lease_token=$8 AND status='sending' AND kind='oms_fulfillment'")
+    let n=sqlx::query("UPDATE wms_native_requests
+        SET status=$1,response=$2,last_error=$3,lease_token=NULL,lease_until=NULL,updated_at=now()
+        WHERE tenant=$4 AND warehouse_id=$5 AND request_id=$6 AND actor=$7 AND lease_token=$8 AND status='sending' AND kind='oms_fulfillment'")
         .bind(status).bind(&response).bind(&message).bind(&i.tenant).bind(warehouse).bind(request).bind(&i.actor).bind(lease).execute(&mut *tx).await?.rows_affected();
     if n == 1 {
         sqlx::query("UPDATE wms_native_attempts SET outcome=$1,response=$2,detail=$3,finished_at=now() WHERE id=$4 AND outcome='started'")

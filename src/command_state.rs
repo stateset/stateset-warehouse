@@ -111,8 +111,27 @@ pub(crate) async fn load(
     state.inventory_baseline = sqlx::query("SELECT sku,lot,location,quantity FROM wms_stock_ledger WHERE tenant=$1 AND warehouse_id=$2 AND sku=ANY($3) ORDER BY sku,lot,location")
         .bind(tenant).bind(warehouse).bind(&skus).fetch_all(&mut *c).await?
         .into_iter().map(|r| Ok(Stock { sku:r.try_get("sku")?,lot:r.try_get("lot")?,location:r.try_get("location")?,on_hand:r.try_get("quantity")?,reserved:0 })).collect::<Result<_>>()?;
-    let rows = sqlx::query("WITH holds AS (SELECT sku,lot,location,quantity-picked-released AS held FROM wms_allocations WHERE tenant=$1 AND warehouse_id=$2 AND sku=ANY($3) AND ($4::text IS NULL OR order_id<>$4) UNION ALL SELECT sku,lot,'STAGE-01',picked-shipped FROM wms_allocations WHERE tenant=$1 AND warehouse_id=$2 AND sku=ANY($3) AND ($4::text IS NULL OR order_id<>$4)) SELECT sku,lot,location,sum(held)::bigint AS held FROM holds GROUP BY sku,lot,location HAVING sum(held)<>0 ORDER BY sku,lot,location")
-        .bind(tenant).bind(warehouse).bind(&skus).bind(order_id).fetch_all(&mut *c).await?;
+    let rows = sqlx::query(
+        "WITH holds AS (
+        SELECT sku,lot,location,quantity-picked-released AS held
+        FROM wms_allocations
+        WHERE tenant=$1 AND warehouse_id=$2 AND sku=ANY($3) AND ($4::text IS NULL OR order_id<>$4)
+        UNION ALL
+        SELECT sku,lot,'STAGE-01',picked-shipped
+        FROM wms_allocations
+        WHERE tenant=$1 AND warehouse_id=$2 AND sku=ANY($3) AND ($4::text IS NULL OR order_id<>$4))
+        SELECT sku,lot,location,sum(held)::bigint AS held
+        FROM holds
+        GROUP BY sku,lot,location
+        HAVING sum(held)<>0
+        ORDER BY sku,lot,location",
+    )
+    .bind(tenant)
+    .bind(warehouse)
+    .bind(&skus)
+    .bind(order_id)
+    .fetch_all(&mut *c)
+    .await?;
     state.reservation_baseline = rows
         .into_iter()
         .map(|r| {

@@ -73,7 +73,13 @@ pub async fn plan(
     .fetch_optional(&mut *tx)
     .await?
     .ok_or_else(|| Error::new(404, "Warehouse not found"))?;
-    let rows=sqlx::query("SELECT q.*,m.controlled,p.data->'serial_controlled'='true'::jsonb AS product_controlled,wms_serial_mode_original(m) AS mode_ok,CASE WHEN m.controlled THEN wms_serial_head_bound(h) ELSE true END AS head_ok FROM wms_serial_targets($1,$2,$3) q LEFT JOIN wms_products p ON p.tenant=$1 AND p.warehouse_id=$2 AND p.sku=q.sku LEFT JOIN wms_serial_modes m ON m.tenant=p.tenant AND m.sku=p.sku LEFT JOIN wms_serial_heads h ON h.tenant=m.tenant AND h.sku=m.sku ORDER BY q.target LIMIT 101")
+    let rows=sqlx::query("SELECT q.*,m.controlled,p.data->'serial_controlled'='true'::jsonb AS product_controlled,wms_serial_mode_original(m) AS mode_ok,CASE WHEN m.controlled THEN wms_serial_head_bound(h) ELSE true END AS head_ok
+        FROM wms_serial_targets($1,$2,$3) q
+        LEFT JOIN wms_products p ON p.tenant=$1 AND p.warehouse_id=$2 AND p.sku=q.sku
+        LEFT JOIN wms_serial_modes m ON m.tenant=p.tenant AND m.sku=p.sku
+        LEFT JOIN wms_serial_heads h ON h.tenant=m.tenant AND h.sku=m.sku
+        ORDER BY q.target
+        LIMIT 101")
         .bind(&i.tenant).bind(&w).bind(&c).fetch_all(&mut *tx).await?;
     if rows.len() != expected {
         return Err(Error::new(
@@ -123,7 +129,15 @@ pub async fn plan(
         }
     }
     tx.commit().await?;
-    Ok(Json(
-        json!({"schema_version":1,"plan_id":r.plan_id,"warehouse_id":w,"command_type":c["type"],"targets":items,"required_labels":labels,"resolved_targets":expected,"observed_warehouse_version":version,"write_review":"retain_original_warehouse_and_resource_versions; this_plan_does_not_authorize_a_save"}),
-    ))
+    Ok(Json(json!({
+        "schema_version":1,
+        "plan_id":r.plan_id,
+        "warehouse_id":w,
+        "command_type":c["type"],
+        "targets":items,
+        "required_labels":labels,
+        "resolved_targets":expected,
+        "observed_warehouse_version":version,
+        "write_review":"retain_original_warehouse_and_resource_versions; this_plan_does_not_authorize_a_save"
+    })))
 }

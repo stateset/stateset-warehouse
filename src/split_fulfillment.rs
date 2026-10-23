@@ -578,7 +578,17 @@ pub(crate) async fn order_id(
     }
 }
 pub(crate) async fn load(c: &mut PgConnection, t: &str, w: &str, order: &Order) -> Result<Context> {
-    let rows:Vec<Value>=sqlx::query_scalar("SELECT wms_package_document($1,$2,id) FROM wms_packages WHERE tenant=$1 AND warehouse_id=$2 AND order_id=$3 ORDER BY seq").bind(t).bind(w).bind(&order.id).fetch_all(&mut *c).await?;
+    let rows: Vec<Value> = sqlx::query_scalar(
+        "SELECT wms_package_document($1,$2,id)
+        FROM wms_packages
+        WHERE tenant=$1 AND warehouse_id=$2 AND order_id=$3
+        ORDER BY seq",
+    )
+    .bind(t)
+    .bind(w)
+    .bind(&order.id)
+    .fetch_all(&mut *c)
+    .await?;
     let ok = if order.shipment_mode.is_some() {
         sqlx::query_scalar("SELECT wms_split_consistent($1,$2,$3)")
             .bind(t)
@@ -613,14 +623,17 @@ pub(crate) async fn persist(
                 .iter()
                 .any(|o| o.id == order.id && o.shipment_mode.is_none())
         {
-            sqlx::query("INSERT INTO wms_split_orders(tenant,warehouse_id,order_id,source_event_id,source_version,document) VALUES($1,$2,$3,$4,$5,wms_split_contract($6))").bind(t).bind(w).bind(&order.id).bind(eid).bind(next.version).bind(json!(order)).execute(&mut *c).await?;
+            sqlx::query("INSERT INTO wms_split_orders(tenant,warehouse_id,order_id,source_event_id,source_version,document)
+                VALUES($1,$2,$3,$4,$5,wms_split_contract($6))").bind(t).bind(w).bind(&order.id).bind(eid).bind(next.version).bind(json!(order)).execute(&mut *c).await?;
         }
     }
     match &next.shipment_change {
         Some(Change::Pack(p)) => {
-            sqlx::query("INSERT INTO wms_packages(tenant,warehouse_id,id,order_id,reference,actor,packed_at,source_event_id,source_version) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)").bind(t).bind(w).bind(&p.id).bind(&p.order_id).bind(&p.reference).bind(&p.actor).bind(&p.packed_at).bind(eid).bind(next.version).execute(&mut *c).await?;
+            sqlx::query("INSERT INTO wms_packages(tenant,warehouse_id,id,order_id,reference,actor,packed_at,source_event_id,source_version)
+                VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)").bind(t).bind(w).bind(&p.id).bind(&p.order_id).bind(&p.reference).bind(&p.actor).bind(&p.packed_at).bind(eid).bind(next.version).execute(&mut *c).await?;
             for l in &p.lines {
-                sqlx::query("INSERT INTO wms_package_lines(tenant,warehouse_id,package_id,order_id,line_id,sku,location,lot,quantity) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)").bind(t).bind(w).bind(&p.id).bind(&p.order_id).bind(&l.line_id).bind(&l.sku).bind(&l.location).bind(&l.lot).bind(l.quantity).execute(&mut *c).await?;
+                sqlx::query("INSERT INTO wms_package_lines(tenant,warehouse_id,package_id,order_id,line_id,sku,location,lot,quantity)
+                    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)").bind(t).bind(w).bind(&p.id).bind(&p.order_id).bind(&l.line_id).bind(&l.sku).bind(&l.location).bind(&l.lot).bind(l.quantity).execute(&mut *c).await?;
             }
         }
         Some(Change::Close {
@@ -628,7 +641,8 @@ pub(crate) async fn persist(
             order_id,
             closure: s,
         }) => {
-            sqlx::query("INSERT INTO wms_package_closures(tenant,warehouse_id,package_id,order_id,kind,reason,carrier,handoff_reference,actor,closed_at,event_id,version) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)").bind(t).bind(w).bind(package_id).bind(order_id).bind(&s.kind).bind(&s.reason).bind(&s.carrier).bind(&s.handoff_reference).bind(&s.actor).bind(&s.closed_at).bind(eid).bind(next.version).execute(&mut *c).await?;
+            sqlx::query("INSERT INTO wms_package_closures(tenant,warehouse_id,package_id,order_id,kind,reason,carrier,handoff_reference,actor,closed_at,event_id,version)
+                VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)").bind(t).bind(w).bind(package_id).bind(order_id).bind(&s.kind).bind(&s.reason).bind(&s.carrier).bind(&s.handoff_reference).bind(&s.actor).bind(&s.closed_at).bind(eid).bind(next.version).execute(&mut *c).await?;
         }
         None => {}
     }
@@ -661,12 +675,29 @@ pub async fn endpoint(
     .bind(&warehouse)
     .fetch_one(&mut *tx)
     .await?;
-    let progress=order.lines.iter().map(|l|{let a:Vec<_>=order.allocations.iter().filter(|a|a.line_id==l.id).collect();let allocated:i64=a.iter().map(|a|a.quantity-a.released).sum();json!({"line_id":l.id,"sku":l.sku,"ordered":l.quantity,"allocated":allocated,"picked":a.iter().map(|a|a.picked).sum::<i64>(),"shipped":a.iter().map(|a|a.shipped).sum::<i64>(),"cancelled":crate::order_cancellation::cancelled(&order,&l.id),"unallocated":l.quantity-allocated-crate::order_cancellation::cancelled(&order,&l.id)})}).collect::<Vec<_>>();
+    let progress=order.lines.iter().map(|l|{let a:Vec<_>=order.allocations.iter().filter(|a|a.line_id==l.id).collect();let allocated:i64=a.iter().map(|a|a.quantity-a.released).sum();json!({
+        "line_id":l.id,
+        "sku":l.sku,
+        "ordered":l.quantity,
+        "allocated":allocated,
+        "picked":a.iter().map(|a|a.picked).sum::<i64>(),
+        "shipped":a.iter().map(|a|a.shipped).sum::<i64>(),
+        "cancelled":crate::order_cancellation::cancelled(&order,&l.id),
+        "unallocated":l.quantity-allocated-crate::order_cancellation::cancelled(&order,&l.id)
+    })}).collect::<Vec<_>>();
     tx.commit().await?;
     Ok(axum::Json(
         json!({"warehouse_id":warehouse,"order_id":order_id,"version":version,"ok":context.ok,"packages":context.packages,"progress":progress,"order":order}),
     ))
 }
 pub(crate) async fn proof(c: &mut PgConnection, t: &str, w: &str) -> Result<Vec<Value>> {
-    sqlx::query_scalar("SELECT jsonb_build_object('order_id',b.order_id,'source_event_id',b.source_event_id,'ok',wms_split_consistent($1,$2,b.order_id),'status',o.status,'packages',(SELECT COALESCE(jsonb_agg(wms_package_document($1,$2,p.id) ORDER BY p.seq),'[]'::jsonb) FROM wms_packages p WHERE p.tenant=$1 AND p.warehouse_id=$2 AND p.order_id=b.order_id)) FROM wms_split_orders b JOIN wms_orders o ON o.tenant=b.tenant AND o.warehouse_id=b.warehouse_id AND o.id=b.order_id WHERE b.tenant=$1 AND b.warehouse_id=$2 ORDER BY b.order_id").bind(t).bind(w).fetch_all(c).await.map_err(Into::into)
+    sqlx::query_scalar("SELECT jsonb_build_object('order_id',b.order_id,'source_event_id',b.source_event_id,'ok',wms_split_consistent($1,$2,b.order_id),'status',o.status,'packages',(
+        SELECT COALESCE(jsonb_agg(wms_package_document($1,$2,p.id)
+        ORDER BY p.seq),'[]'::jsonb)
+        FROM wms_packages p
+        WHERE p.tenant=$1 AND p.warehouse_id=$2 AND p.order_id=b.order_id))
+        FROM wms_split_orders b
+        JOIN wms_orders o ON o.tenant=b.tenant AND o.warehouse_id=b.warehouse_id AND o.id=b.order_id
+        WHERE b.tenant=$1 AND b.warehouse_id=$2
+        ORDER BY b.order_id").bind(t).bind(w).fetch_all(c).await.map_err(Into::into)
 }

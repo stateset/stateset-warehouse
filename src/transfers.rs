@@ -319,7 +319,9 @@ pub(crate) fn apply(state: &mut State, command: &Command, actor: &str) -> domain
 }
 
 pub(crate) async fn load(c: &mut PgConnection, t: &str, w: &str, id: &str) -> Result<Transfer> {
-    let data:Value=sqlx::query_scalar("SELECT wms_transfer_document($1,id)||jsonb_build_object('ok',wms_transfer_consistent($1,id)) FROM wms_transfers WHERE tenant=$1 AND (source_warehouse_id=$2 OR destination_warehouse_id=$2) AND id=$3")
+    let data:Value=sqlx::query_scalar("SELECT wms_transfer_document($1,id)||jsonb_build_object('ok',wms_transfer_consistent($1,id))
+        FROM wms_transfers
+        WHERE tenant=$1 AND (source_warehouse_id=$2 OR destination_warehouse_id=$2) AND id=$3")
         .bind(t).bind(w).bind(id).fetch_optional(c).await?.ok_or_else(||Error::new(404,"Transfer not found in this facility"))?;
     decode(data)
 }
@@ -424,7 +426,8 @@ pub(crate) async fn persist(
             }
             _ => unreachable!(),
         };
-        sqlx::query("INSERT INTO wms_transfer_loss_records(tenant,id,transfer_id,line_id,warehouse_id,kind,quantity,original_loss_id,incident_reference,reason,actor,recorded_at,version,event_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)")
+        sqlx::query("INSERT INTO wms_transfer_loss_records(tenant,id,transfer_id,line_id,warehouse_id,kind,quantity,original_loss_id,incident_reference,reason,actor,recorded_at,version,event_id)
+            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)")
             .bind(t).bind(entity).bind(&transfer.id).bind(line).bind(w).bind(kind).bind(q).bind(original).bind(incident).bind(reason).bind(actor).bind(next.quality_time().to_rfc3339()).bind(next.version).bind(eid).execute(&mut *c).await?;
     }
     if let Command::DispatchTransfer {
@@ -447,14 +450,16 @@ pub(crate) async fn persist(
             .first()
             .ok_or_else(|| Error::new(503, "Original transfer movements are missing"))?
             .at;
-        sqlx::query("INSERT INTO wms_transfers(tenant,id,source_warehouse_id,destination_warehouse_id,reference,carrier,handoff_reference,actor,dispatched_at,source_version,source_event_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)")
+        sqlx::query("INSERT INTO wms_transfers(tenant,id,source_warehouse_id,destination_warehouse_id,reference,carrier,handoff_reference,actor,dispatched_at,source_version,source_event_id)
+            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)")
             .bind(t).bind(entity).bind(w).bind(destination_warehouse_id).bind(reference).bind(carrier).bind(handoff_reference).bind(actor).bind(at).bind(next.version).bind(eid).execute(&mut *c).await?;
         for line in lines {
             let movement = movements
                 .iter()
                 .find(|m| m.transfer_line_id.as_deref() == Some(&line.id))
                 .ok_or_else(|| Error::new(503, "Original transfer line movement missing"))?;
-            sqlx::query("INSERT INTO wms_transfer_lines(tenant,transfer_id,id,source_warehouse_id,destination_warehouse_id,sku,lot,location,quantity,movement_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)")
+            sqlx::query("INSERT INTO wms_transfer_lines(tenant,transfer_id,id,source_warehouse_id,destination_warehouse_id,sku,lot,location,quantity,movement_id)
+                VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)")
                 .bind(t).bind(entity).bind(&line.id).bind(w).bind(destination_warehouse_id).bind(&line.sku).bind(&line.lot).bind(&line.location).bind(line.quantity).bind(&movement.id).execute(&mut *c).await?;
         }
     }
@@ -481,8 +486,19 @@ pub(crate) async fn reviewed_transfer(
             ));
         }
         if let Command::ReverseTransferLoss { loss_id, .. } = command {
-            let document:Value=sqlx::query_scalar("SELECT to_jsonb(r)-'tenant'||jsonb_build_object('reversed',COALESCE((SELECT sum(x.quantity) FROM wms_transfer_loss_records x WHERE x.tenant=$1 AND x.original_loss_id=r.id),0)) FROM wms_transfer_loss_records r WHERE tenant=$1 AND warehouse_id=$2 AND id=$3 AND kind='loss'")
-                .bind(t).bind(w).bind(loss_id).fetch_one(&mut *c).await?;
+            let document: Value = sqlx::query_scalar(
+                "SELECT to_jsonb(r)-'tenant'||jsonb_build_object('reversed',COALESCE((
+                SELECT sum(x.quantity)
+                FROM wms_transfer_loss_records x
+                WHERE x.tenant=$1 AND x.original_loss_id=r.id),0))
+                FROM wms_transfer_loss_records r
+                WHERE tenant=$1 AND warehouse_id=$2 AND id=$3 AND kind='loss'",
+            )
+            .bind(t)
+            .bind(w)
+            .bind(loss_id)
+            .fetch_one(&mut *c)
+            .await?;
             transfer.reviewed_loss = Some(decode(document)?);
         }
         Ok(Some(transfer))
@@ -491,11 +507,28 @@ pub(crate) async fn reviewed_transfer(
     }
 }
 pub(crate) async fn proof(c: &mut PgConnection, t: &str, w: &str) -> Result<Vec<Value>> {
-    let rows=sqlx::query("SELECT id,wms_transfer_document($1,id) AS document,wms_transfer_consistent($1,id) AS ok FROM wms_transfers WHERE tenant=$1 AND (source_warehouse_id=$2 OR destination_warehouse_id=$2) ORDER BY seq")
-        .bind(t).bind(w).fetch_all(c).await?;
+    let rows = sqlx::query(
+        "SELECT id,wms_transfer_document($1,id) AS document,wms_transfer_consistent($1,id) AS ok
+        FROM wms_transfers
+        WHERE tenant=$1 AND (source_warehouse_id=$2 OR destination_warehouse_id=$2)
+        ORDER BY seq",
+    )
+    .bind(t)
+    .bind(w)
+    .fetch_all(c)
+    .await?;
     rows.into_iter().map(|r| {
         let d:Value=r.try_get("document")?;let lines=d["lines"].as_array().ok_or_else(||Error::new(503,"Transfer lines require repair"))?;
-        Ok(json!({"transfer_id":r.try_get::<String,_>("id")?,"source_warehouse_id":d["source_warehouse_id"],"destination_warehouse_id":d["destination_warehouse_id"],"source_event_id":d["source_event_id"],"ok":r.try_get::<bool,_>("ok")?,"lines":lines.iter().map(|l|json!({"line_id":l["id"],"sku":l["sku"],"lot":l["lot"],"dispatched":l["quantity"],"received":l["received"],"lost":l["lost"],"loss_record_count":l["loss_record_count"],"in_transit":l["quantity"].as_i64().unwrap_or(0)-l["received"].as_i64().unwrap_or(0)-l["lost"].as_i64().unwrap_or(0)})).collect::<Vec<_>>()}))
+        Ok(json!({
+            "transfer_id":r.try_get::<String,
+            _>("id")?,
+            "source_warehouse_id":d["source_warehouse_id"],
+            "destination_warehouse_id":d["destination_warehouse_id"],
+            "source_event_id":d["source_event_id"],
+            "ok":r.try_get::<bool,
+            _>("ok")?,
+            "lines":lines.iter().map(|l|json!({"line_id":l["id"],"sku":l["sku"],"lot":l["lot"],"dispatched":l["quantity"],"received":l["received"],"lost":l["lost"],"loss_record_count":l["loss_record_count"],"in_transit":l["quantity"].as_i64().unwrap_or(0)-l["received"].as_i64().unwrap_or(0)-l["lost"].as_i64().unwrap_or(0)})).collect::<Vec<_>>()
+        }))
     }).collect()
 }
 #[derive(Deserialize)]
@@ -546,7 +579,14 @@ pub async fn losses(
     if q.review.is_some_and(|r| r != review) {
         return Err(Error::new(409,"Destination changed; discard original loss pages and explicitly refresh the transfer review"));
     }
-    let records=sqlx::query("SELECT r.version,to_jsonb(r)-'tenant'||jsonb_build_object('reversed',CASE WHEN r.kind='loss' THEN COALESCE((SELECT sum(x.quantity) FROM wms_transfer_loss_records x WHERE x.tenant=$1 AND x.original_loss_id=r.id),0) ELSE 0 END,'source_ok',wms_transfer_loss_original(r)) AS data FROM wms_transfer_loss_records r WHERE tenant=$1 AND transfer_id=$2 AND version>$3 ORDER BY version LIMIT $4")
+    let records=sqlx::query("SELECT r.version,to_jsonb(r)-'tenant'||jsonb_build_object('reversed',CASE WHEN r.kind='loss' THEN COALESCE((
+        SELECT sum(x.quantity)
+        FROM wms_transfer_loss_records x
+        WHERE x.tenant=$1 AND x.original_loss_id=r.id),0) ELSE 0 END,'source_ok',wms_transfer_loss_original(r)) AS data
+        FROM wms_transfer_loss_records r
+        WHERE tenant=$1 AND transfer_id=$2 AND version>$3
+        ORDER BY version
+        LIMIT $4")
         .bind(&i.tenant).bind(&id).bind(after).bind(limit+1).fetch_all(&mut *tx).await?;
     let items: Vec<Value> = records
         .iter()
@@ -560,9 +600,16 @@ pub async fn losses(
     };
     let page_ok = transfer.ok && items.iter().all(|r| r["source_ok"] == true);
     tx.commit().await?;
-    Ok(Json(
-        json!({"warehouse_id":w,"version":version,"destination_warehouse_id":transfer.destination_warehouse_id,"transfer_id":id,"review":review,"items":items,"next_cursor":next,"page_source_ok":page_ok}),
-    ))
+    Ok(Json(json!({
+        "warehouse_id":w,
+        "version":version,
+        "destination_warehouse_id":transfer.destination_warehouse_id,
+        "transfer_id":id,
+        "review":review,
+        "items":items,
+        "next_cursor":next,
+        "page_source_ok":page_ok
+    })))
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -598,7 +645,11 @@ pub async fn page(
     .fetch_optional(&mut *tx)
     .await?
     .ok_or_else(|| Error::new(404, "Warehouse not found"))?;
-    let rows=sqlx::query("SELECT seq,wms_transfer_document($1,id)||jsonb_build_object('ok',wms_transfer_consistent($1,id)) AS data FROM wms_transfers WHERE tenant=$1 AND (source_warehouse_id=$2 OR destination_warehouse_id=$2) AND seq>$3 AND (NOT $4 OR wms_transfer_open($1,id)) ORDER BY seq LIMIT $5")
+    let rows=sqlx::query("SELECT seq,wms_transfer_document($1,id)||jsonb_build_object('ok',wms_transfer_consistent($1,id)) AS data
+        FROM wms_transfers
+        WHERE tenant=$1 AND (source_warehouse_id=$2 OR destination_warehouse_id=$2) AND seq>$3 AND (NOT $4 OR wms_transfer_open($1,id))
+        ORDER BY seq
+        LIMIT $5")
         .bind(&i.tenant).bind(&w).bind(after).bind(query.open_only.unwrap_or(true)).bind(limit+1).fetch_all(&mut *tx).await?;
     let more = rows.len() > limit as usize;
     let items = rows

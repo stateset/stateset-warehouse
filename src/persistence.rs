@@ -359,7 +359,17 @@ impl Store {
                     .await?;
             }
         }
-        let legacy=sqlx::query("SELECT tenant,state FROM wms_workspaces s WHERE NOT EXISTS(SELECT 1 FROM wms_warehouses w WHERE w.tenant=s.tenant AND w.warehouse_id=s.warehouse_id) FOR UPDATE").fetch_all(&mut *tx).await?;
+        let legacy = sqlx::query(
+            "SELECT tenant,state
+            FROM wms_workspaces s
+            WHERE NOT EXISTS(
+            SELECT 1
+            FROM wms_warehouses w
+            WHERE w.tenant=s.tenant AND w.warehouse_id=s.warehouse_id) FOR
+            UPDATE",
+        )
+        .fetch_all(&mut *tx)
+        .await?;
         for row in legacy {
             let tenant: String = row.try_get("tenant")?;
             let mut s: State = decode(row.try_get("state")?)?;
@@ -386,7 +396,18 @@ impl Store {
             })
         };
         let mut tx = self.pool.begin().await?;
-        let n=sqlx::query("INSERT INTO wms_warehouses(tenant,warehouse_id,version,metadata) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING").bind(tenant).bind(&s.warehouse.id).bind(s.version).bind(json!(s.warehouse)).execute(&mut *tx).await?.rows_affected();
+        let n = sqlx::query(
+            "INSERT INTO wms_warehouses(tenant,warehouse_id,version,metadata)
+            VALUES($1,$2,$3,$4)
+            ON CONFLICT DO NOTHING",
+        )
+        .bind(tenant)
+        .bind(&s.warehouse.id)
+        .bind(s.version)
+        .bind(json!(s.warehouse))
+        .execute(&mut *tx)
+        .await?
+        .rows_affected();
         if n == 1 {
             Self::save(&mut tx, tenant, None, &s).await?;
             crate::shipments::initialize(&mut tx, tenant, &s.warehouse.id).await?;
@@ -425,8 +446,28 @@ impl Store {
     ) -> Result<()> {
         crate::order_cancellation::load(c, t, w, orders).await?;
         let ids: Vec<_> = orders.iter().map(|o| o.id.clone()).collect();
-        let lines=sqlx::query("SELECT order_id,id,sku,quantity FROM wms_order_lines WHERE tenant=$1 AND warehouse_id=$2 AND order_id=ANY($3) ORDER BY order_id,id").bind(t).bind(w).bind(&ids).fetch_all(&mut *c).await?;
-        let allocations=sqlx::query("SELECT order_id,line_id,sku,lot,location,quantity,picked,shipped,released FROM wms_allocations WHERE tenant=$1 AND warehouse_id=$2 AND order_id=ANY($3) ORDER BY order_id,line_id,location,lot").bind(t).bind(w).bind(&ids).fetch_all(&mut *c).await?;
+        let lines = sqlx::query(
+            "SELECT order_id,id,sku,quantity
+            FROM wms_order_lines
+            WHERE tenant=$1 AND warehouse_id=$2 AND order_id=ANY($3)
+            ORDER BY order_id,id",
+        )
+        .bind(t)
+        .bind(w)
+        .bind(&ids)
+        .fetch_all(&mut *c)
+        .await?;
+        let allocations = sqlx::query(
+            "SELECT order_id,line_id,sku,lot,location,quantity,picked,shipped,released
+            FROM wms_allocations
+            WHERE tenant=$1 AND warehouse_id=$2 AND order_id=ANY($3)
+            ORDER BY order_id,line_id,location,lot",
+        )
+        .bind(t)
+        .bind(w)
+        .bind(&ids)
+        .fetch_all(&mut *c)
+        .await?;
         let mut lines_by_order: HashMap<String, Vec<OrderLine>> = HashMap::new();
         for r in lines {
             lines_by_order
@@ -469,7 +510,17 @@ impl Store {
         receipts: &mut [domain::Receipt],
     ) -> Result<()> {
         let ids: Vec<_> = receipts.iter().map(|r| r.id.clone()).collect();
-        let lines=sqlx::query("SELECT receipt_id,id,sku,lot,quantity,received FROM wms_receipt_lines WHERE tenant=$1 AND warehouse_id=$2 AND receipt_id=ANY($3) ORDER BY receipt_id,id").bind(t).bind(w).bind(&ids).fetch_all(&mut *c).await?;
+        let lines = sqlx::query(
+            "SELECT receipt_id,id,sku,lot,quantity,received
+            FROM wms_receipt_lines
+            WHERE tenant=$1 AND warehouse_id=$2 AND receipt_id=ANY($3)
+            ORDER BY receipt_id,id",
+        )
+        .bind(t)
+        .bind(w)
+        .bind(&ids)
+        .fetch_all(&mut *c)
+        .await?;
         let mut lines_by_receipt: HashMap<String, Vec<ReceiptLine>> = HashMap::new();
         for l in lines {
             lines_by_receipt
@@ -483,8 +534,17 @@ impl Store {
                     received: l.try_get("received")?,
                 });
         }
-        let returns = sqlx::query("SELECT receipt_id,line_id,order_id,order_line_id,reason FROM wms_return_lines WHERE tenant=$1 AND warehouse_id=$2 AND receipt_id=ANY($3) ORDER BY receipt_id,line_id")
-            .bind(t).bind(w).bind(&ids).fetch_all(&mut *c).await?;
+        let returns = sqlx::query(
+            "SELECT receipt_id,line_id,order_id,order_line_id,reason
+            FROM wms_return_lines
+            WHERE tenant=$1 AND warehouse_id=$2 AND receipt_id=ANY($3)
+            ORDER BY receipt_id,line_id",
+        )
+        .bind(t)
+        .bind(w)
+        .bind(&ids)
+        .fetch_all(&mut *c)
+        .await?;
         let mut sources: HashMap<String, crate::returns::ReturnSource> = HashMap::new();
         for row in returns {
             let receipt_id: String = row.try_get("receipt_id")?;
@@ -592,12 +652,78 @@ impl Store {
         .into_iter()
         .map(|r| decode(r.get("data")))
         .collect::<Result<_>>()?;
-        s.stocks=sqlx::query("SELECT sku,lot,location,on_hand,reserved FROM wms_stock WHERE tenant=$1 AND warehouse_id=$2 ORDER BY sku,lot,location").bind(t).bind(w).fetch_all(&mut *c).await?.iter().map(|r|Ok(Stock{sku:r.try_get("sku")?,lot:r.try_get("lot")?,location:r.try_get("location")?,on_hand:r.try_get("on_hand")?,reserved:r.try_get("reserved")?})).collect::<Result<_>>()?;
-        s.inventory_baseline=sqlx::query("SELECT sku,lot,location,quantity FROM wms_stock_ledger WHERE tenant=$1 AND warehouse_id=$2 ORDER BY sku,lot,location").bind(t).bind(w).fetch_all(&mut *c).await?.iter().map(|r|Ok(Stock{sku:r.try_get("sku")?,lot:r.try_get("lot")?,location:r.try_get("location")?,on_hand:r.try_get("quantity")?,reserved:0})).collect::<Result<_>>()?;
+        s.stocks = sqlx::query(
+            "SELECT sku,lot,location,on_hand,reserved
+            FROM wms_stock
+            WHERE tenant=$1 AND warehouse_id=$2
+            ORDER BY sku,lot,location",
+        )
+        .bind(t)
+        .bind(w)
+        .fetch_all(&mut *c)
+        .await?
+        .iter()
+        .map(|r| {
+            Ok(Stock {
+                sku: r.try_get("sku")?,
+                lot: r.try_get("lot")?,
+                location: r.try_get("location")?,
+                on_hand: r.try_get("on_hand")?,
+                reserved: r.try_get("reserved")?,
+            })
+        })
+        .collect::<Result<_>>()?;
+        s.inventory_baseline = sqlx::query(
+            "SELECT sku,lot,location,quantity
+            FROM wms_stock_ledger
+            WHERE tenant=$1 AND warehouse_id=$2
+            ORDER BY sku,lot,location",
+        )
+        .bind(t)
+        .bind(w)
+        .fetch_all(&mut *c)
+        .await?
+        .iter()
+        .map(|r| {
+            Ok(Stock {
+                sku: r.try_get("sku")?,
+                lot: r.try_get("lot")?,
+                location: r.try_get("location")?,
+                on_hand: r.try_get("quantity")?,
+                reserved: 0,
+            })
+        })
+        .collect::<Result<_>>()?;
         if display {
-            s.movements=sqlx::query("SELECT data FROM wms_movements WHERE tenant=$1 AND warehouse_id=$2 ORDER BY seq DESC LIMIT 100").bind(t).bind(w).fetch_all(&mut *c).await?.into_iter().map(|r|decode(r.get("data"))).collect::<Result<_>>()?;
+            s.movements = sqlx::query(
+                "SELECT data
+                FROM wms_movements
+                WHERE tenant=$1 AND warehouse_id=$2
+                ORDER BY seq DESC
+                LIMIT 100",
+            )
+            .bind(t)
+            .bind(w)
+            .fetch_all(&mut *c)
+            .await?
+            .into_iter()
+            .map(|r| decode(r.get("data")))
+            .collect::<Result<_>>()?;
             s.movements.reverse();
-            s.activity=sqlx::query("SELECT data FROM wms_activity WHERE tenant=$1 AND warehouse_id=$2 ORDER BY seq DESC LIMIT 100").bind(t).bind(w).fetch_all(&mut *c).await?.into_iter().map(|r|decode(r.get("data"))).collect::<Result<_>>()?;
+            s.activity = sqlx::query(
+                "SELECT data
+                FROM wms_activity
+                WHERE tenant=$1 AND warehouse_id=$2
+                ORDER BY seq DESC
+                LIMIT 100",
+            )
+            .bind(t)
+            .bind(w)
+            .fetch_all(&mut *c)
+            .await?
+            .into_iter()
+            .map(|r| decode(r.get("data")))
+            .collect::<Result<_>>()?;
             s.activity.reverse();
         }
         s.orders=sqlx::query("SELECT data || '{\"lines\":[],\"allocations\":[]}'::jsonb AS data FROM wms_orders WHERE tenant=$1 AND warehouse_id=$2 AND (status NOT IN('shipped','cancelled','closed_partial') OR id=$3 OR ($4 AND seq IN(SELECT seq FROM wms_orders WHERE tenant=$1 AND warehouse_id=$2 AND status IN('shipped','cancelled','closed_partial') ORDER BY seq DESC LIMIT 20))) ORDER BY seq").bind(t).bind(w).bind(oid).bind(display).fetch_all(&mut *c).await?.into_iter().map(|r|decode(r.get("data"))).collect::<Result<_>>()?;
@@ -618,14 +744,42 @@ impl Store {
                     .insert(l.id.clone(), 0);
             }
         }
-        let proofs=sqlx::query("SELECT receipt_id,line_id,quantity FROM wms_receipt_evidence WHERE tenant=$1 AND warehouse_id=$2 AND receipt_id=ANY($3)").bind(t).bind(w).bind(&ids).fetch_all(&mut *c).await?;
+        let proofs = sqlx::query(
+            "SELECT receipt_id,line_id,quantity
+            FROM wms_receipt_evidence
+            WHERE tenant=$1 AND warehouse_id=$2 AND receipt_id=ANY($3)",
+        )
+        .bind(t)
+        .bind(w)
+        .bind(&ids)
+        .fetch_all(&mut *c)
+        .await?;
         for p in proofs {
             s.receipt_baseline
                 .entry(p.get("receipt_id"))
                 .or_default()
                 .insert(p.get("line_id"), p.get("quantity"));
         }
-        s.exceptions=sqlx::query("SELECT data FROM wms_exceptions WHERE tenant=$1 AND warehouse_id=$2 AND (status='open' OR id=$3 OR ($4 AND seq IN(SELECT seq FROM wms_exceptions WHERE tenant=$1 AND warehouse_id=$2 AND status='resolved' ORDER BY seq DESC LIMIT 20))) ORDER BY seq").bind(t).bind(w).bind(eid).bind(display).fetch_all(&mut *c).await?.into_iter().map(|r|decode(r.get("data"))).collect::<Result<_>>()?;
+        s.exceptions = sqlx::query(
+            "SELECT data
+            FROM wms_exceptions
+            WHERE tenant=$1 AND warehouse_id=$2 AND (status='open' OR id=$3 OR ($4 AND seq IN(
+            SELECT seq
+            FROM wms_exceptions
+            WHERE tenant=$1 AND warehouse_id=$2 AND status='resolved'
+            ORDER BY seq DESC
+            LIMIT 20)))
+            ORDER BY seq",
+        )
+        .bind(t)
+        .bind(w)
+        .bind(eid)
+        .bind(display)
+        .fetch_all(&mut *c)
+        .await?
+        .into_iter()
+        .map(|r| decode(r.get("data")))
+        .collect::<Result<_>>()?;
         for m in &s.movements {
             for (location, delta) in [
                 (m.from.as_deref(), m.quantity),
@@ -737,27 +891,109 @@ impl Store {
             .flat_map(|s| s.activity.iter())
             .map(|a| a.id.as_str())
             .collect();
-        sqlx::query("INSERT INTO wms_warehouses(tenant,warehouse_id,version,metadata) VALUES($1,$2,$3,$4) ON CONFLICT(tenant,warehouse_id) DO UPDATE SET version=EXCLUDED.version,metadata=EXCLUDED.metadata").bind(t).bind(w).bind(s.version).bind(json!(s.warehouse)).execute(&mut *c).await?;
+        sqlx::query(
+            "INSERT INTO wms_warehouses(tenant,warehouse_id,version,metadata)
+            VALUES($1,$2,$3,$4)
+            ON CONFLICT(tenant,warehouse_id) DO
+            UPDATE
+            SET version=EXCLUDED.version,metadata=EXCLUDED.metadata",
+        )
+        .bind(t)
+        .bind(w)
+        .bind(s.version)
+        .bind(json!(s.warehouse))
+        .execute(&mut *c)
+        .await?;
         for p in &s.products {
             if changed(p, previous_products.get(p.sku.as_str()).copied()) {
-                sqlx::query("INSERT INTO wms_products VALUES($1,$2,$3,$4) ON CONFLICT(tenant,warehouse_id,sku) DO UPDATE SET data=EXCLUDED.data").bind(t).bind(w).bind(&p.sku).bind(json!(p)).execute(&mut *c).await?;
+                sqlx::query(
+                    "INSERT INTO wms_products
+                    VALUES($1,$2,$3,$4)
+                    ON CONFLICT(tenant,warehouse_id,sku) DO
+                    UPDATE
+                    SET data=EXCLUDED.data",
+                )
+                .bind(t)
+                .bind(w)
+                .bind(&p.sku)
+                .bind(json!(p))
+                .execute(&mut *c)
+                .await?;
             }
         }
         for l in &s.locations {
             if changed(l, previous_locations.get(l.code.as_str()).copied()) {
-                sqlx::query("INSERT INTO wms_locations VALUES($1,$2,$3,$4,$5) ON CONFLICT(tenant,warehouse_id,code) DO UPDATE SET kind=EXCLUDED.kind,data=EXCLUDED.data").bind(t).bind(w).bind(&l.code).bind(&l.kind).bind(json!(l)).execute(&mut *c).await?;
+                sqlx::query(
+                    "INSERT INTO wms_locations
+                    VALUES($1,$2,$3,$4,$5)
+                    ON CONFLICT(tenant,warehouse_id,code) DO
+                    UPDATE
+                    SET kind=EXCLUDED.kind,data=EXCLUDED.data",
+                )
+                .bind(t)
+                .bind(w)
+                .bind(&l.code)
+                .bind(&l.kind)
+                .bind(json!(l))
+                .execute(&mut *c)
+                .await?;
             }
         }
         for b in &s.stocks {
             if changed(b, previous_stocks.get(&stock_key(b)).copied()) {
-                sqlx::query("INSERT INTO wms_stock VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(tenant,warehouse_id,sku,lot,location) DO UPDATE SET on_hand=EXCLUDED.on_hand,reserved=EXCLUDED.reserved").bind(t).bind(w).bind(&b.sku).bind(&b.lot).bind(&b.location).bind(b.on_hand).bind(b.reserved).execute(&mut *c).await?;
+                sqlx::query(
+                    "INSERT INTO wms_stock
+                    VALUES($1,$2,$3,$4,$5,$6,$7)
+                    ON CONFLICT(tenant,warehouse_id,sku,lot,location) DO
+                    UPDATE
+                    SET on_hand=EXCLUDED.on_hand,reserved=EXCLUDED.reserved",
+                )
+                .bind(t)
+                .bind(w)
+                .bind(&b.sku)
+                .bind(&b.lot)
+                .bind(&b.location)
+                .bind(b.on_hand)
+                .bind(b.reserved)
+                .execute(&mut *c)
+                .await?;
             }
         }
         for r in &s.receipts {
             if changed(r, previous_receipts.get(r.id.as_str()).copied()) {
-                sqlx::query("INSERT INTO wms_receipts(tenant,warehouse_id,id,reference,status,data) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(tenant,warehouse_id,id) DO UPDATE SET status=EXCLUDED.status,data=EXCLUDED.data").bind(t).bind(w).bind(&r.id).bind(&r.reference).bind(&r.status).bind(json!(r)).execute(&mut *c).await?;
+                sqlx::query(
+                    "INSERT INTO wms_receipts(tenant,warehouse_id,id,reference,status,data)
+                    VALUES($1,$2,$3,$4,$5,$6)
+                    ON CONFLICT(tenant,warehouse_id,id) DO
+                    UPDATE
+                    SET status=EXCLUDED.status,data=EXCLUDED.data",
+                )
+                .bind(t)
+                .bind(w)
+                .bind(&r.id)
+                .bind(&r.reference)
+                .bind(&r.status)
+                .bind(json!(r))
+                .execute(&mut *c)
+                .await?;
                 for l in &r.lines {
-                    sqlx::query("INSERT INTO wms_receipt_lines VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(tenant,warehouse_id,receipt_id,id) DO UPDATE SET received=EXCLUDED.received").bind(t).bind(w).bind(&r.id).bind(&l.id).bind(&l.sku).bind(&l.lot).bind(l.quantity).bind(l.received).execute(&mut *c).await?;
+                    sqlx::query(
+                        "INSERT INTO wms_receipt_lines
+                        VALUES($1,$2,$3,$4,$5,$6,$7,$8)
+                        ON CONFLICT(tenant,warehouse_id,receipt_id,id) DO
+                        UPDATE
+                        SET received=EXCLUDED.received",
+                    )
+                    .bind(t)
+                    .bind(w)
+                    .bind(&r.id)
+                    .bind(&l.id)
+                    .bind(&l.sku)
+                    .bind(&l.lot)
+                    .bind(l.quantity)
+                    .bind(l.received)
+                    .execute(&mut *c)
+                    .await?;
                     if let Some(source) = &r.return_source {
                         if !previous_receipts.contains_key(r.id.as_str()) {
                             sqlx::query("INSERT INTO wms_return_lines(tenant,warehouse_id,receipt_id,line_id,order_id,order_line_id,sku,lot,quantity,reason) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)")
@@ -780,16 +1016,33 @@ impl Store {
         }
         for o in &s.orders {
             if changed(o, previous_orders.get(o.id.as_str()).copied()) {
-                sqlx::query("INSERT INTO wms_orders(tenant,warehouse_id,id,reference,source_order_id,status,data) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(tenant,warehouse_id,id) DO UPDATE SET status=EXCLUDED.status,data=EXCLUDED.data").bind(t).bind(w).bind(&o.id).bind(&o.reference).bind(&o.source_order_id).bind(&o.status).bind(json!(o)).execute(&mut *c).await?;
+                sqlx::query("INSERT INTO wms_orders(tenant,warehouse_id,id,reference,source_order_id,status,data)
+                    VALUES($1,$2,$3,$4,$5,$6,$7)
+                    ON CONFLICT(tenant,warehouse_id,id) DO
+                    UPDATE
+                    SET status=EXCLUDED.status,data=EXCLUDED.data").bind(t).bind(w).bind(&o.id).bind(&o.reference).bind(&o.source_order_id).bind(&o.status).bind(json!(o)).execute(&mut *c).await?;
                 for l in &o.lines {
-                    sqlx::query("INSERT INTO wms_order_lines VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING").bind(t).bind(w).bind(&o.id).bind(&l.id).bind(&l.sku).bind(l.quantity).execute(&mut *c).await?;
+                    sqlx::query(
+                        "INSERT INTO wms_order_lines
+                        VALUES($1,$2,$3,$4,$5,$6)
+                        ON CONFLICT DO NOTHING",
+                    )
+                    .bind(t)
+                    .bind(w)
+                    .bind(&o.id)
+                    .bind(&l.id)
+                    .bind(&l.sku)
+                    .bind(l.quantity)
+                    .execute(&mut *c)
+                    .await?;
                 }
                 if let Some(previous) = previous_orders.get(o.id.as_str()) {
                     for a in &previous.allocations {
                         if !o.allocations.iter().any(|n| {
                             n.line_id == a.line_id && n.location == a.location && n.lot == a.lot
                         }) {
-                            sqlx::query("DELETE FROM wms_allocations WHERE tenant=$1 AND warehouse_id=$2 AND order_id=$3 AND line_id=$4 AND location=$5 AND lot=$6").bind(t).bind(w).bind(&o.id).bind(&a.line_id).bind(&a.location).bind(&a.lot).execute(&mut *c).await?;
+                            sqlx::query("DELETE FROM wms_allocations
+                                WHERE tenant=$1 AND warehouse_id=$2 AND order_id=$3 AND line_id=$4 AND location=$5 AND lot=$6").bind(t).bind(w).bind(&o.id).bind(&a.line_id).bind(&a.location).bind(&a.lot).execute(&mut *c).await?;
                         }
                     }
                 }
@@ -815,12 +1068,27 @@ impl Store {
         }
         for e in &s.exceptions {
             if changed(e, previous_exceptions.get(e.id.as_str()).copied()) {
-                sqlx::query("INSERT INTO wms_exceptions(tenant,warehouse_id,id,status,order_id,data) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(tenant,warehouse_id,id) DO UPDATE SET status=EXCLUDED.status,data=EXCLUDED.data").bind(t).bind(w).bind(&e.id).bind(&e.status).bind(&e.order_id).bind(json!(e)).execute(&mut *c).await?;
+                sqlx::query(
+                    "INSERT INTO wms_exceptions(tenant,warehouse_id,id,status,order_id,data)
+                    VALUES($1,$2,$3,$4,$5,$6)
+                    ON CONFLICT(tenant,warehouse_id,id) DO
+                    UPDATE
+                    SET status=EXCLUDED.status,data=EXCLUDED.data",
+                )
+                .bind(t)
+                .bind(w)
+                .bind(&e.id)
+                .bind(&e.status)
+                .bind(&e.order_id)
+                .bind(json!(e))
+                .execute(&mut *c)
+                .await?;
             }
         }
         for m in &s.movements {
             if !previous_movements.contains(m.id.as_str()) {
-                sqlx::query("INSERT INTO wms_movements(id,tenant,warehouse_id,sku,lot,from_location,to_location,quantity,kind,reference,receipt_id,receipt_line_id,data,transfer_id,transfer_line_id,transfer_event_id,package_id,order_line_id,allocation_location,shipment_event_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)").bind(&m.id).bind(t).bind(w).bind(&m.sku).bind(&m.lot).bind(&m.from).bind(&m.to).bind(m.quantity).bind(&m.kind).bind(&m.reference).bind(&m.receipt_id).bind(&m.receipt_line_id).bind(json!(m)).bind(&m.transfer_id).bind(&m.transfer_line_id).bind(&m.transfer_event_id).bind(&m.package_id).bind(&m.order_line_id).bind(&m.allocation_location).bind(&m.shipment_event_id).execute(&mut *c).await?;
+                sqlx::query("INSERT INTO wms_movements(id,tenant,warehouse_id,sku,lot,from_location,to_location,quantity,kind,reference,receipt_id,receipt_line_id,data,transfer_id,transfer_line_id,transfer_event_id,package_id,order_line_id,allocation_location,shipment_event_id)
+                    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)").bind(&m.id).bind(t).bind(w).bind(&m.sku).bind(&m.lot).bind(&m.from).bind(&m.to).bind(m.quantity).bind(&m.kind).bind(&m.reference).bind(&m.receipt_id).bind(&m.receipt_line_id).bind(json!(m)).bind(&m.transfer_id).bind(&m.transfer_line_id).bind(&m.transfer_event_id).bind(&m.package_id).bind(&m.order_line_id).bind(&m.allocation_location).bind(&m.shipment_event_id).execute(&mut *c).await?;
             }
         }
         for a in &s.activity {
@@ -851,10 +1119,25 @@ impl Store {
         // Immutable committed receipts need no warehouse write lock. Recheck
         // under the lock below when absent, so racing first submissions still
         // have one physical effect. Authorization always precedes both lookups.
-        if let Some(receipt) = sqlx::query("SELECT c.actor,c.digest,c.result FROM wms_commands c JOIN wms_warehouses w ON w.tenant=c.tenant AND w.warehouse_id=c.warehouse_id WHERE c.tenant=$1 AND c.warehouse_id=$2 AND c.request_id=$3")
-            .bind(&i.tenant).bind(w).bind(&r.request_id).fetch_optional(&self.pool).await? {
-            if receipt.get::<String,_>("digest") != digest || receipt.get::<String,_>("actor") != i.actor {
-                return Err(Error::new(409,"Request ID already belongs to a different payload or operator"));
+        if let Some(receipt) = sqlx::query(
+            "SELECT c.actor,c.digest,c.result
+            FROM wms_commands c
+            JOIN wms_warehouses w ON w.tenant=c.tenant AND w.warehouse_id=c.warehouse_id
+            WHERE c.tenant=$1 AND c.warehouse_id=$2 AND c.request_id=$3",
+        )
+        .bind(&i.tenant)
+        .bind(w)
+        .bind(&r.request_id)
+        .fetch_optional(&self.pool)
+        .await?
+        {
+            if receipt.get::<String, _>("digest") != digest
+                || receipt.get::<String, _>("actor") != i.actor
+            {
+                return Err(Error::new(
+                    409,
+                    "Request ID already belongs to a different payload or operator",
+                ));
             }
             return Ok(json!({"replayed":true,"result":receipt.get::<Value,_>("result")}));
         }
@@ -904,7 +1187,31 @@ impl Store {
         .fetch_optional(&mut *tx)
         .await?
         .ok_or_else(|| Error::new(404, "Warehouse not found"))?;
-        if let Some(receipt)=sqlx::query("SELECT actor,digest,result FROM wms_commands WHERE tenant=$1 AND warehouse_id=$2 AND request_id=$3").bind(&i.tenant).bind(w).bind(&r.request_id).fetch_optional(&mut *tx).await?{if receipt.get::<String,_>("digest")!=digest||receipt.get::<String,_>("actor")!=i.actor{return Err(Error::new(409,"Request ID already belongs to a different payload or operator"));}return Ok(json!({"replayed":true,"result":receipt.get::<Value,_>("result")}));}
+        if let Some(receipt) = sqlx::query(
+            "SELECT actor,digest,result
+            FROM wms_commands
+            WHERE tenant=$1 AND warehouse_id=$2 AND request_id=$3",
+        )
+        .bind(&i.tenant)
+        .bind(w)
+        .bind(&r.request_id)
+        .fetch_optional(&mut *tx)
+        .await?
+        {
+            if receipt.get::<String, _>("digest") != digest
+                || receipt.get::<String, _>("actor") != i.actor
+            {
+                return Err(Error::new(
+                    409,
+                    "Request ID already belongs to a different payload or operator",
+                ));
+            }
+            return Ok(json!({
+                "replayed":true,
+                "result":receipt.get::<Value,
+                _>("result")
+            }));
+        }
         let version: i64 = h.try_get("version")?;
         if r.resource_versions.is_none() && r.expected_version < version {
             // The lock also fences a delayed copy of this exact request: the
@@ -1031,7 +1338,10 @@ impl Store {
                 source_order_id,
                 ..
             } => {
-                let duplicate:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM wms_orders WHERE tenant=$1 AND warehouse_id=$2 AND (reference=$3 OR ($4::text IS NOT NULL AND source_order_id=$4)))").bind(&i.tenant).bind(w).bind(reference).bind(source_order_id).fetch_one(&mut *tx).await?;
+                let duplicate:bool=sqlx::query_scalar("SELECT EXISTS(
+                    SELECT 1
+                    FROM wms_orders
+                    WHERE tenant=$1 AND warehouse_id=$2 AND (reference=$3 OR ($4::text IS NOT NULL AND source_order_id=$4)))").bind(&i.tenant).bind(w).bind(reference).bind(source_order_id).fetch_one(&mut *tx).await?;
                 if duplicate {
                     return Err(Error::new(
                         409,
@@ -1040,7 +1350,17 @@ impl Store {
                 }
             }
             Command::CreateReceipt { reference, .. } | Command::CreateReturn { reference, .. } => {
-                let duplicate:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM wms_receipts WHERE tenant=$1 AND warehouse_id=$2 AND reference=$3)").bind(&i.tenant).bind(w).bind(reference).fetch_one(&mut *tx).await?;
+                let duplicate: bool = sqlx::query_scalar(
+                    "SELECT EXISTS(
+                    SELECT 1
+                    FROM wms_receipts
+                    WHERE tenant=$1 AND warehouse_id=$2 AND reference=$3)",
+                )
+                .bind(&i.tenant)
+                .bind(w)
+                .bind(reference)
+                .fetch_one(&mut *tx)
+                .await?;
                 if duplicate {
                     return Err(Error::new(
                         409,
@@ -1179,7 +1499,21 @@ impl Store {
             .filter(|b| changed(*b, previous_stocks.get(&stock_key(b)).copied()))
             .map(|b| json!({"stock":b,"version":next.version}))
             .collect();
-        let mut event = json!({"schema_version":2,"id":eid,"tenant":i.tenant,"warehouse_id":w,"version":next.version,"type":r.command.kind(),"actor":i.actor,"occurred_at":next.quality_time().to_rfc3339(),"request_id":r.request_id,"result":result,"order":order,"inventory_changes":inventory,"command":r.command});
+        let mut event = json!({
+            "schema_version":2,
+            "id":eid,
+            "tenant":i.tenant,
+            "warehouse_id":w,
+            "version":next.version,
+            "type":r.command.kind(),
+            "actor":i.actor,
+            "occurred_at":next.quality_time().to_rfc3339(),
+            "request_id":r.request_id,
+            "result":result,
+            "order":order,
+            "inventory_changes":inventory,
+            "command":r.command
+        });
         event["previous_order"] =
             json!(order.and_then(|o| state.orders.iter().find(|old| old.id == o.id)));
         event["lot_changes"] = json!(next.lot_changes);
@@ -1246,7 +1580,18 @@ impl Store {
         .bind(event)
         .execute(&mut *tx)
         .await?;
-        sqlx::query("INSERT INTO wms_commands(tenant,warehouse_id,request_id,actor,digest,result) VALUES($1,$2,$3,$4,$5,$6)").bind(&i.tenant).bind(w).bind(&r.request_id).bind(&i.actor).bind(digest).bind(&result).execute(&mut *tx).await?;
+        sqlx::query(
+            "INSERT INTO wms_commands(tenant,warehouse_id,request_id,actor,digest,result)
+            VALUES($1,$2,$3,$4,$5,$6)",
+        )
+        .bind(&i.tenant)
+        .bind(w)
+        .bind(&r.request_id)
+        .bind(&i.actor)
+        .bind(digest)
+        .bind(&result)
+        .execute(&mut *tx)
+        .await?;
         let destinations = if matches!(
             r.command,
             Command::Pack { .. } | Command::Ship { .. } | Command::HandoffShipment { .. }
@@ -1270,7 +1615,17 @@ impl Store {
         Ok(json!({"replayed":false,"result":result}))
     }
     pub async fn receipt(&self, i: &Identity, w: &str, key: &str) -> Result<Value> {
-        let r=sqlx::query("SELECT result FROM wms_commands WHERE tenant=$1 AND warehouse_id=$2 AND request_id=$3 AND actor=$4").bind(&i.tenant).bind(w).bind(key).bind(&i.actor).fetch_optional(&self.pool).await?;
+        let r = sqlx::query(
+            "SELECT result
+            FROM wms_commands
+            WHERE tenant=$1 AND warehouse_id=$2 AND request_id=$3 AND actor=$4",
+        )
+        .bind(&i.tenant)
+        .bind(w)
+        .bind(key)
+        .bind(&i.actor)
+        .fetch_optional(&self.pool)
+        .await?;
         Ok(match r {
             Some(r) => json!({"found":true,"result":r.get::<Value,_>("result")}),
             None => json!({"found":false}),
@@ -1369,10 +1724,73 @@ impl Store {
             .bind(w)
             .fetch_all(&mut *tx)
             .await?;
-        let receipts=sqlx::query("SELECT r.receipt_id,r.id,r.received,COALESCE(sum(m.quantity),0)::bigint AS evidence FROM wms_receipt_lines r LEFT JOIN wms_movements m ON m.tenant=r.tenant AND m.warehouse_id=r.warehouse_id AND m.receipt_id=r.receipt_id AND m.receipt_line_id=r.id AND m.kind='receipt' WHERE r.tenant=$1 AND r.warehouse_id=$2 GROUP BY r.receipt_id,r.id,r.received ORDER BY r.receipt_id,r.id").bind(t).bind(w).fetch_all(&mut *tx).await?;
-        let proofs:Vec<_>=rows.iter().map(|r|json!({"sku":r.get::<String,_>("sku"),"lot":r.get::<String,_>("lot"),"location":r.get::<String,_>("location"),"on_hand":r.get::<i64,_>("on_hand"),"ledger":r.get::<i64,_>("ledger"),"reserved":r.get::<i64,_>("reserved"),"allocation_reserved":r.get::<i64,_>("allocation_reserved"),"difference":r.get::<i64,_>("on_hand")-r.get::<i64,_>("ledger"),"reserved_difference":r.get::<i64,_>("reserved")-r.get::<i64,_>("allocation_reserved"),"ok":r.get::<i64,_>("on_hand")==r.get::<i64,_>("ledger")&&r.get::<i64,_>("reserved")==r.get::<i64,_>("allocation_reserved")})).collect();
-        let receipt_proofs:Vec<_>=receipts.iter().map(|r|json!({"receipt_id":r.get::<String,_>("receipt_id"),"line_id":r.get::<String,_>("id"),"received":r.get::<i64,_>("received"),"evidence":r.get::<i64,_>("evidence"),"ok":r.get::<i64,_>("received")==r.get::<i64,_>("evidence")})).collect();
-        let returns = sqlx::query("SELECT r.order_id,r.order_line_id,r.sku,r.lot,sum(r.quantity-COALESCE(c.cancelled,0))::bigint AS authorized,sum(l.received)::bigint AS received,COALESCE((SELECT sum(s.quantity) FROM wms_actual_shipped(r.tenant,r.warehouse_id,r.order_id) s WHERE s.line_id=r.order_line_id AND s.sku=r.sku AND s.lot=r.lot),0)::bigint AS shipped,bool_and(r.sku=l.sku AND r.lot=l.lot AND r.quantity=l.quantity AND o.status IN('shipped','partially_shipped','closed_partial')) AS identity_ok FROM wms_return_lines r JOIN wms_receipt_lines l ON l.tenant=r.tenant AND l.warehouse_id=r.warehouse_id AND l.receipt_id=r.receipt_id AND l.id=r.line_id JOIN wms_orders o ON o.tenant=r.tenant AND o.warehouse_id=r.warehouse_id AND o.id=r.order_id LEFT JOIN wms_receipt_cancelled_lines c ON c.tenant=r.tenant AND c.warehouse_id=r.warehouse_id AND c.receipt_id=r.receipt_id AND c.line_id=r.line_id WHERE r.tenant=$1 AND r.warehouse_id=$2 GROUP BY r.tenant,r.warehouse_id,r.order_id,r.order_line_id,r.sku,r.lot ORDER BY r.order_id,r.order_line_id,r.lot")
+        let receipts=sqlx::query("SELECT r.receipt_id,r.id,r.received,COALESCE(sum(m.quantity),0)::bigint AS evidence
+            FROM wms_receipt_lines r
+            LEFT JOIN wms_movements m ON m.tenant=r.tenant AND m.warehouse_id=r.warehouse_id AND m.receipt_id=r.receipt_id AND m.receipt_line_id=r.id AND m.kind='receipt'
+            WHERE r.tenant=$1 AND r.warehouse_id=$2
+            GROUP BY r.receipt_id,r.id,r.received
+            ORDER BY r.receipt_id,r.id").bind(t).bind(w).fetch_all(&mut *tx).await?;
+        let proofs: Vec<_> = rows
+            .iter()
+            .map(|r| {
+                json!({
+                    "sku":r.get::<String,
+                    _>("sku"),
+                    "lot":r.get::<String,
+                    _>("lot"),
+                    "location":r.get::<String,
+                    _>("location"),
+                    "on_hand":r.get::<i64,
+                    _>("on_hand"),
+                    "ledger":r.get::<i64,
+                    _>("ledger"),
+                    "reserved":r.get::<i64,
+                    _>("reserved"),
+                    "allocation_reserved":r.get::<i64,
+                    _>("allocation_reserved"),
+                    "difference":r.get::<i64,
+                    _>("on_hand")-r.get::<i64,
+                    _>("ledger"),
+                    "reserved_difference":r.get::<i64,
+                    _>("reserved")-r.get::<i64,
+                    _>("allocation_reserved"),
+                    "ok":r.get::<i64,
+                    _>("on_hand")==r.get::<i64,
+                    _>("ledger")&&r.get::<i64,
+                    _>("reserved")==r.get::<i64,
+                    _>("allocation_reserved")
+                })
+            })
+            .collect();
+        let receipt_proofs: Vec<_> = receipts
+            .iter()
+            .map(|r| {
+                json!({
+                    "receipt_id":r.get::<String,
+                    _>("receipt_id"),
+                    "line_id":r.get::<String,
+                    _>("id"),
+                    "received":r.get::<i64,
+                    _>("received"),
+                    "evidence":r.get::<i64,
+                    _>("evidence"),
+                    "ok":r.get::<i64,
+                    _>("received")==r.get::<i64,
+                    _>("evidence")
+                })
+            })
+            .collect();
+        let returns = sqlx::query("SELECT r.order_id,r.order_line_id,r.sku,r.lot,sum(r.quantity-COALESCE(c.cancelled,0))::bigint AS authorized,sum(l.received)::bigint AS received,COALESCE((
+            SELECT sum(s.quantity)
+            FROM wms_actual_shipped(r.tenant,r.warehouse_id,r.order_id) s
+            WHERE s.line_id=r.order_line_id AND s.sku=r.sku AND s.lot=r.lot),0)::bigint AS shipped,bool_and(r.sku=l.sku AND r.lot=l.lot AND r.quantity=l.quantity AND o.status IN('shipped','partially_shipped','closed_partial')) AS identity_ok
+            FROM wms_return_lines r
+            JOIN wms_receipt_lines l ON l.tenant=r.tenant AND l.warehouse_id=r.warehouse_id AND l.receipt_id=r.receipt_id AND l.id=r.line_id
+            JOIN wms_orders o ON o.tenant=r.tenant AND o.warehouse_id=r.warehouse_id AND o.id=r.order_id
+            LEFT JOIN wms_receipt_cancelled_lines c ON c.tenant=r.tenant AND c.warehouse_id=r.warehouse_id AND c.receipt_id=r.receipt_id AND c.line_id=r.line_id
+            WHERE r.tenant=$1 AND r.warehouse_id=$2
+            GROUP BY r.tenant,r.warehouse_id,r.order_id,r.order_line_id,r.sku,r.lot
+            ORDER BY r.order_id,r.order_line_id,r.lot")
             .bind(t).bind(w).fetch_all(&mut *tx).await?;
         let return_proofs: Vec<_> = returns.iter().map(|r| {
             let shipped: i64 = r.get("shipped"); let authorized: i64 = r.get("authorized"); let received: i64 = r.get("received");
@@ -1403,13 +1821,51 @@ impl Store {
             && receipt_proofs.iter().all(|p| p["ok"] == true)
             && return_proofs.iter().all(|p| p["ok"] == true);
         tx.commit().await?;
-        Ok(
-            json!({"version":s.version,"ok":ok,"rows":proofs,"receipts":receipt_proofs,"returns":return_proofs,"receipt_cancellations":cancellation_proofs,"shipments":shipment_proofs,"transfers":transfer_proofs,"packages":package_proofs,"lot_controls":lot_proof,"units":unit_proof,"serials":serial_proof,"method":"full_append_only_ledger_and_order_line_allocations"}),
-        )
+        Ok(json!({
+            "version":s.version,
+            "ok":ok,
+            "rows":proofs,
+            "receipts":receipt_proofs,
+            "returns":return_proofs,
+            "receipt_cancellations":cancellation_proofs,
+            "shipments":shipment_proofs,
+            "transfers":transfer_proofs,
+            "packages":package_proofs,
+            "lot_controls":lot_proof,
+            "units":unit_proof,
+            "serials":serial_proof,
+            "method":"full_append_only_ledger_and_order_line_allocations"
+        }))
     }
     pub async fn outbox(&self, t: &str, w: &str) -> Result<Vec<Value>> {
-        let rows=sqlx::query("SELECT o.id,o.destination,o.status,o.attempts,o.last_error,o.event_id,e.payload->>'type' AS kind,e.payload->>'occurred_at' AS occurred_at FROM wms_outbox o JOIN wms_events e ON e.id=o.event_id WHERE o.tenant=$1 AND e.warehouse_id=$2 ORDER BY e.created_at DESC,o.id LIMIT 200").bind(t).bind(w).fetch_all(&self.pool).await?;
-        rows.iter().map(|r|Ok(json!({"id":r.try_get::<String,_>("id")?,"destination":r.try_get::<String,_>("destination")?,"status":r.try_get::<String,_>("status")?,"attempts":r.try_get::<i64,_>("attempts")?,"last_error":r.try_get::<String,_>("last_error")?,"event_id":r.try_get::<String,_>("event_id")?,"type":r.try_get::<String,_>("kind")?,"occurred_at":r.try_get::<String,_>("occurred_at")?}))).collect()
+        let rows=sqlx::query("SELECT o.id,o.destination,o.status,o.attempts,o.last_error,o.event_id,e.payload->>'type' AS kind,e.payload->>'occurred_at' AS occurred_at
+            FROM wms_outbox o
+            JOIN wms_events e ON e.id=o.event_id
+            WHERE o.tenant=$1 AND e.warehouse_id=$2
+            ORDER BY e.created_at DESC,o.id
+            LIMIT 200").bind(t).bind(w).fetch_all(&self.pool).await?;
+        rows.iter()
+            .map(|r| {
+                Ok(json!({
+                    "id":r.try_get::<String,
+                    _>("id")?,
+                    "destination":r.try_get::<String,
+                    _>("destination")?,
+                    "status":r.try_get::<String,
+                    _>("status")?,
+                    "attempts":r.try_get::<i64,
+                    _>("attempts")?,
+                    "last_error":r.try_get::<String,
+                    _>("last_error")?,
+                    "event_id":r.try_get::<String,
+                    _>("event_id")?,
+                    "type":r.try_get::<String,
+                    _>("kind")?,
+                    "occurred_at":r.try_get::<String,
+                    _>("occurred_at")?
+                }))
+            })
+            .collect()
     }
     pub async fn retry(&self, i: &Identity, id: &str) -> Result<Value> {
         if i.role != "admin" {
@@ -1419,14 +1875,32 @@ impl Store {
             ));
         }
         let mut tx = self.pool.begin().await?;
-        let n=sqlx::query("UPDATE wms_outbox SET status='pending',due_at=now(),attempts=0,lease_token=NULL,lease_until=NULL WHERE tenant=$1 AND id=$2 AND status='dead_letter'").bind(&i.tenant).bind(id).execute(&mut *tx).await?.rows_affected();
+        let n = sqlx::query(
+            "UPDATE wms_outbox
+            SET status='pending',due_at=now(),attempts=0,lease_token=NULL,lease_until=NULL
+            WHERE tenant=$1 AND id=$2 AND status='dead_letter'",
+        )
+        .bind(&i.tenant)
+        .bind(id)
+        .execute(&mut *tx)
+        .await?
+        .rows_affected();
         if n != 1 {
             return Err(Error::new(
                 409,
                 "Only an existing dead letter can be retried",
             ));
         }
-        sqlx::query("INSERT INTO wms_admin_audit(id,tenant,actor,action,reference) VALUES($1,$2,$3,'outbox.retry',$4)").bind(domain::id()).bind(&i.tenant).bind(&i.actor).bind(id).execute(&mut *tx).await?;
+        sqlx::query(
+            "INSERT INTO wms_admin_audit(id,tenant,actor,action,reference)
+            VALUES($1,$2,$3,'outbox.retry',$4)",
+        )
+        .bind(domain::id())
+        .bind(&i.tenant)
+        .bind(&i.actor)
+        .bind(id)
+        .execute(&mut *tx)
+        .await?;
         tx.commit().await?;
         Ok(json!({"queued":true}))
     }

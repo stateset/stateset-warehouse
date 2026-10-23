@@ -278,11 +278,20 @@ pub async fn page(
                 .take(limit as usize + 1)
             {
                 let balance = facility_balances.get(w).cloned().unwrap_or_else(|| json!({"physical":0,"reserved":0,"usable_storage":0,"physical_reconciliation_ok":true}));
-                items.push(json!({"warehouse_id":w,"key":[],"source_ok":balance["physical_reconciliation_ok"],"document":{"warehouse":f.state.warehouse,"version":f.state.version,"availability":f.availability,"expiry_required":f.state.products[0].expiry_required,"control":f.state.lot_controls.iter().find(|c|c.sku==q.sku&&c.lot==q.lot),"historic_eligibility_unknown_through_version":f.baseline_version,"balance":balance}}));
+                items.push(json!({
+                    "warehouse_id":w,
+                    "key":[],
+                    "source_ok":balance["physical_reconciliation_ok"],
+                    "document":{"warehouse":f.state.warehouse,"version":f.state.version,"availability":f.availability,"expiry_required":f.state.products[0].expiry_required,"control":f.state.lot_controls.iter().find(|c|c.sku==q.sku&&c.lot==q.lot),"historic_eligibility_unknown_through_version":f.baseline_version,"balance":balance}
+                }));
             }
         }
         Section::Positions => {
-            let rows=sqlx::query("SELECT * FROM wms_lot_trace_balances($1,$2,$3) WHERE (warehouse_id COLLATE \"C\",jsonb_build_array(location))>($4 COLLATE \"C\",$5::jsonb) ORDER BY warehouse_id COLLATE \"C\",jsonb_build_array(location) LIMIT $6").bind(&identity.tenant).bind(&q.sku).bind(&q.lot).bind(last_warehouse).bind(&last_key).bind(limit+1).fetch_all(&mut *tx).await?;
+            let rows=sqlx::query("SELECT *
+                FROM wms_lot_trace_balances($1,$2,$3)
+                WHERE (warehouse_id COLLATE \"C\",jsonb_build_array(location))>($4 COLLATE \"C\",$5::jsonb)
+                ORDER BY warehouse_id COLLATE \"C\",jsonb_build_array(location)
+                LIMIT $6").bind(&identity.tenant).bind(&q.sku).bind(&q.lot).bind(last_warehouse).bind(&last_key).bind(limit+1).fetch_all(&mut *tx).await?;
             for row in rows {
                 let w: String = row.try_get("warehouse_id")?;
                 let location: String = row.try_get("location")?;
@@ -304,14 +313,32 @@ pub async fn page(
                 } else {
                     0
                 };
-                items.push(json!({"warehouse_id":w,"key":[location],"source_ok":ok,"document":{"location":location,"kind":kind,"physical":p,"reserved":r,"ledger":ledger,"allocation_reserved":held,"usable_storage":u,"availability":availability,"source_kind":"original_movements_and_allocation_ownership"}}));
+                items.push(json!({
+                    "warehouse_id":w,
+                    "key":[location],
+                    "source_ok":ok,
+                    "document":{"location":location,"kind":kind,"physical":p,"reserved":r,"ledger":ledger,"allocation_reserved":held,"usable_storage":u,"availability":availability,"source_kind":"original_movements_and_allocation_ownership"}
+                }));
             }
         }
         _ => {
-            let rows=sqlx::query("SELECT warehouse_id,sort_key,document,COALESCE(source_ok,false) AS source_ok FROM wms_lot_trace_records($1,$2,$3,$4) WHERE section=$5 AND (warehouse_id COLLATE \"C\",sort_key)>($6 COLLATE \"C\",$7::jsonb) ORDER BY warehouse_id COLLATE \"C\",sort_key LIMIT $8")
+            let rows=sqlx::query("SELECT warehouse_id,sort_key,document,COALESCE(source_ok,false) AS source_ok
+                FROM wms_lot_trace_records($1,$2,$3,$4)
+                WHERE section=$5 AND (warehouse_id COLLATE \"C\",sort_key)>($6 COLLATE \"C\",$7::jsonb)
+                ORDER BY warehouse_id COLLATE \"C\",sort_key
+                LIMIT $8")
                 .bind(&identity.tenant).bind(&q.sku).bind(&q.lot).bind(&warehouse_ids).bind(section.name()).bind(last_warehouse).bind(last_key).bind(limit+1).fetch_all(&mut *tx).await?;
             for row in rows {
-                items.push(json!({"warehouse_id":row.try_get::<String,_>("warehouse_id")?,"key":row.try_get::<Value,_>("sort_key")?,"document":row.try_get::<Value,_>("document")?,"source_ok":row.try_get::<bool,_>("source_ok")?}));
+                items.push(json!({
+                    "warehouse_id":row.try_get::<String,
+                    _>("warehouse_id")?,
+                    "key":row.try_get::<Value,
+                    _>("sort_key")?,
+                    "document":row.try_get::<Value,
+                    _>("document")?,
+                    "source_ok":row.try_get::<bool,
+                    _>("source_ok")?
+                }));
             }
         }
     }
@@ -336,7 +363,18 @@ pub async fn page(
     };
     let page_ok = items.iter().all(|v| v["source_ok"] == true);
     tx.commit().await?;
-    Ok(Json(
-        json!({"schema_version":1,"sku":q.sku,"lot":q.lot,"review":review,"checked_at":checked_at,"section":section,"items":items,"next_cursor":next_cursor,"summary":{"physical":physical,"reserved":reserved,"usable_storage":usable,"receiving":receiving,"staged":staged,"physical_reconciliation_ok":physical_ok,"sections":sections},"page_source_ok":page_ok,"source_checks":"physical_and_reservation_reconstruction_plus_selected_page_sources","limits":["Exact SKU/lot labels do not establish common manufacturer batch genealogy","Each page uses a fresh database instant; expiry can change without a warehouse version change","Review fencing covers committed warehouse work; no multi-page physical observation or tenant-wide recall is implied","Legacy/synthetic shipment baselines remain distinct from actual original handoff events"]}),
-    ))
+    Ok(Json(json!({
+        "schema_version":1,
+        "sku":q.sku,
+        "lot":q.lot,
+        "review":review,
+        "checked_at":checked_at,
+        "section":section,
+        "items":items,
+        "next_cursor":next_cursor,
+        "summary":{"physical":physical,"reserved":reserved,"usable_storage":usable,"receiving":receiving,"staged":staged,"physical_reconciliation_ok":physical_ok,"sections":sections},
+        "page_source_ok":page_ok,
+        "source_checks":"physical_and_reservation_reconstruction_plus_selected_page_sources",
+        "limits":["Exact SKU/lot labels do not establish common manufacturer batch genealogy","Each page uses a fresh database instant; expiry can change without a warehouse version change","Review fencing covers committed warehouse work; no multi-page physical observation or tenant-wide recall is implied","Legacy/synthetic shipment baselines remain distinct from actual original handoff events"]
+    })))
 }
