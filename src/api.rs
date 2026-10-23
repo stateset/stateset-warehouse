@@ -7,7 +7,7 @@ use axum::{
     http::{HeaderMap, StatusCode},
     middleware::{self, Next},
     response::{IntoResponse, Response},
-    routing::{any, get, post},
+    routing::{any, get, post, put},
     Extension, Json, Router,
 };
 use serde_json::{json, Value};
@@ -427,6 +427,22 @@ fn business_routes_with_console(assets: crate::console::Assets) -> Router<App> {
         .route(
             "/v1/warehouses/{warehouse}/labels",
             post(crate::labels::endpoint),
+        )
+        .route(
+            "/v1/warehouses/{warehouse}/scans/parse",
+            post(crate::master_data::parse_scan),
+        )
+        .route(
+            "/v1/warehouses/{warehouse}/products/{sku}/gtins",
+            get(crate::master_data::product_gtins).put(crate::master_data::replace_product_gtins),
+        )
+        .route(
+            "/v1/warehouses/{warehouse}/capacity",
+            get(crate::master_data::capacities),
+        )
+        .route(
+            "/v1/warehouses/{warehouse}/locations/{code}/capacity",
+            put(crate::master_data::set_capacity),
         )
         .route(
             "/v1/warehouses/{warehouse}/packages/{package}/carrier-labels",

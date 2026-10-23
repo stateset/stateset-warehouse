@@ -113,7 +113,7 @@ fn putaway_prefers_same_lot_then_same_sku_then_empty_bins() {
     count(&mut s, "SKU-A", "L1", "RECV-01", 4);
     count(&mut s, "SKU-B", "L6", "RECV-01", 2);
     count(&mut s, "SKU-C", "L7", "RECV-01", 1);
-    let plan = putaway::plan(&s, &putaway::PlanRequest::default()).expect("plan");
+    let plan = putaway::plan(&s, &putaway::PlanRequest::default(), &BTreeMap::new()).expect("plan");
     let tasks = plan["tasks"].as_array().expect("tasks");
     let to = |sku: &str| {
         let t = tasks
@@ -132,7 +132,8 @@ fn putaway_prefers_same_lot_then_same_sku_then_empty_bins() {
     let after = execute_all(s, tasks);
     assert!(after.validate().is_ok());
     assert!(
-        putaway::plan(&after, &putaway::PlanRequest::default()).expect("replan")["tasks"]
+        putaway::plan(&after, &putaway::PlanRequest::default(), &BTreeMap::new()).expect("replan")
+            ["tasks"]
             .as_array()
             .expect("tasks")
             .is_empty()
@@ -144,7 +145,7 @@ fn putaway_never_reuses_one_empty_bin_for_two_skus_in_one_plan() {
     let mut s = warehouse();
     count(&mut s, "SKU-A", "L1", "RECV-01", 1);
     count(&mut s, "SKU-B", "L1", "RECV-01", 1);
-    let plan = putaway::plan(&s, &putaway::PlanRequest::default()).expect("plan");
+    let plan = putaway::plan(&s, &putaway::PlanRequest::default(), &BTreeMap::new()).expect("plan");
     let bins: Vec<_> = plan["tasks"]
         .as_array()
         .expect("tasks")
@@ -165,7 +166,7 @@ fn putaway_rejects_unknown_bins_skus_and_zones() {
     ] {
         let parsed: std::result::Result<putaway::PlanRequest, _> =
             serde_json::from_value(request.clone());
-        let ok = parsed.is_ok_and(|r| putaway::plan(&s, &r).is_ok());
+        let ok = parsed.is_ok_and(|r| putaway::plan(&s, &r, &BTreeMap::new()).is_ok());
         assert!(!ok, "{request} should be rejected");
     }
 }
@@ -345,4 +346,84 @@ fn labels_encode_exact_values_and_refuse_unknown_records() {
         serial.contains("^FDUnit_7EA^FS"),
         "tilde escaped, not dropped"
     );
+}
+
+#[test]
+fn putaway_splits_across_bins_when_capacity_is_reached() {
+    use stateset_warehouse::master_data::Capacity;
+    let mut s = warehouse();
+    count(&mut s, "SKU-A", "L1", "A-2", 4);
+    count(&mut s, "SKU-A", "L1", "RECV-01", 5);
+    let capacity = BTreeMap::from([(
+        "A-2".to_string(),
+        Capacity {
+            max_units: 6,
+            max_skus: None,
+        },
+    )]);
+    let plan = putaway::plan(&s, &putaway::PlanRequest::default(), &capacity).expect("plan");
+    let tasks = plan["tasks"].as_array().expect("tasks");
+    let moves: Vec<_> = tasks
+        .iter()
+        .map(|t| (t["command"]["to"].clone(), t["command"]["quantity"].clone()))
+        .collect();
+    assert_eq!(
+        moves,
+        vec![(json!("A-2"), json!(2)), (json!("A-1"), json!(3))],
+        "{plan}"
+    );
+    assert_eq!(tasks[0]["capacity_limited"], true);
+    let after = execute_all(s, tasks);
+    assert!(after.validate().is_ok());
+}
+
+#[test]
+fn putaway_respects_distinct_sku_limits_and_full_bins() {
+    use stateset_warehouse::master_data::Capacity;
+    let mut s = warehouse();
+    count(&mut s, "SKU-B", "L1", "A-1", 1);
+    count(&mut s, "SKU-A", "L1", "RECV-01", 2);
+    // Every other bin is full; A-1 allows only one SKU, so mixing is refused.
+    let capacity = BTreeMap::from([
+        (
+            "A-1".to_string(),
+            Capacity {
+                max_units: 100,
+                max_skus: Some(1),
+            },
+        ),
+        (
+            "A-2".to_string(),
+            Capacity {
+                max_units: 1,
+                max_skus: None,
+            },
+        ),
+        (
+            "A-10".to_string(),
+            Capacity {
+                max_units: 1,
+                max_skus: None,
+            },
+        ),
+        (
+            "B-1".to_string(),
+            Capacity {
+                max_units: 1,
+                max_skus: None,
+            },
+        ),
+    ]);
+    count(&mut s, "SKU-C", "L1", "A-2", 1);
+    count(&mut s, "SKU-C", "L1", "A-10", 1);
+    count(&mut s, "SKU-C", "L1", "B-1", 1);
+    let plan = putaway::plan(&s, &putaway::PlanRequest::default(), &capacity).expect("plan");
+    let a = plan["tasks"]
+        .as_array()
+        .expect("tasks")
+        .iter()
+        .any(|t| t["command"]["sku"] == "SKU-A");
+    assert!(!a, "{plan}");
+    assert_eq!(plan["unplaced"][0]["sku"], "SKU-A");
+    assert_eq!(plan["unplaced"][0]["quantity"], 2);
 }

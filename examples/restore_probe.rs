@@ -2440,6 +2440,30 @@ async fn seed(path: &str) -> Result<()> {
         "Transfer fixture must retain goods in transit",
     )?;
     let mut split_fulfillment = split_fixture(&store).await?;
+    // Reviewed GTIN and bin capacity master data.
+    application(
+        stateset_warehouse::master_data::save_gtins(
+            &store.pool,
+            &identity(),
+            WAREHOUSE,
+            "RESTORE-SPLIT",
+            &["09506000134352".to_string()],
+        )
+        .await,
+    )?;
+    application(
+        stateset_warehouse::master_data::save_capacity(
+            &store.pool,
+            &identity(),
+            WAREHOUSE,
+            "SPLIT-A",
+            &stateset_warehouse::master_data::CapacityRequest {
+                max_units: Some(500),
+                max_skus: Some(4),
+            },
+        )
+        .await,
+    )?;
     application(
         stateset_warehouse::replenishment::save_rules(
             &store.pool,

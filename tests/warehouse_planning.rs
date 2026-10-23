@@ -561,3 +561,132 @@ async fn labels_and_carrier_labels_cover_bins_packages_and_their_lifecycle() {
     assert_eq!(status, StatusCode::CONFLICT, "package already handed off");
     f.proof().await;
 }
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL"]
+async fn gtins_scans_and_bin_capacity_are_reviewed_and_drive_putaway() {
+    let f = Fixture::new().await;
+    f.setup().await;
+    let gtins = format!("/v1/warehouses/{W}/products/SKU-A/gtins");
+    let (status, _) = f
+        .call(
+            "operator",
+            "PUT",
+            &gtins,
+            Some(json!({"gtins":["9506000134352"]})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    let (status, saved) = f
+        .call(
+            "admin",
+            "PUT",
+            &gtins,
+            Some(json!({"gtins":["9506000134352"]})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    assert_eq!(
+        saved["gtins"],
+        json!(["09506000134352"]),
+        "normalized to GTIN-14"
+    );
+    let (status, _) = f
+        .call(
+            "admin",
+            "PUT",
+            &format!("/v1/warehouses/{W}/products/SKU-B/gtins"),
+            Some(json!({"gtins":["09506000134352"]})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::CONFLICT, "one product per GTIN");
+    let (status, _) = f
+        .call(
+            "admin",
+            "PUT",
+            &gtins,
+            Some(json!({"gtins":["9506000134353"]})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "bad check digit");
+
+    let parse = format!("/v1/warehouses/{W}/scans/parse");
+    let scan = "]C1010950600013435217261231\u{1d}10L1";
+    let (status, parsed) = f
+        .call("viewer", "POST", &parse, Some(json!({"data": scan})))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{parsed}");
+    assert_eq!(parsed["sku"], "SKU-A");
+    assert_eq!(parsed["lot"], "L1");
+    assert_eq!(parsed["expiry_date"], "2026-12-31");
+    let (_, unknown) = f
+        .call(
+            "viewer",
+            "POST",
+            &parse,
+            Some(json!({"data":"(01)00012345678905(10)X"})),
+        )
+        .await;
+    assert!(
+        unknown["sku"].is_null(),
+        "an unreviewed GTIN identifies nothing"
+    );
+    let (status, _) = f
+        .call(
+            "viewer",
+            "POST",
+            &parse,
+            Some(json!({"data":"(01)00012345678906"})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+
+    // S-2 holds 4 units of SKU-A L1; a 6-unit limit leaves room for 2 of
+    // the 5 waiting in receiving, so the rest goes to an empty bin.
+    let (status, _) = f
+        .call(
+            "operator",
+            "PUT",
+            &format!("/v1/warehouses/{W}/locations/S-2/capacity"),
+            Some(json!({"max_units":6})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    let (status, _) = f
+        .call(
+            "admin",
+            "PUT",
+            &format!("/v1/warehouses/{W}/locations/S-2/capacity"),
+            Some(json!({"max_units":6})),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    let (_, bins) = f
+        .call(
+            "viewer",
+            "GET",
+            &format!("/v1/warehouses/{W}/capacity"),
+            None,
+        )
+        .await;
+    assert_eq!(bins["bins"][0]["max_units"], 6);
+    let (_, plan) = f
+        .call(
+            "operator",
+            "POST",
+            &format!("/v1/warehouses/{W}/putaway/plan"),
+            Some(json!({"skus":["SKU-A"]})),
+        )
+        .await;
+    let tasks = plan["tasks"].as_array().expect("tasks");
+    assert_eq!(tasks[0]["command"]["to"], "S-2", "{plan}");
+    assert_eq!(tasks[0]["command"]["quantity"], 2);
+    assert_eq!(tasks[1]["command"]["quantity"], 3);
+    for task in tasks {
+        f.command(task["command"].clone(), None).await;
+    }
+    let audits: i64 = sqlx::query_scalar("SELECT count(*) FROM wms_admin_audit WHERE tenant=$1 AND action IN('product.gtins','location.capacity')")
+        .bind(&f.tenant).fetch_one(&f.store.pool).await.expect("audit");
+    assert_eq!(audits, 2);
+    f.proof().await;
+}

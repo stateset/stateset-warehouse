@@ -316,6 +316,10 @@ impl Store {
                 "037_carrier_labels",
                 include_str!("../migrations/037_carrier_labels.sql"),
             ),
+            (
+                "038_gtins_and_bin_capacity",
+                include_str!("../migrations/038_gtins_and_bin_capacity.sql"),
+            ),
         ];
         // A database migrated by a newer release has ledger rows this binary
         // does not know. Refuse to start before applying anything: an older

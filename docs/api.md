@@ -37,6 +37,10 @@ The same authenticated service exposes a [native MCP endpoint](mcp.md) at `/mcp`
 | POST | `/v1/warehouses/{id}/putaway/plan` | Read-only putaway suggestions for receiving stock; operator/admin |
 | POST | `/v1/warehouses/{id}/picking/batch-plan` | Read-only multi-order pick walk with totes; operator/admin |
 | POST | `/v1/warehouses/{id}/counts/plan` | Read-only ABC cycle counts due; operator/admin |
+| POST | `/v1/warehouses/{id}/scans/parse` | Parse a GS1 scan to exact GTIN, lot, expiry date, serial and the reviewed product; read roles |
+| GET / PUT | `/v1/warehouses/{id}/products/{sku}/gtins` | Reviewed product GTINs; read roles / admin (audited) |
+| GET | `/v1/warehouses/{id}/capacity` | Per-bin capacity limits; read roles |
+| PUT | `/v1/warehouses/{id}/locations/{code}/capacity` | Set or clear a bin's unit and SKU limits; admin (audited) |
 | POST | `/v1/warehouses/{id}/labels` | ZPL labels for bins, products, packages, serials and carrier labels; read roles |
 | GET / POST | `/v1/warehouses/{id}/packages/{package}/carrier-labels` | List / record a package's carrier label; read roles / operator |
 | POST | `/v1/warehouses/{id}/packages/{package}/carrier-labels/{label}/void` | Void the active carrier label with a reason; operator |
@@ -441,7 +445,9 @@ Body (all optional): `from` (receiving bins), `skus`, `zone` (preferred zone for
 5. any empty storage bin (`empty_bin`);
 6. if none of those exist, a bin already holding other SKUs, the fewest first (`mixed_sku_bin`). Set `allow_mixed: false` to turn this off.
 
-Ties go to the first bin in natural order, with numbers compared numerically (`A-2` before `A-10`), the same order batch picking walks. Stock with no eligible bin is listed under `unplaced`. There is **no bin capacity model**, so confirm that the stock physically fits. `serial_labels_required` marks tasks that need the serial review.
+Bins at their [capacity](#bin-capacity) are skipped, and stock is split when a bin can take only part of it.
+
+Ties go to the first bin in natural order, with numbers compared numerically (`A-2` before `A-10`), the same order batch picking walks. Stock with no eligible bin is listed under `unplaced`. [Capacity](#bin-capacity) counts whole units and distinct SKUs only, so confirm that the stock physically fits. `serial_labels_required` marks tasks that need the serial review.
 
 ### Batch picking
 
@@ -465,6 +471,29 @@ Body (all optional): `interval_days` (`[A, B, C]`, default `[7, 30, 90]`, with A
 - `PUT` with `{"rules": [...]}` (admin only) replaces them as one change, recorded in the immutable admin audit. An empty list clears them.
 - Rules are validated exactly like `POST /replenishment/plan` and are removed with their product or bin.
 - `GET /replenishment/due` runs that same planner over the saved rules.
+
+## Scanning GS1 barcodes
+
+Supplier labels usually carry a GS1 barcode (GS1-128, GS1 DataMatrix or QR) that encodes the product, lot, expiry and serial in one scan.
+
+- `POST /v1/warehouses/{w}/scans/parse` with `{"data": "<raw scanner data>"}` (any warehouse role) parses it. It accepts:
+  - FNC1/GS-separated data, with or without a `]C1`/`]d2`/`]Q3` prefix;
+  - the bracketed `(01)…(10)…` form.
+- The response has the exact encoded `gs1` elements, plus `sku`, `lot`, `serial` and `expiry_date`.
+- **`sku` is set only when the GTIN is a reviewed GTIN of a product in this warehouse.** An unknown GTIN identifies nothing.
+- `expiry_date` is the label's calendar date, using the GS1 century rule; day `00` means the last day of the month. Recording lot expiry still needs an exact time with a UTC offset under your facility policy.
+- Supported application identifiers: `00` SSCC, `01` GTIN, `02` content GTIN, `10` lot, `11` production date, `13` packaging date, `15` best before, `17` expiry, `21` serial, `30` and `37` counts.
+- GTIN and SSCC check digits are verified, and GS1 lengths and character sets enforced. Unsupported identifiers, duplicates and malformed data return 422; nothing is partly parsed.
+
+**Reviewed GTINs.** `GET /v1/warehouses/{w}/products/{sku}/gtins` (read roles). `PUT` with `{"gtins": [...]}` (admin only) replaces the set as one audited change.
+- GTIN-8, -12, -13 and -14 are accepted with valid check digits and stored in their standard 14-digit form.
+- A GTIN identifies at most one product per warehouse; a conflict returns 409.
+
+## Bin capacity
+
+`PUT /v1/warehouses/{w}/locations/{code}/capacity` (admin only, audited) sets a storage bin's `max_units`, in whole units, and optional `max_skus`, in distinct SKUs. `{"max_units": null}` clears both. `GET /v1/warehouses/{w}/capacity` lists the limits.
+
+Directed putaway skips bins that are full or would exceed their SKU limit. When the best bin can take only part of the stock, the plan puts that much there and the rest in the next eligible bin. Capacity doesn't model volume or weight, so physical fit still needs confirming.
 
 ## Labels
 

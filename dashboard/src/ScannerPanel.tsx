@@ -19,7 +19,7 @@ type Props = {
   canWork: boolean;
   disabled: boolean;
   active: boolean;
-  request: (path: string) => Promise<any>;
+  request: (path: string, body?: unknown) => Promise<any>;
   /** Uses the shared durable command journal. True means the save was confirmed. */
   onSubmit: (
     command: Command,
@@ -35,6 +35,12 @@ type Selection = (
 const allocationKey = (allocation: Allocation) =>
   JSON.stringify([allocation.line_id, allocation.location, allocation.lot]);
 const steps = ["location", "SKU", "lot"] as const;
+
+/** GS1 element strings: a symbology prefix, bracketed AIs or FNC1 separators. */
+export const looksLikeGs1 = (value: string) =>
+  /^\](C1|d2|Q3)/.test(value) ||
+  value.startsWith("(") ||
+  value.includes("\u001d");
 
 export default function ScannerPanel({
   at,
@@ -62,6 +68,7 @@ export default function ScannerPanel({
   const quantityInput = useRef<HTMLInputElement>(null);
   const lock = useRef(false);
   const verification = useRef<string[]>([]);
+  const gs1Pending = useRef(false);
   const loadSequence = useRef(0);
   const warehouse = state.warehouse.id;
   const blocked = disabled || busy || !canWork;
@@ -300,12 +307,60 @@ export default function ScannerPanel({
     }
   };
 
+  const clearScan = () => {
+    setScan("");
+    if (scanInput.current) scanInput.current.value = "";
+  };
+  // A GS1 label at the product step identifies the product only through
+  // its reviewed GTIN, and can verify the lot from the same scan.
+  const verifyGs1 = async (value: string) => {
+    if (!target || gs1Pending.current) return;
+    gs1Pending.current = true;
+    try {
+      const parsed = await request(
+        `/v1/warehouses/${encodeURIComponent(state.warehouse.id)}/scans/parse`,
+        { data: value },
+      );
+      clearScan();
+      if (parsed.sku !== target.sku) {
+        setError(
+          parsed.sku
+            ? `GS1 label is ${parsed.sku}. Expected ${target.sku}. Nothing was saved.`
+            : "This GS1 label's GTIN is not reviewed for any product here. Scan the SKU barcode or ask an administrator to add the GTIN.",
+        );
+        setFocusSequence((n) => n + 1);
+        return;
+      }
+      const lotMatches =
+        typeof parsed.lot === "string" && parsed.lot === target.lot;
+      verification.current = lotMatches
+        ? [...verification.current, target.sku, target.lot]
+        : [...verification.current, target.sku];
+      setVerified(verification.current);
+      setError(
+        typeof parsed.lot === "string" && !lotMatches
+          ? `GS1 label lot is ${parsed.lot}. Expected ${target.lot}. Scan the lot.`
+          : "",
+      );
+    } catch (failure) {
+      clearScan();
+      setError(`GS1 label could not be read: ${(failure as Error).message}`);
+    } finally {
+      gs1Pending.current = false;
+    }
+  };
+
   const verifyScan = (event: FormEvent) => {
     event.preventDefault();
-    if (blocked || !readyToScan || !target || complete) return;
+    if (blocked || !readyToScan || !target || complete || gs1Pending.current)
+      return;
     const index = verification.current.length;
     const value = scanInput.current?.value ?? scan;
     if (!value || index >= steps.length) return;
+    if (index === 1 && looksLikeGs1(value)) {
+      void verifyGs1(value);
+      return;
+    }
     const expected = [target.location, target.sku, target.lot][index];
     if (value !== expected) {
       setError(

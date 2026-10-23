@@ -6,6 +6,7 @@ use crate::{
     api::App,
     concurrency,
     domain::{self, Command, State},
+    master_data::{self, Capacity},
     store::{Error, Identity},
 };
 use axum::{
@@ -63,7 +64,11 @@ impl Reason {
     }
 }
 
-pub fn plan(state: &State, request: &PlanRequest) -> domain::Result<Value> {
+pub fn plan(
+    state: &State,
+    request: &PlanRequest,
+    capacity: &BTreeMap<String, Capacity>,
+) -> domain::Result<Value> {
     state.validate()?;
     let receiving: BTreeSet<&str> = state
         .locations
@@ -120,85 +125,54 @@ pub fn plan(state: &State, request: &PlanRequest) -> domain::Result<Value> {
         })
         .collect();
     sources.sort_by(|a, b| (&a.location, &a.sku, &a.lot).cmp(&(&b.location, &b.sku, &b.lot)));
+    // Units already in each bin, plus what this plan has put there.
+    let mut units: BTreeMap<&str, i64> = BTreeMap::new();
+    for s in &state.stocks {
+        *units.entry(s.location.as_str()).or_default() += s.on_hand;
+    }
     let mut tasks = vec![];
     let mut unplaced = vec![];
     for stock in sources {
-        let quantity = stock.on_hand - stock.reserved;
-        let sku_zones: BTreeSet<&str> = storage
-            .iter()
-            .filter(|l| {
-                occupied
-                    .get(l.code.as_str())
-                    .is_some_and(|items| items.iter().any(|(sku, _)| *sku == stock.sku))
-            })
-            .map(|l| l.zone.as_str())
-            .collect();
-        let allow_mixed = request.allow_mixed.unwrap_or(true);
-        let mut best: Option<(Reason, usize, crate::batch_pick::NaturalKey, &str)> = None;
-        for bin in &storage {
-            let items = occupied.get(bin.code.as_str());
-            let mut skus = 0;
-            let reason = match items {
-                Some(items) if items.contains(&(stock.sku.clone(), stock.lot.clone())) => {
-                    Reason::SameLot
-                }
-                Some(items) if items.iter().any(|(sku, _)| *sku == stock.sku) => Reason::SameSku,
-                Some(items) if !items.is_empty() => {
-                    if !allow_mixed {
-                        continue;
-                    }
-                    skus = items
-                        .iter()
-                        .map(|(sku, _)| sku)
-                        .collect::<BTreeSet<_>>()
-                        .len();
-                    Reason::Mixed
-                }
-                _ if request.zone.as_deref() == Some(bin.zone.as_str()) => Reason::PreferredZone,
-                _ if sku_zones.contains(bin.zone.as_str()) => Reason::SkuZone,
-                _ => Reason::Empty,
+        let mut remaining = stock.on_hand - stock.reserved;
+        while remaining > 0 {
+            let Some((reason, to, room)) = choose(
+                &storage, &occupied, &units, capacity, request, &stock.sku, &stock.lot,
+            ) else {
+                unplaced.push(
+                    json!({"sku":stock.sku,"lot":stock.lot,"from":stock.location,
+                    "quantity":remaining,"reason":"no_eligible_storage_bin"}),
+                );
+                break;
             };
-            // Strongest reason first; for mixed bins the fewest SKUs; then the
-            // first bin in natural walk order (A-2 before A-10), as in batch
-            // picking.
-            let key = (
-                reason,
-                skus,
-                crate::batch_pick::natural_key(&bin.code),
-                bin.code.as_str(),
-            );
-            if best.as_ref().is_none_or(|b| key < *b) {
-                best = Some(key);
+            let quantity = remaining.min(room);
+            remaining -= quantity;
+            occupied
+                .entry(to)
+                .or_default()
+                .insert((stock.sku.clone(), stock.lot.clone()));
+            *units.entry(to).or_default() += quantity;
+            let command = Command::MoveStock {
+                sku: stock.sku.clone(),
+                lot: stock.lot.clone(),
+                from: stock.location.clone(),
+                to: to.to_string(),
+                quantity,
+            };
+            let serial = state
+                .products
+                .iter()
+                .any(|p| p.sku == stock.sku && p.serial_controlled);
+            tasks.push(json!({
+                "command": command,
+                "resource_versions": concurrency::reviewed_versions(state, &command)?,
+                "reason": reason.as_str(),
+                "zone": storage.iter().find(|l| l.code == to).map(|l| l.zone.clone()),
+                "capacity_limited": capacity.contains_key(to),
+                "serial_labels_required": serial,
+            }));
+            if tasks.len() > MAX_TASKS {
+                return Err("Plan exceeds 500 movements; select fewer bins or SKUs".into());
             }
-        }
-        let Some((reason, _, _, to)) = best else {
-            unplaced.push(json!({"sku":stock.sku,"lot":stock.lot,"from":stock.location,"quantity":quantity,"reason":"no_eligible_storage_bin"}));
-            continue;
-        };
-        occupied
-            .entry(to)
-            .or_default()
-            .insert((stock.sku.clone(), stock.lot.clone()));
-        let command = Command::MoveStock {
-            sku: stock.sku.clone(),
-            lot: stock.lot.clone(),
-            from: stock.location.clone(),
-            to: to.to_string(),
-            quantity,
-        };
-        let serial = state
-            .products
-            .iter()
-            .any(|p| p.sku == stock.sku && p.serial_controlled);
-        tasks.push(json!({
-            "command": command,
-            "resource_versions": concurrency::reviewed_versions(state, &command)?,
-            "reason": reason.as_str(),
-            "zone": storage.iter().find(|l| l.code == to).map(|l| l.zone.clone()),
-            "serial_labels_required": serial,
-        }));
-        if tasks.len() > MAX_TASKS {
-            return Err("Plan exceeds 500 movements; select fewer bins or SKUs".into());
         }
     }
     Ok(json!({
@@ -208,10 +182,85 @@ pub fn plan(state: &State, request: &PlanRequest) -> domain::Result<Value> {
         "generated_at": domain::now(),
         "tasks": tasks,
         "unplaced": unplaced,
-        "limits": ["No bin capacity model: confirm physical fit before moving",
+        "limits": ["Capacity is whole units and distinct SKUs where an administrator set it; confirm physical fit (volume, weight) before moving",
                    "mixed_sku_bin tasks put the stock beside other SKUs; set allow_mixed to false to avoid them",
                    "Suggestions reserve nothing; each task is a reviewed move_stock command"],
     }))
+}
+
+/// The best eligible bin for one SKU and lot, with how many more units it
+/// can take. Bins at capacity, or that would exceed their distinct-SKU
+/// limit, are skipped.
+fn choose<'a>(
+    storage: &[&'a domain::Location],
+    occupied: &BTreeMap<&str, BTreeSet<(String, String)>>,
+    units: &BTreeMap<&str, i64>,
+    capacity: &BTreeMap<String, Capacity>,
+    request: &PlanRequest,
+    sku: &str,
+    lot: &str,
+) -> Option<(Reason, &'a str, i64)> {
+    let sku_zones: BTreeSet<&str> = storage
+        .iter()
+        .filter(|l| {
+            occupied
+                .get(l.code.as_str())
+                .is_some_and(|items| items.iter().any(|(s, _)| s == sku))
+        })
+        .map(|l| l.zone.as_str())
+        .collect();
+    let allow_mixed = request.allow_mixed.unwrap_or(true);
+    let mut best: Option<(Reason, usize, crate::batch_pick::NaturalKey, &str, i64)> = None;
+    for bin in storage {
+        let items = occupied.get(bin.code.as_str());
+        let skus: BTreeSet<&str> = items
+            .map(|i| i.iter().map(|(s, _)| s.as_str()).collect())
+            .unwrap_or_default();
+        let limit = capacity.get(&bin.code);
+        let room = limit.map_or(i64::MAX, |c| {
+            c.max_units - units.get(bin.code.as_str()).copied().unwrap_or(0)
+        });
+        let new_sku = !skus.contains(sku);
+        if room <= 0
+            || limit
+                .and_then(|c| c.max_skus)
+                .is_some_and(|max| new_sku && skus.len() as i64 >= max)
+        {
+            continue;
+        }
+        let reason = match items {
+            Some(items) if items.contains(&(sku.to_string(), lot.to_string())) => Reason::SameLot,
+            Some(_) if !new_sku => Reason::SameSku,
+            Some(items) if !items.is_empty() => {
+                if !allow_mixed {
+                    continue;
+                }
+                Reason::Mixed
+            }
+            _ if request.zone.as_deref() == Some(bin.zone.as_str()) => Reason::PreferredZone,
+            _ if sku_zones.contains(bin.zone.as_str()) => Reason::SkuZone,
+            _ => Reason::Empty,
+        };
+        let mixed = if reason == Reason::Mixed {
+            skus.len()
+        } else {
+            0
+        };
+        // Strongest reason first; for mixed bins the fewest SKUs; then the
+        // first bin in natural walk order (A-2 before A-10), as in batch
+        // picking.
+        let key = (
+            reason,
+            mixed,
+            crate::batch_pick::natural_key(&bin.code),
+            bin.code.as_str(),
+            room,
+        );
+        if best.as_ref().is_none_or(|b| key < *b) {
+            best = Some(key);
+        }
+    }
+    best.map(|(reason, _, _, code, room)| (reason, code, room))
 }
 
 pub async fn endpoint(
@@ -230,5 +279,9 @@ pub async fn endpoint(
             "Warehouse inventory requires reconciliation; putaway held",
         )
     })?;
-    Ok(Json(plan(&state, &input).map_err(|e| Error::new(422, e))?))
+    let capacity =
+        master_data::load_capacity(&app.store.pool, &identity.tenant, &warehouse).await?;
+    Ok(Json(
+        plan(&state, &input, &capacity).map_err(|e| Error::new(422, e))?,
+    ))
 }

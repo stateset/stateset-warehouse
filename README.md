@@ -47,7 +47,7 @@ Open **http://127.0.0.1:8088**. Localhost is a secure browser context; use HTTPS
 
 ## Implemented warehouse work
 
-- Native [MCP server](docs/mcp.md) at `/mcp` with 80 administrator tools, authenticated discovery, tenant/role enforcement, typed warehouse commands and original-request recovery through the same journal as REST.
+- Native [MCP server](docs/mcp.md) at `/mcp` with 85 administrator tools, authenticated discovery, tenant/role enforcement, typed warehouse commands and original-request recovery through the same journal as REST.
 - Create and select multiple facilities with independent stock, catalog, work and versions. Admin creation uses the same immutable command journal; pending warehouse/native saves hold switching, and reload restores their original warehouse. The paginated picker keeps the active facility visible on mobile.
 - Catalog products and receiving/storage locations; configure facility name, code, city and IANA timezone from Locations.
 - [Lot expiry and quarantine controls](docs/api.md#lot-expiry-quarantine-and-availability) with server-owned cutoff checks, optional required expiry labels, earliest-expiry allocation, independent reasoned holds and protected physical recovery. Inventory distinguishes physical/reserved custody from usable stock.
@@ -62,6 +62,7 @@ Open **http://127.0.0.1:8088**. Localhost is a secure browser context; use HTTPS
 - [Directed putaway](docs/api.md#directed-putaway): bin suggestions for receiving stock, consolidating by lot and SKU before using empty bins.
 - [Batch picking](docs/api.md#batch-picking): one walk for several orders, with stops in bin order and a tote per order.
 - [Scheduled cycle counts](docs/api.md#cycle-counts): ABC classes by picked volume, blind counts and never-counted bins first.
+- [GS1 barcode scanning](docs/api.md#scanning-gs1-barcodes): one scan gives the exact GTIN, lot, expiry date and serial, matched to a product only through reviewed GTINs. [Bin capacity](docs/api.md#bin-capacity) limits that putaway respects.
 - [ZPL labels](docs/api.md#labels) for bins, products, cartons and serial units, and [carrier labels](docs/api.md#carrier-labels) attached to packages with tracking numbers and exact rates.
 - Immutable original handoff evidence protects shipped quantities, lot ownership and carrier/source metadata; returns and conditional OMS writeback share that verified source.
 - Customer return receipts tied to the exact original shipped order line and lot. Authorizations are capped across all retained RMAs; returned stock enters receiving before reviewed putaway, without changing the original shipment or issuing a refund.
@@ -83,7 +84,7 @@ Open **http://127.0.0.1:8088**. Localhost is a secure browser context; use HTTPS
 
 - Fractional measured units (weight, length); quantities are whole **each** units. Reviewed case, inner-pack and pallet conversions are supported; see [pack units](docs/api.md#reviewed-pack-units).
 - Carrier rate shopping and label purchasing: the TMS buys labels, and the WMS [records and prints](docs/api.md#carrier-labels) them. Also refunds and automated quality disposition.
-- Bin capacity (volume or weight); putaway suggestions don't check physical fit.
+- Bin volume and weight; [bin capacity](docs/api.md#bin-capacity) counts whole units and distinct SKUs.
 - Tenant-wide recalls; quarantine is per warehouse.
 - Multiple physical handoffs per order in the native OMS connection; they are held rather than merged into an invented event.
 - Date-only expiry labels without a reviewed facility policy; expiry needs an exact time with a UTC offset.

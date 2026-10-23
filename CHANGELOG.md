@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **GS1 scanning.** `POST /scans/parse` turns a GS1-128, DataMatrix or QR scan into its exact GTIN, lot, expiry date and serial, with check digits, lengths and character sets verified and the GS1 century rule for dates. Unsupported or malformed data is refused, not partly parsed. A product is identified only through reviewed GTINs (migration 038): admin-managed, audited, normalized to GTIN-14 and unique per warehouse.
+- **Bin capacity** (migration 038): optional per-bin limits in whole units and distinct SKUs, admin-managed and audited. Putaway skips full bins and splits stock across bins.
 - **Startup refuses a database migrated by a newer release.** If the migration ledger contains a migration this binary doesn't know, startup stops before applying anything, naming the unknown migrations. An older release can therefore never run against a newer schema without that release's rules. Roll back by restoring the pre-upgrade backup instead.
 - **Planning.** Every plan below reserves and moves nothing. Each task is the exact canonical command, with its reviewed versions, confirmed through the normal command journal.
   - Directed putaway: same lot, then same SKU, then a requested or SKU zone, then any empty bin. There is no capacity model.
