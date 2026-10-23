@@ -36,15 +36,21 @@ flowchart LR
 | Concern | Code |
 |---|---|
 | HTTP routes, authentication, headers | `src/api.rs`, `src/auth.rs` |
-| Command types and the pure state reducer | `src/domain.rs` |
+| Entity types, the `Command` enum and state helpers | `src/domain.rs` |
+| The command reducer, validation and demo data | `src/domain/apply.rs`, `src/domain/validate.rs`, `src/domain/demo.rs` |
 | Transaction, locking, receipts, migrations, reconciliation | `src/persistence.rs`, `src/store.rs` |
 | Resource versions (which concurrent writes conflict) | `src/concurrency.rs` |
 | Serial tracking | `src/serials.rs`, `src/serial_*.rs`, `migrations/021`–`035`; see the [serial design guide](serial-design.md) |
 | Lots, expiry, quarantine and lot tracing | `src/lot_control.rs`, `src/lot_store.rs`, `src/lot_trace.rs` |
 | Transfers, packages, returns, receipts, shipments | `src/transfers.rs`, `src/split_fulfillment.rs`, `src/returns.rs`, `src/receipts.rs`, `src/shipments.rs` |
 | Outbox delivery and integrations | `src/integrations.rs`, `src/native*.rs`, `src/oms_*.rs` |
+| Planning (putaway, batch picking, cycle counts, replenishment) | `src/putaway.rs`, `src/batch_pick.rs`, `src/cycle_counts.rs`, `src/replenishment.rs` |
+| Labels, carrier labels, GS1 scanning, GTINs and bin capacity | `src/labels.rs`, `src/carrier_labels.rs`, `src/gs1.rs`, `src/master_data.rs` |
 | MCP server | `src/mcp.rs` |
-| Schema and database guards | `migrations/` (append-only; digests are checked at startup) |
+| Schema and database guards | `migrations/` (append-only; digests checked at startup; a database migrated by a newer release is refused) |
+| Current definition of every database function and trigger | `schema/current-functions.sql` (generated; drift-checked by `tests/sql_catalog.rs`) |
+| Dashboard | `dashboard/src/App.tsx` (shell, routing, session and journal), one component per tab (`*Tab.tsx`), `PlanningPanels.tsx` |
+| Fast tests without a database | `tests/domain.rs`, `tests/planning_units.rs` |
 
 The sections below are the detailed contract.
 
