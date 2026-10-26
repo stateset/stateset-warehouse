@@ -1,0 +1,231 @@
+{
+  "ok": true,
+  "synthetic": true,
+  "image_id": "sha256:0dd4a711260214204bce48c1d7a7795c2287bf554927d40f58b569d61012a642",
+  "source_inputs_sha256": "aa09073390014e461283a26d2349e0d041d404758c76a5ff894f6f946f8434d9",
+  "release_revision": "unrecorded-working-tree",
+  "os": "linux",
+  "architecture": "amd64",
+  "docker_server_version": "27.4.0",
+  "postgres_server_version": "16.15",
+  "postgres_image_id": "sha256:81bd698b4594e751a3269e4dcd3e03a4a0ec0daf7b72e7aa1abd43cce9887542",
+  "postgres_repo_digests": [
+    "postgres@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea"
+  ],
+  "qualifier_script_sha256": "95ba3b7e7096344fe32c672589077e70bb75dbecf8942ee2cbf02b0eac1ff88b",
+  "resource_helper_sha256": "61e454b5d465660ae5751411681eeafd9c9da8357d2657c1a396ee98f1996e0f",
+  "elapsed_build_and_runtime_seconds": 17,
+  "runtime": {
+    "uid": 10001,
+    "read_only_rootfs": true,
+    "effective_capabilities": 0,
+    "no_new_privileges": true,
+    "health": "healthy",
+    "random_loopback_host_port": true,
+    "unauthenticated_api_status": 401,
+    "real_mode_authenticated_session": true,
+    "mcp": {
+      "unauthenticated_status": 401,
+      "authenticated_session_matches_rest": true,
+      "catalog_tools": 85,
+      "catalog_bytes": 133431,
+      "partial_fulfillment_tools_present": true
+    },
+    "immutable_image_id_bound_to_running_container": true,
+    "graceful_sigterm_exit_code": 0,
+    "compiled_dashboard_served": true,
+    "independent_reconciliation": {
+      "lot_controls": {
+        "baseline_version": 0,
+        "eligibility_decisions": 0,
+        "ok": true,
+        "policy_changes": 0
+      },
+      "method": "full_append_only_ledger_and_order_line_allocations",
+      "ok": true,
+      "packages": [],
+      "receipt_cancellations": [],
+      "receipts": [],
+      "returns": [],
+      "rows": [],
+      "serials": {
+        "batches": 0,
+        "controlled_skus": 0,
+        "identity_scope": "tenant",
+        "method": "original_serial_modes_reviews_history_observations_and_physical_ownership",
+        "observations": 0,
+        "ok": true,
+        "physical_ok": true,
+        "registered_units": 0,
+        "sku_reviews": 0,
+        "source_ok": true,
+        "unit_steps": 0,
+        "warehouse_id": "wh-main"
+      },
+      "shipments": [],
+      "transfers": [],
+      "units": {
+        "definition_changes": 0,
+        "method": "immutable_definition_and_original_command_each_conversion",
+        "ok": true,
+        "quantity_observations": 0
+      },
+      "version": 0
+    }
+  },
+  "migrations": [
+    {
+      "name": "001_initial",
+      "sha256": "8e5c3fa5f0065b63076c33b8bd3c337b8490d4b7a88f3e774ec17e2290e1f4d4"
+    },
+    {
+      "name": "002_relational_execution",
+      "sha256": "660cd0fdbc7205644c7c3d7ac3da43cbaf1c6d9f80c4d0f2ea4d0c0986e6ff90"
+    },
+    {
+      "name": "003_native_operations",
+      "sha256": "f9a5cfa4a1e4f7830613febe6b37f11a8485beef46d6b96791c78435fe784108"
+    },
+    {
+      "name": "004_native_source_ownership",
+      "sha256": "366979c9630c4c62cb7d71beb5c89cd917764558b4e05267c4eb4aac486a6cb9"
+    },
+    {
+      "name": "005_conditional_oms_fulfillment",
+      "sha256": "b8892cbaa4a1b26c6e1732616ec30503d3698f44e363240386078398e29e9a41"
+    },
+    {
+      "name": "006_oms_rejections",
+      "sha256": "567e061943a1602ff25b5d5c988be810808b8c6e1638885ee6ef9b71a9ba4ed4"
+    },
+    {
+      "name": "007_operations_indexes",
+      "sha256": "b0b9b422f570ed77ca1252df42c96b29544849621ed748cadd1f068b708576b5"
+    },
+    {
+      "name": "008_delivery_recipient",
+      "sha256": "050f40c80b9e73a3edc8a19545ab08cfe41051616b84d9445dfdea9a30de9d19"
+    },
+    {
+      "name": "009_resource_versions",
+      "sha256": "b702a003a1d74210fdfc06cef1fbfb6e737146a25314642094a2f8383dc2e209"
+    },
+    {
+      "name": "010_customer_returns",
+      "sha256": "dfafb0547d0af2ba11f86dfa31f7facebe89adf582d6b215d02b734e1413fb71"
+    },
+    {
+      "name": "011_immutable_command_receipts",
+      "sha256": "0a7c69928f38527f542a55e795de9b62c65f4907d7d05cba2d47f7eeebdf8a73"
+    },
+    {
+      "name": "012_receipt_cancellation",
+      "sha256": "5a36bc5c39f49fe9fdf9e6cd292d71ed50c85daffea2777fda890d9b2d68a676"
+    },
+    {
+      "name": "013_shipment_evidence",
+      "sha256": "e867e6b35c3cbcb10ea5f4a952c916f10e7b5d16b53c80aad656a9fba286334e"
+    },
+    {
+      "name": "014_facility_transfers",
+      "sha256": "b98005fca14a6aa180c09e77d998105662b3f11147a3284d6a145147de3182b1"
+    },
+    {
+      "name": "015_split_fulfillment",
+      "sha256": "dd2e0b0625cec5d9cd1a6209e094f924fc4cb503a0b82ed3fcc2253109fe393a"
+    },
+    {
+      "name": "016_order_remainder_cancellation",
+      "sha256": "c79180323838e6353c3c32f77564aa3ae37eae6b523bf405e12311496f0f3f43"
+    },
+    {
+      "name": "017_lot_controls",
+      "sha256": "cbca465647b18f84e9d74deeabbe011a7572957b90c4046de9f2f0e9738360bf"
+    },
+    {
+      "name": "018_lot_trace",
+      "sha256": "c4d000be8cc2bae0097c629f98556177b97225cc6ba753cb29731e5464a85d4c"
+    },
+    {
+      "name": "019_transfer_loss",
+      "sha256": "30822c5f49905f192d4eff2de3b90e885ed800d26d1bc97e6b383b1fef47eae1"
+    },
+    {
+      "name": "020_pack_units",
+      "sha256": "7ba3eefed9e4386fc2f11002540bd703d0e6c584780ca3a378e308831c4bccf1"
+    },
+    {
+      "name": "021_serial_tracking",
+      "sha256": "856cbcf67490934123676ac6de66a972a39256616cd74d8048368feacdb1acce"
+    },
+    {
+      "name": "022_serial_restore_search_path",
+      "sha256": "ae5e84f4a08cbb75a46ea9a0602e35b03815861661fe7b60f9eff11514b677cc"
+    },
+    {
+      "name": "023_serial_target_resolution",
+      "sha256": "8778a75182885af6ac976f44ee2bcbd3813837e6c5f8170842e53c31fcc9687d"
+    },
+    {
+      "name": "024_serial_event_payload_reuse",
+      "sha256": "5c7dc4b76a21c487a0440297b42001fb39a65af1537813e880908e5a8b9fb491"
+    },
+    {
+      "name": "025_serial_resolved_read_sources",
+      "sha256": "d255984a2eb4e7a1e7e9212c1406b30e40dcd24944f6bb0e35fa7c58027fdf32"
+    },
+    {
+      "name": "026_serial_event_batch_index",
+      "sha256": "98c2796069821a4ef064e5968759686109833067f510ef066eeb0d9e7185ea03"
+    },
+    {
+      "name": "027_serial_reference_classes",
+      "sha256": "e8515cdbebc8ceece05e45d6882d20b1031455347473676d588a4437a5ba144f"
+    },
+    {
+      "name": "028_serial_read_source",
+      "sha256": "04aac8ae5697cf913bc3d2bbf774327e3bf15c146d3e64f2d700c2c1362ec928"
+    },
+    {
+      "name": "029_serial_scope_source_sets",
+      "sha256": "3b4c3af8193077bac797c2dafdf1d0eb1d4c690ac94c20e200a70fa2fa21cedd"
+    },
+    {
+      "name": "030_serial_scope_custody_counts",
+      "sha256": "75484358617dd3b0db45979871b8f6e980e5c45e5022d38f2b8ffe565b222d16"
+    },
+    {
+      "name": "031_serial_ascii_validation",
+      "sha256": "eda4e8e05c64042b72945ce13c587add68a8f6323d9a8e57a1649fb0f6aaadf3"
+    },
+    {
+      "name": "032_serial_deferred_check_sets",
+      "sha256": "c1159facd8c9727ab9d2cb9e00fa54ea83cd2d8401771d302ba30a975a6d4464"
+    },
+    {
+      "name": "033_serial_target_dispatch",
+      "sha256": "633eaba6e2a566e7ada516baf16e1dcdbea775b6030495c15cb530df40570ed0"
+    },
+    {
+      "name": "034_serial_command_target_sets",
+      "sha256": "69086efaff103a36fcdd1dbbf5adf4df4f7cb932acae1359fc05c21781d846b5"
+    },
+    {
+      "name": "035_serial_sku_scope_checks",
+      "sha256": "e7eb6e56b71a44752bf6e0a937b23ddd00b6cd33bb2cb11439efa4be920f0e90"
+    },
+    {
+      "name": "036_replenishment_rules",
+      "sha256": "f75f00aff65d4afa988e9bc3252bf8fd81686899584d2ca630baae3293f3c6e0"
+    },
+    {
+      "name": "037_carrier_labels",
+      "sha256": "94bb6766f67a0fd7d0c9c5dff673cf61a6de80da5c9c8b9b52dd693fb2760dd3"
+    },
+    {
+      "name": "038_gtins_and_bin_capacity",
+      "sha256": "7d48bab9a4f6d661628b9f7da431bce9a674d39ebc537dc47b94f1d264b2b3ae"
+    }
+  ],
+  "qualification_limit": "Production image build and isolated synthetic PostgreSQL runtime; no facility or deployed integration acceptance claimed"
+}

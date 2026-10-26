@@ -1,0 +1,180 @@
+{
+  "schema_version": 1,
+  "scope": "software_release_gate",
+  "recorded_at": "2026-10-26T20:26:49.911697+00:00",
+  "result": "passed",
+  "production_qualified": false,
+  "synthetic": true,
+  "release_revision": "unrecorded-working-tree",
+  "elapsed_seconds": 3149,
+  "stages": [
+    {
+      "name": "prerequisites",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 1.234
+    },
+    {
+      "name": "software_checks",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 1320.019
+    },
+    {
+      "name": "observability_rules",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 2.984
+    },
+    {
+      "name": "release_builds",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 1.92
+    },
+    {
+      "name": "standard_workload",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 16.725
+    },
+    {
+      "name": "archive_restore",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 98.456
+    },
+    {
+      "name": "live_browsers",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 377.147
+    },
+    {
+      "name": "production_container",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 19.399
+    },
+    {
+      "name": "image_resilience",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 1309.343
+    },
+    {
+      "name": "stable_source_inputs",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 0.861
+    }
+  ],
+  "artifacts": [
+    {
+      "stage": "standard_workload",
+      "path": "standard_workload.json",
+      "sha256": "aae284515716d2d1a51abfc45262821a2ec76a75d2e8c8e3ea468cabb2d2d8cf"
+    },
+    {
+      "stage": "archive_restore",
+      "path": "archive_restore.json",
+      "sha256": "12533dabe2c57d34678960d3536b923e6de92a1eff95ecc6fec25e538c5fd145"
+    },
+    {
+      "stage": "observability_rules",
+      "path": "observability_rules.json",
+      "sha256": "d0529326f8331199bae4d9faee03d055595ab5557537681d3c48dd70a36a4314"
+    },
+    {
+      "stage": "production_container",
+      "path": "production_container.json",
+      "sha256": "08c0e11aafe0fdf6e7fb56a2bc390498a4a1d213cb4ab5a07e94c852df8c50ac"
+    },
+    {
+      "stage": "image_resilience",
+      "path": "image_resilience.json",
+      "sha256": "1059f741664f1d506276d4f3429be7cb28a793a70766de72aa155992a32f74eb"
+    },
+    {
+      "stage": "image_serial_resilience",
+      "path": "image_serial_resilience.json",
+      "sha256": "4eafa2ab1b82654d496f35deae170f81474290cd0d0adc6946e89f88aa0e7b6a"
+    },
+    {
+      "path": "source-inputs-before.json",
+      "sha256": "02c043d670a694cf31fcff023fb78b2390227471d1cae93665d953fb9001b532"
+    },
+    {
+      "path": "source-inputs-after.json",
+      "sha256": "02c043d670a694cf31fcff023fb78b2390227471d1cae93665d953fb9001b532"
+    },
+    {
+      "path": "tool-versions.json",
+      "sha256": "fb353776fcb627064e6ae049b0f4af0fa62007cc594ca9b5063098dd9946e8b5"
+    },
+    {
+      "path": "provenance.json",
+      "sha256": "b4b87b0aa85515b7c0f7293339596e76e06d7c98531b3df86694efaba3b2f41e"
+    },
+    {
+      "path": "dependency-licenses.json",
+      "sha256": "80b9b96da5853dcb257e5857055265ada14b31ae0acf27ee6d8333803c6a6408"
+    },
+    {
+      "path": "host-preflight.json",
+      "sha256": "b85c739a9678191c5e55afde53a97a24a709457422491366c54302ff9404a8cb"
+    },
+    {
+      "path": "archive_restore.log",
+      "sha256": "2a31b73dbca767fbefe9e56f0fa029074e3fa2c85a6ff6f56ff2b6b679d09201"
+    },
+    {
+      "path": "image_resilience.log",
+      "sha256": "7c6d9f8694f7b68d6bf3f879751714733ca69bb963cb5c818f5e338576389953"
+    },
+    {
+      "path": "live_browsers.log",
+      "sha256": "f564d9e4e3c20db7ba9ebb4691755a2444d4d679fe15499948b038a83960ca27"
+    },
+    {
+      "path": "observability_rules.log",
+      "sha256": "6ea89889bde1dea45385eded927b4b88c7b45fc33c61084d5897a674a470d9ee"
+    },
+    {
+      "path": "prerequisites.log",
+      "sha256": "a69b884358d56dd64577ff580d3a52d7d6aa74bf8ea2566c7962597f06cc9061"
+    },
+    {
+      "path": "production_container.log",
+      "sha256": "87157f4e5408bb8cca801e6640bb098035aa0bc3dfdc79db4b08a35b76135e26"
+    },
+    {
+      "path": "release_builds.log",
+      "sha256": "e90a71282fcb65a3dabdadc5b49cd7ff1e302aacac01d402cf6fb41a197f1ec0"
+    },
+    {
+      "path": "software_checks.log",
+      "sha256": "2bb2055bd5936c2ef9c9ecc9540042a2a14013a3a7da21d0a32eeb964adaf747"
+    },
+    {
+      "path": "stable_source_inputs.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "standard_workload.log",
+      "sha256": "e8bf944a37f0af979289fc163b0530d413acdff0dbaccef0f218733cad85375c"
+    }
+  ],
+  "not_performed": [
+    "Deployed WorkOS sign-in and membership lifecycle",
+    "Deployed OMS/Freight qualification",
+    "Physical warehouse and scanner acceptance",
+    "Organization-hosted GitHub execution"
+  ],
+  "limits": [
+    "All inventory and native-service fixtures are synthetic",
+    "Performance results apply to the recorded profiles and host",
+    "Process/database restart is not managed database failover",
+    "Published logs are sanitized; private raw artifacts stay in the fresh evidence directory"
+  ]
+}

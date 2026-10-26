@@ -1,0 +1,210 @@
+{
+  "schema_version": 1,
+  "scope": "software_release_gate_verification",
+  "release": "unreleased (planned 0.4.0)",
+  "branch": "feature/planning-labels",
+  "release_commit": "7aa8eef",
+  "gated_inputs_commit": "179d8bf",
+  "gate_result": "passed",
+  "gate_release_revision_field": "unrecorded-working-tree",
+  "elapsed_seconds": 3149,
+  "commit_binding": {
+    "method": "Each gated software input's SHA-256 recomputed from `git show 7aa8eef:<path>`",
+    "inputs": 504,
+    "aggregate_sha256": "127ff25a0a170963fc8de05b54e2f5217553a6f4bfff9f2a90f7a09af41391ba",
+    "mismatches": 0,
+    "note": "The gate ran from a working tree without .git, so it recorded `unrecorded-working-tree`; this byte comparison binds those inputs to the commit. 7aa8eef differs from 179d8bf only in docs/architecture.md, which is not a gated input."
+  },
+  "profile": {
+    "products": 500,
+    "open_orders": 500,
+    "bins": 100,
+    "lots": 2,
+    "operators": 8,
+    "replicas": 2,
+    "sustained_seconds": 300,
+    "serial_units_per_sku_lot": 16,
+    "serial_labels": 16000
+  },
+  "results": {
+    "sustained_http": {
+      "committed_moves": 6082,
+      "moves_per_second": 20.255,
+      "unexpected_errors": 0,
+      "action_p95_ms": 537.935
+    },
+    "serial_sustained_http": {
+      "committed_moves": 3297,
+      "moves_per_second": 10.961,
+      "unexpected_errors": 0,
+      "action_p95_ms": 1020.621,
+      "serial_current_source_p95_ms": 49.304
+    },
+    "replica_reconciliations": "both replicas ok in both image runs (full append-only ledger and order-line allocations)",
+    "live_browsers": "22 passed"
+  },
+  "attempts": [
+    {
+      "attempt": 1,
+      "profile": "full",
+      "result": "failed",
+      "reason": "software_checks: terminal menu numbering test after adding 'Planned work'; fixed by placing the item last"
+    },
+    {
+      "attempt": 2,
+      "profile": "full",
+      "result": "failed",
+      "reason": "Host load or memory pressure from unrelated sessions"
+    },
+    {
+      "attempt": 3,
+      "profile": "full",
+      "result": "failed",
+      "reason": "Host load or memory pressure from unrelated sessions"
+    },
+    {
+      "attempt": 4,
+      "profile": "full",
+      "result": "failed",
+      "reason": "live_browsers: timeouts under host load"
+    },
+    {
+      "attempt": 5,
+      "source": "179d8bf",
+      "profile": "full",
+      "result": "failed",
+      "reason": "live_browsers: 4 of 22 failed (503 after SQL statement timeouts, click timeouts) as host load reached about 48",
+      "stages": [
+        {
+          "stage": "prerequisites",
+          "status": "passed"
+        },
+        {
+          "stage": "software_checks",
+          "status": "passed"
+        },
+        {
+          "stage": "observability_rules",
+          "status": "passed"
+        },
+        {
+          "stage": "release_builds",
+          "status": "passed"
+        },
+        {
+          "stage": "standard_workload",
+          "status": "passed"
+        },
+        {
+          "stage": "archive_restore",
+          "status": "passed"
+        },
+        {
+          "stage": "live_browsers",
+          "status": "failed"
+        }
+      ]
+    },
+    {
+      "attempt": 6,
+      "source": "179d8bf",
+      "profile": "full",
+      "result": "failed",
+      "reason": "image_resilience: one sustained write returned 503 at about 210 s as host load spiked to 51; live_browsers 22/22 passed",
+      "stages": [
+        {
+          "stage": "prerequisites",
+          "status": "passed"
+        },
+        {
+          "stage": "software_checks",
+          "status": "passed"
+        },
+        {
+          "stage": "observability_rules",
+          "status": "passed"
+        },
+        {
+          "stage": "release_builds",
+          "status": "passed"
+        },
+        {
+          "stage": "standard_workload",
+          "status": "passed"
+        },
+        {
+          "stage": "archive_restore",
+          "status": "passed"
+        },
+        {
+          "stage": "live_browsers",
+          "status": "passed"
+        },
+        {
+          "stage": "production_container",
+          "status": "passed"
+        },
+        {
+          "stage": "image_resilience",
+          "status": "failed"
+        }
+      ]
+    },
+    {
+      "attempt": 7,
+      "source": "179d8bf",
+      "profile": "full",
+      "result": "passed",
+      "reason": "This bundle",
+      "stages": [
+        {
+          "stage": "prerequisites",
+          "status": "passed"
+        },
+        {
+          "stage": "software_checks",
+          "status": "passed"
+        },
+        {
+          "stage": "observability_rules",
+          "status": "passed"
+        },
+        {
+          "stage": "release_builds",
+          "status": "passed"
+        },
+        {
+          "stage": "standard_workload",
+          "status": "passed"
+        },
+        {
+          "stage": "archive_restore",
+          "status": "passed"
+        },
+        {
+          "stage": "live_browsers",
+          "status": "passed"
+        },
+        {
+          "stage": "production_container",
+          "status": "passed"
+        },
+        {
+          "stage": "image_resilience",
+          "status": "passed"
+        },
+        {
+          "stage": "stable_source_inputs",
+          "status": "passed"
+        }
+      ]
+    }
+  ],
+  "attempt_note": "Raw directories for attempts 1-6 were lost when the host rebooted on 2026-10-26 and cleared /tmp; their outcomes are recorded from the session that ran them.",
+  "limits": [
+    "Synthetic fixtures on a shared, uncontrolled host; no facility SLO or capacity claim",
+    "Production deployment, deployed identity/native/MCP clients, scanner devices, label printers, carrier accounts, physical facility acceptance and managed failover remain separate",
+    "Hosted CI did not run (GitHub billing); PostgreSQL 16 runtime checks ran only inside the image stages",
+    "Not a release: no tag, package or image; repository remains private"
+  ]
+}
