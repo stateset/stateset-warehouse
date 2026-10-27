@@ -15,11 +15,12 @@
 - Dashboard panels for each: putaway (Receiving), batch picking (Fulfillment), cycle counts, label printing and saved rules (Inventory), and carrier labels on each package. Ten new MCP tools.
 - Integration tests run every planned task through the real command path against PostgreSQL. The restore rehearsal populates both new tables.
 
-## 0.3.1 — 2026-10-22
+## 0.3.1 — 2026-10-27
 
 **Highlights**
 
 - **Faster serial saves.** Each save now checks serial custody only for the products it touches, not every serial unit in the warehouse. The native serial latency profile now meets its 1,000ms p95 target (772ms, from 1,242ms), and throughput more than doubled (18.8 moves/s, from 8.3).
+- **Safer rollbacks.** Startup refuses a database migrated by a newer release, naming the migrations it doesn't know, before applying anything.
 - **Behavior change.** Custody damage confined to one product, which only a database guard bypass can create, now blocks saves for that product only, not the whole warehouse. Full reconciliation still reports it.
 
 **All changes**

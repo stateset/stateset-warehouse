@@ -1,0 +1,185 @@
+{
+  "schema_version": 1,
+  "scope": "software_release_gate_verification",
+  "release": "0.3.1",
+  "tag": "v0.3.1",
+  "release_commit": "5eadef063f74758d77d4b4c9284a13496b5b064c",
+  "gate_result": "passed",
+  "gate_release_revision_field": "5658cd785b5ba9f7cb09df2f5e0f507c0fbdd154",
+  "elapsed_seconds": 5263,
+  "commit_binding": {
+    "method": "Each gated software input's SHA-256 recomputed from `git show 5eadef0:<path>`",
+    "inputs": 473,
+    "aggregate_sha256": "712263c4e45b0bdf2808cf97f7d2bed8039e5e16bfa31b2ec73fc665531888b3",
+    "mismatches": 0,
+    "note": "The gate ran from a clean clone of release-0.3.1 at 5658cd7. The tag adds only release notes (README.md, CHANGELOG.md, docs/performance.md), which are not gated inputs; every gated input matches the tagged commit byte for byte."
+  },
+  "profile": {
+    "products": 500,
+    "open_orders": 500,
+    "bins": 100,
+    "lots": 2,
+    "operators": 8,
+    "replicas": 2,
+    "sustained_seconds": 300,
+    "serial_units_per_sku_lot": 16,
+    "serial_labels": 16000
+  },
+  "results": {
+    "image_resilience": {
+      "committed_moves": 6010,
+      "moves_per_second": 20.008,
+      "unexpected_errors": 0,
+      "action_p95_ms": 497.901
+    },
+    "image_serial_resilience": {
+      "committed_moves": 3865,
+      "moves_per_second": 12.866,
+      "unexpected_errors": 0,
+      "action_p95_ms": 902.139
+    }
+  },
+  "limits": [
+    "Synthetic fixtures on a shared, uncontrolled host; no facility SLO or capacity claim",
+    "Production deployment, deployed identity/native/MCP clients, scanner devices, physical facility acceptance and managed failover remain separate",
+    "Hosted CI did not run (GitHub billing); PostgreSQL 16 runtime checks ran only inside the image stages",
+    "Repository remains private; no packages or images are published"
+  ],
+  "attempts": [
+    {
+      "attempt": 1,
+      "date": "2026-10-22",
+      "source": "b43feb2",
+      "profile": "full",
+      "result": "failed",
+      "reason": "image_resilience failed under host memory pressure from other sessions; the directory was lost when a host reboot cleared /tmp"
+    },
+    {
+      "attempt": 2,
+      "date": "2026-10-27",
+      "directory": "gate-031-attempt2-failed-test-cleanup",
+      "source": "6b222dd",
+      "profile": "full",
+      "result": "failed",
+      "reason": "software_checks: the startup-check test dropped its database while a pool session was still open (SQLSTATE 55006); fixed in 5658cd7",
+      "stages": [
+        {
+          "stage": "prerequisites",
+          "status": "passed"
+        },
+        {
+          "stage": "software_checks",
+          "status": "failed"
+        },
+        {
+          "stage": "observability_rules",
+          "status": "not_run"
+        },
+        {
+          "stage": "release_builds",
+          "status": "not_run"
+        },
+        {
+          "stage": "standard_workload",
+          "status": "not_run"
+        },
+        {
+          "stage": "archive_restore",
+          "status": "not_run"
+        },
+        {
+          "stage": "live_browsers",
+          "status": "not_run"
+        },
+        {
+          "stage": "production_container",
+          "status": "not_run"
+        },
+        {
+          "stage": "image_resilience",
+          "status": "not_run"
+        },
+        {
+          "stage": "stable_source_inputs",
+          "status": "not_run"
+        }
+      ]
+    },
+    {
+      "attempt": 3,
+      "date": "2026-10-27",
+      "directory": "gate-031-attempt3-full",
+      "source": "5658cd7",
+      "profile": "full",
+      "result": "passed",
+      "reason": "This bundle",
+      "stages": [
+        {
+          "stage": "prerequisites",
+          "status": "passed"
+        },
+        {
+          "stage": "software_checks",
+          "status": "passed"
+        },
+        {
+          "stage": "observability_rules",
+          "status": "passed"
+        },
+        {
+          "stage": "release_builds",
+          "status": "passed"
+        },
+        {
+          "stage": "standard_workload",
+          "status": "passed"
+        },
+        {
+          "stage": "archive_restore",
+          "status": "passed"
+        },
+        {
+          "stage": "live_browsers",
+          "status": "passed"
+        },
+        {
+          "stage": "production_container",
+          "status": "passed"
+        },
+        {
+          "stage": "image_resilience",
+          "status": "passed"
+        },
+        {
+          "stage": "stable_source_inputs",
+          "status": "passed"
+        }
+      ]
+    }
+  ],
+  "source_audit": {
+    "report": "source-audit-report.json",
+    "result": "passed",
+    "audited_head": "5eadef063f74758d77d4b4c9284a13496b5b064c",
+    "refs": 8,
+    "commits": 70,
+    "current_files": 1445,
+    "unreviewed_findings": 0,
+    "scanner": "Gitleaks 8.30.1, archive SHA-256 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb",
+    "note": "Run on a full mirror of every branch and tag, including v0.3.1; the raw source export stays private."
+  },
+  "license_review": {
+    "report": "source-license-review.json",
+    "vendored_files_verified": 169,
+    "rust_packages": 311,
+    "browser_packages": 128,
+    "non_permissive": [
+      {
+        "package": "caniuse-lite",
+        "license": "CC-BY-4.0",
+        "note": "Development-only build data (dev: true in package-lock.json); absent from the built dashboard and its notices"
+      }
+    ],
+    "not_legal_approval": true
+  }
+}

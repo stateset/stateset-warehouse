@@ -1,0 +1,1897 @@
+{
+  "sha256": "712263c4e45b0bdf2808cf97f7d2bed8039e5e16bfa31b2ec73fc665531888b3",
+  "inputs": [
+    {
+      "path": ".dockerignore",
+      "sha256": "3a4fc58e15e3d6c6eef44e378d112ebfdf6b6840755f13d654a24bc5e5877c63"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/bug_report.yml",
+      "sha256": "c96b94a4b0a91ef3be9d777baccacfe88e2e4c0b569eaa9f31c1f32b86688e2f"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/feature_request.yml",
+      "sha256": "b37804e723f556f730760867c2f79d16a34d0dc63d1aee7ab5b9e243e00dba6e"
+    },
+    {
+      "path": ".github/workflows/check.yml",
+      "sha256": "f726ca65757719c3f74854a346e50de8e26474007195245f3faa3bcf76a3fe6d"
+    },
+    {
+      "path": ".nvmrc",
+      "sha256": "f14b4987904bcb5814e4459a057ed4d20f58a633152288a761214dcd28780b56"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "sha256": "52334b2ab3a9f23b6b469ebacbdd85b97997ff4ea6d692ed4ba991467e42abbc"
+    },
+    {
+      "path": "Cargo.lock",
+      "sha256": "c70a9d6ecbbe54e78c63cd9ee583dfe7e312d68157cc966b5e0e4917d31c28f2"
+    },
+    {
+      "path": "Cargo.toml",
+      "sha256": "d5fd88c49ebf1f6e7752fa4c20110c689372709277180481ec43ca9229401ba3"
+    },
+    {
+      "path": "Dockerfile",
+      "sha256": "baff2b9531a8f1f946fb5dd4b7022fcc27094cba11bd2b80cc2cd583940af610"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "bbbe090bf86b0ca4cc6a1d8510e5552e65d6f43bb98c00023c615eb7b046fed4"
+    },
+    {
+      "path": "LICENSE-APACHE",
+      "sha256": "a5717beca8467c307a0d24a41bcd0b83db7e30702eeccb167d001b62d23239a1"
+    },
+    {
+      "path": "LICENSE-MIT",
+      "sha256": "bba83f79a8d87b2dc0b66334f0c325d952d654d742331291959e3dcadf4a3dd6"
+    },
+    {
+      "path": "SECURITY.md",
+      "sha256": "06b3987347cf3e255b70578ecf2d169a3b00ed79524c79dd917db92f2875d1ff"
+    },
+    {
+      "path": "THIRD_PARTY_NOTICES.md",
+      "sha256": "9a19bdd3783df2e586c95779239b9046cd24b6d7a4c195b426f3a8e6adabacac"
+    },
+    {
+      "path": "cli/LICENSE",
+      "sha256": "bbbe090bf86b0ca4cc6a1d8510e5552e65d6f43bb98c00023c615eb7b046fed4"
+    },
+    {
+      "path": "cli/LICENSE-APACHE",
+      "sha256": "a5717beca8467c307a0d24a41bcd0b83db7e30702eeccb167d001b62d23239a1"
+    },
+    {
+      "path": "cli/LICENSE-MIT",
+      "sha256": "bba83f79a8d87b2dc0b66334f0c325d952d654d742331291959e3dcadf4a3dd6"
+    },
+    {
+      "path": "cli/README.md",
+      "sha256": "a027530f244e308f3fdf07ad3bf3151c824b9c4d0583c73453472e8a69f96d77"
+    },
+    {
+      "path": "cli/lib/CODE128-NOTICE.txt",
+      "sha256": "1656fe965bbf0fb7b7bcffd73ea94cadc4505396771719f00a1f7f1700fde55c"
+    },
+    {
+      "path": "cli/lib/board.mjs",
+      "sha256": "818b58541d9fd4477aa5b122a50ac4d91a93f7531ce6fc1f8cac047a8c96af27"
+    },
+    {
+      "path": "cli/lib/client.mjs",
+      "sha256": "09c38561cb65014b5629aa196d2dd91d312d2f074df121f5b8bb33dd6de76da2"
+    },
+    {
+      "path": "cli/lib/code128.mjs",
+      "sha256": "e9806fbf3c0c6b7959f02ca60432d6c622fcf5057a07133f679cf04aff86ebb6"
+    },
+    {
+      "path": "cli/lib/commands.mjs",
+      "sha256": "d8314988cacfeb9cbdcf727430685d6661b2f8ca9319d1485a70bc62b55717b7"
+    },
+    {
+      "path": "cli/lib/connection.mjs",
+      "sha256": "66bb05fd1b29edb71283ea08b885fbab39796a232b4f42398919a8940b2f41b4"
+    },
+    {
+      "path": "cli/lib/console.mjs",
+      "sha256": "03bba6f266855874a5bf180fd6d0f2c5d71461c707ade51b01da94a88b0b9914"
+    },
+    {
+      "path": "cli/lib/entry.mjs",
+      "sha256": "646e519d8c61ec5421614ae55c3dbf3305d742307596b7fe3da3d97fe9835687"
+    },
+    {
+      "path": "cli/lib/format.mjs",
+      "sha256": "9eab17a2524403feab3b5e15422c2faf597d5f251a757c25d92432b8df7ca78a"
+    },
+    {
+      "path": "cli/lib/fulfillment.mjs",
+      "sha256": "43fd737179685d6b0a9cd7a6a08459df312a856afce5d2eaaf9c6afffbac4430"
+    },
+    {
+      "path": "cli/lib/graphics.mjs",
+      "sha256": "c4e413de948006f275c4bc74e7339ccf941be7f034386d71f5a54ae2b3e7a579"
+    },
+    {
+      "path": "cli/lib/journal.mjs",
+      "sha256": "c6ba9e83810940cd19ba9675cc25c337cc326d928913dd95483a6a5961c11e7d"
+    },
+    {
+      "path": "cli/lib/keys.mjs",
+      "sha256": "f40b1f9996854035692946ad924340826cc5022d6d16303e44545c9927bbf59f"
+    },
+    {
+      "path": "cli/lib/pages.mjs",
+      "sha256": "55da3adbec29f6f13f2066df85555236e9ad2eb7a556ce879604a968cf22fda8"
+    },
+    {
+      "path": "cli/lib/queues.mjs",
+      "sha256": "1efc571b51204151192c68a81aaabfc82582c0219057cdad329f949e166ae8f7"
+    },
+    {
+      "path": "cli/lib/raster.mjs",
+      "sha256": "061c7d86d148b9249a79a705d3516572f82a0a63290b380d2805e590464002cc"
+    },
+    {
+      "path": "cli/lib/reviews.mjs",
+      "sha256": "e107a0063f11e59bda8005fb2e3b88f984507b50e912b816238ff594fdb26539"
+    },
+    {
+      "path": "cli/lib/scanning.mjs",
+      "sha256": "1c80efeb7496504b472eef459613db64a508ddab46476c7e2a0f94a77830549c"
+    },
+    {
+      "path": "cli/lib/summaries.mjs",
+      "sha256": "e3dc8fbc6d8194943818227d53a3f9eea4a653b1bbd4f6876fd19f2898a487a4"
+    },
+    {
+      "path": "cli/lib/terminal.mjs",
+      "sha256": "953b74cfdd20c4aa54ab6436b356cdce020c23564bb1e19e356b695edda8a6e5"
+    },
+    {
+      "path": "cli/lib/views.mjs",
+      "sha256": "72e166c7ec07915a6b1a11c56885e34042d8cb22ba82c51753901c269e5707ff"
+    },
+    {
+      "path": "cli/lib/visual.mjs",
+      "sha256": "6112f26c3ff6ae51159ba60e1d832b782cf6bd8981a76109649160d53f74dad5"
+    },
+    {
+      "path": "cli/lib/workflows.mjs",
+      "sha256": "4fb3e8f4889f4e3850fc71b28a7faf87188ae258d9a97d866563cbe835525d22"
+    },
+    {
+      "path": "cli/package.json",
+      "sha256": "4e56ab06fdb78890f309da73548827395adae5ad6e288fee2e33d2232a394691"
+    },
+    {
+      "path": "cli/test/acceptance.mjs",
+      "sha256": "537f2946f50163c2f31bcc064e6f8ab6c3f5a33a79e7424a9466340e198a9bc7"
+    },
+    {
+      "path": "cli/test/board.test.mjs",
+      "sha256": "9a2683576751b41e572d836054fb506c8ed8fd000f8a3196637404f6c9a21655"
+    },
+    {
+      "path": "cli/test/connection.test.mjs",
+      "sha256": "7d229f9923feccad6991487e4bc1bcf9e2043fed08da0928d734218603094bba"
+    },
+    {
+      "path": "cli/test/console-fixture.mjs",
+      "sha256": "42cce74591d414bc9ea23973909513be558ec163decb948254d353c5c9fd165f"
+    },
+    {
+      "path": "cli/test/console.test.mjs",
+      "sha256": "160135f5145e3b5a0be6aebff03e94d00ca2235f57bd279274177e8ed324bd8f"
+    },
+    {
+      "path": "cli/test/fulfillment.test.mjs",
+      "sha256": "1a78968c6b3cd19174af470b36a2658e9807505a1c0c2c4bf84a7e38a15b14c5"
+    },
+    {
+      "path": "cli/test/graphics.test.mjs",
+      "sha256": "6c14017f899e9c6d36edcd68b36717757be6bf6a245157331fbcde05a07d41a1"
+    },
+    {
+      "path": "cli/test/keys.test.mjs",
+      "sha256": "d985de25b6e7d045fdc1c18c4071c90aa207913a1ed9b2a9fb5008cbb6e1e75c"
+    },
+    {
+      "path": "cli/test/live.test.mjs",
+      "sha256": "6a34c703e04e9dedfa58b5cf6351cc6f5941a64612024569176ccfb35054a426"
+    },
+    {
+      "path": "cli/test/operations.test.mjs",
+      "sha256": "84d9844ef1b4d58729aab8fda23ce926100787462dc50a2d7e8601782eba2bd7"
+    },
+    {
+      "path": "cli/test/pages.test.mjs",
+      "sha256": "2a6fe26f6187a5eb4e42ad416c7e186f4d85b485923df9bd2c5a2b8eed85f850"
+    },
+    {
+      "path": "cli/test/queues.test.mjs",
+      "sha256": "e9e53483309763a312dc94ef271502b3163516e53c63bf21fe8282f42941fa3a"
+    },
+    {
+      "path": "cli/test/recovery.test.mjs",
+      "sha256": "165a51021e049578612f83bec690ff0e88b51a9b1f8b988c40aeeaf401c3e291"
+    },
+    {
+      "path": "cli/test/resize.test.mjs",
+      "sha256": "99c35c8eb5a1527cd760fed94fac6da6d2ec01da7befc45e9c5f7a2b8d514453"
+    },
+    {
+      "path": "cli/test/scanning.test.mjs",
+      "sha256": "2d77dba396ed069ad40cc417f4424b5e61db052ab2401658c2529c469444c1e9"
+    },
+    {
+      "path": "cli/test/views.test.mjs",
+      "sha256": "5ce463b489d0e64a2712b4cd5a02130205c09cf493eb23ad7baa10037e7849c6"
+    },
+    {
+      "path": "cli/test/visual.test.mjs",
+      "sha256": "26949b3981cc85a53ba006a58f8a3a78efe6424efc728738352b98398e126600"
+    },
+    {
+      "path": "cli/test/workflows.test.mjs",
+      "sha256": "65a7316ff5233ce19ae52e911c6afb6cc6ce9bb1219bff0c509bfe267f031ece"
+    },
+    {
+      "path": "cli/warehouse-tui.mjs",
+      "sha256": "6c11fc1da7abd792e23ee8395b5f8eea59d685cd7995d5918bbaaea8abdc2bda"
+    },
+    {
+      "path": "dashboard/index.html",
+      "sha256": "66cd221529193872707eb84c6a9aecc4a01b451675d8682d49f667b02bf4bfa1"
+    },
+    {
+      "path": "dashboard/package-lock.json",
+      "sha256": "39252a0722fdcc467a9f98c92d00711c8130160ef848f96ec9a28daf93a036aa"
+    },
+    {
+      "path": "dashboard/package.json",
+      "sha256": "df7cec0c08c66b7aa57377fea1e07daa9f5538252fd864f4d8166dccab4fe186"
+    },
+    {
+      "path": "dashboard/playwright.config.ts",
+      "sha256": "3c7cd9b5e81ab913d9df08c7a04e27f80170af8a1220f264ea4a26379ffa62fa"
+    },
+    {
+      "path": "dashboard/public/THIRD_PARTY_NOTICES.txt",
+      "sha256": "ed196d316131632fe51e7fc001974206875779661354689307c90a3d6e9f5048"
+    },
+    {
+      "path": "dashboard/src/App.tsx",
+      "sha256": "4a5b1cc9b60d316620dc53aa864e6b919354173ef7b459f56b3551a4e32f190f"
+    },
+    {
+      "path": "dashboard/src/Auth.tsx",
+      "sha256": "a87ff13939bbb0d516714c1e7662ef6e57c298f74695ad139b70b0f27a2157b4"
+    },
+    {
+      "path": "dashboard/src/CommandDialog.tsx",
+      "sha256": "90acda74c912389d1f5c5602cf0bc78a7bcde28212496577e78f8475c480d316"
+    },
+    {
+      "path": "dashboard/src/LotControlsPanel.tsx",
+      "sha256": "465e3ed3c6de17f5e815d58bc4f507b2362cbc13eaaa7928b986dd3624e480f0"
+    },
+    {
+      "path": "dashboard/src/LotTracePanel.tsx",
+      "sha256": "d6674b717a5700f15ebcd7ea14924f84ee634c33d6107ceec7839351664aecb8"
+    },
+    {
+      "path": "dashboard/src/NativePanel.tsx",
+      "sha256": "df60b151d1f1ccc861cd63b51f6a06cc84d55f15d5f4599257dde0e7ca4c9eef"
+    },
+    {
+      "path": "dashboard/src/OperationsPanel.css",
+      "sha256": "b568799187d79fefd54a489fbb09d5cff239ba847a365bcc37add67819651834"
+    },
+    {
+      "path": "dashboard/src/OperationsPanel.tsx",
+      "sha256": "ee36111b0279be1210f54049a3ad59fac051f1a67aee9f75694e2eb9e1742233"
+    },
+    {
+      "path": "dashboard/src/ReplenishmentPanel.tsx",
+      "sha256": "87cca79be1216476c092c44abdb986a176b1c3969415dcae7b0188d1d69db593"
+    },
+    {
+      "path": "dashboard/src/ReturnForm.tsx",
+      "sha256": "8de55a16521a8c15fa3a43cf78739f93c237b0c4227e6ed484e14c673e89952e"
+    },
+    {
+      "path": "dashboard/src/ScannerPanel.css",
+      "sha256": "bf1e3abda90a79c96db19058b1532dca0ac2abb6fce68af5573646991c2ebe74"
+    },
+    {
+      "path": "dashboard/src/ScannerPanel.tsx",
+      "sha256": "64f6bb61b9a8c07d7b3ca035fb449717f7af1f42a3a1bf5d43ef3e0e1871e58f"
+    },
+    {
+      "path": "dashboard/src/SerialObservationForm.tsx",
+      "sha256": "6c6e36c04c09ee7d38c03ca90fdfec9d9213bf8c899610b60760eb408d540877"
+    },
+    {
+      "path": "dashboard/src/SerialTracePanel.tsx",
+      "sha256": "09b719f2cc47e28077c86232788715d0aaa3be454adeaefea17fea49fcc8b833"
+    },
+    {
+      "path": "dashboard/src/Serials.css",
+      "sha256": "9cbf478d6f73924359c586383b2615a7108eac4707de4814d10dc66d2368bd96"
+    },
+    {
+      "path": "dashboard/src/ShipmentsPanel.tsx",
+      "sha256": "f985a4c1932ef0792ceabe6d499ce9a09d0e2fca15fed2160b8ffde51cf67eff"
+    },
+    {
+      "path": "dashboard/src/TransferLossPanel.tsx",
+      "sha256": "007ef6a96a46d927e52e6edd35f881f940007184a693c8a6088fe045a6f08eef"
+    },
+    {
+      "path": "dashboard/src/TransfersPanel.tsx",
+      "sha256": "c6d3dc72696cb77573253e1f08b5f0b68820a5c3a5a626baa7454feee542144e"
+    },
+    {
+      "path": "dashboard/src/UnitPacksPanel.tsx",
+      "sha256": "4c0d5dea0b52301f0e25351b9ebb7e27d7200aa5d1952377d4259f69ca32eba5"
+    },
+    {
+      "path": "dashboard/src/UnitQuantityInput.tsx",
+      "sha256": "cf7a1fd4ef5d853bcd5e9ab259634ea08f452f40dfb28b05b28291bfe067038e"
+    },
+    {
+      "path": "dashboard/src/WarehousePicker.css",
+      "sha256": "23119e51a3efc5422654ecb0f96dd2ef3fdd3a63ecf9ef5461380125eee55403"
+    },
+    {
+      "path": "dashboard/src/WarehousePicker.tsx",
+      "sha256": "4aeab67af86e2b9730bc9e8054cd53366eb6a5cb1ee5980f0ad23fad68ae8b1b"
+    },
+    {
+      "path": "dashboard/src/WarehouseUi.tsx",
+      "sha256": "d162cab4e58dc805877a36cd1a58f1a7e4463beac3d04771e70e4afb37f92324"
+    },
+    {
+      "path": "dashboard/src/Workflows.css",
+      "sha256": "113a918db29c36ebb455b84f40022861eb4e8bdbec34b7fbfc2c951786308853"
+    },
+    {
+      "path": "dashboard/src/commandRecovery.ts",
+      "sha256": "c1cd645e2e2a555821e5fd466015fc763125b2287d0ffff6df99c33a94a530ce"
+    },
+    {
+      "path": "dashboard/src/concurrency.ts",
+      "sha256": "d56b0ce956ed43569aaf83c7de31d1502119b3b6684ad2e9fc7b395e1b7600a7"
+    },
+    {
+      "path": "dashboard/src/lotAvailability.ts",
+      "sha256": "cc6781d58da863582673ff26a96804135017164fe826fc49f10ccbca58fd2c12"
+    },
+    {
+      "path": "dashboard/src/main.tsx",
+      "sha256": "c417538b28b88c6038a823c88e281a5dcd7ffcaa20ba2bbe8f9a6fb796160f69"
+    },
+    {
+      "path": "dashboard/src/serialInputs.ts",
+      "sha256": "c12538a84f9ded9fbea006238c15385fef19155fd95ecee0fdcef353c21a735b"
+    },
+    {
+      "path": "dashboard/src/styles.css",
+      "sha256": "01ae71c18c65d3adb8961deac3c4eca7c8f9a16ae452f549a25af13be7d95ce3"
+    },
+    {
+      "path": "dashboard/src/types.ts",
+      "sha256": "432be7f64e1318a1ce586182d3cac3d936dc59a16c3abf8c6105fb8604aea31a"
+    },
+    {
+      "path": "dashboard/src/unitInputs.ts",
+      "sha256": "9ccdd1d2b9c99cb257265deb35e43847b7e3f5013ae934e4795186419ebaca88"
+    },
+    {
+      "path": "dashboard/tests/auth.spec.ts",
+      "sha256": "7d2738311d781db2805bf9da0c370bf04cf15f507e13116faaa4ca6fd8cdda10"
+    },
+    {
+      "path": "dashboard/tests/cancellation-live.spec.ts",
+      "sha256": "8408e2f629249d026eecf4e50a34db32b3efbb36248c765aacba88a3f604eae7"
+    },
+    {
+      "path": "dashboard/tests/facilities-live.spec.ts",
+      "sha256": "1d9f9c86abf935968ab0495f44ccbc0604a676f7ec11f15fee08c4e52df4c33c"
+    },
+    {
+      "path": "dashboard/tests/facilities.spec.ts",
+      "sha256": "09a7ca47803dd373a302f74c2eb070226f5b43a4f46a03f112a0fc58cd6b5c05"
+    },
+    {
+      "path": "dashboard/tests/live.spec.ts",
+      "sha256": "ce553d2d31d9635197a09c4b34027b8463e0df40ad5459436b87251eb2f8f2ab"
+    },
+    {
+      "path": "dashboard/tests/lot-controls-live.spec.ts",
+      "sha256": "4a077fa5b750418347483a805cb60a5275b1ff847aebd7c3c36698081341443d"
+    },
+    {
+      "path": "dashboard/tests/lot-controls.spec.ts",
+      "sha256": "9bff68f971616b9d5cb2788329263322596730098da22a703f29feaa4d61b607"
+    },
+    {
+      "path": "dashboard/tests/lot-trace-live.spec.ts",
+      "sha256": "ddcdb5cd566f8a975b7dd106b664ae4025d3e0f7ac3b556afcbe2efa1d2ea17f"
+    },
+    {
+      "path": "dashboard/tests/lot-trace.spec.ts",
+      "sha256": "9f4a782a13bcf95b826aaba9f0e48481015eaf21dc55ab6febc27382e3e3818b"
+    },
+    {
+      "path": "dashboard/tests/native.spec.ts",
+      "sha256": "10232cbb35e5d9152047b8aebd59e5ed6a6447f64eb649a530bf00d876dda3e9"
+    },
+    {
+      "path": "dashboard/tests/offline.spec.ts",
+      "sha256": "f91256115a00a7a9983d604bcd9e96f47203f81fd8153f7ee0cc699b436f69e0"
+    },
+    {
+      "path": "dashboard/tests/operations-live.spec.ts",
+      "sha256": "b5c2cfd78dc0496b7661c1765756449a18264e21f3dc80db83c1f6efdc68c802"
+    },
+    {
+      "path": "dashboard/tests/operations.spec.ts",
+      "sha256": "991f59f6cda8f3768f1ceadd887ae58f53935d7c3ca87f5e83a021d5d1986b76"
+    },
+    {
+      "path": "dashboard/tests/scanner-live.spec.ts",
+      "sha256": "ffd03bfd454ec988b01d06f922dbb3b31d665ab2b47c269dde44d7b4fad68b6b"
+    },
+    {
+      "path": "dashboard/tests/scanner.spec.ts",
+      "sha256": "d3bc8581645c4692c59f4e743f64e51376880cf5faa13ee8c258c2cfa2712a0f"
+    },
+    {
+      "path": "dashboard/tests/serial-transfers-live.spec.ts",
+      "sha256": "f38710035cc32f08897ab77ae82ad2c57588a789bbe2699b3d2e38c3dde647d1"
+    },
+    {
+      "path": "dashboard/tests/serial-workflows-live.spec.ts",
+      "sha256": "fda835b23f88ad6ef3cf941911b06b89ef7623905ca321adad9aeb4546964c9a"
+    },
+    {
+      "path": "dashboard/tests/serials-live.spec.ts",
+      "sha256": "5d557656ed3a41b081b002c7f3e170bc69b76958fe197c8b6020272086f8515d"
+    },
+    {
+      "path": "dashboard/tests/serials.spec.ts",
+      "sha256": "008479497377c79e2e9ca119e4861cc4b1ce24652549f35f8d576e36ed9848b6"
+    },
+    {
+      "path": "dashboard/tests/split-live.spec.ts",
+      "sha256": "2ba4a8d958a2de9a3934754c6c59feb7e5446ea006e0b8b4ddf569186300faac"
+    },
+    {
+      "path": "dashboard/tests/support/serialLive.ts",
+      "sha256": "4a854a7a4caea87f1b31d77ac7c42ba7e28c86b02f7db9b20bdca9da12ef3853"
+    },
+    {
+      "path": "dashboard/tests/transfer-loss-live.spec.ts",
+      "sha256": "e1070165b5c7da706f9283d2fee3f13be91d6a0a6a6863a190aff60efc66f223"
+    },
+    {
+      "path": "dashboard/tests/transfer-loss.spec.ts",
+      "sha256": "3f22c38ac9d122ca63d51a329fcda5d176cf3a0d78b5ed80ebcad75dd73eb391"
+    },
+    {
+      "path": "dashboard/tests/transfers-live.spec.ts",
+      "sha256": "886d69bfed64dd74bccd30b3d3813f05b04775d68c00e794432d595c71a25186"
+    },
+    {
+      "path": "dashboard/tests/units-live.spec.ts",
+      "sha256": "bfeb2d8d434c9d876a1f4fc9badfc80767484500962ddd5af1fdbf8029573101"
+    },
+    {
+      "path": "dashboard/tests/units.spec.ts",
+      "sha256": "e8ccc01bb0e455dd490b12e150583734687c1c1da44a405a50f64d9c98408e94"
+    },
+    {
+      "path": "dashboard/tsconfig.json",
+      "sha256": "c1317d4798e92373f96d90f9dc75c13d2b2bdf0c610cc3f88af2ad29906e1e51"
+    },
+    {
+      "path": "dashboard/vite.config.ts",
+      "sha256": "c5581d616f3e732443a54dc188e2af5d07905f2388c0d2b10c92e8d5f24e2401"
+    },
+    {
+      "path": "deploy/monitoring/alerts.test.yml",
+      "sha256": "27c6301b966f8cf55446d2f72a6ff862ccb29bc342fe9a7f9ad68aef72d26f9c"
+    },
+    {
+      "path": "deploy/monitoring/alerts.yml",
+      "sha256": "b54143aea85ba48972539cae63268fb592081132cae2440594b752c5bea58d82"
+    },
+    {
+      "path": "deploy/monitoring/check.sh",
+      "sha256": "0eb1248a7e06210b630d5a9d1122d7fd99f4c625977465fedd6c718fb3da4041"
+    },
+    {
+      "path": "docker-compose.yml",
+      "sha256": "f1349f94ec577f5fa3863c3b0cf046fd17f7586d1bc299bf68968e8ceb42fa86"
+    },
+    {
+      "path": "examples/domain_driver.rs",
+      "sha256": "01269fe5df45a60e3754fa665204cfc48d1f75ae8da8a66cf4e805e697e2353b"
+    },
+    {
+      "path": "examples/request_fingerprint.rs",
+      "sha256": "67a18aad2416c3b423c9271124710e12137f932c08259af2e8064cc39f1be398"
+    },
+    {
+      "path": "examples/restore_probe/histories.rs",
+      "sha256": "18f0164e6b20f6bf2f7d9627fc0dd7770486a4356594f98e481ec9666ff90913"
+    },
+    {
+      "path": "examples/restore_probe/serials.rs",
+      "sha256": "33d7c21770fa746a0dabea96f2de1d97f3493aa613896f1f8808b512f749a54d"
+    },
+    {
+      "path": "examples/restore_probe.rs",
+      "sha256": "94832eb67471e62a5436d8cfda54cfdc8cb9811a1d4abd18ad7bb89e736bfabf"
+    },
+    {
+      "path": "examples/serial_profile.rs",
+      "sha256": "c28d74baa94893570677f6d0e93e3b1d3853ad4af755945e736e65df0ea3341d"
+    },
+    {
+      "path": "examples/workload.rs",
+      "sha256": "6387ea5b292b18296d492dc8f0c58949979639d7fbccc3477bfb73120dab2084"
+    },
+    {
+      "path": "integrations/stateset-sync-server/README.md",
+      "sha256": "70d74795d3d2a18c614dd293728eff62de541e5afb14571ee8cf112ea1fb5ab1"
+    },
+    {
+      "path": "integrations/stateset-sync-server/assertions.sql",
+      "sha256": "88aba36e29bcbf5b034efd02c4d073061d4f31497898fdabc23d07c61357a615"
+    },
+    {
+      "path": "integrations/stateset-sync-server/check-upstream.py",
+      "sha256": "bd95cae6b964ee86c0959e44d5bb8d34e4a0a4d44b565953c918250f3f84f13a"
+    },
+    {
+      "path": "integrations/stateset-sync-server/check.py",
+      "sha256": "7076230d852c1bbbd679ca93e801ca68af3c70d10a8f0095d9ad71705e5d57cb"
+    },
+    {
+      "path": "integrations/stateset-sync-server/migrations/20261017000000_warehouse_fulfillment_receipts.sql",
+      "sha256": "9487a1975a80f2e69705b177f12f43c24eb4cd07547c0ebf3f76f930f2b0dd66"
+    },
+    {
+      "path": "integrations/stateset-sync-server/proof.sql",
+      "sha256": "a67aadbb3462cfcfae5dc6219946e8e907de8659e1a6cbf76e1875b3c60a58bf"
+    },
+    {
+      "path": "integrations/stateset-sync-server/refresh-patch.py",
+      "sha256": "f6d60390a522ff9cfc688e4940570500ed1f918a9af4341b1ffc828d5bc00cee"
+    },
+    {
+      "path": "integrations/stateset-sync-server/src/warehouse_fulfillment.rs",
+      "sha256": "f9351bb526aa07120bcc5aeda14c72cb71f2984c55cdb4a5b12d207120cc440c"
+    },
+    {
+      "path": "integrations/stateset-sync-server/upstream.patch",
+      "sha256": "9db777c45307ded36fef316d860708fee43b03afe7655aa2cdf04896ce94d359"
+    },
+    {
+      "path": "migrations/001_initial.sql",
+      "sha256": "8e5c3fa5f0065b63076c33b8bd3c337b8490d4b7a88f3e774ec17e2290e1f4d4"
+    },
+    {
+      "path": "migrations/002_relational_execution.sql",
+      "sha256": "660cd0fdbc7205644c7c3d7ac3da43cbaf1c6d9f80c4d0f2ea4d0c0986e6ff90"
+    },
+    {
+      "path": "migrations/003_native_operations.sql",
+      "sha256": "f9a5cfa4a1e4f7830613febe6b37f11a8485beef46d6b96791c78435fe784108"
+    },
+    {
+      "path": "migrations/004_native_source_ownership.sql",
+      "sha256": "366979c9630c4c62cb7d71beb5c89cd917764558b4e05267c4eb4aac486a6cb9"
+    },
+    {
+      "path": "migrations/005_conditional_oms_fulfillment.sql",
+      "sha256": "b8892cbaa4a1b26c6e1732616ec30503d3698f44e363240386078398e29e9a41"
+    },
+    {
+      "path": "migrations/006_oms_rejections.sql",
+      "sha256": "567e061943a1602ff25b5d5c988be810808b8c6e1638885ee6ef9b71a9ba4ed4"
+    },
+    {
+      "path": "migrations/007_operations_indexes.sql",
+      "sha256": "b0b9b422f570ed77ca1252df42c96b29544849621ed748cadd1f068b708576b5"
+    },
+    {
+      "path": "migrations/008_delivery_recipient.sql",
+      "sha256": "050f40c80b9e73a3edc8a19545ab08cfe41051616b84d9445dfdea9a30de9d19"
+    },
+    {
+      "path": "migrations/009_resource_versions.sql",
+      "sha256": "b702a003a1d74210fdfc06cef1fbfb6e737146a25314642094a2f8383dc2e209"
+    },
+    {
+      "path": "migrations/010_customer_returns.sql",
+      "sha256": "dfafb0547d0af2ba11f86dfa31f7facebe89adf582d6b215d02b734e1413fb71"
+    },
+    {
+      "path": "migrations/011_immutable_command_receipts.sql",
+      "sha256": "0a7c69928f38527f542a55e795de9b62c65f4907d7d05cba2d47f7eeebdf8a73"
+    },
+    {
+      "path": "migrations/012_receipt_cancellation.sql",
+      "sha256": "5a36bc5c39f49fe9fdf9e6cd292d71ed50c85daffea2777fda890d9b2d68a676"
+    },
+    {
+      "path": "migrations/013_shipment_evidence.sql",
+      "sha256": "e867e6b35c3cbcb10ea5f4a952c916f10e7b5d16b53c80aad656a9fba286334e"
+    },
+    {
+      "path": "migrations/014_facility_transfers.sql",
+      "sha256": "b98005fca14a6aa180c09e77d998105662b3f11147a3284d6a145147de3182b1"
+    },
+    {
+      "path": "migrations/015_split_fulfillment.sql",
+      "sha256": "dd2e0b0625cec5d9cd1a6209e094f924fc4cb503a0b82ed3fcc2253109fe393a"
+    },
+    {
+      "path": "migrations/016_order_remainder_cancellation.sql",
+      "sha256": "c79180323838e6353c3c32f77564aa3ae37eae6b523bf405e12311496f0f3f43"
+    },
+    {
+      "path": "migrations/017_lot_controls.sql",
+      "sha256": "cbca465647b18f84e9d74deeabbe011a7572957b90c4046de9f2f0e9738360bf"
+    },
+    {
+      "path": "migrations/018_lot_trace.sql",
+      "sha256": "c4d000be8cc2bae0097c629f98556177b97225cc6ba753cb29731e5464a85d4c"
+    },
+    {
+      "path": "migrations/019_transfer_loss.sql",
+      "sha256": "30822c5f49905f192d4eff2de3b90e885ed800d26d1bc97e6b383b1fef47eae1"
+    },
+    {
+      "path": "migrations/020_pack_units.sql",
+      "sha256": "7ba3eefed9e4386fc2f11002540bd703d0e6c584780ca3a378e308831c4bccf1"
+    },
+    {
+      "path": "migrations/021_serial_tracking.sql",
+      "sha256": "856cbcf67490934123676ac6de66a972a39256616cd74d8048368feacdb1acce"
+    },
+    {
+      "path": "migrations/022_serial_restore_search_path.sql",
+      "sha256": "ae5e84f4a08cbb75a46ea9a0602e35b03815861661fe7b60f9eff11514b677cc"
+    },
+    {
+      "path": "migrations/023_serial_target_resolution.sql",
+      "sha256": "8778a75182885af6ac976f44ee2bcbd3813837e6c5f8170842e53c31fcc9687d"
+    },
+    {
+      "path": "migrations/024_serial_event_payload_reuse.sql",
+      "sha256": "5c7dc4b76a21c487a0440297b42001fb39a65af1537813e880908e5a8b9fb491"
+    },
+    {
+      "path": "migrations/025_serial_resolved_read_sources.sql",
+      "sha256": "d255984a2eb4e7a1e7e9212c1406b30e40dcd24944f6bb0e35fa7c58027fdf32"
+    },
+    {
+      "path": "migrations/026_serial_event_batch_index.sql",
+      "sha256": "98c2796069821a4ef064e5968759686109833067f510ef066eeb0d9e7185ea03"
+    },
+    {
+      "path": "migrations/027_serial_reference_classes.sql",
+      "sha256": "e8515cdbebc8ceece05e45d6882d20b1031455347473676d588a4437a5ba144f"
+    },
+    {
+      "path": "migrations/028_serial_read_source.sql",
+      "sha256": "04aac8ae5697cf913bc3d2bbf774327e3bf15c146d3e64f2d700c2c1362ec928"
+    },
+    {
+      "path": "migrations/029_serial_scope_source_sets.sql",
+      "sha256": "3b4c3af8193077bac797c2dafdf1d0eb1d4c690ac94c20e200a70fa2fa21cedd"
+    },
+    {
+      "path": "migrations/030_serial_scope_custody_counts.sql",
+      "sha256": "75484358617dd3b0db45979871b8f6e980e5c45e5022d38f2b8ffe565b222d16"
+    },
+    {
+      "path": "migrations/031_serial_ascii_validation.sql",
+      "sha256": "eda4e8e05c64042b72945ce13c587add68a8f6323d9a8e57a1649fb0f6aaadf3"
+    },
+    {
+      "path": "migrations/032_serial_deferred_check_sets.sql",
+      "sha256": "c1159facd8c9727ab9d2cb9e00fa54ea83cd2d8401771d302ba30a975a6d4464"
+    },
+    {
+      "path": "migrations/033_serial_target_dispatch.sql",
+      "sha256": "633eaba6e2a566e7ada516baf16e1dcdbea775b6030495c15cb530df40570ed0"
+    },
+    {
+      "path": "migrations/034_serial_command_target_sets.sql",
+      "sha256": "69086efaff103a36fcdd1dbbf5adf4df4f7cb932acae1359fc05c21781d846b5"
+    },
+    {
+      "path": "migrations/035_serial_sku_scope_checks.sql",
+      "sha256": "e7eb6e56b71a44752bf6e0a937b23ddd00b6cd33bb2cb11439efa4be920f0e90"
+    },
+    {
+      "path": "scripts/check-sql.py",
+      "sha256": "dd6bb6c9107562bc6ea38e0a025e0bd1a8f668c37b358a5d5c9f85702468b2e8"
+    },
+    {
+      "path": "scripts/check.sh",
+      "sha256": "291f5cc5b9f087e005bf5532802d767bba08c969b9e3477f19dc7d8b8248f918"
+    },
+    {
+      "path": "scripts/container-smoke.sh",
+      "sha256": "95ba3b7e7096344fe32c672589077e70bb75dbecf8942ee2cbf02b0eac1ff88b"
+    },
+    {
+      "path": "scripts/crash_journal.py",
+      "sha256": "ff05defa1cb7ddccd72568b6f851afaac5af1be9a64a416cc8a6f3d8d522cf74"
+    },
+    {
+      "path": "scripts/dashboard_notices.py",
+      "sha256": "5fb4f88e74e0788155e6aa383f8d51660a31cd4c6e269abeff309544364b715b"
+    },
+    {
+      "path": "scripts/dev.sh",
+      "sha256": "23102cd9ca151f798ba8049287a4833fe34860386d316ea08cf09858f65aebbc"
+    },
+    {
+      "path": "scripts/facility-template.py",
+      "sha256": "120c81a38d36f1dcacd9c0cb4b6a61bbde78a4fefc382ab101660d4b83cf11be"
+    },
+    {
+      "path": "scripts/facility_evidence.py",
+      "sha256": "b56fe566edf85419d010b47a2ede0219cdd0f8f314cc5f49f8a8301160278495"
+    },
+    {
+      "path": "scripts/fault-proof.sql",
+      "sha256": "917e1e1d46fa679e76848626d827535b46cf7fbcaec92fe72c1909e3dcb93014"
+    },
+    {
+      "path": "scripts/live-browser-checks.sh",
+      "sha256": "9aaf6158c8eca5b300840f488b8fb0fc7ceb84363517e0a7d87e644873138a71"
+    },
+    {
+      "path": "scripts/local-postgres.sh",
+      "sha256": "81443de353893e27b443b217a5d578852f4bd648d0e04beada55856c2af03f2e"
+    },
+    {
+      "path": "scripts/open_source_preflight.py",
+      "sha256": "4fccbdc4db74d5b1bd7102287507c4f7ac88e43cf8262fda0b622cbfad466649"
+    },
+    {
+      "path": "scripts/public_source_audit.py",
+      "sha256": "fc67870627726dcf061dcf82e6d35d87fb6f1f87718f86c3b737078ac3e7352b"
+    },
+    {
+      "path": "scripts/public_source_reviews.json",
+      "sha256": "c859416e8933de218aa7398ef63048615d272b59f4e79454e0aa77587d7e986f"
+    },
+    {
+      "path": "scripts/qualification_host.py",
+      "sha256": "cf52076c6a0952c4671232921c262d8852f0b5e1203720c64a2555f1f597101e"
+    },
+    {
+      "path": "scripts/qualification_resources.sh",
+      "sha256": "61e454b5d465660ae5751411681eeafd9c9da8357d2657c1a396ee98f1996e0f"
+    },
+    {
+      "path": "scripts/qualify-native.py",
+      "sha256": "61ec5d69af51da08b373d7e322698c08a9700cbcfba8613ed91c837ec5beb5cf"
+    },
+    {
+      "path": "scripts/qualify-release.sh",
+      "sha256": "13b12547cc33ea60499ee38ed23026a10b800803c4ece33aabd3f4e04fc6381e"
+    },
+    {
+      "path": "scripts/relational-proof.sql",
+      "sha256": "5dfec21634977d9511dff7264a12b109f40853eb0f6eb2c674800dc25a27858e"
+    },
+    {
+      "path": "scripts/resilience-rehearsal.sh",
+      "sha256": "12e0ba244e89e18f78fd0f33f3d287ea8eb6737ddc25e6ab376fa5733ca6e831"
+    },
+    {
+      "path": "scripts/resilience_probe.py",
+      "sha256": "99c1de2af3685a85f4265124b2dc1e8f5d6aff896d50fc70e312bb9970fa3da2"
+    },
+    {
+      "path": "scripts/restore-rehearsal.sh",
+      "sha256": "7ef3844d7d7815f8425c5565cdb64dfc01bd1bbf23619a74879a975b0b0224d9"
+    },
+    {
+      "path": "scripts/serial-traffic-native.sh",
+      "sha256": "ff156a9fd8e7b20f349a53d1ff61a0290a88358914bdd71bb9bf807003ff8458"
+    },
+    {
+      "path": "scripts/serial_crash_barrier.py",
+      "sha256": "9ecae86ec0f80c9a930ccecff02a78e3b4ee2dc4f774db27057305d8cbc305a1"
+    },
+    {
+      "path": "scripts/serial_traffic.py",
+      "sha256": "3677db179f2f578acb67019ca14fd7a906a9aa3a103722610171677c251f2935"
+    },
+    {
+      "path": "scripts/serial_traffic_proof.py",
+      "sha256": "fbf40276356a5992fd3c15a78d8ec81bc8b1913b612b1ff42061784583b1485e"
+    },
+    {
+      "path": "scripts/test_check_sql.py",
+      "sha256": "5c4756c032338b56b000982d14071275e4b5eb5705b54ed1063db2181983b557"
+    },
+    {
+      "path": "scripts/test_crash_journal.py",
+      "sha256": "bcc3bd04b53f07828f4f0c5979cd99ee6cae266fdbea9f5ee7abce338e06f22d"
+    },
+    {
+      "path": "scripts/test_dashboard_notices.py",
+      "sha256": "367bc8bffe201df3a6799f5f11d28e315557f6c04749506f96a2a4d352e201ff"
+    },
+    {
+      "path": "scripts/test_facility_evidence.py",
+      "sha256": "6c04fe3ce72265884624529e86b73f2a61299bffc5c148061b8b85acdb3b7c40"
+    },
+    {
+      "path": "scripts/test_icommerce_upstream.py",
+      "sha256": "e00a06707ca935ec537e628b6062a1f30f4ebedd35d69b130f9177665cbf87fc"
+    },
+    {
+      "path": "scripts/test_live_browser_checks.py",
+      "sha256": "07fd598c564dfe754516f176d1d4720844318638289e257e7768ca5565ec3b24"
+    },
+    {
+      "path": "scripts/test_public_source_audit.py",
+      "sha256": "bc9196392c9f3eca68def71a2a4d59459340cc1de2a2eefd52e2a6a8dc5180a3"
+    },
+    {
+      "path": "scripts/test_qualification_host.py",
+      "sha256": "f461289a470782dc10132f479aa35d17bdf0a3c714ac7863811dcf1c20127e92"
+    },
+    {
+      "path": "scripts/test_qualification_resources.py",
+      "sha256": "940fa6e92e4ee7d5951455b8e0674e17c99f7017b614ac1d40a27f26ba17007e"
+    },
+    {
+      "path": "scripts/test_qualify_native.py",
+      "sha256": "14e422119fb55de8dc8fb9bbd43e4c5afc5995b7dfa7078d7170a620140886ac"
+    },
+    {
+      "path": "scripts/test_resilience_probe.py",
+      "sha256": "08f522b971366691e50296def89861f7d595f82f83ed7e85a7998ec3d68e5b6e"
+    },
+    {
+      "path": "scripts/test_serial_traffic.py",
+      "sha256": "f63c23653183a5c8853a37d93f3fd62e0f2ded4c8ef95bd8f03da86c2b284695"
+    },
+    {
+      "path": "scripts/test_traffic_policy.py",
+      "sha256": "f1547499e7fc62ce17773512a834069837f9dcdc22176bdce6b8761e92229f6e"
+    },
+    {
+      "path": "scripts/traffic_policy.py",
+      "sha256": "9a50162a2c6ca7a998f37979e9405d61653ba01b0e78cc116b784c98f8a96aa5"
+    },
+    {
+      "path": "scripts/warehouse-tui.sh",
+      "sha256": "555fc4af4c35174a053e5a0fdf65ff2bcf747646bd6ec047c02fbac1e6db1143"
+    },
+    {
+      "path": "src/api.rs",
+      "sha256": "ace10c3d1d651e0bd36fec679c781803d6cc3e7d56788ff408f3f9accec90719"
+    },
+    {
+      "path": "src/auth.rs",
+      "sha256": "5e5098de620454789a222f68311b1035afdc57423be23b12deac03eb5a58df5d"
+    },
+    {
+      "path": "src/command_state.rs",
+      "sha256": "9464d59fbd1fbbb4cf5252e3b1fe7deb6626b3ba61dc9bc97bc39c9e77f8e0aa"
+    },
+    {
+      "path": "src/concurrency.rs",
+      "sha256": "541a93013cc405a5d6952bc24b433f22d88b83463d723bedbb11cb79139ead49"
+    },
+    {
+      "path": "src/console.rs",
+      "sha256": "d46c9bb4414162128fb8b947e923e710ac53cf4a787d3b47182beaf08c8b60a1"
+    },
+    {
+      "path": "src/domain.rs",
+      "sha256": "fa9b59e0804f0ff3a6e3fb96e8244936b7c8daf2f2c985ca47a5b35ae980997f"
+    },
+    {
+      "path": "src/icommerce.rs",
+      "sha256": "cedc668ca711de5ceeb0247a632b430892cc3719fc0d79ba706bd3618ac7e06d"
+    },
+    {
+      "path": "src/integrations.rs",
+      "sha256": "0c4b3f8dd395cfb4130de24ba2f4e9b1010532831ef7368c77808eaed4a9690f"
+    },
+    {
+      "path": "src/lib.rs",
+      "sha256": "16f28a7d07c0ee4d8005559769befb56c212be06c1eb6913a3285a8c7228c5f0"
+    },
+    {
+      "path": "src/lot_control.rs",
+      "sha256": "1cf646c1dfe734bf04452d12e79aca54a57d9261af245c5372fac6a09c83bddb"
+    },
+    {
+      "path": "src/lot_store.rs",
+      "sha256": "35828b71c5f91bf092ea36adc8935943e7d8f8295bfb9f87e51b205d21d872db"
+    },
+    {
+      "path": "src/lot_trace.rs",
+      "sha256": "c1c5d4112f4b70735136ba706012ccbb3efe4ff613ff19678f2455c66222f476"
+    },
+    {
+      "path": "src/lot_trace_balances.sql",
+      "sha256": "e76e8c95db75e74aa6f6d2b0c1ba949b57ec891692716197a84e24364295fb82"
+    },
+    {
+      "path": "src/lot_trace_heads.sql",
+      "sha256": "578914ac44abc1b0305c961b141182355703e300c1eeb2954ce3085c01e1740e"
+    },
+    {
+      "path": "src/main.rs",
+      "sha256": "0045e5d2f82ff7023150d4e1def089e4989b0bf49f6807ae685d9210c2499984"
+    },
+    {
+      "path": "src/mcp.rs",
+      "sha256": "ef53375de5e2ffbaaef56d97fea49f8abe0f68e8381474e18541fe42fed1a96f"
+    },
+    {
+      "path": "src/native.rs",
+      "sha256": "e657f064429e18803bf159da1f2c5ca4d5406a1e79994a9179e9bffc92824125"
+    },
+    {
+      "path": "src/native_api.rs",
+      "sha256": "c15c8b908c86c19a9f7baa18912150446447e5c28c49b09f38f5b9e9957996da"
+    },
+    {
+      "path": "src/native_store.rs",
+      "sha256": "0f2e4f746e66de8c23ed27512f84b87f16f081f6f6cd88b6fa35a2b314f288c0"
+    },
+    {
+      "path": "src/oms_client.rs",
+      "sha256": "2c94c9264968eae6a8beec310d7b4939d0c0bb036cdd17f799be47f1314f3edb"
+    },
+    {
+      "path": "src/oms_fulfillment_api.rs",
+      "sha256": "b5cab17c0aba816fd0753a681407936233e306fbbedfe8ca0c8dbdabc8dc90df"
+    },
+    {
+      "path": "src/operations.rs",
+      "sha256": "07be1a2e297cfa32a41c16a232558ef886189403e954bb3d1cc6defd15ef980a"
+    },
+    {
+      "path": "src/order_cancellation.rs",
+      "sha256": "4a0db2b0542021e9175a24c18563db6e2b7b53a070314ccd13f051314036b158"
+    },
+    {
+      "path": "src/persistence.rs",
+      "sha256": "7adbb6d608c111cad15e2a44d6b4da53a1bdebc098c284ba2a55ec4e2b5bb303"
+    },
+    {
+      "path": "src/receipt_cancellation_proof.sql",
+      "sha256": "1b2105bb100b806e1e85606c752afe7e0edf0e464bb1be0f8c2bae8c517f78a2"
+    },
+    {
+      "path": "src/receipts.rs",
+      "sha256": "19b5864ac57d9fbc01174f6eca4f2fa8b3c1704df641e1a57890a7c98b84a243"
+    },
+    {
+      "path": "src/reconciliation.sql",
+      "sha256": "6d88cec8fb77922b03c696c7a65e34b710cd3b8b16d13f23731f486c42821a82"
+    },
+    {
+      "path": "src/replenishment.rs",
+      "sha256": "6597b332e953bb64ccd14989d1d3a66f60357f4435dfce7d8092fed4fbbc7499"
+    },
+    {
+      "path": "src/return_availability.sql",
+      "sha256": "8fc27e37f45969a49148371ed484c288fa7d88c723ad17b9e57807c82c034db6"
+    },
+    {
+      "path": "src/returns.rs",
+      "sha256": "c9ab0746c442aa5333ab28bb22b9e61a1066a6fe493ef169be4dfe1366b6e64b"
+    },
+    {
+      "path": "src/serial_plan.rs",
+      "sha256": "edde29cb2bdd4f0cb943634e12ffda5991da17c6e95f92e6966b78d4d4ddf767"
+    },
+    {
+      "path": "src/serial_reads.rs",
+      "sha256": "50852175ba1eaf7f102b9912155db6be2d43916f9fb8f2006c52abd84c646279"
+    },
+    {
+      "path": "src/serial_reconciliation.sql",
+      "sha256": "ca14e6ecceffe43ba4bc9dd385a834c293fc07358f527b672e5f459d8dd97925"
+    },
+    {
+      "path": "src/serial_store.rs",
+      "sha256": "ef164a95d3ad5b472121cf60081694d5acfb99569cddedecded4caa093f63e0e"
+    },
+    {
+      "path": "src/serials.rs",
+      "sha256": "c686ae0f713828735de660065c5bbd6ce5dc1dfd7a3cb848e3acd27097618c9e"
+    },
+    {
+      "path": "src/shipments.rs",
+      "sha256": "b3c17c67f5615769f232409095fd1a85006a676ac73eb3efdf75b52be7569d4d"
+    },
+    {
+      "path": "src/split_fulfillment.rs",
+      "sha256": "a1af20f48fdc938f265460e8436af1ab19511025f8ee1d31b8f4f41d830b6809"
+    },
+    {
+      "path": "src/store.rs",
+      "sha256": "f7a66e070217dfaaa4d14aca33e28be3092e7e48a27f1f15bd6b998661f610a1"
+    },
+    {
+      "path": "src/transfers.rs",
+      "sha256": "1ed9746d2b4bc3fbfa8ceaa24188e6bf2fc6d60d4dea983b0ad80fc1801deacd"
+    },
+    {
+      "path": "src/units.rs",
+      "sha256": "b49184685601d5bbdbe59ab03b230cc6465205557a4cb2b87c2081432b40e313"
+    },
+    {
+      "path": "tests/console.rs",
+      "sha256": "66c9c7f1848ae7880ec4437aa6444f8fdd8c8cd83c10702947404be7b471c2e9"
+    },
+    {
+      "path": "tests/domain.rs",
+      "sha256": "b79c8c5e9f1a3d4329a1c594e5344abf21a7c2932c723269f8e0f5dd8f7a7c6c"
+    },
+    {
+      "path": "tests/fixtures/README.md",
+      "sha256": "79479b98ae87fb4337d54bf52072e8a253373dfee31df7ee806630fa538236a3"
+    },
+    {
+      "path": "tests/fixtures/facility-v2-command-journal.json",
+      "sha256": "fb8b94c814bdb8fc7983e5620975a9f305ebc1df0c62d3a81dbc6f57c992be09"
+    },
+    {
+      "path": "tests/fixtures/facility-v2-trace.json",
+      "sha256": "f1b564a5fbf71439ea2c17572f63f0352d4c6fef1a10e423b352d32bf4f1baca"
+    },
+    {
+      "path": "tests/fixtures/serial_reconciliation_v23.sql",
+      "sha256": "fe6e3ca785cb978f2cadda051f54ac6015ad4aead2aa34008322313d55ffe319"
+    },
+    {
+      "path": "tests/fixtures/serial_reconciliation_v24.sql",
+      "sha256": "052b53bf49d5164a8ea968b5b14ab0eb3687c83217568e4a8ecd040074542a42"
+    },
+    {
+      "path": "tests/fixtures/workos-test-jwk.json",
+      "sha256": "2a3ddc233b758bf7c280f9fbd4df054196c7615f7be6d2ff1458e85c79646aef"
+    },
+    {
+      "path": "tests/fixtures/workos-test-jwk2.json",
+      "sha256": "017dc9b93757e0923aa932b8f94f1fe39e2a3a4afe1c01fa949287080a7c89b6"
+    },
+    {
+      "path": "tests/fixtures/workos-test-key.der",
+      "sha256": "13fcf965425ebaa8f9e7e6b82b6f92d95f0deebed7101626c1f792ae07d2761d"
+    },
+    {
+      "path": "tests/fixtures/workos-test-key2.der",
+      "sha256": "6ce91f87286991dc711a2ffce591d8257435d763a7dd0d9020ca5856e0edff90"
+    },
+    {
+      "path": "tests/http_auth.rs",
+      "sha256": "644813e48864e10c7b6ba8bb93fd5b39851b0ecbe167db4e7759b21b0f7f393c"
+    },
+    {
+      "path": "tests/icommerce.rs",
+      "sha256": "0749a5730c265bb4d771b76f7ba6c46dfa7f31ef68da009b02c1f68099b16ec7"
+    },
+    {
+      "path": "tests/mcp.rs",
+      "sha256": "1ecdb37fa8e986bb4480d15c0a01401b9c029b02362b022a8353e9ef8e36cf28"
+    },
+    {
+      "path": "tests/native_api.rs",
+      "sha256": "49fb61d839cdcb7f9a6596b9cf62d814461711c198fc941cc4f5661691b84cf7"
+    },
+    {
+      "path": "tests/native_contracts.rs",
+      "sha256": "ad7b76c38ba91c4c5baf6eef5247f2de6b5027f8887619e8ec55026341f216ef"
+    },
+    {
+      "path": "tests/oms_client.rs",
+      "sha256": "4a82a2869401e89be0cb51579837c3e4fb3f41735aa7884b3a70e26ee0edcc54"
+    },
+    {
+      "path": "tests/oms_fulfillment_api.rs",
+      "sha256": "91e415cb1a3a62697ba496d5f4e5df250b4ee8048dbb22820166afb1dd35075c"
+    },
+    {
+      "path": "tests/oms_receiver.rs",
+      "sha256": "0be85747951e397144922c46715d64cea951e3551c6df69c9300501f6a2af96d"
+    },
+    {
+      "path": "tests/operations.rs",
+      "sha256": "8979eae28b428be912e7af3962d38fb7ed1319c48445099851b653efc1089429"
+    },
+    {
+      "path": "tests/persistence_acceptance.rs",
+      "sha256": "36ffd93c2fb6accf08f809af06c9bc295065f2e5329bd8cb2b90fa1d02d353b7"
+    },
+    {
+      "path": "tests/persistence_guards.rs",
+      "sha256": "98765da888325852e64dfe468ac201fa582006ac27a3734ef8bdc4edd8ef5169"
+    },
+    {
+      "path": "tests/postgres.rs",
+      "sha256": "3ffa9b12c9472f5e0e666d1af446593fd5833921ab7970520cb2f2330faaab4d"
+    },
+    {
+      "path": "tests/serial_admission/extended.rs",
+      "sha256": "889f1cb0fd44366a2c1b937f0ca6610bf07a5c772d702926b58114fc84687045"
+    },
+    {
+      "path": "tests/serial_admission/payload_reuse.rs",
+      "sha256": "fa489772269d8f58cd9428297e66eef49d67f00c579a4d620060df5eadf0cbb9"
+    },
+    {
+      "path": "tests/serial_admission/plan.rs",
+      "sha256": "9d618030be580c9797526dfd05f97ee53e21052b05e1ab86640ab74dff48cfa0"
+    },
+    {
+      "path": "tests/serial_admission/reads.rs",
+      "sha256": "b2a0a8e72d3fb6ebc65244aaa66f8badcebf11810701fbc4e14403767f3e14e3"
+    },
+    {
+      "path": "tests/serial_admission/resolved_sources.rs",
+      "sha256": "0ff3347e500319e23085d089add8429f6020c994b64724f3561201a451984230"
+    },
+    {
+      "path": "tests/serial_admission/restore.rs",
+      "sha256": "ec392b7c5bb59fa78c30602834c6142219d36d836841de7a9455fca067dabbd9"
+    },
+    {
+      "path": "tests/serial_admission/scoped_references.rs",
+      "sha256": "4f063c1a00d12398af08cc172dffe025575b28808180d743b4d43d9e1cd863d3"
+    },
+    {
+      "path": "tests/serial_admission/shared_sources.rs",
+      "sha256": "abb5ba3c07b31b9ad56891e3381913f51dd813e71adfac36a8cffbda6c6dc623"
+    },
+    {
+      "path": "tests/serial_admission/sku_scope.rs",
+      "sha256": "cdd5651e15c5e6263318d01c973e94bf6327bd814353b9cad614012cd6fb949d"
+    },
+    {
+      "path": "tests/serial_admission/target_resolution.rs",
+      "sha256": "5cb4a2bf98e31510a98930c1716d1a88d093552154a1d4242c5e293ea88138f0"
+    },
+    {
+      "path": "tests/serial_admission.rs",
+      "sha256": "ee1775ce7908f45708e66b3476be96aaef62619129ee68f9c7c64563a8c2a1bb"
+    },
+    {
+      "path": "tests/serial_registry/transfers.rs",
+      "sha256": "dff36695490e03c0f57ea4306b5a6c26da70e00aeb3cbe56de314ce1ad7e694a"
+    },
+    {
+      "path": "tests/serial_registry/workflows.rs",
+      "sha256": "da4a8fc1959ef995d9fc1ef9686330ddb9abe9d3b52995f8d89cc7388cacf4a1"
+    },
+    {
+      "path": "tests/serial_registry.rs",
+      "sha256": "433f63dfd91ffa66a379ef451a3406c3df069e29aa72697dd96421a14e46c053"
+    },
+    {
+      "path": "tests/serial_scale.rs",
+      "sha256": "9380311136e4ed41f8e410ce34d22d461e3a321f207ff5e50455b6727ea2167c"
+    },
+    {
+      "path": "tests/startup.rs",
+      "sha256": "39debba7d1a8fd0d13af3022f1ef143fddc519647bb571ab882322fbdd4b7a4d"
+    },
+    {
+      "path": "tests/support/workos.rs",
+      "sha256": "3289c000a039d677db3c5f5f67afa0f0fd331d2204e849405b5b679c7911733f"
+    },
+    {
+      "path": "vendor/stateset-icommerce/Cargo.toml",
+      "sha256": "048641cee00fd6639285b4a5eee63fb0247879ed88e50d54204cb54973a6b713"
+    },
+    {
+      "path": "vendor/stateset-icommerce/LICENSE",
+      "sha256": "bbbe090bf86b0ca4cc6a1d8510e5552e65d6f43bb98c00023c615eb7b046fed4"
+    },
+    {
+      "path": "vendor/stateset-icommerce/LICENSE-APACHE",
+      "sha256": "a5717beca8467c307a0d24a41bcd0b83db7e30702eeccb167d001b62d23239a1"
+    },
+    {
+      "path": "vendor/stateset-icommerce/LICENSE-MIT",
+      "sha256": "bba83f79a8d87b2dc0b66334f0c325d952d654d742331291959e3dcadf4a3dd6"
+    },
+    {
+      "path": "vendor/stateset-icommerce/UPSTREAM.json",
+      "sha256": "0fd02725bf175d9274fb1fe065b2a844026cb4dcb11eab922b573ded686c06a8"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/Cargo.toml",
+      "sha256": "0b261dfa3b27139f5e58e8e28ef77ad24a1cd0dbd863cbc00813aec857120b42"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/README.md",
+      "sha256": "ccbf0832c45bed5d9742e71ff77bf88ef06fd84f8a198de7a93aaca9882ab05f"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/benches/core_benchmarks.rs",
+      "sha256": "d622a87b429972cb2c99c275847ebc35eeb4cbd1394c4adb0fb78739511e03fb"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/economic.rs",
+      "sha256": "d8cc3647a36bb522179d1c748f673d9b76ff47cc6f264414b891ffe89ae16599"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/errors/customer.rs",
+      "sha256": "643500ec29d25aef41dbc86abad7d661e5c93b1fae932bb7ba3452fa75e0968b"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/errors/inventory.rs",
+      "sha256": "3aabdcbffef9e9ee87d447e76d1045b2cb55691082d43594850bb62e0ab61594"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/errors/mod.rs",
+      "sha256": "6e960715b7214603474ee6704390eef7ee99e2bb2b141150c7bdd19d7f92b698"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/errors/order.rs",
+      "sha256": "ca925d79fc091f17e8c87f141f8c1261018f035243a0a5a43079a4322736135f"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/errors/payment.rs",
+      "sha256": "487659b942cb2010bf15566c1f6943210f80565031ef3b950c0737787cced1a9"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/errors/product.rs",
+      "sha256": "e55fd8b5d1814c9462436e9b56f475d1efa3d5df92e786e3eb3a5a7fa66ae538"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/errors/returns.rs",
+      "sha256": "20196e222bb5e26a7938deb3947307d374ae5e4843b68133abb95db5e9dd2aaf"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/errors/shipping.rs",
+      "sha256": "2d864876bb9b8dfb25401238edb69efb64c0a6172db00be5373a607115ace4ac"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/errors/transition.rs",
+      "sha256": "faffc8dcd1d64af0975bb59b7ffef6f8027134c936a610d65211dca2e0433ee1"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/events.rs",
+      "sha256": "59c2fdb30bb29a1d344b235673e0a5c3649b20473902f1f2be6187bf08642646"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/fixtures/profile-restricted-refund-policy.json",
+      "sha256": "83e755e071983a7829e19f987d8285425683c9fa54dc33e94f287b5f7ae68aab"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/kernel.rs",
+      "sha256": "38ec2e7e5ad080b3af50de97f897bf3df59cd7574fe2d0e50833d06773c3cdd2"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/lib.rs",
+      "sha256": "2e6d1b397ce69a2a7bef622edf9cf02e3e9abf9ec4d8488b67349edc65827b5e"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/metrics.rs",
+      "sha256": "7205911233c47cf66a6aea593bc1c52c7fdfe7997087f2783d9a391306223a58"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/a2a.rs",
+      "sha256": "c2ccb2f14b9045dff45cd7a9542a3cc487bb908d337a70f83d8ddbcfb0fe70d0"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/a2a_skill.rs",
+      "sha256": "83e2564518f162f6813331161899bf7882c8729c600607dd574e90e70ac2431e"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/accounts_payable.rs",
+      "sha256": "65f1bc7d7c4b9dbf549457c6f7ac3dedda4f7346cfa04459078caf879c5f7c5e"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/accounts_receivable.rs",
+      "sha256": "bc683975449c65f8aa07d7500c8dec81a59cb5751fae2db95351be08bef5ca4e"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/activity_log.rs",
+      "sha256": "614a93158edb6ae2db183a42ff92a0452c2be72d5cc71bad7d83fba37d8b28b1"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/agent_card.rs",
+      "sha256": "7d3446b277170da225a01b37f84aee3433df1b7d1c60e533e6c286158a27ceda"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/analytics.rs",
+      "sha256": "078c4b8baf449961e7240d0219d5a00fe7a62bc951c2cb913290ba84c6b27f99"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/backorder.rs",
+      "sha256": "edd061aadeb7a9025196811a3157cc443a0cf77e0c5574ce1f21e27263721c2b"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/cart.rs",
+      "sha256": "692eba3e8a9b5ef29a19f9a7ebd953d8c1049a8217f537a9ef4115b7d95446a3"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/channel.rs",
+      "sha256": "ba9f92e2470b979263028704bc3837cbdf0b9c053f4b63d66678f818df0090b4"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/close_books_report.rs",
+      "sha256": "697edf864a5095242f88ba60079dd76c2bdeea3ff8c48cb9155e023383647904"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/close_month.rs",
+      "sha256": "9f89e6b655fa6415433b8a319cee4deb8ebad31df7cbef78bfccbde344e6bb3f"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/cogs_report.rs",
+      "sha256": "15b7c2273e892def6ff2fe4c2b8438fd23618818218c75295ea18786a21278e3"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/company.rs",
+      "sha256": "8499d9fbe9c94f86286806f178e43b8f07716007eae243d1fca84b79c2dabbfb"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/consumption_report.rs",
+      "sha256": "53b21b1e07fa8c0930c8ee03bfeaaef8e93a8e83187134f769ae8bf9be7ed04d"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/cost_accounting.rs",
+      "sha256": "349e81334e3221116c595e2d1dbe7107d8c716d5c6a29f2a76895a081bc29bbe"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/credit.rs",
+      "sha256": "be9ed51e59f439e916b6c9dfedb6a28e5ba339018de135cc96196bade740789f"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/currency.rs",
+      "sha256": "7fa2aae59f8641db1180695e13682eefa62e9821cef47a57362a3d8e9f878365"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/custom_object.rs",
+      "sha256": "970677422816a43582fa8090f5eb0447ec16514cbb3bf7c20cbd9507d9c9eb16"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/customer.rs",
+      "sha256": "82d55f2952a3ac44afb51d44095329fdb08167d8e54ae5bc6f1952a9d3e42ab1"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/cycle_count.rs",
+      "sha256": "1e75cc35fc9acea2cbae59b2d3213ca060b317db80a307c17df27f34fbed4a0f"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/edi_document.rs",
+      "sha256": "bef67e76a978e94036228d645d34b6365be55139c64f5d03824aedeb0d28a25a"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/erc8004.rs",
+      "sha256": "006f9537b9c8f2e9a90da3acfdbee2fb3e3a0cda92b9462780f4b4c4b1a273ee"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/fixed_asset.rs",
+      "sha256": "1330b6de9fc07db3af92957736b9d7eadce121252da17c8d5ce7d01f10209824"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/forecasting.rs",
+      "sha256": "76d6d51adce483eadc3e264276d5cc9e48789a73746165b2ebb09d4d2d94de30"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/fraud.rs",
+      "sha256": "628871238744b90c643527ae653d7e8db2ec4d2913cb225c87a70e4497076ecb"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/fulfillment.rs",
+      "sha256": "320b4f6aab37293d7b32042e11c428253bd7035a248b20ad0e0823c5e0b95b8f"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/general_ledger.rs",
+      "sha256": "1896f5573a0a3a555138df64c2a331cbeae7c4bacb4096564d8cde875260ee39"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/gift_card.rs",
+      "sha256": "55e3d8d3d41e15a0ad0bef7b64906ddc0b587543c1da1611683101f534b1da18"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/inbound_shipment.rs",
+      "sha256": "f3dbad0091e05c0ccefcc2c86286d108dad79ac63c8a1f4763d95816936cc782"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/integration_field_mapping.rs",
+      "sha256": "28fc9d467e9c836d43ce3a5441f4f9e63584a08a0c03bd8a01fd95461a1aeac0"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/integration_mapping.rs",
+      "sha256": "6eb5fab5772daadf653c139004bdb450e56449bf6ec6a68bbe45530e20c0ccc7"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/inventory.rs",
+      "sha256": "b3752c75a26824cc37222d0e82d7256d5fd0b51b34eae296bb35846c881e2edf"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/inventory_aging.rs",
+      "sha256": "26ac04d8011995099834c9ef3ce65dc3ae215198308b4ef446ebbe1c015605b3"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/invoice.rs",
+      "sha256": "9b1ab6dc178dccaa30782bc84d17703a1e1151f27ad34073fa927a9bf977683c"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/lot.rs",
+      "sha256": "8df74e9d68809cf6308f65c1991fcb5b56241d4e0c8e1ba93e6ce7eba9e68171"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/loyalty.rs",
+      "sha256": "7db0979dfd7086c5442792047ae8204ec70fe362d7ad6f9220f074e757402859"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/manufacturing.rs",
+      "sha256": "4e797465f5b3ea253f6addc0fc2f87271526249b8aa07659a9357c2e83f9ccde"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/metrics.rs",
+      "sha256": "d214710ce153e8892e9fd6f1b567bf933852cbc410352ca9534d9fb270d28fc2"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/mod.rs",
+      "sha256": "ba2c9b072d203dee276732042e5a7d3b8fb06d38647e069d790fae37a906ef86"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/order.rs",
+      "sha256": "e4361a40eb0da7adc2b23e39760d70f505d39d4bb846edc11f0dc36b480cff5a"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/payment.rs",
+      "sha256": "7067af42ee1f7780651dd4fe36718e9bff6795d4573c6194b4368ba2d0bdbeba"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/payment_obligation.rs",
+      "sha256": "1d7aeb47597e25a128a2d3ea341dc867e54248afb0db30aa5604117370c04ddc"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/prepayment.rs",
+      "sha256": "0e01cdcbab35552f3c90a24c1ab7023b8811a56c5acff37ea1fef2bdf2a97f82"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/price_level.rs",
+      "sha256": "e9d24d7d6ecaa6bb5c68f6d4619ded2aa4716632253b7944b8471d39a5b8cf91"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/price_schedule.rs",
+      "sha256": "0dbc6b07ead746df2b2beace605bcc533e211fffdc6d21cd5e89b106f010dd5c"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/print_station.rs",
+      "sha256": "a2b3f682fdb5a731802660de4d981d1649e9e5e508838e8ee34c6c0bcf30e122"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/product.rs",
+      "sha256": "8b583fb3bb0b1c91318c8d0baabd24b897e0d5da751022e1345ee29d28411cce"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/production_batch.rs",
+      "sha256": "e43af8932b3443ff238277902c20602faade2a2c97865d6294ff89f23d55c363"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/promotion.rs",
+      "sha256": "1afbe051d51557ada5ac77a77b35ac9c6a19a6155b154ad7125cd88390092648"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/purchase_order.rs",
+      "sha256": "e2bcf49e3f70cba7890fd0141e728d6bdfbe41a170fab08d39f14d973a512b1c"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/purgatory.rs",
+      "sha256": "edea809d5afca62c6db5f55e05dc15fe17adf76113c042912c1388d54a8157df"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/quality.rs",
+      "sha256": "3b8bd0752be408e12115c39638bbff95f1163a49136359eaba393f66d3fc31de"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/receiving.rs",
+      "sha256": "880478fe4b9ea864f2187c8f53434282bd10387f007ad593f4d7908f356f29bf"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/returns.rs",
+      "sha256": "3982245f22b21ca3629b8110e9aa9870dfeea80091d94a02d005b9ed6ee6bcb7"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/revenue_recognition.rs",
+      "sha256": "b3fef3e236e64a7123bfefc757ab5d510ffc70dfee45b2bfd89e7efd8664bc02"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/review.rs",
+      "sha256": "c39e1aa0dc976857f57082e7c5e08d815dfb40e35fa1c1bac7cb1e69f6f06f36"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/sales_report.rs",
+      "sha256": "9059735a926388dcac1462b0de8637576d53042ff6096a858669616665d9f867"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/search_config.rs",
+      "sha256": "bade21b1498a0df2180505eb0d18ec10ae73cb89aed1d559b61e398c9410f8af"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/segment.rs",
+      "sha256": "7695401c0e6192e95b234426972718329b472da0b064f199b10fa4150f964ec3"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/serial.rs",
+      "sha256": "8816df90fd0370d9c65da6cdff9f14132e459e167598a8a3141f74daef404b52"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/shipment.rs",
+      "sha256": "f561edc930cb3cd940d46846542aa02a671475f4a368d35f892f90aaeafee6cc"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/shipping_zone.rs",
+      "sha256": "8a6019b6f335289e3ca1d0fe25277d45661a37c00e0df95febc787230b396974"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/stock_snapshot.rs",
+      "sha256": "55d3cb8596ef482253b3e8bae07f7fbef47a0f7039773dd69514b0cb45244b74"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/store_credit.rs",
+      "sha256": "1915323d979f0adae4b17f341999ae226e898924a3728d0a861bfeeb37705ee7"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/subscription.rs",
+      "sha256": "d1faa534f3af590fd46e3e01f2bdd3c172c2b8d520e90c220029ea0d80ede1d9"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/supplier_sku.rs",
+      "sha256": "bc69008d7c26483f87c896e8b4337eeb721c27d3d13eec0a12b4bb05f84f4ca9"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/tax.rs",
+      "sha256": "d438d8ac8a3facd7c4862b275159903bf5d51237895e2b5a7ba7cbeeca34324e"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/topology_snapshot.rs",
+      "sha256": "0564e3b5ca1af21eabb41aa03fb41ad9fcd88a433b2845c4339eee2956888f19"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/transfer_order.rs",
+      "sha256": "3beb4546384f8543cf7658330913f624c0ea6451953e5c6cd5498034df48a072"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/unit_of_measure.rs",
+      "sha256": "5f4d16fec0ce541de88111a36340d0e54232d3680b7b9d4535f00cc6211dda44"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/vector.rs",
+      "sha256": "ee5fe794e9c3cc1e20c7c02f187250ea4f4efb06df42b83ff9769cb6744a17e9"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/vendor_credit.rs",
+      "sha256": "c3b0092158581a0b2bcaadccac1c0788287ba787a70f1b9bbe3742615d1f7ffd"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/vendor_return.rs",
+      "sha256": "e39a962079aaa23b3abb0e72330b1b0b6ef53fad3d0e32e5bf16a6a484f14fb4"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/warehouse.rs",
+      "sha256": "abc0665ebe4071d87e705b5e2a36d19e43fa93fa475f5faa3ea9c8af2bded3c9"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/warranty.rs",
+      "sha256": "85642a4119974dc1041b7c193c3cf8f6d1c3701321ab853aec93c3d6778d97d1"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/wishlist.rs",
+      "sha256": "99b11f4bf7e496e6e9e78f1611c02fadba3f047e363317d19148d7065fb34a4e"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/models/x402.rs",
+      "sha256": "17c9ffc860b4f946a3ddce5b393c7398e5bda02aca28fd45ee2ad0834cd0fe04"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/services/embeddings.rs",
+      "sha256": "4ee8a58cd1273549cbbec0b7152349d028510bd70e0ebb3e3bf36b3be3a8cfe9"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/services/mod.rs",
+      "sha256": "cc2c8dfc137973021226c16cb3f04a0d558a5f8b5c4814f4017c026741f213a0"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/traits/agentic.rs",
+      "sha256": "dfe83199d45a9881fd68bfcf12f401858a87c4b0fb5907b0e90d59a1ea668fb3"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/traits/analytics.rs",
+      "sha256": "a803b013a22d27fe4690647f2da6028aaa8b076815bac2828c8a84e57ac551a3"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/traits/catalog.rs",
+      "sha256": "e547bc61a3e5f7d2e6c5275bfcb2ae5af6ed8382f38e80cb9a63487a76408005"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/traits/customers.rs",
+      "sha256": "3e6fac04d5bc4313ea18eb187a9c0ca058590888cb42fbc5d92da3d88b768045"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/traits/events.rs",
+      "sha256": "470850d11799bd13534c9e625e4d58739f2163ea3e66b3b509e7d194d1342fc3"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/traits/finance.rs",
+      "sha256": "660b7c38ae20d7b79e39fd904ff1db7b597c312b0a7b71e2517a41e6d50cc488"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/traits/fulfillment.rs",
+      "sha256": "a341ab0070940d11c0c057669ddf7d308b82316553d2add84c6b29e143fee6b4"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/traits/inventory.rs",
+      "sha256": "d845fb5955b1d8652afd37a28394c214765926da6553acd24ec09e2792580ce3"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/traits/manufacturing.rs",
+      "sha256": "740e7d5d90a508d6737e1841209e97a0f88ede0d87a0c89dec2ee8bbef03a80c"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/traits/mod.rs",
+      "sha256": "07727f2cf4fb67bc40fa6049720d47fb6e8d54091464366b5421ef6532ef8a2d"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/traits/orders.rs",
+      "sha256": "1d5db76cffcb538c95639c28a06713457324736463fd0cbcb54ea0d04e979788"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/traits/payments.rs",
+      "sha256": "0229f5e3f031a763c483278fab06cb09f20a793ec3ca8e5c2dd4dabc7b4d5b1e"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/traits/platform.rs",
+      "sha256": "c158a708fd3e574fc266a2ca23af035d1d885d7254292502319f02dbe295ea3e"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/traits/purchasing.rs",
+      "sha256": "3fd7baf2b7849f4a6a56e8f36584bd50cb866993c2b10050224c4caecc48b176"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/traits/repository.rs",
+      "sha256": "8da26a15eeaf5efdd7dcc8b930a656f18ace6819bb789fab481555776e5f2f20"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/traits/returns.rs",
+      "sha256": "cf10781df2fcd55807804a73fd40d4f41a2931dcb36ee77af78f72062bd44e26"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/traits/warehouse.rs",
+      "sha256": "1d82c2728fbd9219be65531f47376e89a5049177ac8f002edc040e0b44535914"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/src/validation.rs",
+      "sha256": "59f52228c1f326f3e27dd4f2337f743ade9bd1a79cb881dcbe4f583de6b5b974"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/tests/finance_properties.rs",
+      "sha256": "9582daaebc27193333171856d186bdf3c08cada65d980a3a156f3fb66fbcc9d3"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/tests/proptest_models.rs",
+      "sha256": "b2236243933ef118394b64dc611e1fde5d6eb43a6251ebe8a97e3788ad21ad82"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/tests/reservation_formal_conformance.rs",
+      "sha256": "6ac36e16bdc2ed1d42a3f29863b3ec02823905f5c64cc4abc06d5dbed0fecbaa"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/tests/snapshot_serialization.rs",
+      "sha256": "b0d4e628fbb919e886310c114114aace0a7101f11ee1617de14f7acf9c81ce5c"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/tests/snapshots/snapshot_serialization__create_order_input.snap",
+      "sha256": "97f9b2f4b77cef46752e0dcea5e3f0e737ef943a781dd4160c6feca8dfe92a50"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/tests/snapshots/snapshot_serialization__customer_status_variants.snap",
+      "sha256": "5f6502eb6703434f5ea566303512a88040a1173e5b238c0bf9af0635dc2a053a"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/tests/snapshots/snapshot_serialization__fraud_decision_variants.snap",
+      "sha256": "6be4bdbcf1666ca8267ae034abb422513dd1bc0a8bdd4fed6bdc90d48b717c3c"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/tests/snapshots/snapshot_serialization__fraud_signal_type_variants.snap",
+      "sha256": "b0157ae9550b309b23432804e96031445bd8e70c49a95780170a507d57deef8d"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/tests/snapshots/snapshot_serialization__gift_card_status_variants.snap",
+      "sha256": "5669c9986c273ee88d696c1a89ab9f015f67886870676fb9c6e1387b1fa29a03"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/tests/snapshots/snapshot_serialization__gift_card_transaction_type_variants.snap",
+      "sha256": "451544f265e393c89643b0fa16f6341a2fc8c64181773f10030c1711f09b7c80"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/tests/snapshots/snapshot_serialization__inventory_transaction_types.snap",
+      "sha256": "c1a1f9ae9773f1b525cffa32044cc17d2b0b68e3f8e0587ed77e03b3e6bed471"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/tests/snapshots/snapshot_serialization__loyalty_program_status_variants.snap",
+      "sha256": "60379b87ee12e4bebd4063f0d418e0ea9abbf3233ef485cbd4cfa965619efdca"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/tests/snapshots/snapshot_serialization__loyalty_transaction_type_variants.snap",
+      "sha256": "94ea8bfee263ba2b2bc27e617c9c45809fb66b50591a87f887862eff4b516c74"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/tests/snapshots/snapshot_serialization__order.snap",
+      "sha256": "f5898ee51f84b3247edce7e1886148fcf236f6c798d9ccaac25889e013014842"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/tests/snapshots/snapshot_serialization__order_status_variants.snap",
+      "sha256": "3c94d3230a19e9f0b8da607f4b7427b2c60a58e05df417e0c428c5fceeb34c5d"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/tests/snapshots/snapshot_serialization__payment_status_variants.snap",
+      "sha256": "800b185e292ed55d1cbe75f4341b1adb05f862d9df167012c0b6ca6a8d0315b9"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/tests/snapshots/snapshot_serialization__product_status_variants.snap",
+      "sha256": "646e864f20153761557355c8aeed843b757627e6db5880dfa9fb45762c9b824d"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/tests/snapshots/snapshot_serialization__return_status_variants.snap",
+      "sha256": "090c0865efb4dbba57ba4622257174fcb3f2ba00b21bb38cb645e354a62b560f"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/tests/snapshots/snapshot_serialization__review_status_variants.snap",
+      "sha256": "788d118178ac4c1d0e52647faa0307080de993e733ab7c7ee16abc60004a2de6"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/tests/snapshots/snapshot_serialization__reward_type_variants.snap",
+      "sha256": "20089fed37219c00f70b5f291d40a2168de641c4ddc3c75f0fa67242a1824fd0"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/tests/snapshots/snapshot_serialization__segment_operator_variants.snap",
+      "sha256": "87cf83a71d5359a37f3245d7ec19f99162ca6cccd7e29d4113212b6964a1b9a5"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/tests/snapshots/snapshot_serialization__segment_type_variants.snap",
+      "sha256": "c47c1ed1540238aaf31e633430ec8ddd85ce90deeeac80f6050126921a12be5b"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/tests/snapshots/snapshot_serialization__shipping_method_type_variants.snap",
+      "sha256": "0b06aef755312cd2c984e926cebc24453c1080177a250550c2ec9b5876e74b27"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-core/tests/snapshots/snapshot_serialization__store_credit_status_variants.snap",
+      "sha256": "7ff42b6cbdf544ee7a439020e2791fee62c2fa6622a6eb28b3794693aef19a3e"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-crypto/Cargo.toml",
+      "sha256": "3ca65dc543ba60dc3d5f19e148c250ee4507e6e465ae91dee3f0a57c0df22b32"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-crypto/README.md",
+      "sha256": "bd7532715222c35e46ef950fdd5d506d23d46d0266213b92231edc7e3f06533e"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-crypto/src/canonicalize.rs",
+      "sha256": "0f23e851d2257d54ed92aa044ab2152ae3c1dc0860816a33a4e692b70c46052b"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-crypto/src/encoding.rs",
+      "sha256": "944fe7c0d587a8e71f81a7d90a04474a112cf4bbdfce4dcb9061bbd8bfb9f20d"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-crypto/src/encrypt.rs",
+      "sha256": "2774a0674849b982843dcca2c9ab11fdad0dd393cbd0dc66b088c28710d47e0a"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-crypto/src/error.rs",
+      "sha256": "cda9960d9d38007c91b742db11bcfb058ff627713ead22be89bf6d66a37aa773"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-crypto/src/hash.rs",
+      "sha256": "ed21cdd977481524bbae8b585bf8f15fa694dad7d0475f875173198300c0bedb"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-crypto/src/lib.rs",
+      "sha256": "6cb71d87e1772433a8acfeb7f20545cb168096d014e62bf5b4c9259da4f948e7"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-crypto/src/merkle.rs",
+      "sha256": "2a3201e87bb939dc1ba8c483a528a84cc4718c4baba4f28a11cbde5057020347"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-crypto/src/pqc.rs",
+      "sha256": "1d17b09c90da6026394a00cd4ec7535345bb9df1ae00400fc40c5d0033bef49d"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-crypto/src/pqc_backend.rs",
+      "sha256": "5927430b6e8c7d08a995cdaea6cea3c8557267995942e829d078564e44ca16fa"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-crypto/src/sign.rs",
+      "sha256": "fbc7506deaf131ab9e0b57f55ceed389721a663daff03f854674480311d9934c"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-crypto/tests/cross_binding_vectors.rs",
+      "sha256": "fbe3c9b5bcec8fa8c9be2afefa85e9c17582d391330cd8ad0e8dd98622f2c4a8"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-crypto/tests/crypto_expanded.rs",
+      "sha256": "ff24be13db0389de817528af9728d809c72a29f3dd3c46cf7600f25c767f1195"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-crypto/tests/proptest_crypto.rs",
+      "sha256": "3e7ad0f36ffdbd0f210300a1a9f2fb26ea5617d38490b8d4330477a8bd50049b"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-crypto/tests/test_vectors.rs",
+      "sha256": "456f4f9dda1ea8d9407703aa9f7c01b25d838c50232946cee89f9088f5223f67"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-primitives/Cargo.toml",
+      "sha256": "2da91edca8879e26dc3e37db2285d9743947fb6bb7fd61f0c66385d01f119f0a"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-primitives/README.md",
+      "sha256": "ff72015262550313ac0fcbbb007346b9272fb8e87674cecaf64298e6fd718677"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-primitives/src/id.rs",
+      "sha256": "9d308733e234d6de25be3d25052afde5df0f63ddabbdf515cd2ea02609956a6f"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-primitives/src/lib.rs",
+      "sha256": "809407a3a90b21fb75a5c57c64132d57060572078c852fbbf7bd5746841101d0"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-primitives/src/money.rs",
+      "sha256": "2f70663ab9b00fe3ff551d3f4f015cb9c157018acad92431c4b51063f74a5178"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-primitives/src/sku.rs",
+      "sha256": "80b39fa9cb786cb85d369b69b3293ebf90dafe10b9cb60589e99643f21823031"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-test-utils/Cargo.toml",
+      "sha256": "87d5f829481a462dff412251be1308ca588537b0026258a88e7ec801aa855151"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-test-utils/src/assertions.rs",
+      "sha256": "48c3566ac1957b6ff38b1a5d1ba129dd1e1e0cc0524c4b88bc48b4a683515180"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-test-utils/src/fixtures.rs",
+      "sha256": "43f626e0d7dc7dca9e278015a1375e349f3a7f61cc106fff7e87b78a56bc3163"
+    },
+    {
+      "path": "vendor/stateset-icommerce/crates/stateset-test-utils/src/lib.rs",
+      "sha256": "da46e3ed3fde642f390117a000982db62f4f29cbe5b7a8b4bfbea058aaebcd5f"
+    }
+  ]
+}
