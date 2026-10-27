@@ -258,6 +258,31 @@ test("scanned receiving rejects wrong identities and saves only the selected sam
   ).toBe(true);
 });
 
+test("scanner code ID prefixes still match the exact case-sensitive label", async ({
+  page,
+}) => {
+  const fixture = await setup(page);
+  await load(page, "SCAN-RECEIPT");
+  await page
+    .getByRole("combobox", { name: "Receipt line", exact: true })
+    .selectOption("scan-receipt-b");
+  await scan(page, "bin", "]C0RECV-01");
+  await scan(page, "SKU", "]C0SS-CAP-004");
+  await scan(page, "lot", "]C0scan-lot");
+  await expect(page.getByRole("alert")).toContainText("Wrong lot");
+  await scan(page, "lot", "]C0SCAN-LOT");
+  await page.getByLabel("Physical quantity (each)").fill("1");
+  await page.getByRole("button", { name: "Confirm scanned receipt" }).click();
+  await expect(page.getByText(/Save confirmed\. Reload work/)).toBeVisible();
+  expect(fixture.submissions).toHaveLength(1);
+  expect(fixture.submissions[0].command).toMatchObject({
+    type: "receive",
+    line_id: "scan-receipt-b",
+    location: "RECV-01",
+    quantity: 1,
+  });
+});
+
 test("scanned partial picks preserve original allocation and exact same-SKU line identity", async ({
   page,
 }) => {

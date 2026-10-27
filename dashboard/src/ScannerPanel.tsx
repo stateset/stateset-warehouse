@@ -42,6 +42,17 @@ export const looksLikeGs1 = (value: string) =>
   value.startsWith("(") ||
   value.includes("\u001d");
 
+/** A leading ISO/IEC 15424 symbology identifier, such as `]C0` for plain Code 128. */
+const symbologyId = /^\][A-Za-z][0-9A-Za-z]/;
+
+/**
+ * Whether a plain scan is the expected label. Scanners set to send code IDs
+ * prefix every label, so a label also matches without that prefix. Matching
+ * stays exact and case sensitive.
+ */
+export const scanMatches = (value: string, expected: string) =>
+  value === expected || value.replace(symbologyId, "") === expected;
+
 export default function ScannerPanel({
   at,
   state,
@@ -362,7 +373,7 @@ export default function ScannerPanel({
       return;
     }
     const expected = [target.location, target.sku, target.lot][index];
-    if (value !== expected) {
+    if (!scanMatches(value, expected)) {
       setError(
         `Wrong ${steps[index]}. Expected ${expected}. Nothing was saved.`,
       );
@@ -371,7 +382,7 @@ export default function ScannerPanel({
       setFocusSequence((value) => value + 1);
       return;
     }
-    verification.current = [...verification.current, value];
+    verification.current = [...verification.current, expected];
     setVerified(verification.current);
     setScan("");
     if (scanInput.current) scanInput.current.value = "";
