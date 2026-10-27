@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "scope": "software_release_gate_verification",
+  "release": "0.4.0",
+  "tag": "v0.4.0",
+  "release_commit": "aaed4995207054a0361a0a24717b13aeed4d763a",
+  "gate_result": "passed",
+  "gate_release_revision_field": "aaed4995207054a0361a0a24717b13aeed4d763a",
+  "elapsed_seconds": 3051,
+  "commit_binding": {
+    "method": "Each gated software input's SHA-256 recomputed from `git show aaed499:<path>`",
+    "inputs": 504,
+    "aggregate_sha256": "9239960a79b30f414f2267e1932ce713cef9fde31611fa534571bd0d10f99199",
+    "mismatches": 0,
+    "note": "The gate ran from a clean clone of release-0.4.0 at aaed499; every gated input matches that commit byte for byte. The tag may add only release notes, which are not gated inputs."
+  },
+  "profile": {
+    "products": 500,
+    "open_orders": 500,
+    "bins": 100,
+    "lots": 2,
+    "operators": 8,
+    "replicas": 2,
+    "sustained_seconds": 300,
+    "serial_units_per_sku_lot": 16,
+    "serial_labels": 16000
+  },
+  "results": {
+    "image_resilience": {
+      "committed_moves": 7070,
+      "moves_per_second": 23.546,
+      "unexpected_errors": 0,
+      "action_p95_ms": 501.13
+    },
+    "image_serial_resilience": {
+      "committed_moves": 3777,
+      "moves_per_second": 12.566,
+      "unexpected_errors": 0,
+      "action_p95_ms": 999.289
+    }
+  },
+  "limits": [
+    "Synthetic fixtures on a shared, uncontrolled host; no facility SLO or capacity claim",
+    "Production deployment, deployed identity/native/MCP clients, scanner devices, physical facility acceptance and managed failover remain separate",
+    "Hosted CI did not run (GitHub billing); PostgreSQL 16 runtime checks ran only inside the image stages",
+    "Repository remains private; no packages or images are published"
+  ],
+  "tag_status": "pending: v0.4.0 is tagged after the 2026-10-28 launch of 0.3.1, followed by its source audit and license review",
+  "attempts": [
+    {
+      "attempt": 1,
+      "date": "2026-10-27",
+      "directory": "gate-040-attempt1-full",
+      "source": "aaed499",
+      "profile": "full",
+      "result": "passed",
+      "reason": "This bundle",
+      "stages": [
+        {
+          "stage": "prerequisites",
+          "status": "passed"
+        },
+        {
+          "stage": "software_checks",
+          "status": "passed"
+        },
+        {
+          "stage": "observability_rules",
+          "status": "passed"
+        },
+        {
+          "stage": "release_builds",
+          "status": "passed"
+        },
+        {
+          "stage": "standard_workload",
+          "status": "passed"
+        },
+        {
+          "stage": "archive_restore",
+          "status": "passed"
+        },
+        {
+          "stage": "live_browsers",
+          "status": "passed"
+        },
+        {
+          "stage": "production_container",
+          "status": "passed"
+        },
+        {
+          "stage": "image_resilience",
+          "status": "passed"
+        },
+        {
+          "stage": "stable_source_inputs",
+          "status": "passed"
+        }
+      ]
+    }
+  ],
+  "feature_gate": {
+    "evidence": "../feature-planning-labels-20261026/verification.json",
+    "note": "The five features passed their own full gate on 2026-10-26 (gated inputs 7aa8eef); this gate adds the 0.3.1 merge and the version bump."
+  }
+}
