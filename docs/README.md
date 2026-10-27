@@ -38,6 +38,7 @@ Pick the row that matches what you are doing.
 | [Observability](observability.md) | Operations snapshots, Prometheus metrics and alert policies. |
 | [Resilience](resilience.md) | Sustained HTTP traffic with forced API/PostgreSQL crashes and recovery. |
 | [Deployed OMS/Freight acceptance](native-acceptance.md) | Preflight and staging checks before connecting live services. |
+| [Scanner setup](scanners.md) | Configure Zebra and other keyboard scanners, and test each model before the pilot. |
 | [Facility acceptance](facility-acceptance.md) | Signed physical acceptance with real devices and stock. |
 
 ## Releases and evidence
