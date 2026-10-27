@@ -12,7 +12,7 @@
     "inputs": 504,
     "aggregate_sha256": "9239960a79b30f414f2267e1932ce713cef9fde31611fa534571bd0d10f99199",
     "mismatches": 0,
-    "note": "The gate ran from a clean clone of release-0.4.0 at aaed499; every gated input matches that commit byte for byte. The tag may add only release notes, which are not gated inputs."
+    "note": "The gate ran from a clean clone of release-0.4.0 at aaed499. Tag v0.4.0 (f721391) adds only release notes (README.md, CHANGELOG.md), which are not gated inputs; every gated input matches both commits byte for byte."
   },
   "profile": {
     "products": 500,
@@ -45,7 +45,6 @@
     "Hosted CI did not run (GitHub billing); PostgreSQL 16 runtime checks ran only inside the image stages",
     "Repository remains private; no packages or images are published"
   ],
-  "tag_status": "pending: v0.4.0 is tagged after the 2026-10-28 launch of 0.3.1, followed by its source audit and license review",
   "attempts": [
     {
       "attempt": 1,
@@ -102,5 +101,31 @@
   "feature_gate": {
     "evidence": "../feature-planning-labels-20261026/verification.json",
     "note": "The five features passed their own full gate on 2026-10-26 (gated inputs 7aa8eef); this gate adds the 0.3.1 merge and the version bump."
+  },
+  "tag_commit": "f7213914220a145af84568b3868116d7da2fcff3",
+  "source_audit": {
+    "report": "source-audit-report.json",
+    "result": "passed",
+    "audited_head": "f7213914220a145af84568b3868116d7da2fcff3",
+    "refs": 11,
+    "commits": 77,
+    "current_files": 1523,
+    "unreviewed_findings": 0,
+    "scanner": "Gitleaks 8.30.1, archive SHA-256 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb",
+    "note": "Run on a full mirror of every branch and tag, including v0.4.0, with the tag's tree as the current tree; the raw source export stays private."
+  },
+  "license_review": {
+    "report": "source-license-review.json",
+    "vendored_files_verified": 169,
+    "rust_packages": 311,
+    "browser_packages": 128,
+    "non_permissive": [
+      {
+        "package": "caniuse-lite",
+        "license": "CC-BY-4.0",
+        "note": "Development-only build data (dev: true in package-lock.json); absent from the built dashboard and its notices"
+      }
+    ],
+    "not_legal_approval": true
   }
 }

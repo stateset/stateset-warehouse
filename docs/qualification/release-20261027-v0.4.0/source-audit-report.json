@@ -1,0 +1,286 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-27T23:35:01.912703+00:00",
+  "scope": "Automated source/history checks with exact-byte false-positive review; no publication",
+  "result": "passed",
+  "head": "f7213914220a145af84568b3868116d7da2fcff3",
+  "refs": [
+    {
+      "ref": "refs/heads/deploy/production-kit",
+      "object": "3bf15a48dc0e18b35b5d8f4762de159b8d9f04bd"
+    },
+    {
+      "ref": "refs/heads/feature/planning-labels",
+      "object": "fa379232bd69136416e33e2d6adfe3f2de1411a3"
+    },
+    {
+      "ref": "refs/heads/main",
+      "object": "24d9a7c55805500d7ab3c523395f7470cc1e4b5f"
+    },
+    {
+      "ref": "refs/heads/next/code-health",
+      "object": "cf72ac86f593904bee35e29aa600aa3d1d8495c8"
+    },
+    {
+      "ref": "refs/heads/release-0.3.1",
+      "object": "5eadef063f74758d77d4b4c9284a13496b5b064c"
+    },
+    {
+      "ref": "refs/heads/release-0.4.0",
+      "object": "f7213914220a145af84568b3868116d7da2fcff3"
+    },
+    {
+      "ref": "refs/tags/v0.1.1",
+      "object": "75de8d764c11a69a5e310ce166f1c447665031b4"
+    },
+    {
+      "ref": "refs/tags/v0.2.0",
+      "object": "7e0572c171f471d99150743f9dc9a4b05bb2bef5"
+    },
+    {
+      "ref": "refs/tags/v0.3.0",
+      "object": "5e8ebe77652a2bc5c3f1899ead148c45ae01efab"
+    },
+    {
+      "ref": "refs/tags/v0.3.1",
+      "object": "61e413f18cb053b973762792cad429b469355566"
+    },
+    {
+      "ref": "refs/tags/v0.4.0",
+      "object": "1f036112256ec95791095a6e9c2d875887cfec4a"
+    }
+  ],
+  "commits": 77,
+  "current_files": 1523,
+  "historical_paths": 1549,
+  "unique_historical_blobs": 2010,
+  "source_files_manifest_sha256": "308b3584e9320c73e904711df2e37edc37a53d49bc2f20088e90c63e11990c04",
+  "scanner": {
+    "version": "8.30.1",
+    "binary_sha256": "88f91962aa2f93ac6ab281d553b9e125f5197bbbce38f9f2437f7299c32e5509",
+    "default_rules": true,
+    "inline_allow_comments_ignored": true,
+    "repo_ignore_file_ignored": true,
+    "redaction_percent": 100,
+    "review_sha256": "c859416e8933de218aa7398ef63048615d272b59f4e79454e0aa77587d7e986f"
+  },
+  "scans": [
+    {
+      "name": "history",
+      "exit_code": 1,
+      "candidates": 8
+    },
+    {
+      "name": "current_tree",
+      "exit_code": 1,
+      "candidates": 8
+    },
+    {
+      "name": "commit_metadata",
+      "exit_code": 0,
+      "candidates": 0
+    }
+  ],
+  "findings": [
+    {
+      "scan": "history",
+      "rule": "generic-api-key",
+      "path": "vendor/stateset-icommerce/crates/stateset-crypto/src/pqc_backend.rs",
+      "start_line": 8,
+      "end_line": 9,
+      "source_sha256": "5927430b6e8c7d08a995cdaea6cea3c8557267995942e829d078564e44ca16fa",
+      "commit": "840cb9c3fa4f2ef963c966210295ccc4613b7961",
+      "classification": "reviewed_false_positive",
+      "reason": "Rust import identifiers for ML-KEM types; no credential literal. Original vendored bytes match public iCommerce upstream."
+    },
+    {
+      "scan": "history",
+      "rule": "generic-api-key",
+      "path": "docs/performance/http-500-8-operators-wms-mcp-provenance.json",
+      "start_line": 26,
+      "end_line": 26,
+      "source_sha256": "e976a08924e0267341c64cbf34398258d89f93db32b81bf9eab1ca1a64b2cc77",
+      "commit": "e64da9fa8b6819993b7f50f1647c09139602cf1b",
+      "classification": "reviewed_false_positive",
+      "reason": "SHA256 digests of retained synthetic qualification artifacts in the explicitly named artifacts_sha256 object; no authentication capability."
+    },
+    {
+      "scan": "history",
+      "rule": "generic-api-key",
+      "path": "docs/performance/http-500-8-operators-wms-mcp-provenance.json",
+      "start_line": 35,
+      "end_line": 35,
+      "source_sha256": "e976a08924e0267341c64cbf34398258d89f93db32b81bf9eab1ca1a64b2cc77",
+      "commit": "e64da9fa8b6819993b7f50f1647c09139602cf1b",
+      "classification": "reviewed_false_positive",
+      "reason": "SHA256 digests of retained synthetic qualification artifacts in the explicitly named artifacts_sha256 object; no authentication capability."
+    },
+    {
+      "scan": "history",
+      "rule": "curl-auth-header",
+      "path": "scripts/container-smoke.sh",
+      "start_line": 124,
+      "end_line": 124,
+      "source_sha256": "dd5eaefa76083e2dfc6d4aaf64e80aab9433dc4f50fa0f1e96a7557267db7df0",
+      "commit": "e64da9fa8b6819993b7f50f1647c09139602cf1b",
+      "classification": "reviewed_false_positive",
+      "reason": "Fixed synthetic release-smoke credential configured only inside the owned isolated test container. Its matching API-key fixture is in the same script; it is not a deployment credential."
+    },
+    {
+      "scan": "history",
+      "rule": "curl-auth-header",
+      "path": "scripts/container-smoke.sh",
+      "start_line": 113,
+      "end_line": 116,
+      "source_sha256": "5953e166762a6bea9616b8180eed4e6b13ecd30ddffcf1a9710f289df74f5be7",
+      "commit": "6e7b564c68b54f44441ba8302fb79e4bdcf512ba",
+      "classification": "reviewed_false_positive",
+      "reason": "Fixed synthetic release-smoke credential configured only inside the owned isolated test container. Its matching API-key fixture is in the same script; it is not a deployment credential."
+    },
+    {
+      "scan": "history",
+      "rule": "curl-auth-header",
+      "path": "scripts/container-smoke.sh",
+      "start_line": 118,
+      "end_line": 118,
+      "source_sha256": "5953e166762a6bea9616b8180eed4e6b13ecd30ddffcf1a9710f289df74f5be7",
+      "commit": "6e7b564c68b54f44441ba8302fb79e4bdcf512ba",
+      "classification": "reviewed_false_positive",
+      "reason": "Fixed synthetic release-smoke credential configured only inside the owned isolated test container. Its matching API-key fixture is in the same script; it is not a deployment credential."
+    },
+    {
+      "scan": "history",
+      "rule": "generic-api-key",
+      "path": "tests/fixtures/facility-v2-command-journal.json",
+      "start_line": 61074,
+      "end_line": 61074,
+      "source_sha256": "fb8b94c814bdb8fc7983e5620975a9f305ebc1df0c62d3a81dbc6f57c992be09",
+      "commit": "e64da9fa8b6819993b7f50f1647c09139602cf1b",
+      "classification": "reviewed_false_positive",
+      "reason": "Synthetic UUID idempotency keys in the original restore fixture. Recipient is loopback port 1 and tenant is restore-oms; these are request identities, not authentication secrets."
+    },
+    {
+      "scan": "history",
+      "rule": "generic-api-key",
+      "path": "tests/fixtures/facility-v2-command-journal.json",
+      "start_line": 61126,
+      "end_line": 61126,
+      "source_sha256": "fb8b94c814bdb8fc7983e5620975a9f305ebc1df0c62d3a81dbc6f57c992be09",
+      "commit": "e64da9fa8b6819993b7f50f1647c09139602cf1b",
+      "classification": "reviewed_false_positive",
+      "reason": "Synthetic UUID idempotency keys in the original restore fixture. Recipient is loopback port 1 and tenant is restore-oms; these are request identities, not authentication secrets."
+    },
+    {
+      "scan": "current_tree",
+      "rule": "generic-api-key",
+      "path": "docs/performance/http-500-8-operators-wms-mcp-provenance.json",
+      "start_line": 26,
+      "end_line": 26,
+      "source_sha256": "e976a08924e0267341c64cbf34398258d89f93db32b81bf9eab1ca1a64b2cc77",
+      "commit": "",
+      "classification": "reviewed_false_positive",
+      "reason": "SHA256 digests of retained synthetic qualification artifacts in the explicitly named artifacts_sha256 object; no authentication capability."
+    },
+    {
+      "scan": "current_tree",
+      "rule": "generic-api-key",
+      "path": "docs/performance/http-500-8-operators-wms-mcp-provenance.json",
+      "start_line": 35,
+      "end_line": 35,
+      "source_sha256": "e976a08924e0267341c64cbf34398258d89f93db32b81bf9eab1ca1a64b2cc77",
+      "commit": "",
+      "classification": "reviewed_false_positive",
+      "reason": "SHA256 digests of retained synthetic qualification artifacts in the explicitly named artifacts_sha256 object; no authentication capability."
+    },
+    {
+      "scan": "current_tree",
+      "rule": "curl-auth-header",
+      "path": "scripts/container-smoke.sh",
+      "start_line": 124,
+      "end_line": 124,
+      "source_sha256": "95ba3b7e7096344fe32c672589077e70bb75dbecf8942ee2cbf02b0eac1ff88b",
+      "commit": "",
+      "classification": "reviewed_false_positive",
+      "reason": "Fixed synthetic release-smoke credential configured only inside the owned isolated test container. Its matching API-key fixture is in the same script; it is not a deployment credential. The owned-network creation call is the sole changed line; the fixed test credential assignment and reviewed authentication lines remain byte-identical to the earlier reviewed source."
+    },
+    {
+      "scan": "current_tree",
+      "rule": "curl-auth-header",
+      "path": "scripts/container-smoke.sh",
+      "start_line": 129,
+      "end_line": 131,
+      "source_sha256": "95ba3b7e7096344fe32c672589077e70bb75dbecf8942ee2cbf02b0eac1ff88b",
+      "commit": "",
+      "classification": "reviewed_false_positive",
+      "reason": "Fixed synthetic release-smoke credential configured only inside the owned isolated test container. Its matching API-key fixture is in the same script; it is not a deployment credential. The owned-network creation call is the sole changed line; the fixed test credential assignment and reviewed authentication lines remain byte-identical to the earlier reviewed source."
+    },
+    {
+      "scan": "current_tree",
+      "rule": "curl-auth-header",
+      "path": "scripts/container-smoke.sh",
+      "start_line": 133,
+      "end_line": 133,
+      "source_sha256": "95ba3b7e7096344fe32c672589077e70bb75dbecf8942ee2cbf02b0eac1ff88b",
+      "commit": "",
+      "classification": "reviewed_false_positive",
+      "reason": "Fixed synthetic release-smoke credential configured only inside the owned isolated test container. Its matching API-key fixture is in the same script; it is not a deployment credential. The owned-network creation call is the sole changed line; the fixed test credential assignment and reviewed authentication lines remain byte-identical to the earlier reviewed source."
+    },
+    {
+      "scan": "current_tree",
+      "rule": "generic-api-key",
+      "path": "vendor/stateset-icommerce/crates/stateset-crypto/src/pqc_backend.rs",
+      "start_line": 8,
+      "end_line": 9,
+      "source_sha256": "5927430b6e8c7d08a995cdaea6cea3c8557267995942e829d078564e44ca16fa",
+      "commit": "",
+      "classification": "reviewed_false_positive",
+      "reason": "Rust import identifiers for ML-KEM types; no credential literal. Original vendored bytes match public iCommerce upstream."
+    },
+    {
+      "scan": "current_tree",
+      "rule": "generic-api-key",
+      "path": "tests/fixtures/facility-v2-command-journal.json",
+      "start_line": 61074,
+      "end_line": 61074,
+      "source_sha256": "fb8b94c814bdb8fc7983e5620975a9f305ebc1df0c62d3a81dbc6f57c992be09",
+      "commit": "",
+      "classification": "reviewed_false_positive",
+      "reason": "Synthetic UUID idempotency keys in the original restore fixture. Recipient is loopback port 1 and tenant is restore-oms; these are request identities, not authentication secrets."
+    },
+    {
+      "scan": "current_tree",
+      "rule": "generic-api-key",
+      "path": "tests/fixtures/facility-v2-command-journal.json",
+      "start_line": 61126,
+      "end_line": 61126,
+      "source_sha256": "fb8b94c814bdb8fc7983e5620975a9f305ebc1df0c62d3a81dbc6f57c992be09",
+      "commit": "",
+      "classification": "reviewed_false_positive",
+      "reason": "Synthetic UUID idempotency keys in the original restore fixture. Recipient is loopback port 1 and tenant is restore-oms; these are request identities, not authentication secrets."
+    }
+  ],
+  "unreviewed_findings": 0,
+  "path_issues": [],
+  "binary_files": [
+    "docs/screenshots/desktop.png",
+    "docs/screenshots/lot-trace-desktop.png",
+    "docs/screenshots/lot-trace-mobile.png",
+    "docs/screenshots/mobile.png",
+    "docs/screenshots/pack-units-desktop.png",
+    "docs/screenshots/pack-units-mobile.png",
+    "docs/screenshots/transfer-loss-desktop.png",
+    "docs/screenshots/transfer-loss-mobile.png",
+    "tests/fixtures/workos-test-key.der",
+    "tests/fixtures/workos-test-key2.der"
+  ],
+  "public_launch_authorized": false,
+  "production_qualified": false,
+  "limits": [
+    "Pattern scanning does not prove absence of secrets or customer data",
+    "Binary assets require provenance review; Git patch scanning follows scanner defaults",
+    "Only refs available to this clone are included; server-side deleted/unreachable objects are outside scope",
+    "GitHub issues, pull requests, Actions logs/artifacts and releases require separate review",
+    "Rights to publish and security-contact ownership require maintainer confirmation",
+    "A passing source audit does not replace exact-source software release qualification"
+  ]
+}
