@@ -189,3 +189,95 @@ async fn reconciliation_completes_with_thousands_of_move_events() {
     assert_eq!(report["serials"]["source_ok"], true);
     assert_eq!(report["serials"]["registered_units"], 2000);
 }
+
+/// Growth curve for the 2026-10-27 gate timeout: the gate's 16,000 labels plus
+/// thousands of single-label moves. Prints the full request time and its two
+/// largest statements after each batch; correctness is asserted, timing is not.
+#[tokio::test]
+#[ignore = "requires WMS_TEST_DATABASE_URL; prints a timing curve"]
+async fn reconciliation_time_with_serial_move_history() {
+    let f = Fixture::new().await;
+    let skus = 8;
+    let per_sku = 2000;
+    for s in 0..skus {
+        f.plain(json!({"type":"create_product","sku":format!("CURVE-{s}"),"name":"Synthetic scale product","category":"Synthetic","reorder_point":0,"serial_controlled":true}))
+            .await;
+    }
+    f.plain(json!({"type":"create_location","code":"A","zone":"Synthetic","kind":"storage"}))
+        .await;
+    f.plain(json!({"type":"create_location","code":"B","zone":"Synthetic","kind":"storage"}))
+        .await;
+    for s in 0..skus {
+        let sku = format!("CURVE-{s}");
+        let labels: Vec<String> = (0..per_sku).map(|i| format!("{sku}-{i}")).collect();
+        f.execute(
+            json!({"type":"count_stock","sku":sku,"lot":"LOT","location":"A","counted":labels.len(),"reason":"Synthetic scale opening count"}),
+            vec![Input { target: vec![], sku: sku.clone(), serials: labels }],
+        )
+        .await;
+    }
+
+    let url = std::env::var("WMS_TEST_DATABASE_URL").expect("isolated PostgreSQL test URL");
+    let pool = sqlx::PgPool::connect(&url)
+        .await
+        .expect("timing connection");
+    let timed = |sql: &'static str| {
+        let pool = pool.clone();
+        let tenant = f.who.tenant.clone();
+        async move {
+            let started = std::time::Instant::now();
+            sqlx::query(sql)
+                .bind(&tenant)
+                .bind("wh-main")
+                .fetch_all(&pool)
+                .await
+                .expect("proof statement");
+            started.elapsed().as_millis()
+        }
+    };
+
+    let mut version = f.state().await.version;
+    let mut moves = 0usize;
+    for target in [0usize, 1000, 2000, 4000, 6000] {
+        while moves < target {
+            // Rotate one label per move: out to B on the first pass, back to A on the next.
+            let sku = format!("CURVE-{}", moves % skus);
+            let index = moves / skus % per_sku;
+            let (from, to) = if (moves / (skus * per_sku)).is_multiple_of(2) {
+                ("A", "B")
+            } else {
+                ("B", "A")
+            };
+            let request = Request {
+                request_id: domain::id(),
+                expected_version: version,
+                resource_versions: None,
+                unit_inputs: vec![],
+                serial_inputs: vec![Input { target: vec![], sku: sku.clone(), serials: vec![format!("{sku}-{index}")] }],
+                command: serde_json::from_value(json!({"type":"move_stock","sku":sku,"lot":"LOT","from":from,"to":to,"quantity":1}))
+                    .expect("typed canonical command"),
+            };
+            f.store
+                .execute(&f.who, "wh-main", &request)
+                .await
+                .expect("real atomic move");
+            version += 1;
+            moves += 1;
+        }
+        let started = std::time::Instant::now();
+        let report = f
+            .store
+            .reconciliation(&f.who.tenant, "wh-main")
+            .await
+            .expect("complete reconciliation within the statement deadline");
+        let full = started.elapsed().as_millis();
+        assert_eq!(report["ok"], true, "{report}");
+        assert_eq!(report["version"], version);
+        let started = std::time::Instant::now();
+        f.state().await;
+        let state = started.elapsed().as_millis();
+        let ledger = timed(include_str!("../src/reconciliation.sql")).await;
+        let serial = timed(include_str!("../src/serial_reconciliation.sql")).await;
+        eprintln!("curve moves={moves} commands={version} full_ms={full} state_ms={state} ledger_sql_ms={ledger} serial_sql_ms={serial}");
+    }
+}
