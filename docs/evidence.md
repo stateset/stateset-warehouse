@@ -1,5 +1,13 @@
 # Implementation evidence
 
+## 0.3.1 qualification — 2026-10-27
+
+The [0.3.1 complete gate](qualification/release-20261027-v0.3.1/summary.json) passed all ten stages from a clean clone of `release-0.3.1` at `5658cd7`. It used the same full profile as 0.3.0: 500 products, 500 open orders, 100 bins, two lots, eight operators, two API replicas, 300-second image workloads and 16,000 serial labels. The untracked image workload completed **6,010 moves with exact replays** (20.008 moves/s, 497.901ms action p95). The serial workload completed **3,865 moves with exact replays** (12.866 moves/s, 902.139ms action p95). Both had zero unexpected errors and zero conflicts, and final full reconciliation passed on both replicas.
+
+[The verification record](qualification/release-20261027-v0.3.1/verification.json) binds all 473 gated inputs byte for byte to tag `v0.3.1` (`5eadef0`), which adds only release notes to `5658cd7`. It lists all three attempts. Attempt 1 failed under shared-host memory pressure. Attempt 2 failed on a real test cleanup bug, fixed in `5658cd7`. Deployed clients and physical acceptance remain open.
+
+The [full-history source audit](qualification/release-20261027-v0.3.1/source-audit-report.json) passed on every branch and tag: 70 commits, 1,445 current files, 0 unreviewed findings (Gitleaks 8.30.1, verified archive). The [license review](qualification/release-20261027-v0.3.1/source-license-review.json) verified 169 vendored upstream files and inventoried 311 Rust and 128 browser packages. All are permissively licensed except development-only `caniuse-lite` (CC-BY-4.0), which is not distributed. These are automated checks, not legal approval.
+
 ## 0.3.0 qualification — 2026-10-22
 
 The [0.3.0 complete gate](qualification/release-20261022-v0.3.0/summary.json) passed all ten stages on the tagged source. The run used the full profile: 500 products, 500 open orders, 100 bins, two lots, eight operators, two API replicas, 300-second image workloads and 16,000 serial labels. The untracked image workload completed **4,694 moves with exact replays** (15.618 moves/s, 662.249ms action p95). The serial workload completed **1,689 moves with exact replays** across 256 distinct timed labels (5.605 moves/s, 1,930.575ms action p95). Both had zero unexpected errors and zero conflicts. Final full reconciliation passed on both replicas; that is the check that exceeded its SQL deadline on 2026-10-21. API and PostgreSQL crash recovery preserved every table fingerprint.

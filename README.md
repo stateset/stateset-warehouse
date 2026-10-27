@@ -17,7 +17,7 @@ Built with Rust (Axum, Tokio, SQLx) on PostgreSQL, with a React/TypeScript dashb
 
 | | |
 |---|---|
-| Latest qualified release | **0.3.1** (2026-10-27): the complete [release gate](docs/release-qualification.md) passed at the full profile: 500 products, 16,000 serial labels, eight operators, API and PostgreSQL crash recovery, and final reconciliation on both replicas. Serial saves now check custody per product, and the native serial latency profile meets its 1,000ms p95 target (772ms). |
+| Latest qualified release | **0.3.1** (2026-10-27): the complete [release gate](docs/release-qualification.md) passed at the full profile: 500 products, 16,000 serial labels, eight operators, API and PostgreSQL crash recovery, and final reconciliation on both replicas. Serial saves now check custody per product, and the native serial latency profile meets its 1,000ms p95 target (772ms). [Evidence](docs/qualification/release-20261027-v0.3.1/verification.json). |
 | Previous release | **0.3.0** (2026-10-22). [Evidence](docs/qualification/release-20261022-v0.3.0/verification.json). |
 | Not yet qualified | Production deployment, scanner hardware, physical facility acceptance and managed failover. See [evidence and limits](docs/evidence.md). |
 
