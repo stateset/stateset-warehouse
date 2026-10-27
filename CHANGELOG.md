@@ -1,6 +1,6 @@
 # Changes
 
-## Unreleased
+## 0.4.0 — unreleased
 
 - **GS1 scanning.** `POST /scans/parse` turns a GS1-128, DataMatrix or QR scan into its exact GTIN, lot, expiry date and serial, with check digits, lengths and character sets verified and the GS1 century rule for dates. Unsupported or malformed data is refused, not partly parsed. A product is identified only through reviewed GTINs (migration 038): admin-managed, audited, normalized to GTIN-14 and unique per warehouse.
 - **Bin capacity** (migration 038): optional per-bin limits in whole units and distinct SKUs, admin-managed and audited. Putaway skips full bins and splits stock across bins.
