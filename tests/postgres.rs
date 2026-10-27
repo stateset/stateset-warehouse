@@ -1884,6 +1884,13 @@ async fn startup_refuses_a_database_migrated_by_a_newer_release() {
         .expect("ledger count");
     assert_eq!(after, before);
     check.close().await.expect("closed");
+    sqlx::query(
+        "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname=$1 AND pid<>pg_backend_pid()",
+    )
+    .bind(&name)
+    .execute(&mut admin)
+    .await
+    .expect("end leftover sessions on the owned database");
     sqlx::query(&format!("DROP DATABASE {name}"))
         .execute(&mut admin)
         .await
