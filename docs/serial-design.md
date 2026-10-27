@@ -91,7 +91,7 @@ Migrations are append-only: an applied migration's SHA-256 is recorded and any c
 
 ## Changing serial code safely
 
-1. **Never edit an applied migration.** Add a new numbered migration, register it in `src/persistence.rs`, and regenerate `schema/current-functions.sql` (see `tests/sql_catalog.rs`). Update the migration count in `tests/serial_admission/restore.rs` and the schema helper in `tests/serial_registry.rs`.
+1. **Never edit an applied migration.** Add a new numbered migration, register it in `src/persistence/startup.rs`, and regenerate `schema/current-functions.sql` (see `tests/sql_catalog.rs`). Update the migration count in `tests/serial_admission/restore.rs` and the schema helper in `tests/serial_registry.rs`.
 2. **Prove it gives the same answers.** For a rewrite of an existing check, add a differential test that compares the new result with the original function or the frozen predecessor (`tests/fixtures/serial_reconciliation_v24.sql`), on clean data *and* on deliberately damaged rows. `tests/serial_admission/resolved_sources.rs` is the template: it disables immutability triggers inside a rollback-only transaction, corrupts one thing at a time, and compares every verdict.
 3. **Make sure the test can fail.** Temporarily remove one predicate from your new code; at least one case must fail.
 4. **Check scale.** Run the ignored scale tests:

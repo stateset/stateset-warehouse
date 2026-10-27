@@ -14,6 +14,8 @@
 - **Carrier labels** (migration 037) record the carrier, service, tracking number, exact decimal rate, observed carton and a ZPL or HTTPS label on an open package. A package has one active label; labels are immutable apart from one void, and can't be added after handoff or unpacking. The WMS never calls a carrier; the TMS or an operator supplies the label.
 - Dashboard panels for each: putaway (Receiving), batch picking (Fulfillment), cycle counts, label printing and saved rules (Inventory), and carrier labels on each package. Ten new MCP tools.
 - Integration tests run every planned task through the real command path against PostgreSQL. The restore rehearsal populates both new tables.
+- **Scanner code IDs.** The dashboard scanner panel also accepts a bin, SKU or lot label that arrives after a leading symbology identifier such as `]C0`. Matching stays exact and case-sensitive. Forms, serial fields and the terminal still record scans exactly as typed.
+- Code structure, no behavior change: the order, receipt and help dialogs moved out of `App.tsx` (2,878 to 2,350 lines). `persistence.rs` is split into startup, load, save and command-execution modules (1,911 to 490 lines). The serial custody equations and tests moved out of `serials.rs` (1,963 to 837 lines).
 
 ## 0.3.1 — 2026-10-22
 
