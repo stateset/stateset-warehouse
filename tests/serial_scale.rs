@@ -193,12 +193,17 @@ async fn reconciliation_completes_with_thousands_of_move_events() {
 /// Growth curve for the 2026-10-27 gate timeout: the gate's 16,000 labels plus
 /// thousands of single-label moves. After each batch it prints the move cost,
 /// host load, full request time and the serial statement with and without JIT,
-/// and writes that statement's actual plan to WMS_CURVE_PLAN_DIR when set.
+/// and writes that statement's actual plan to WMS_CURVE_PLAN_DIR. It takes about
+/// an hour, so it runs only when that directory is set, never in the suite.
 /// Correctness is asserted whenever the request completes; timing is not.
 #[tokio::test]
-#[ignore = "requires WMS_TEST_DATABASE_URL; prints a timing curve"]
+#[ignore = "requires WMS_TEST_DATABASE_URL and WMS_CURVE_PLAN_DIR; prints a timing curve"]
 async fn reconciliation_time_with_serial_move_history() {
     use sqlx::Connection;
+    let Ok(plans) = std::env::var("WMS_CURVE_PLAN_DIR") else {
+        eprintln!("skipped: set WMS_CURVE_PLAN_DIR to record the growth curve");
+        return;
+    };
     let f = Fixture::new().await;
     let skus = 8;
     let per_sku = 2000;
@@ -223,7 +228,6 @@ async fn reconciliation_time_with_serial_move_history() {
     // A separate session without the store's 10s deadline, so slow statements
     // are measured rather than cancelled. Unnamed statements plan per call.
     let url = std::env::var("WMS_TEST_DATABASE_URL").expect("isolated PostgreSQL test URL");
-    let plans = std::env::var("WMS_CURVE_PLAN_DIR").ok();
     let mut probe = sqlx::PgConnection::connect(&url)
         .await
         .expect("timing connection");
@@ -325,13 +329,13 @@ async fn reconciliation_time_with_serial_move_history() {
             .unwrap_or("none")
             .trim()
             .to_string();
-        if let Some(dir) = &plans {
+        {
             let stats: Vec<String> = sqlx::query_scalar("SELECT relname||' live='||n_live_tup||' mod_since_analyze='||n_mod_since_analyze||' analyzed='||COALESCE(greatest(last_analyze,last_autoanalyze)::text,'never') FROM pg_stat_user_tables WHERE relname LIKE 'wms_serial%' OR relname='wms_events' ORDER BY relname")
                 .fetch_all(&mut probe)
                 .await
                 .expect("table statistics");
             std::fs::write(
-                format!("{dir}/serial-plan-{moves}.txt"),
+                format!("{plans}/serial-plan-{moves}.txt"),
                 format!(
                     "moves={moves} commands={version} load={load}\n{}\n\n{}\n",
                     stats.join("\n"),
