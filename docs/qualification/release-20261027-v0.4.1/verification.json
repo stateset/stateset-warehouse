@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "scope": "software_release_gate_verification",
+  "release": "0.4.1",
+  "tag": "v0.4.1",
+  "release_commit": "879966493d2968f217e5e6de60509997f7eb5bb7",
+  "gate_result": "passed",
+  "gate_release_revision_field": "879966493d2968f217e5e6de60509997f7eb5bb7",
+  "elapsed_seconds": 2742,
+  "commit_binding": {
+    "method": "Each gated software input's SHA-256 recomputed from `git show 8799664:<path>`",
+    "inputs": 515,
+    "aggregate_sha256": "79dc9f8aece7478a4d55042ca7d58f1a6c40717ed0e1b673708ac96a461570d4",
+    "mismatches": 0
+  },
+  "profile": {
+    "products": 500,
+    "open_orders": 500,
+    "bins": 100,
+    "lots": 2,
+    "operators": 8,
+    "replicas": 2,
+    "sustained_seconds": 300,
+    "serial_units_per_sku_lot": 16,
+    "serial_labels": 16000
+  },
+  "results": {
+    "image_resilience": {
+      "committed_moves": 7491,
+      "moves_per_second": 24.955,
+      "unexpected_errors": 0,
+      "action_p95_ms": 478.991
+    },
+    "image_serial_resilience": {
+      "committed_moves": 4719,
+      "moves_per_second": 15.703,
+      "unexpected_errors": 0,
+      "action_p95_ms": 622.571
+    }
+  },
+  "stages": [
+    {
+      "stage": "prerequisites",
+      "status": "passed"
+    },
+    {
+      "stage": "software_checks",
+      "status": "passed"
+    },
+    {
+      "stage": "observability_rules",
+      "status": "passed"
+    },
+    {
+      "stage": "release_builds",
+      "status": "passed"
+    },
+    {
+      "stage": "standard_workload",
+      "status": "passed"
+    },
+    {
+      "stage": "archive_restore",
+      "status": "passed"
+    },
+    {
+      "stage": "live_browsers",
+      "status": "passed"
+    },
+    {
+      "stage": "production_container",
+      "status": "passed"
+    },
+    {
+      "stage": "image_resilience",
+      "status": "passed"
+    },
+    {
+      "stage": "stable_source_inputs",
+      "status": "passed"
+    }
+  ],
+  "limits": [
+    "Synthetic fixtures on a shared, uncontrolled host; no facility SLO or capacity claim",
+    "Production deployment, deployed identity/native/MCP clients, scanner devices, physical facility acceptance and managed failover remain separate",
+    "Hosted CI did not run (GitHub billing); PostgreSQL 16 runtime checks ran only inside the image stages",
+    "Repository remains private; no packages or images are published"
+  ]
+}
