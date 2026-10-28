@@ -27,6 +27,8 @@ The same authenticated service exposes a [native MCP endpoint](mcp.md) at `/mcp`
 | GET | `/v1/warehouses/{id}/unit-observations?sku={exact_sku}` | Original pack counts, exact each conversions, definition IDs and source flags |
 | GET | `/v1/warehouses/{id}` | Consistent operational snapshot: active work, bounded completed work, recent history and an operational balance check |
 | GET | `/v1/warehouses/{id}/reconciliation` | Full append-only movement, allocation and exact receipt-line proof, checked version and overall validity |
+| POST | `/v1/warehouses/{id}/reconciliation/runs` | Start the same full proof in the background under its own deadline; returns `202` and the run |
+| GET | `/v1/warehouses/{id}/reconciliation/runs/{run}` | A run's status and, once it succeeds, its complete proof |
 | GET | `/v1/warehouses/{id}/history/{kind}?limit=50&before={cursor}` | Keyset history for `orders`, `receipts`, `movements`, `activity` or `exceptions` |
 | GET | `/v1/warehouses/{id}/orders/{order_id}` | Authoritative order detail, including archived work |
 | GET | `/v1/warehouses/{id}/receipts/{receipt_id}` | Authoritative receipt detail, including completed receipts |
@@ -422,6 +424,12 @@ The browser offers reviewed pack definitions in Inventory and explicit whole-pac
 
 
 <a id="serial-command-admission-in-development"></a>
+
+## Background reconciliation runs
+
+`GET .../reconciliation` must finish inside the 10-second request deadline, which a warehouse with long serial history can exceed. A run executes the same complete proof, in one read-only snapshot, on the API process that accepted it, with a 120-second deadline for each statement. Start one with `POST .../reconciliation/runs`, then poll `GET .../reconciliation/runs/{run}` every second or so; each request returns at once.
+
+A run moves through `queued`, `running`, then `succeeded` or `failed`. A succeeded run has `version` (the warehouse version it proved) and `result`, exactly the body `GET .../reconciliation` returns at that version, including its own `ok`. A failed run has `error`. A run still unfinished 10 minutes after it was requested reads as `failed` with an abandoned error; this is what a stopped API process leaves behind. A warehouse may have two unfinished runs at a time; a third request returns `429`. The 20 newest finished runs per warehouse are kept. Runs need a `viewer`, `operator` or `admin` credential, change no stock or history, and are visible only within their tenant.
 
 ## Planning: putaway, batch picking, cycle counts and replenishment
 

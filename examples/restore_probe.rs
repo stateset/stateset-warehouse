@@ -2480,6 +2480,26 @@ async fn seed(path: &str) -> Result<()> {
         )
         .await,
     )?;
+    // A finished background reconciliation run, recorded before the archive.
+    let run = application(
+        stateset_warehouse::reconciliation_runs::begin(&store, &identity(), WAREHOUSE).await,
+    )?;
+    let run_id = run["id"].as_str().ok_or("Missing reconciliation run id")?;
+    let mut run_outcome = Value::Null;
+    for _ in 0..600 {
+        run_outcome = application(
+            stateset_warehouse::reconciliation_runs::find(&store, TENANT, WAREHOUSE, run_id).await,
+        )?
+        .ok_or("Missing reconciliation run")?;
+        if run_outcome["status"] == "succeeded" || run_outcome["status"] == "failed" {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    require(
+        run_outcome["status"] == "succeeded" && run_outcome["result"]["ok"] == true,
+        "A background reconciliation run must complete the full proof",
+    )?;
     let mut remainder_cancellation = remainder_fixture(&store).await?;
     let lot_controls = quality_fixture(&store).await?;
     let transfer_loss = transfer_loss_fixture(&store).await?;

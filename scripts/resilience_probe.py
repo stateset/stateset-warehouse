@@ -222,6 +222,35 @@ class Probe:
                 data = data.decode(errors="replace")
             return error.code, data
 
+    def reconciliation_run(self, base, seconds=600):
+        """Run the complete proof in the background on this replica and poll it.
+
+        Each request keeps the 12-second HTTP limit; only the proof itself runs
+        longer, under the run's own statement deadline. Returns (proof, run).
+        """
+        status, run = self.http(
+            base, "POST", self.route + "/reconciliation/runs", self.admin
+        )
+        require(
+            status == 202 and run.get("status") in ("queued", "running"),
+            "API reconciliation run was not accepted",
+        )
+        path = self.route + "/reconciliation/runs/" + urllib.parse.quote(
+            run["id"], safe=""
+        )
+        deadline = time.monotonic() + seconds
+        while time.monotonic() < deadline:
+            status, run = self.http(base, "GET", path, self.admin)
+            require(status == 200, "API reconciliation run could not be read")
+            if run["status"] == "succeeded":
+                return run["result"], run
+            require(
+                run["status"] != "failed",
+                "API full ledger reconciliation failed: " + str(run.get("error")),
+            )
+            time.sleep(0.5)
+        raise AssertionError("API reconciliation run did not finish in time")
+
     def wait(self, condition, description, seconds=60):
         deadline = time.monotonic() + seconds
         last = None
@@ -1495,13 +1524,9 @@ class Probe:
             )
         reconciliations = []
         for base in self.bases:
-            status, proof = self.http(
-                base, "GET", self.route + "/reconciliation", self.admin
-            )
+            proof, run = self.reconciliation_run(base)
             require(
-                status == 200
-                and proof["ok"] is True
-                and proof["version"] == len(commands),
+                proof["ok"] is True and proof["version"] == len(commands),
                 "API full ledger reconciliation failed",
             )
             reconciliations.append(
@@ -1509,6 +1534,9 @@ class Probe:
                     "ok": proof["ok"],
                     "version": proof["version"],
                     "method": proof["method"],
+                    "run_id": run["id"],
+                    "run_started_at": run["started_at"],
+                    "run_finished_at": run["finished_at"],
                 }
             )
         literal_proof = None

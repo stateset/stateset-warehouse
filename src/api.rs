@@ -377,6 +377,14 @@ fn business_routes_with_console(assets: crate::console::Assets) -> Router<App> {
         )
         .route("/v1/warehouses/{warehouse}", get(state))
         .route("/v1/warehouses/{warehouse}/reconciliation", get(reconcile))
+        .route(
+            "/v1/warehouses/{warehouse}/reconciliation/runs",
+            post(crate::reconciliation_runs::start),
+        )
+        .route(
+            "/v1/warehouses/{warehouse}/reconciliation/runs/{id}",
+            get(crate::reconciliation_runs::show),
+        )
         .route("/v1/warehouses/{warehouse}/history/{kind}", get(history))
         .route("/v1/warehouses/{warehouse}/orders/{id}", get(order_detail))
         .route(

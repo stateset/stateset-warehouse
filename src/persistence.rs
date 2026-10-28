@@ -292,10 +292,30 @@ impl Store {
         Ok(json!({"items":items,"next_cursor":cursor}))
     }
     pub async fn reconciliation(&self, t: &str, w: &str) -> Result<Value> {
+        self.reconciliation_within(t, w, None).await
+    }
+    /// The complete proof in one read-only snapshot. `statement_timeout`
+    /// replaces the connection's 10-second deadline for this transaction only;
+    /// background reconciliation runs use it, request handlers do not.
+    pub async fn reconciliation_within(
+        &self,
+        t: &str,
+        w: &str,
+        statement_timeout: Option<Duration>,
+    ) -> Result<Value> {
         let mut tx = self.pool.begin().await?;
         sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
             .execute(&mut *tx)
             .await?;
+        if let Some(limit) = statement_timeout {
+            // An integer millisecond count; never caller text.
+            sqlx::query(&format!(
+                "SET LOCAL statement_timeout = '{}ms'",
+                limit.as_millis()
+            ))
+            .execute(&mut *tx)
+            .await?;
+        }
         // Past roughly 5,500 serial commands the serial proof's estimated cost
         // crosses PostgreSQL's JIT optimization threshold, and compiling its
         // ~940 expressions alone took 12-16s against the 10s deadline. Below

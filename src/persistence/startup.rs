@@ -177,6 +177,10 @@ impl Store {
                 "038_gtins_and_bin_capacity",
                 include_str!("../../migrations/038_gtins_and_bin_capacity.sql"),
             ),
+            (
+                "039_reconciliation_runs",
+                include_str!("../../migrations/039_reconciliation_runs.sql"),
+            ),
         ];
         // A database migrated by a newer release has ledger rows this binary
         // does not know. Refuse to start before applying anything: an older

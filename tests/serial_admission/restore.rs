@@ -76,6 +76,7 @@ async fn table_contents(pool: &sqlx::PgPool) -> Value {
             "wms_carrier_labels",
             "wms_product_gtins",
             "wms_location_capacity",
+            "wms_reconciliation_runs",
         ]
         .contains(&name.as_str())
         {
@@ -83,7 +84,7 @@ async fn table_contents(pool: &sqlx::PgPool) -> Value {
             assert_eq!(
                 data,
                 json!([]),
-                "upgrade invented planning or label rows in {name}"
+                "upgrade invented planning, label or run rows in {name}"
             );
         } else {
             result.insert(name, data);
@@ -225,7 +226,7 @@ async fn populated_21_upgrade_to_current_preserves_every_data_table_and_original
     assert_eq!(
         table_contents(&f.store.pool).await,
         before,
-        "migrations22–38 changed existing application data"
+        "migrations22–39 changed existing application data"
     );
     let old_rows:Value=sqlx::query_scalar("SELECT jsonb_agg(to_jsonb(m) ORDER BY name) FROM wms_schema_migrations m WHERE name<'022_serial_restore_search_path'").fetch_one(&f.store.pool).await.expect("original21 ledger remains intact");
     assert_eq!(old_rows, ledger);
@@ -233,7 +234,7 @@ async fn populated_21_upgrade_to_current_preserves_every_data_table_and_original
         .fetch_one(&f.store.pool)
         .await
         .expect("upgraded ledger count");
-    assert_eq!(count, 38);
+    assert_eq!(count, 39);
     f.proof().await;
     f.execute(
         json!({"type":"move_stock","sku":"SERIAL","lot":"LOT","from":"A","to":"B","quantity":1}),

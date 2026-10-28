@@ -24,6 +24,7 @@ pub mod order_cancellation;
 mod persistence;
 pub mod putaway;
 pub mod receipts;
+pub mod reconciliation_runs;
 pub mod replenishment;
 pub mod returns;
 pub mod serial_plan;
