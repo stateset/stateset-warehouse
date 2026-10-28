@@ -17,8 +17,8 @@ Built with Rust (Axum, Tokio, SQLx) on PostgreSQL, with a React/TypeScript dashb
 
 | | |
 |---|---|
-| Latest qualified release | **0.4.1** (2026-10-27): the complete [release gate](docs/release-qualification.md) passed at the full profile: 500 products, 16,000 serial labels, eight operators, API and PostgreSQL crash recovery, and final reconciliation on both replicas through background runs. Adds background reconciliation runs, a faster serial proof and scanner code IDs. [Evidence](docs/qualification/release-20261027-v0.4.1/verification.json). |
-| Previous release | **0.4.0** (2026-10-27). [Evidence](docs/qualification/release-20261027-v0.4.0/verification.json). |
+| Latest qualified release | **0.4.2** (2026-10-28): the complete [release gate](docs/release-qualification.md) passed at the full profile: 500 products, 16,000 serial labels, eight operators, API and PostgreSQL crash recovery, and final reconciliation on both replicas through background runs. The dashboard, terminal and MCP now use background reconciliation runs. [Evidence](docs/qualification/release-20261028-v0.4.2/verification.json). |
+| Previous release | **0.4.1** (2026-10-27). [Evidence](docs/qualification/release-20261027-v0.4.1/verification.json). |
 | Known limit | `GET .../reconciliation` must finish inside 10 seconds, which a warehouse with serial-controlled SKUs exceeds after about 5,000 serial commands. [Background reconciliation runs](docs/api.md#background-reconciliation-runs) complete the same proof: 13 s at 7,084 commands with 16,000 labels. [Measurements](docs/performance.md#known-full-reconciliation-history-limit--2026-10-27). |
 | Not yet qualified | Production deployment, scanner hardware, physical facility acceptance and managed failover. See [evidence and limits](docs/evidence.md). |
 
