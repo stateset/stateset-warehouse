@@ -3,7 +3,7 @@ description: Report a reproducible defect using synthetic warehouse data.
 body:
   - type: markdown
     attributes:
-      value: "For vulnerabilities, use security@stateset.io. Never attach credentials, customer data, production dumps, private qualification files or recovery journals."
+      value: "For vulnerabilities, use security@stateset.com. Never attach credentials, customer data, production dumps, private qualification files or recovery journals."
   - type: input
     id: version
     attributes:

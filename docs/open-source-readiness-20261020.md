@@ -41,7 +41,7 @@ No failure has been relabeled as a pass. The last repeat changed no software, wr
 
 1. Run the entire [release procedure](release-qualification.md) on a runner with sufficient isolated resources. Require both full resilience profiles, serial identity proof, final reconciliation and the final unchanged-input stage to pass. Preserve these failures and the new run separately.
 2. Obtain an actual hosted CI pass. Resolve the account runner restriction if it persists; historical metadata is not evidence of executed checks.
-3. Review publication rights and delivery/monitoring of `security@stateset.io`. The technical review does not establish either. Follow [SECURITY.md](../SECURITY.md), [CONTRIBUTING.md](../CONTRIBUTING.md) and the [source-release checklist](open-source-release.md).
+3. Review publication rights and delivery/monitoring of `security@stateset.com`. The technical review does not establish either. Follow [SECURITY.md](../SECURITY.md), [CONTRIBUTING.md](../CONTRIBUTING.md) and the [source-release checklist](open-source-release.md).
 4. Receive an explicit public-launch instruction before changing repository visibility. Packages/images remain unpublished. Before official downloadable binaries or images, retain the applicable Rust and container system-package notices for the actual targets/options being shipped.
 
 Pattern scanning and visual review do not guarantee the absence of confidential material. Deployed identity, real OMS/Freight and MCP clients, native Ghostty/scanner and signed facility acceptance remain separate. `source_launch_ready=false`; `production_qualified=false`.
