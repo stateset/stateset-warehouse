@@ -24,6 +24,7 @@ from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_ope
 import uuid
 
 MAX_BYTES = 2 * 1024 * 1024
+MAX_DEPTH = 128
 CONTRACT = "stateset.wms-fulfillment.v1"
 SCENARIOS = {
     "receiving_exact_lines", "putaway", "allocation_same_sku_lines",
@@ -51,13 +52,26 @@ def unique_object(pairs):
     return value
 
 
+def nesting_depth(value):
+    """Iterative, so the limit holds on every Python; 3.12+ parses far deeper than 3.8 before RecursionError."""
+    deepest, pending = 0, [(value, 1)]
+    while pending:
+        item, level = pending.pop()
+        if isinstance(item, (dict, list)):
+            deepest = max(deepest, level)
+            pending.extend((child, level + 1) for child in (item.values() if isinstance(item, dict) else item))
+    return deepest
+
+
 def decode(raw):
     require(len(raw) <= MAX_BYTES, "JSON exceeds 2 MiB")
     try:
-        return json.loads(raw, object_pairs_hook=unique_object, parse_float=Decimal,
-                          parse_constant=lambda _: (_ for _ in ()).throw(Unqualified("Non-finite JSON number")))
+        value = json.loads(raw, object_pairs_hook=unique_object, parse_float=Decimal,
+                           parse_constant=lambda _: (_ for _ in ()).throw(Unqualified("Non-finite JSON number")))
     except (ValueError, UnicodeError, RecursionError):
         raise Unqualified("Invalid JSON") from None
+    require(nesting_depth(value) <= MAX_DEPTH, f"JSON nests deeper than {MAX_DEPTH} levels")
+    return value
 
 
 def load(path):

@@ -521,6 +521,8 @@ class FacilityEvidenceTests(unittest.TestCase):
         for path in ("alias/capture.json", "capture.pipe"):
             with self.subTest(path=path), self.assertRaises((Q.Unqualified, OSError)): V.artifact_bytes(CONTEXT, self.root, path)
         with self.assertRaises(Q.Unqualified): Q.decode(b'[' * 2000 + b'0' + b']' * 2000)
+        self.assertEqual(Q.nesting_depth(Q.decode(b'[' * Q.MAX_DEPTH + b']' * Q.MAX_DEPTH)), Q.MAX_DEPTH)
+        with self.assertRaises(Q.Unqualified): Q.decode(b'{"a":' * Q.MAX_DEPTH + b'[]' + b'}' * Q.MAX_DEPTH)
 
     def test_template_cli_rejects_invalid_scope_cleanly_before_creating_destination(self):
         trial = InventedSignedTrial(self.root)
