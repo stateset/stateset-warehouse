@@ -189,3 +189,261 @@ async fn reconciliation_completes_with_thousands_of_move_events() {
     assert_eq!(report["serials"]["source_ok"], true);
     assert_eq!(report["serials"]["registered_units"], 2000);
 }
+
+/// Each event must reach its input class through one exact key. Restricted to
+/// merge joins, the plan behind the 2026-10-27 gate timeout matched events on
+/// the command alone and compared inputs afterwards, so identical moves were
+/// compared pairwise. Hash and nested-loop joins are disabled for this one
+/// statement so the plan shape is fixed, not left to row estimates. The name
+/// sorts after the 16,000-label test: that proof slows past its deadline when a
+/// smaller warehouse analyzed just before leaves planner statistics stale.
+#[tokio::test]
+#[ignore = "requires WMS_TEST_DATABASE_URL"]
+async fn reconciliation_joins_each_event_to_its_input_class_by_one_key() {
+    let f = Fixture::new().await;
+    f.plain(json!({"type":"create_product","sku":"SCALE-J","name":"Synthetic scale product","category":"Synthetic","reorder_point":0,"serial_controlled":true}))
+        .await;
+    f.plain(json!({"type":"create_location","code":"A","zone":"Synthetic","kind":"storage"}))
+        .await;
+    f.plain(json!({"type":"create_location","code":"B","zone":"Synthetic","kind":"storage"}))
+        .await;
+    let moves = 300;
+    let labels: Vec<String> = (0..moves).map(|i| format!("JOIN-{i}")).collect();
+    f.execute(
+        json!({"type":"count_stock","sku":"SCALE-J","lot":"LOT","location":"A","counted":moves,"reason":"Synthetic scale opening count"}),
+        vec![Input { target: vec![], sku: "SCALE-J".into(), serials: labels.clone() }],
+    )
+    .await;
+    // Identical commands; only each move's observed label differs.
+    for label in &labels {
+        f.execute(
+            json!({"type":"move_stock","sku":"SCALE-J","lot":"LOT","from":"A","to":"B","quantity":1}),
+            vec![Input { target: vec![], sku: "SCALE-J".into(), serials: vec![label.clone()] }],
+        )
+        .await;
+    }
+
+    let events = f.state().await.version;
+    let mut tx = f.store.pool.begin().await.expect("plan transaction");
+    for setting in [
+        "SET LOCAL enable_hashjoin=off",
+        "SET LOCAL enable_nestloop=off",
+        "SET LOCAL jit=off",
+    ] {
+        sqlx::query(setting)
+            .execute(&mut *tx)
+            .await
+            .expect("planner setting");
+    }
+    let explain = format!(
+        "EXPLAIN (ANALYZE, FORMAT JSON) {}",
+        include_str!("../src/serial_reconciliation.sql")
+    );
+    let plan: Value = sqlx::query_scalar(&explain)
+        .bind(&f.who.tenant)
+        .bind("wh-main")
+        .fetch_one(&mut *tx)
+        .await
+        .expect("actual serial proof plan");
+    fn find<'a>(node: &'a Value, name: &str) -> Option<&'a Value> {
+        if node["Subplan Name"] == name {
+            return Some(node);
+        }
+        node["Plans"]
+            .as_array()?
+            .iter()
+            .find_map(|child| find(child, name))
+    }
+    // Largest join filter rejection in the CTE's own joins, not its subqueries.
+    fn rejected(node: &Value) -> u64 {
+        let own = node["Rows Removed by Join Filter"].as_u64().unwrap_or(0);
+        let children = node["Plans"].as_array().map_or(0, |plans| {
+            plans
+                .iter()
+                .filter(|child| {
+                    !child["Subplan Name"]
+                        .as_str()
+                        .is_some_and(|n| n.starts_with("SubPlan"))
+                })
+                .map(rejected)
+                .max()
+                .unwrap_or(0)
+        });
+        own.max(children)
+    }
+    let contexts = find(&plan[0]["Plan"], "CTE event_contexts").expect("event_contexts plan");
+    assert_eq!(contexts["Actual Rows"], events, "one context per event");
+    let pairs = rejected(contexts);
+    assert!(
+        pairs < moves as u64,
+        "event_contexts rejected {pairs} row pairs for {events} events"
+    );
+    tx.rollback().await.expect("discard plan settings");
+}
+
+/// Growth curve for the 2026-10-27 gate timeout: the gate's 16,000 labels plus
+/// thousands of single-label moves. After each batch it prints the move cost,
+/// host load, full request time and the serial statement with and without JIT,
+/// and writes that statement's actual plan to WMS_CURVE_PLAN_DIR. It takes about
+/// an hour, so it runs only when that directory is set, never in the suite.
+/// Correctness is asserted whenever the request completes; timing is not.
+#[tokio::test]
+#[ignore = "requires WMS_TEST_DATABASE_URL and WMS_CURVE_PLAN_DIR; prints a timing curve"]
+async fn reconciliation_time_with_serial_move_history() {
+    use sqlx::Connection;
+    let Ok(plans) = std::env::var("WMS_CURVE_PLAN_DIR") else {
+        eprintln!("skipped: set WMS_CURVE_PLAN_DIR to record the growth curve");
+        return;
+    };
+    let f = Fixture::new().await;
+    let skus = 8;
+    let per_sku = 2000;
+    for s in 0..skus {
+        f.plain(json!({"type":"create_product","sku":format!("CURVE-{s}"),"name":"Synthetic scale product","category":"Synthetic","reorder_point":0,"serial_controlled":true}))
+            .await;
+    }
+    f.plain(json!({"type":"create_location","code":"A","zone":"Synthetic","kind":"storage"}))
+        .await;
+    f.plain(json!({"type":"create_location","code":"B","zone":"Synthetic","kind":"storage"}))
+        .await;
+    for s in 0..skus {
+        let sku = format!("CURVE-{s}");
+        let labels: Vec<String> = (0..per_sku).map(|i| format!("{sku}-{i}")).collect();
+        f.execute(
+            json!({"type":"count_stock","sku":sku,"lot":"LOT","location":"A","counted":labels.len(),"reason":"Synthetic scale opening count"}),
+            vec![Input { target: vec![], sku: sku.clone(), serials: labels }],
+        )
+        .await;
+    }
+
+    // A separate session without the store's 10s deadline, so slow statements
+    // are measured rather than cancelled. Unnamed statements plan per call.
+    let url = std::env::var("WMS_TEST_DATABASE_URL").expect("isolated PostgreSQL test URL");
+    let mut probe = sqlx::PgConnection::connect(&url)
+        .await
+        .expect("timing connection");
+    sqlx::query("SET statement_timeout='120s'")
+        .execute(&mut probe)
+        .await
+        .expect("diagnostic deadline");
+    let ledger_sql = include_str!("../src/reconciliation.sql");
+    let serial_sql = include_str!("../src/serial_reconciliation.sql");
+    let explain = format!("EXPLAIN (ANALYZE, BUFFERS) {serial_sql}");
+    let tenant = f.who.tenant.clone();
+    async fn timed(probe: &mut sqlx::PgConnection, sql: &str, tenant: &str) -> u128 {
+        let started = std::time::Instant::now();
+        sqlx::query(sql)
+            .persistent(false)
+            .bind(tenant)
+            .bind("wh-main")
+            .fetch_all(&mut *probe)
+            .await
+            .expect("proof statement");
+        started.elapsed().as_millis()
+    }
+    async fn set(probe: &mut sqlx::PgConnection, sql: &str) {
+        sqlx::query(sql)
+            .execute(&mut *probe)
+            .await
+            .expect("session setting");
+    }
+
+    let mut version = f.state().await.version;
+    let mut moves = 0usize;
+    let checkpoints = [0usize, 2000, 4000, 5000, 6000, 7000];
+    for target in checkpoints {
+        let started = std::time::Instant::now();
+        let first = moves;
+        while moves < target {
+            // Rotate one label per move: out to B on the first pass, back to A on the next.
+            let sku = format!("CURVE-{}", moves % skus);
+            let index = moves / skus % per_sku;
+            let (from, to) = if (moves / (skus * per_sku)).is_multiple_of(2) {
+                ("A", "B")
+            } else {
+                ("B", "A")
+            };
+            let request = Request {
+                request_id: domain::id(),
+                expected_version: version,
+                resource_versions: None,
+                unit_inputs: vec![],
+                serial_inputs: vec![Input { target: vec![], sku: sku.clone(), serials: vec![format!("{sku}-{index}")] }],
+                command: serde_json::from_value(json!({"type":"move_stock","sku":sku,"lot":"LOT","from":from,"to":to,"quantity":1}))
+                    .expect("typed canonical command"),
+            };
+            f.store
+                .execute(&f.who, "wh-main", &request)
+                .await
+                .expect("real atomic move");
+            version += 1;
+            moves += 1;
+        }
+        let move_ms = match moves - first {
+            0 => 0,
+            n => started.elapsed().as_millis() / n as u128,
+        };
+        let load = std::fs::read_to_string("/proc/loadavg").unwrap_or_default();
+        let load = load
+            .split_whitespace()
+            .take(3)
+            .collect::<Vec<_>>()
+            .join("/");
+
+        let started = std::time::Instant::now();
+        let full = match f.store.reconciliation(&f.who.tenant, "wh-main").await {
+            Ok(report) => {
+                assert_eq!(report["ok"], true, "{report}");
+                assert_eq!(report["version"], version);
+                started.elapsed().as_millis().to_string()
+            }
+            Err(e) => format!("failed({})", e.status),
+        };
+        let ledger = timed(&mut probe, ledger_sql, &tenant).await;
+        let serial = timed(&mut probe, serial_sql, &tenant)
+            .await
+            .min(timed(&mut probe, serial_sql, &tenant).await);
+        set(&mut probe, "SET jit=off").await;
+        let serial_nojit = timed(&mut probe, serial_sql, &tenant).await;
+        set(&mut probe, "RESET jit").await;
+        let plan: Vec<String> = sqlx::query_scalar(&explain)
+            .persistent(false)
+            .bind(&tenant)
+            .bind("wh-main")
+            .fetch_all(&mut probe)
+            .await
+            .expect("actual serial plan");
+        let jit = plan
+            .iter()
+            .find(|l| l.trim_start().starts_with("Timing: Generation"))
+            .and_then(|l| l.rsplit("Total ").next())
+            .unwrap_or("none")
+            .trim()
+            .to_string();
+        {
+            let stats: Vec<String> = sqlx::query_scalar("SELECT relname||' live='||n_live_tup||' mod_since_analyze='||n_mod_since_analyze||' analyzed='||COALESCE(greatest(last_analyze,last_autoanalyze)::text,'never') FROM pg_stat_user_tables WHERE relname LIKE 'wms_serial%' OR relname='wms_events' ORDER BY relname")
+                .fetch_all(&mut probe)
+                .await
+                .expect("table statistics");
+            std::fs::write(
+                format!("{plans}/serial-plan-{moves}.txt"),
+                format!(
+                    "moves={moves} commands={version} load={load}\n{}\n\n{}\n",
+                    stats.join("\n"),
+                    plan.join("\n")
+                ),
+            )
+            .expect("plan file");
+        }
+        eprintln!("curve moves={moves} commands={version} load={load} move_ms={move_ms} full_ms={full} ledger_sql_ms={ledger} serial_sql_ms={serial} serial_nojit_ms={serial_nojit} plan_jit={jit}");
+    }
+
+    // Fresh planner statistics separate stale estimates from inherent cost.
+    set(&mut probe, "ANALYZE").await;
+    let serial = timed(&mut probe, serial_sql, &tenant).await;
+    set(&mut probe, "SET jit=off").await;
+    let serial_nojit = timed(&mut probe, serial_sql, &tenant).await;
+    eprintln!(
+        "curve-after-analyze moves={moves} serial_sql_ms={serial} serial_nojit_ms={serial_nojit}"
+    );
+}
