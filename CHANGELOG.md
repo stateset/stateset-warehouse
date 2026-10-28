@@ -1,5 +1,11 @@
 # Changes
 
+## 0.4.1 — unreleased
+
+- **Full reconciliation scales further with serial history.** The serial proof joined each event to its input class on the command alone and compared inputs afterwards, so identical moves were compared pairwise (89,700 rejected pairs for 300 identical moves). Each event now carries one exact class id. Reconciliation also runs without JIT compilation, which took 12–16 s past about 5,500 serial commands. On the same snapshot of 5,943 single-label moves the serial proof took 3.9 s instead of 9.9 s, with an identical verdict. Its cost still grows with history, about 0.65 ms per serial command.
+- **Scanner code IDs.** The dashboard scanner panel also accepts a bin, SKU or lot label that arrives after a leading symbology identifier such as `]C0`. Matching stays exact and case-sensitive. Forms, serial fields and the terminal still record scans exactly as typed.
+- Code structure, no behavior change: the order, receipt and help dialogs moved out of `App.tsx` (2,878 to 2,350 lines). `persistence.rs` is split into startup, load, save and command-execution modules (1,911 to 490 lines). The serial custody equations and tests moved out of `serials.rs` (1,963 to 837 lines).
+
 ## 0.4.0 — 2026-10-27
 
 - **GS1 scanning.** `POST /scans/parse` turns a GS1-128, DataMatrix or QR scan into its exact GTIN, lot, expiry date and serial, with check digits, lengths and character sets verified and the GS1 century rule for dates. Unsupported or malformed data is refused, not partly parsed. A product is identified only through reviewed GTINs (migration 038): admin-managed, audited, normalized to GTIN-14 and unique per warehouse.
@@ -14,9 +20,6 @@
 - **Carrier labels** (migration 037) record the carrier, service, tracking number, exact decimal rate, observed carton and a ZPL or HTTPS label on an open package. A package has one active label; labels are immutable apart from one void, and can't be added after handoff or unpacking. The WMS never calls a carrier; the TMS or an operator supplies the label.
 - Dashboard panels for each: putaway (Receiving), batch picking (Fulfillment), cycle counts, label printing and saved rules (Inventory), and carrier labels on each package. Ten new MCP tools.
 - Integration tests run every planned task through the real command path against PostgreSQL. The restore rehearsal populates both new tables.
-- **Scanner code IDs.** The dashboard scanner panel also accepts a bin, SKU or lot label that arrives after a leading symbology identifier such as `]C0`. Matching stays exact and case-sensitive. Forms, serial fields and the terminal still record scans exactly as typed.
-- **Full reconciliation scales further with serial history.** The serial proof joined each event to its input class on the command alone and compared inputs afterwards, so identical moves were compared pairwise (89,700 rejected pairs for 300 identical moves). Each event now carries one exact class id. Reconciliation also runs without JIT compilation, which took 12–16 s past about 5,500 serial commands. On the same snapshot of 5,943 single-label moves the serial proof took 3.9 s instead of 9.9 s, with an identical verdict. Its cost still grows with history, about 0.65 ms per serial command.
-- Code structure, no behavior change: the order, receipt and help dialogs moved out of `App.tsx` (2,878 to 2,350 lines). `persistence.rs` is split into startup, load, save and command-execution modules (1,911 to 490 lines). The serial custody equations and tests moved out of `serials.rs` (1,963 to 837 lines).
 
 ## 0.3.1 — 2026-10-27
 
