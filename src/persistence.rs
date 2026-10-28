@@ -296,6 +296,11 @@ impl Store {
         sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
             .execute(&mut *tx)
             .await?;
+        // Past roughly 5,500 serial commands the serial proof's estimated cost
+        // crosses PostgreSQL's JIT optimization threshold, and compiling its
+        // ~940 expressions alone took 12-16s against the 10s deadline. Below
+        // that threshold JIT changed the time by no more than run-to-run noise.
+        sqlx::query("SET LOCAL jit = off").execute(&mut *tx).await?;
         let s = Self::load(&mut tx, t, w, None, false).await?;
         let rows = sqlx::query(include_str!("reconciliation.sql"))
             .bind(t)

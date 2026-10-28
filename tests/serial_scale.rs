@@ -190,6 +190,97 @@ async fn reconciliation_completes_with_thousands_of_move_events() {
     assert_eq!(report["serials"]["registered_units"], 2000);
 }
 
+/// Each event must reach its input class through one exact key. Restricted to
+/// merge joins, the plan behind the 2026-10-27 gate timeout matched events on
+/// the command alone and compared inputs afterwards, so identical moves were
+/// compared pairwise. Hash and nested-loop joins are disabled for this one
+/// statement so the plan shape is fixed, not left to row estimates. The name
+/// sorts after the 16,000-label test: that proof slows past its deadline when a
+/// smaller warehouse analyzed just before leaves planner statistics stale.
+#[tokio::test]
+#[ignore = "requires WMS_TEST_DATABASE_URL"]
+async fn reconciliation_joins_each_event_to_its_input_class_by_one_key() {
+    let f = Fixture::new().await;
+    f.plain(json!({"type":"create_product","sku":"SCALE-J","name":"Synthetic scale product","category":"Synthetic","reorder_point":0,"serial_controlled":true}))
+        .await;
+    f.plain(json!({"type":"create_location","code":"A","zone":"Synthetic","kind":"storage"}))
+        .await;
+    f.plain(json!({"type":"create_location","code":"B","zone":"Synthetic","kind":"storage"}))
+        .await;
+    let moves = 300;
+    let labels: Vec<String> = (0..moves).map(|i| format!("JOIN-{i}")).collect();
+    f.execute(
+        json!({"type":"count_stock","sku":"SCALE-J","lot":"LOT","location":"A","counted":moves,"reason":"Synthetic scale opening count"}),
+        vec![Input { target: vec![], sku: "SCALE-J".into(), serials: labels.clone() }],
+    )
+    .await;
+    // Identical commands; only each move's observed label differs.
+    for label in &labels {
+        f.execute(
+            json!({"type":"move_stock","sku":"SCALE-J","lot":"LOT","from":"A","to":"B","quantity":1}),
+            vec![Input { target: vec![], sku: "SCALE-J".into(), serials: vec![label.clone()] }],
+        )
+        .await;
+    }
+
+    let events = f.state().await.version;
+    let mut tx = f.store.pool.begin().await.expect("plan transaction");
+    for setting in [
+        "SET LOCAL enable_hashjoin=off",
+        "SET LOCAL enable_nestloop=off",
+        "SET LOCAL jit=off",
+    ] {
+        sqlx::query(setting)
+            .execute(&mut *tx)
+            .await
+            .expect("planner setting");
+    }
+    let explain = format!(
+        "EXPLAIN (ANALYZE, FORMAT JSON) {}",
+        include_str!("../src/serial_reconciliation.sql")
+    );
+    let plan: Value = sqlx::query_scalar(&explain)
+        .bind(&f.who.tenant)
+        .bind("wh-main")
+        .fetch_one(&mut *tx)
+        .await
+        .expect("actual serial proof plan");
+    fn find<'a>(node: &'a Value, name: &str) -> Option<&'a Value> {
+        if node["Subplan Name"] == name {
+            return Some(node);
+        }
+        node["Plans"]
+            .as_array()?
+            .iter()
+            .find_map(|child| find(child, name))
+    }
+    // Largest join filter rejection in the CTE's own joins, not its subqueries.
+    fn rejected(node: &Value) -> u64 {
+        let own = node["Rows Removed by Join Filter"].as_u64().unwrap_or(0);
+        let children = node["Plans"].as_array().map_or(0, |plans| {
+            plans
+                .iter()
+                .filter(|child| {
+                    !child["Subplan Name"]
+                        .as_str()
+                        .is_some_and(|n| n.starts_with("SubPlan"))
+                })
+                .map(rejected)
+                .max()
+                .unwrap_or(0)
+        });
+        own.max(children)
+    }
+    let contexts = find(&plan[0]["Plan"], "CTE event_contexts").expect("event_contexts plan");
+    assert_eq!(contexts["Actual Rows"], events, "one context per event");
+    let pairs = rejected(contexts);
+    assert!(
+        pairs < moves as u64,
+        "event_contexts rejected {pairs} row pairs for {events} events"
+    );
+    tx.rollback().await.expect("discard plan settings");
+}
+
 /// Growth curve for the 2026-10-27 gate timeout: the gate's 16,000 labels plus
 /// thousands of single-label moves. After each batch it prints the move cost,
 /// host load, full request time and the serial statement with and without JIT,

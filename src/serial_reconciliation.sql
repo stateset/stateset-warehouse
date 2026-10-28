@@ -4,9 +4,12 @@
 -- Derived closures and malformed envelopes use the complete read-only
 -- counterpart. Actual event/receipt/batch facts are shared only in this snapshot.
 -- Input/command classes are total maps over the selected ordinary events.
--- LEFT JOIN preserves that cardinality estimate; null-safe hash keys preserve
--- the distinction between an absent command and JSON null. No verdict lives
--- beyond this statement, and standalone/write guards are unchanged.
+-- Each event carries its exact input class id: dense_rank groups exactly the
+-- equal (warehouse, command, inputs) values that DISTINCT groups, keeping an
+-- absent command apart from JSON null. Events join their class by that id,
+-- because a join on the command alone compared every pair of identical moves.
+-- LEFT JOIN preserves the cardinality estimate. No verdict lives beyond this
+-- statement, and standalone/write guards are unchanged.
 WITH required_events AS MATERIALIZED (
  SELECT e.tenant,e.id,e.warehouse_id,e.payload->'command' AS command,
   COALESCE(e.payload->'serial_inputs','[]'::jsonb) AS inputs,COALESCE(e.payload->'serial_heads','{}'::jsonb) AS heads,
@@ -15,12 +18,13 @@ WITH required_events AS MATERIALIZED (
   CASE WHEN jsonb_typeof(COALESCE(e.payload->'serial_steps','[]'::jsonb)) IS DISTINCT FROM 'array' THEN false
    WHEN jsonb_array_length(COALESCE(e.payload->'serial_steps','[]'::jsonb))>10000 THEN false
    WHEN jsonb_typeof(COALESCE(e.payload->'serial_heads','{}'::jsonb)) IS DISTINCT FROM 'object' THEN false
-   ELSE COALESCE(e.payload#>>'{command,type}','') NOT IN('ship','unpack_shipment','handoff_shipment','cancel_receipt') END AS direct
+   ELSE COALESCE(e.payload#>>'{command,type}','') NOT IN('ship','unpack_shipment','handoff_shipment','cancel_receipt') END AS direct,
+  dense_rank() OVER (ORDER BY e.warehouse_id,e.payload->'command',COALESCE(e.payload->'serial_inputs','[]'::jsonb)) AS iid
  FROM wms_events e WHERE e.tenant=$1
   AND (EXISTS(SELECT 1 FROM wms_serial_modes m WHERE m.tenant=$1 AND m.controlled)
    OR e.payload ?| ARRAY['serial_heads','serial_steps','serial_inputs'])
 ), input_classes AS MATERIALIZED (
- SELECT DISTINCT warehouse_id,command,inputs FROM required_events WHERE direct
+ SELECT DISTINCT iid,warehouse_id,command,inputs FROM required_events WHERE direct
 ), input_candidates AS MATERIALIZED (
  -- The exact target-command set is defined by wms_serial_targets in migration
  -- 021. Outside that set an empty observation has no target to validate; all
@@ -28,7 +32,7 @@ WITH required_events AS MATERIALIZED (
  -- wms_serial_inputs_match_command (migration 023), evaluated below in set
  -- form. CASE guards keep malformed JSON from reaching any array operation
  -- that the original returns false before.
- SELECT row_number() OVER () AS iid,warehouse_id,command,inputs,
+ SELECT iid,warehouse_id,command,inputs,
   CASE WHEN inputs='[]'::jsonb AND COALESCE(command->>'type','') NOT IN(
    'count_stock','move_stock','receive','pick','unpick','create_return','pack_shipment',
    'dispatch_transfer','receive_transfer','record_transfer_loss','reverse_transfer_loss') THEN true END AS untargeted,
@@ -97,7 +101,7 @@ WITH required_events AS MATERIALIZED (
  SELECT DISTINCT q.iid FROM controlled_targets q LEFT JOIN observed_inputs i ON i.iid=q.iid AND i.target=q.target AND i.sku=q.sku
  WHERE NOT q.product_valid OR i.sku IS NULL
 ), input_sources AS MATERIALIZED (
- SELECT i.warehouse_id,i.command,i.inputs,CASE WHEN i.untargeted THEN true
+ SELECT i.iid,i.warehouse_id,i.command,i.inputs,CASE WHEN i.untargeted THEN true
   WHEN NOT i.bounded THEN false
   ELSE COALESCE(c.target_rows IS NOT NULL
    AND dt.iid IS NULL
@@ -126,7 +130,7 @@ WITH required_events AS MATERIALIZED (
     WHERE o.event_id IS NULL)
    ELSE false END AS inputs_bound
  FROM required_events e
- LEFT JOIN input_sources i ON i.warehouse_id=e.warehouse_id AND (i.command IS NULL)=(e.command IS NULL) AND COALESCE(i.command,'null'::jsonb)=COALESCE(e.command,'null'::jsonb) AND i.inputs=e.inputs
+ LEFT JOIN input_sources i ON i.iid=e.iid
  LEFT JOIN command_sources c ON c.warehouse_id=e.warehouse_id AND (c.command IS NULL)=(e.command IS NULL) AND COALESCE(c.command,'null'::jsonb)=COALESCE(e.command,'null'::jsonb)
  WHERE e.direct
 ), event_facts AS MATERIALIZED (
