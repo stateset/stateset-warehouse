@@ -13,10 +13,7 @@ import NativePanel from "./NativePanel";
 import ScannerPanel from "./ScannerPanel";
 import OperationsPanel from "./OperationsPanel";
 import { BatchPickPanel } from "./PlanningPanels";
-import {
-  availability,
-  useAvailabilityTime,
-} from "./lotAvailability";
+import { availability, useAvailabilityTime } from "./lotAvailability";
 import OrderDetail from "./OrderDetail";
 import ReceiptDetail from "./ReceiptDetail";
 import WorkspaceGuide from "./WorkspaceGuide";
@@ -383,15 +380,33 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
       const sequence = ++reconciliationSequence.current;
       setFullReconciliationBusy(true);
       setFullReconciliationError("");
+      const base = `/v1/warehouses/${encodeURIComponent(warehouse)}/reconciliation`;
+      const stale = () =>
+        current !== epoch.current ||
+        sequence !== reconciliationSequence.current;
       try {
-        const proof: ReconciliationProof = await request(
-          `/v1/warehouses/${encodeURIComponent(warehouse)}/reconciliation`,
-        );
-        if (
-          current === epoch.current &&
-          sequence === reconciliationSequence.current
-        )
-          setFullReconciliation({ warehouse, proof });
+        let proof: ReconciliationProof | null;
+        try {
+          proof = await request(base);
+        } catch (e) {
+          // Long serial history can exceed the 10-second request deadline;
+          // the same proof then runs in the background and is polled.
+          if (!(e instanceof ApiError) || e.status !== 503) throw e;
+          let run = await request(`${base}/runs`, undefined, "POST");
+          const deadline = Date.now() + 11 * 60_000;
+          while (run.status !== "succeeded" && !stale()) {
+            if (run.status === "failed")
+              throw new Error(run.error ?? "The reconciliation run failed.");
+            if (Date.now() > deadline)
+              throw new Error(
+                "The reconciliation run did not finish; run it again.",
+              );
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            run = await request(`${base}/runs/${encodeURIComponent(run.id)}`);
+          }
+          proof = stale() ? null : run.result;
+        }
+        if (proof && !stale()) setFullReconciliation({ warehouse, proof });
       } catch (e) {
         if (
           current === epoch.current &&

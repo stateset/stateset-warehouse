@@ -2145,12 +2145,10 @@ for (const corruption of [
       .getByRole("button", { name: order.reference, exact: true })
       .click();
     await expect(
-      page
-        .getByRole("alert")
-        .filter({
-          hasText:
-            /review could not be verified|cancellation could not be verified/,
-        }),
+      page.getByRole("alert").filter({
+        hasText:
+          /review could not be verified|cancellation could not be verified/,
+      }),
     ).toBeVisible();
     await expect(
       page.getByRole("button", {
@@ -2160,3 +2158,99 @@ for (const corruption of [
     ).toHaveCount(0);
   });
 }
+
+test("ledger runs the proof in the background when it exceeds the request deadline", async ({
+  page,
+}) => {
+  await setup(page);
+  // The complete proof the synchronous endpoint would have returned.
+  const complete = await page.evaluate(() =>
+    fetch("/v1/warehouses/wh-pdx/reconciliation").then((r) => r.json()),
+  );
+  const calls: string[] = [];
+  await page.route("**/v1/warehouses/wh-pdx/reconciliation", (route) => {
+    calls.push("direct");
+    return route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: "Database operation unavailable; retry with the same request ID",
+      }),
+    });
+  });
+  await page.route("**/v1/warehouses/wh-pdx/reconciliation/runs", (route) => {
+    calls.push(`${route.request().method()} run`);
+    return route.fulfill({
+      status: 202,
+      contentType: "application/json",
+      body: JSON.stringify({ id: "run-1", status: "queued" }),
+    });
+  });
+  let polls = 0;
+  await page.route(
+    "**/v1/warehouses/wh-pdx/reconciliation/runs/run-1",
+    (route) => {
+      polls += 1;
+      return route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify(
+          polls < 2
+            ? { id: "run-1", status: "running" }
+            : {
+                id: "run-1",
+                status: "succeeded",
+                version: complete.version,
+                result: complete,
+              },
+        ),
+      });
+    },
+  );
+  await page
+    .getByRole("button", { name: "Movement ledger", exact: true })
+    .click();
+  await expect(
+    page.getByText("Inventory ledger reconciles", { exact: true }),
+  ).toBeVisible();
+  expect(calls).toEqual(["direct", "POST run"]);
+  expect(polls).toBe(2);
+});
+
+test("ledger reports a failed background run", async ({ page }) => {
+  await setup(page);
+  await page.route("**/v1/warehouses/wh-pdx/reconciliation", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "Database operation unavailable" }),
+    }),
+  );
+  await page.route("**/v1/warehouses/wh-pdx/reconciliation/runs", (route) =>
+    route.fulfill({
+      status: 202,
+      contentType: "application/json",
+      body: JSON.stringify({ id: "run-2", status: "queued" }),
+    }),
+  );
+  await page.route(
+    "**/v1/warehouses/wh-pdx/reconciliation/runs/run-2",
+    (route) =>
+      route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: "run-2",
+          status: "failed",
+          error: "Abandoned: the run did not finish before its deadline",
+        }),
+      }),
+  );
+  await page
+    .getByRole("button", { name: "Movement ledger", exact: true })
+    .click();
+  await expect(
+    page.getByText("Full reconciliation unavailable", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Abandoned: the run did not finish before its deadline"),
+  ).toBeVisible();
+});

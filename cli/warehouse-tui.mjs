@@ -264,8 +264,8 @@ async function readView(client, scope, ui, kind, journal, settings = {}) {
     }
     return;
   } else {
-    const endpoint = { reconciliation: `${base}/reconciliation`, operations: '/v1/operations/health' }[kind];
-    await inspectJson(ui, `${kind} | ${scope.warehouse}`, await client.read(endpoint));
+    const data = kind === 'reconciliation' ? await client.reconciliation(scope.warehouse) : await client.read({ operations: '/v1/operations/health' }[kind]);
+    await inspectJson(ui, `${kind} | ${scope.warehouse}`, data);
   }
 }
 async function interop(client, journal, scope, ui) {
@@ -296,7 +296,7 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
     if (args.once === 'session') data = session;
     else if (args.once === 'warehouses') data = await client.read('/v1/warehouses?limit=100');
     else if (args.once === 'recovery') data = (await journal.listForIdentity(scope)).map(r => ({ warehouse_id: r.original.scope.warehouse, request_id: r.request.request_id, command_type: r.request.command.type, stage: r.stage }));
-    else if (args.once === 'reconciliation') data = await client.read(client.warehousePath(warehouse, '/reconciliation'));
+    else if (args.once === 'reconciliation') data = await client.reconciliation(warehouse);
     else if (args.once === 'console') data = await readConsole(client, scope);
     else if (['inventory', 'orders', 'receipts'].includes(args.once)) { const snapshot = await client.read(client.warehousePath(warehouse)); data = { scope, version: snapshot.version, items: snapshot[args.once === 'inventory' ? 'stocks' : args.once] }; }
     else throw new Error('Unknown --once view; see --help');

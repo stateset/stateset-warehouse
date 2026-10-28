@@ -35,6 +35,7 @@ Send `{"jsonrpc":"2.0","id":2,"method":"tools/list"}` with the same headers to d
 | `wms_lots` | Page current lot policy, exact expiry, independent active holds and physical/reserved/usable quantities at the returned server instant. |
 | `wms_shipments`, `wms_return_eligibility`, `wms_transfers` | Review original package/line/lot claims, actual handoffs, capped return allowances and goods in transit. |
 | `wms_reconciliation`, `wms_outbox`, `wms_operations`, `wms_metrics` | Inspect independent proofs and delivery/operating evidence; role restrictions apply. |
+| `wms_reconciliation_run_start`, `wms_reconciliation_run` | Run the complete proof in the background when it exceeds the 10-second request deadline, then poll for the result. |
 | `wms_command_receipt`, `wms_native_receipt` | Recover original journaled warehouse or native requests under their original actor. |
 | `wms_<command.type>` | Execute each canonical physical/business command, including partial fulfillment and facility transfers. |
 | `wms_replenishment_plan`, `wms_readiness` | Review plans/readiness; these do not establish physical work. |

@@ -77,6 +77,23 @@ export class Client {
     if (!identity || !['tenant', 'actor', 'role'].every(k => typeof identity[k] === 'string' && identity[k])) throw new Error('WMS did not return a complete authenticated identity');
     return session;
   }
+  // The complete proof from the synchronous endpoint when it fits its request
+  // deadline; past it (HTTP 503), the same proof as a polled background run.
+  async reconciliation(warehouse, { pollMs = 1000, waitMs = 660000, sleep = ms => new Promise(resolve => setTimeout(resolve, ms)) } = {}) {
+    const base = this.warehousePath(warehouse, '/reconciliation');
+    const direct = await this.call('GET', base);
+    if (direct.ok) return direct.data;
+    if (direct.status !== 503) throw new Error(`HTTP ${direct.status}: ${safeText(direct.data.error ?? 'WMS read failed')}`);
+    const started = await this.call('POST', `${base}/runs`);
+    if (started.status !== 202) throw new Error(`HTTP ${started.status}: ${safeText(started.data.error ?? 'Reconciliation run was not accepted')}`);
+    const path = `${base}/runs/${encodeURIComponent(started.data.id)}`;
+    for (const end = Date.now() + waitMs; Date.now() < end; await sleep(pollMs)) {
+      const run = await this.read(path);
+      if (run.status === 'succeeded') return run.result;
+      if (run.status === 'failed') throw new Error(`Reconciliation run failed: ${safeText(run.error)}`);
+    }
+    throw new Error(`Reconciliation run ${safeText(started.data.id)} did not finish; poll it again later`);
+  }
   warehousePath(warehouse, suffix = '') {
     if (typeof warehouse !== 'string' || !warehouse || ['.', '..'].includes(warehouse) || /[\x00-\x1f\x7f-\x9f]/.test(warehouse) || Buffer.byteLength(warehouse) > 240) throw new Error('Invalid original warehouse ID');
     return `/v1/warehouses/${encodeURIComponent(warehouse)}${suffix}`;

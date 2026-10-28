@@ -1,5 +1,9 @@
 # Changes
 
+## Unreleased
+
+- **Clients use background reconciliation runs.** The dashboard's movement ledger, the terminal's reconciliation view and `--once reconciliation` try the synchronous proof first; when it exceeds the 10-second request deadline (HTTP 503) they start a background run and poll it to completion. Two MCP tools, `wms_reconciliation_run_start` and `wms_reconciliation_run`, expose runs to agents.
+
 ## 0.4.1 — 2026-10-27
 
 - **Background reconciliation runs** (migration 039). `POST /v1/warehouses/{id}/reconciliation/runs` starts the same complete proof as `GET .../reconciliation`, in one read-only snapshot, under a 120-second statement deadline instead of the 10-second request deadline; poll `GET .../reconciliation/runs/{run}` for its status and result. A warehouse whose serial history no longer reconciles within one request still gets its full proof. Runs left unfinished by a stopped API process read as failed after 10 minutes. The release gate's final reconciliation on both replicas now uses runs, with every HTTP request still bounded at 12 seconds and no 503s allowed.

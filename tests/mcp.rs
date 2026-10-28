@@ -688,6 +688,39 @@ async fn real_http_mcp_partial_fulfillment_and_exact_retry_share_the_canonical_j
         200,
     );
     assert_eq!(proof["ok"], true, "{proof}");
+    let run = payload(
+        &tool(
+            &app,
+            "admin",
+            "wms_reconciliation_run_start",
+            json!({"warehouse_id":"wh-main"}),
+        )
+        .await,
+        202,
+    );
+    let run_id = run["id"].as_str().expect("run id").to_string();
+    let mut finished = Value::Null;
+    for _ in 0..300 {
+        finished = payload(
+            &tool(
+                &app,
+                "admin",
+                "wms_reconciliation_run",
+                json!({"warehouse_id":"wh-main","run_id":run_id}),
+            )
+            .await,
+            200,
+        );
+        if finished["status"] == "succeeded" || finished["status"] == "failed" {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    assert_eq!(finished["status"], "succeeded", "{finished}");
+    assert_eq!(
+        finished["result"], proof,
+        "a run is the same complete proof"
+    );
     let state = store
         .state(&identity.tenant, "wh-main")
         .await
