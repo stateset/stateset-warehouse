@@ -1,6 +1,6 @@
 # Third-party notices
 
-StateSet Warehouse is available under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option. The root [LICENSE](LICENSE) records that choice. Dependency licenses remain their respective authors' licenses.
+StateSet Warehouse is available under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option. Dependency licenses remain their respective authors' licenses.
 
 The repository includes unmodified StateSet iCommerce 1.39.0 crate sources from public upstream commit `b8a5c6db885998defa9fd74e2b12f0d1add21e1c`:
 

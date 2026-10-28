@@ -185,7 +185,7 @@ wms_release_fingerprint() {
   python3 - "$1" <<'PY'
 import hashlib, json, pathlib, sys
 root = pathlib.Path.cwd()
-files = [root / path for path in ("Cargo.toml", "Cargo.lock", "Dockerfile", ".dockerignore", "docker-compose.yml", ".nvmrc", "LICENSE", "LICENSE-MIT", "LICENSE-APACHE", "SECURITY.md", "CONTRIBUTING.md", "THIRD_PARTY_NOTICES.md")]
+files = [root / path for path in ("Cargo.toml", "Cargo.lock", "Dockerfile", ".dockerignore", "docker-compose.yml", ".nvmrc", "LICENSE-MIT", "LICENSE-APACHE", "SECURITY.md", "CONTRIBUTING.md", "THIRD_PARTY_NOTICES.md")]
 excluded = {"node_modules", "dist", "test-results", "playwright-report", "__pycache__"}
 for name in ("src", "migrations", "dashboard", "vendor", "cli", "examples", "tests", "scripts", "integrations", "deploy", ".github"):
     files += [path for path in (root / name).rglob("*") if path.is_file() and not excluded.intersection(path.parts)
