@@ -1,6 +1,6 @@
 # Changes
 
-## Unreleased
+## 0.4.2 — unreleased
 
 - **Clients use background reconciliation runs.** The dashboard's movement ledger, the terminal's reconciliation view and `--once reconciliation` try the synchronous proof first; when it exceeds the 10-second request deadline (HTTP 503) they start a background run and poll it to completion. Two MCP tools, `wms_reconciliation_run_start` and `wms_reconciliation_run`, expose runs to agents.
 
