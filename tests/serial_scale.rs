@@ -191,11 +191,14 @@ async fn reconciliation_completes_with_thousands_of_move_events() {
 }
 
 /// Growth curve for the 2026-10-27 gate timeout: the gate's 16,000 labels plus
-/// thousands of single-label moves. Prints the full request time and its two
-/// largest statements after each batch; correctness is asserted, timing is not.
+/// thousands of single-label moves. After each batch it prints the move cost,
+/// host load, full request time and the serial statement with and without JIT,
+/// and writes that statement's actual plan to WMS_CURVE_PLAN_DIR when set.
+/// Correctness is asserted whenever the request completes; timing is not.
 #[tokio::test]
 #[ignore = "requires WMS_TEST_DATABASE_URL; prints a timing curve"]
 async fn reconciliation_time_with_serial_move_history() {
+    use sqlx::Connection;
     let f = Fixture::new().await;
     let skus = 8;
     let per_sku = 2000;
@@ -217,28 +220,45 @@ async fn reconciliation_time_with_serial_move_history() {
         .await;
     }
 
+    // A separate session without the store's 10s deadline, so slow statements
+    // are measured rather than cancelled. Unnamed statements plan per call.
     let url = std::env::var("WMS_TEST_DATABASE_URL").expect("isolated PostgreSQL test URL");
-    let pool = sqlx::PgPool::connect(&url)
+    let plans = std::env::var("WMS_CURVE_PLAN_DIR").ok();
+    let mut probe = sqlx::PgConnection::connect(&url)
         .await
         .expect("timing connection");
-    let timed = |sql: &'static str| {
-        let pool = pool.clone();
-        let tenant = f.who.tenant.clone();
-        async move {
-            let started = std::time::Instant::now();
-            sqlx::query(sql)
-                .bind(&tenant)
-                .bind("wh-main")
-                .fetch_all(&pool)
-                .await
-                .expect("proof statement");
-            started.elapsed().as_millis()
-        }
-    };
+    sqlx::query("SET statement_timeout='120s'")
+        .execute(&mut probe)
+        .await
+        .expect("diagnostic deadline");
+    let ledger_sql = include_str!("../src/reconciliation.sql");
+    let serial_sql = include_str!("../src/serial_reconciliation.sql");
+    let explain = format!("EXPLAIN (ANALYZE, BUFFERS) {serial_sql}");
+    let tenant = f.who.tenant.clone();
+    async fn timed(probe: &mut sqlx::PgConnection, sql: &str, tenant: &str) -> u128 {
+        let started = std::time::Instant::now();
+        sqlx::query(sql)
+            .persistent(false)
+            .bind(tenant)
+            .bind("wh-main")
+            .fetch_all(&mut *probe)
+            .await
+            .expect("proof statement");
+        started.elapsed().as_millis()
+    }
+    async fn set(probe: &mut sqlx::PgConnection, sql: &str) {
+        sqlx::query(sql)
+            .execute(&mut *probe)
+            .await
+            .expect("session setting");
+    }
 
     let mut version = f.state().await.version;
     let mut moves = 0usize;
-    for target in [0usize, 1000, 2000, 4000, 6000] {
+    let checkpoints = [0usize, 2000, 4000, 5000, 6000, 7000];
+    for target in checkpoints {
+        let started = std::time::Instant::now();
+        let first = moves;
         while moves < target {
             // Rotate one label per move: out to B on the first pass, back to A on the next.
             let sku = format!("CURVE-{}", moves % skus);
@@ -264,20 +284,71 @@ async fn reconciliation_time_with_serial_move_history() {
             version += 1;
             moves += 1;
         }
+        let move_ms = match moves - first {
+            0 => 0,
+            n => started.elapsed().as_millis() / n as u128,
+        };
+        let load = std::fs::read_to_string("/proc/loadavg").unwrap_or_default();
+        let load = load
+            .split_whitespace()
+            .take(3)
+            .collect::<Vec<_>>()
+            .join("/");
+
         let started = std::time::Instant::now();
-        let report = f
-            .store
-            .reconciliation(&f.who.tenant, "wh-main")
+        let full = match f.store.reconciliation(&f.who.tenant, "wh-main").await {
+            Ok(report) => {
+                assert_eq!(report["ok"], true, "{report}");
+                assert_eq!(report["version"], version);
+                started.elapsed().as_millis().to_string()
+            }
+            Err(e) => format!("failed({})", e.status),
+        };
+        let ledger = timed(&mut probe, ledger_sql, &tenant).await;
+        let serial = timed(&mut probe, serial_sql, &tenant)
             .await
-            .expect("complete reconciliation within the statement deadline");
-        let full = started.elapsed().as_millis();
-        assert_eq!(report["ok"], true, "{report}");
-        assert_eq!(report["version"], version);
-        let started = std::time::Instant::now();
-        f.state().await;
-        let state = started.elapsed().as_millis();
-        let ledger = timed(include_str!("../src/reconciliation.sql")).await;
-        let serial = timed(include_str!("../src/serial_reconciliation.sql")).await;
-        eprintln!("curve moves={moves} commands={version} full_ms={full} state_ms={state} ledger_sql_ms={ledger} serial_sql_ms={serial}");
+            .min(timed(&mut probe, serial_sql, &tenant).await);
+        set(&mut probe, "SET jit=off").await;
+        let serial_nojit = timed(&mut probe, serial_sql, &tenant).await;
+        set(&mut probe, "RESET jit").await;
+        let plan: Vec<String> = sqlx::query_scalar(&explain)
+            .persistent(false)
+            .bind(&tenant)
+            .bind("wh-main")
+            .fetch_all(&mut probe)
+            .await
+            .expect("actual serial plan");
+        let jit = plan
+            .iter()
+            .find(|l| l.trim_start().starts_with("Timing: Generation"))
+            .and_then(|l| l.rsplit("Total ").next())
+            .unwrap_or("none")
+            .trim()
+            .to_string();
+        if let Some(dir) = &plans {
+            let stats: Vec<String> = sqlx::query_scalar("SELECT relname||' live='||n_live_tup||' mod_since_analyze='||n_mod_since_analyze||' analyzed='||COALESCE(greatest(last_analyze,last_autoanalyze)::text,'never') FROM pg_stat_user_tables WHERE relname LIKE 'wms_serial%' OR relname='wms_events' ORDER BY relname")
+                .fetch_all(&mut probe)
+                .await
+                .expect("table statistics");
+            std::fs::write(
+                format!("{dir}/serial-plan-{moves}.txt"),
+                format!(
+                    "moves={moves} commands={version} load={load}\n{}\n\n{}\n",
+                    stats.join("\n"),
+                    plan.join("\n")
+                ),
+            )
+            .expect("plan file");
+        }
+        eprintln!("curve moves={moves} commands={version} load={load} move_ms={move_ms} full_ms={full} ledger_sql_ms={ledger} serial_sql_ms={serial} serial_nojit_ms={serial_nojit} plan_jit={jit}");
     }
+
+    // Fresh planner statistics separate stale estimates from inherent cost.
+    set(&mut probe, "ANALYZE").await;
+    let serial = timed(&mut probe, serial_sql, &tenant).await;
+    set(&mut probe, "SET jit=off").await;
+    let serial_nojit = timed(&mut probe, serial_sql, &tenant).await;
+    eprintln!(
+        "curve-after-analyze moves={moves} serial_sql_ms={serial} serial_nojit_ms={serial_nojit}"
+    );
 }
