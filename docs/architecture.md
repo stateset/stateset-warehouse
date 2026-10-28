@@ -38,9 +38,9 @@ flowchart LR
 | HTTP routes, authentication, headers | `src/api.rs`, `src/auth.rs` |
 | Entity types, the `Command` enum and state helpers | `src/domain.rs` |
 | The command reducer, validation and demo data | `src/domain/apply.rs`, `src/domain/validate.rs`, `src/domain/demo.rs` |
-| Transaction, locking, receipts, migrations, reconciliation | `src/persistence.rs`, `src/store.rs` |
+| Transaction, locking, receipts, migrations, reconciliation | `src/persistence.rs` (reads, receipts, reconciliation, outbox), `src/persistence/` (`startup.rs` migrations and provisioning, `load.rs`, `save.rs`, `execute.rs` command execution), `src/store.rs` |
 | Resource versions (which concurrent writes conflict) | `src/concurrency.rs` |
-| Serial tracking | `src/serials.rs`, `src/serial_*.rs`, `migrations/021`–`035`; see the [serial design guide](serial-design.md) |
+| Serial tracking | `src/serials.rs`, `src/serials/equations.rs` (custody equations), `src/serial_*.rs`, `migrations/021`–`035`; see the [serial design guide](serial-design.md) |
 | Lots, expiry, quarantine and lot tracing | `src/lot_control.rs`, `src/lot_store.rs`, `src/lot_trace.rs` |
 | Transfers, packages, returns, receipts, shipments | `src/transfers.rs`, `src/split_fulfillment.rs`, `src/returns.rs`, `src/receipts.rs`, `src/shipments.rs` |
 | Outbox delivery and integrations | `src/integrations.rs`, `src/native*.rs`, `src/oms_*.rs` |
@@ -49,7 +49,7 @@ flowchart LR
 | MCP server | `src/mcp.rs` |
 | Schema and database guards | `migrations/` (append-only; digests checked at startup; a database migrated by a newer release is refused) |
 | Current definition of every database function and trigger | `schema/current-functions.sql` (generated; drift-checked by `tests/sql_catalog.rs`) |
-| Dashboard | `dashboard/src/App.tsx` (shell, routing, session and journal), one component per tab (`*Tab.tsx`), `PlanningPanels.tsx` |
+| Dashboard | `dashboard/src/App.tsx` (shell, routing, session and journal), one component per tab (`*Tab.tsx`), the order, receipt and help dialogs (`OrderDetail.tsx`, `ReceiptDetail.tsx`, `WorkspaceGuide.tsx`), `PlanningPanels.tsx` |
 | Fast tests without a database | `tests/domain.rs`, `tests/planning_units.rs` |
 
 The sections below are the detailed contract.

@@ -15,11 +15,11 @@ import OperationsPanel from "./OperationsPanel";
 import { BatchPickPanel } from "./PlanningPanels";
 import {
   availability,
-  availabilityLabel,
   useAvailabilityTime,
 } from "./lotAvailability";
-import ReturnForm from "./ReturnForm";
-import ShipmentsPanel from "./ShipmentsPanel";
+import OrderDetail from "./OrderDetail";
+import ReceiptDetail from "./ReceiptDetail";
+import WorkspaceGuide from "./WorkspaceGuide";
 import TransfersPanel from "./TransfersPanel";
 import WarehousePicker from "./WarehousePicker";
 import { reviewedVersions } from "./concurrency";
@@ -42,7 +42,6 @@ import {
   CheckCheck,
   ChevronRight,
   CircleHelp,
-  ClipboardCheck,
   Clock3,
   Download,
   Filter,
@@ -51,7 +50,6 @@ import {
   Loader2,
   LogOut,
   MapPin,
-  Package,
   PackageCheck,
   Plus,
   RefreshCw,
@@ -65,7 +63,6 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import type {
-  Allocation,
   Command,
   Journal,
   HistoryData,
@@ -1329,18 +1326,6 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
     detail.version === s.version
       ? (detail.data as Receipt)
       : undefined;
-  const orderBlocked =
-    !!selectedOrder &&
-    s.exceptions.some(
-      (issue) => issue.order_id === selectedOrder.id && issue.status === "open",
-    );
-  const legacyLotHeld =
-    !!selectedOrder &&
-    selectedOrder.allocations.some(
-      (a) =>
-        a.quantity > a.shipped + a.released &&
-        availability(s, a.sku, a.lot, availabilityTime) !== "available",
-    );
 
   return (
     <div className="app-shell">
@@ -2321,557 +2306,40 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
         </ModalFrame>
       )}
       {selectedOrder && (
-        <ModalFrame
-          suspended={serialPreparing || !!serialReview}
-          title={`${selectedOrder.reference} · ${selectedOrder.customer}`}
+        <OrderDetail
+          at={availabilityTime}
+          canWork={canWork}
           close={closeModal}
-        >
-          <div className="detail-body">
-            <div className="detail-summary">
-              <Status value={selectedOrder.status} />
-              <span className={`priority ${selectedOrder.priority}`}>
-                <i />
-                {selectedOrder.priority}
-              </span>
-              <span>{selectedOrder.destination}</span>
-            </div>
-            <div className="detail-reference">
-              <span>OMS source</span>
-              <code>
-                {selectedOrder.source_order_id ?? "Manual warehouse work"}
-              </code>
-            </div>
-            <h3>Order lines</h3>
-            {selectedOrder.lines.map((l) => (
-              <div className="detail-line" key={l.id}>
-                <span className="product-thumb">
-                  <Package size={20} />
-                </span>
-                <div>
-                  <strong>
-                    {s.products.find((p) => p.sku === l.sku)?.name}
-                  </strong>
-                  <small>
-                    {l.sku} · line {l.id.slice(0, 8)}
-                  </small>
-                </div>
-                <strong>
-                  {l.quantity} <small>each</small>
-                </strong>
-              </div>
-            ))}
-            {selectedOrder.allocations.length > 0 && (
-              <>
-                <h3>Reserved pick instructions</h3>
-                {selectedOrder.allocations.map((a: Allocation, i: number) => (
-                  <div className="allocation" key={i}>
-                    <div>
-                      <strong>{a.sku}</strong>
-                      <small>
-                        {a.location} · {a.lot} · line {a.line_id.slice(0, 8)}
-                      </small>
-                      <span>
-                        {a.quantity > a.shipped + a.released
-                          ? availabilityLabel[
-                              availability(s, a.sku, a.lot, availabilityTime)
-                            ]
-                          : "No active reserved units"}
-                      </span>
-                      <span>
-                        {a.picked} picked / {a.quantity} reserved
-                        {a.released > 0 && ` · ${a.released} released`}
-                      </span>
-                    </div>
-                    {canWork &&
-                      ["allocated", "picking", "partially_shipped"].includes(
-                        selectedOrder.status,
-                      ) &&
-                      a.quantity > a.picked + a.released && (
-                        <button
-                          className="btn"
-                          disabled={
-                            disabled ||
-                            orderBlocked ||
-                            availability(s, a.sku, a.lot, availabilityTime) !==
-                              "available"
-                          }
-                          onClick={() =>
-                            setModal({
-                              title: "Confirm physical pick",
-                              subtitle: `Verify ${a.sku} at ${a.location}, lot ${a.lot}. The units move into STAGE-01 and remain reserved.`,
-                              unitSku: a.sku,
-                              fields: [
-                                {
-                                  name: "quantity",
-                                  label: "Picked quantity (each)",
-                                  type: "number",
-                                  value: a.quantity - a.picked - a.released,
-                                  max: a.quantity - a.picked - a.released,
-                                },
-                              ],
-                              submit: "Confirm pick",
-                              build: (d) => ({
-                                type: "pick",
-                                order_id: selectedOrder.id,
-                                line_id: a.line_id,
-                                location: a.location,
-                                lot: a.lot,
-                                quantity: Number(d.quantity),
-                              }),
-                            })
-                          }
-                        >
-                          Pick units
-                        </button>
-                      )}
-                    {canWork &&
-                      [
-                        "picking",
-                        "picked",
-                        "packed",
-                        "partially_shipped",
-                      ].includes(selectedOrder.status) &&
-                      a.picked > a.shipped && (
-                        <button
-                          className="btn"
-                          disabled={disabled}
-                          onClick={() =>
-                            setModal({
-                              title: "Return staged stock",
-                              subtitle: `Physically return ${a.sku}, lot ${a.lot}, from STAGE-01 to ${a.location}. Only line ${a.line_id} is affected. Packing must be confirmed again after recovery.`,
-                              unitSku: a.sku,
-                              fields: [
-                                {
-                                  name: "quantity",
-                                  label: "Returned quantity (each)",
-                                  type: "number",
-                                  value: a.picked - a.shipped,
-                                  max: a.picked - a.shipped,
-                                },
-                                {
-                                  name: "reason",
-                                  label: "Return evidence / reason",
-                                  type: "textarea",
-                                },
-                              ],
-                              submit: "Confirm physical return",
-                              build: (data) => ({
-                                type: "unpick",
-                                order_id: selectedOrder.id,
-                                line_id: a.line_id,
-                                location: a.location,
-                                lot: a.lot,
-                                quantity: Number(data.quantity),
-                                reason: data.reason,
-                              }),
-                            })
-                          }
-                        >
-                          Return staged units
-                        </button>
-                      )}
-                  </div>
-                ))}
-              </>
-            )}
-            {s.exceptions
-              .filter(
-                (e) => e.order_id === selectedOrder.id && e.status === "open",
-              )
-              .map((e) => (
-                <div className="alert warning" key={e.id}>
-                  <AlertTriangle size={17} />
-                  <p>
-                    <strong>{e.category}</strong>
-                    <br />
-                    {e.detail}
-                  </p>
-                </div>
-              ))}
-            {selectedOrder.status === "shipped" && (
-              <div className="shipment-proof">
-                <Truck size={22} />
-                <div>
-                  <strong>Physical handoff recorded</strong>
-                  <p>
-                    {selectedOrder.carrier
-                      ? `${selectedOrder.carrier} · ${selectedOrder.handoff_reference}`
-                      : "Multiple handoffs — review each shipment package below"}
-                  </p>
-                  <small>
-                    {selectedOrder.shipped_at && when(selectedOrder.shipped_at)}
-                  </small>
-                </div>
-              </div>
-            )}
-            {["shipped", "partially_shipped", "closed_partial"].includes(
-              selectedOrder.status,
-            ) &&
-              canWork && (
-                <ReturnForm
-                  packs={s.unit_packs}
-                  warehouse={s.warehouse.id}
-                  orderId={selectedOrder.id}
-                  disabled={disabled}
-                  request={request}
-                  onSubmit={submit}
-                />
-              )}
-            {(selectedOrder.shipment_mode === "packages" ||
-              !["shipped", "cancelled", "closed_partial"].includes(
-                selectedOrder.status,
-              )) && (
-              <ShipmentsPanel
-                warehouse={s.warehouse.id}
-                orderId={selectedOrder.id}
-                disabled={disabled}
-                forwardBlocked={orderBlocked}
-                state={s}
-                at={availabilityTime}
-                canWork={canWork}
-                request={request}
-                refreshWarehouse={refresh}
-                onSubmit={submit}
-              />
-            )}
-            {legacyLotHeld && (
-              <p role="status" className="alert warning">
-                One or more reserved lots are unavailable. Review Inventory →
-                Lot expiry and quarantine. Physical unpick, unpack and
-                reservation release remain available.
-              </p>
-            )}
-            <div className="detail-actions">
-              {canWork && (
-                <>
-                  {!selectedOrder.shipment_mode &&
-                    selectedOrder.status === "pending" && (
-                      <button
-                        className="btn primary"
-                        disabled={disabled || orderBlocked}
-                        onClick={() =>
-                          action({
-                            type: "allocate",
-                            order_id: selectedOrder.id,
-                          })
-                        }
-                      >
-                        <ClipboardCheck size={16} />
-                        Allocate stock
-                      </button>
-                    )}
-                  {!selectedOrder.shipment_mode &&
-                    selectedOrder.status === "allocated" &&
-                    selectedOrder.allocations.every(
-                      (allocation) => allocation.picked === 0,
-                    ) && (
-                      <button
-                        className="btn"
-                        disabled={disabled}
-                        onClick={() =>
-                          setModal({
-                            title: "Release allocation for recovery",
-                            subtitle:
-                              "All staged stock has been returned. Release this order's reservations so a supervisor can recount the physical stock, then allocate the order again after the issue is resolved.",
-                            fields: [
-                              {
-                                name: "reason",
-                                label: "Allocation release reason",
-                                type: "textarea",
-                              },
-                            ],
-                            submit: "Release reservations",
-                            build: (data) => ({
-                              type: "reset_allocation",
-                              order_id: selectedOrder.id,
-                              reason: data.reason,
-                            }),
-                          })
-                        }
-                      >
-                        Release allocation
-                      </button>
-                    )}
-                  {!selectedOrder.shipment_mode &&
-                    selectedOrder.status === "picked" && (
-                      <button
-                        className="btn primary"
-                        disabled={disabled || orderBlocked || legacyLotHeld}
-                        onClick={() =>
-                          action({ type: "pack", order_id: selectedOrder.id })
-                        }
-                      >
-                        <PackageCheck size={16} />
-                        Confirm packed
-                      </button>
-                    )}
-                  {!selectedOrder.shipment_mode &&
-                    selectedOrder.status === "packed" && (
-                      <button
-                        className="btn primary"
-                        disabled={disabled || orderBlocked || legacyLotHeld}
-                        onClick={() =>
-                          setModal({
-                            title: "Confirm carrier handoff",
-                            subtitle:
-                              "Record the actual physical departure. This removes staged units from warehouse stock. TMS owns transportation after this handoff.",
-                            fields: [
-                              { name: "carrier", label: "Carrier" },
-                              {
-                                name: "handoff_reference",
-                                label: "Carrier pickup / tracking reference",
-                              },
-                            ],
-                            submit: "Confirm physical handoff",
-                            build: (d) => ({
-                              type: "ship",
-                              order_id: selectedOrder.id,
-                              ...d,
-                            }),
-                          })
-                        }
-                      >
-                        <Truck size={16} />
-                        Record handoff
-                      </button>
-                    )}
-                  {!["shipped", "cancelled", "closed_partial"].includes(
-                    selectedOrder.status,
-                  ) && (
-                    <button
-                      className="btn"
-                      disabled={disabled}
-                      onClick={() => report(selectedOrder)}
-                    >
-                      Report exception
-                    </button>
-                  )}
-                  {["pending", "allocated"].includes(selectedOrder.status) && (
-                    <button
-                      className="text-btn danger"
-                      disabled={disabled}
-                      onClick={() =>
-                        setModal({
-                          title: "Cancel warehouse fulfillment",
-                          subtitle:
-                            "Releases all reservations for this order. Available only before physical picking begins.",
-                          fields: [
-                            {
-                              name: "reason",
-                              label: "Cancellation reason",
-                              type: "textarea",
-                            },
-                          ],
-                          submit: "Cancel fulfillment",
-                          build: (d) => ({
-                            type: "cancel_order",
-                            order_id: selectedOrder.id,
-                            ...d,
-                          }),
-                        })
-                      }
-                    >
-                      Cancel fulfillment
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-          {error && (
-            <div role="alert" className="modal-error">
-              {error}
-            </div>
-          )}
-        </ModalFrame>
+          disabled={disabled}
+          error={error}
+          order={selectedOrder}
+          refresh={refresh}
+          report={report}
+          request={request}
+          s={s}
+          setModal={setModal}
+          submit={submit}
+          suspended={serialPreparing || !!serialReview}
+        />
       )}
       {selectedReceipt && (
-        <ModalFrame
-          suspended={serialPreparing || !!serialReview}
-          title={`${selectedReceipt.reference} · ${selectedReceipt.supplier}`}
+        <ReceiptDetail
+          canWork={canWork}
           close={closeModal}
-        >
-          <div className="detail-body">
-            <div className="detail-summary">
-              <Status value={selectedReceipt.status} />
-              <span>Created {when(selectedReceipt.created_at)}</span>
-            </div>
-            {selectedReceipt.cancellation && (
-              <p className="shipment-proof">
-                Unreceived remainder cancelled ·{" "}
-                {selectedReceipt.cancellation.reason}
-                <br />
-                {selectedReceipt.cancellation.actor} ·{" "}
-                {when(selectedReceipt.cancellation.cancelled_at)}
-              </p>
-            )}
-            <h3>Expected receipt lines</h3>
-            {selectedReceipt.return_source && (
-              <p className="shipment-proof">
-                Customer return · original order{" "}
-                {selectedReceipt.return_source.order_id}
-                <br />
-                {selectedReceipt.return_source.reason}
-              </p>
-            )}
-            {selectedReceipt.lines.map((l) => (
-              <div className="receipt-line" key={l.id}>
-                <div>
-                  <strong>
-                    {s.products.find((p) => p.sku === l.sku)?.name}
-                  </strong>
-                  <small>
-                    {l.sku} · {l.lot}
-                  </small>
-                  <span>
-                    {l.received} received / {l.quantity} expected
-                  </span>
-                  {selectedReceipt.cancellation && (
-                    <span>
-                      {selectedReceipt.cancellation.lines[l.id]?.cancelled ?? 0}{" "}
-                      cancelled
-                    </span>
-                  )}
-                </div>
-                {canWork &&
-                  !selectedReceipt.cancellation &&
-                  selectedReceipt.status !== "cancelled" &&
-                  l.received < l.quantity && (
-                    <button
-                      className="btn primary"
-                      disabled={disabled}
-                      onClick={() =>
-                        setModal({
-                          title: "Receive physical goods",
-                          subtitle: `Verify ${l.sku}, lot ${l.lot}. Receive into a receiving bin, then move to storage. Allocation also requires an available lot.`,
-                          unitSku: l.sku,
-                          fields: [
-                            {
-                              name: "quantity",
-                              label: "Received quantity (each)",
-                              type: "number",
-                              value: l.quantity - l.received,
-                              max: l.quantity - l.received,
-                            },
-                            {
-                              name: "location",
-                              label: "Receiving location",
-                              type: "select",
-                              options: fieldOptions("receiving"),
-                            },
-                          ],
-                          submit: "Confirm receipt",
-                          build: (d) => ({
-                            type: "receive",
-                            receipt_id: selectedReceipt.id,
-                            line_id: l.id,
-                            quantity: Number(d.quantity),
-                            location: d.location,
-                          }),
-                        })
-                      }
-                    >
-                      Receive goods
-                    </button>
-                  )}
-              </div>
-            ))}
-            {canWork &&
-              !selectedReceipt.cancellation &&
-              ["expected", "partial"].includes(selectedReceipt.status) &&
-              selectedReceipt.lines.some(
-                (line) => line.received < line.quantity,
-              ) && (
-                <button
-                  className="btn danger"
-                  disabled={disabled}
-                  onClick={() =>
-                    setModal({
-                      title: "Cancel unreceived remainder",
-                      subtitle: `${selectedReceipt.reference}: close only goods that have not arrived. Received stock and its history stay intact. Cancelled return quantities become available for a new authorization.`,
-                      fields: [
-                        {
-                          name: "reason",
-                          label: "Cancellation reason",
-                          value: "",
-                          placeholder:
-                            "Why the remaining goods will not arrive",
-                        },
-                      ],
-                      submit: "Confirm remainder cancellation",
-                      build: (d) => ({
-                        type: "cancel_receipt",
-                        receipt_id: selectedReceipt.id,
-                        reason: d.reason,
-                      }),
-                    })
-                  }
-                >
-                  Cancel unreceived remainder
-                </button>
-              )}
-            <div className="detail-note">
-              <ArrowRight size={16} />
-              <p>
-                Received goods remain in the receiving location until putaway.
-                Use Inventory → Move stock to transfer them into storage.
-              </p>
-            </div>
-          </div>
-        </ModalFrame>
+          disabled={disabled}
+          fieldOptions={fieldOptions}
+          receipt={selectedReceipt}
+          s={s}
+          setModal={setModal}
+          suspended={serialPreparing || !!serialReview}
+        />
       )}
       {modal && "help" in modal && (
-        <ModalFrame
-          suspended={serialPreparing || !!serialReview}
-          title="Your warehouse workspace"
+        <WorkspaceGuide
           close={closeModal}
-        >
-          <div className="detail-body guide">
-            <h3>From dock to departure</h3>
-            <ol>
-              <li>
-                <strong>Receiving:</strong> schedule an expected receipt, then
-                confirm actual line quantities into a receiving bin.
-              </li>
-              <li>
-                <strong>Putaway:</strong> move received stock into a storage
-                location from Inventory.
-              </li>
-              <li>
-                <strong>Fulfillment:</strong> create or accept OMS work,
-                allocate stock, follow line-specific picks, and confirm packing.
-              </li>
-              <li>
-                <strong>Handoff:</strong> record the actual carrier pickup with
-                a reference. TMS manages transportation afterward.
-              </li>
-              <li>
-                <strong>Reconcile:</strong> review the movement ledger and
-                export the independently reconstructed balances.
-              </li>
-            </ol>
-            <h3>Ownership</h3>
-            <p>
-              Sync is the OMS. Warehouse is the WMS. Freight is the TMS. EDI
-              owns trading-partner documents.
-            </p>
-            <h3>Safe recovery</h3>
-            <p>
-              If a save response is lost, use “Check original save.” The same
-              request ID confirms or retries the original action without
-              applying it twice.
-            </p>
-            <p className="muted-text">
-              This version supports whole each units and complete-order
-              shipments. Physical counts and operator validation are still
-              required before live use.
-            </p>
-            <button className="btn" onClick={logout}>
-              <LogOut size={16} />
-              Sign out of workspace
-            </button>
-          </div>
-        </ModalFrame>
+          logout={logout}
+          suspended={serialPreparing || !!serialReview}
+        />
       )}
     </div>
   );
