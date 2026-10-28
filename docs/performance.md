@@ -9,12 +9,33 @@ Measured throughput and latency for StateSet Warehouse, and how to reproduce the
 | 500 products, 8 operators, 2 API replicas, 300 s, whole-unit stock | 4,694 moves with exact replays, 15.6 moves/s, **662ms** action p95 | [0.3.0 gate](qualification/release-20261022-v0.3.0/image_resilience.json) |
 | Same, plus 16,000 serial labels | 1,689 moves with exact replays, 5.6 moves/s, **1,931ms** action p95 | [0.3.0 gate](qualification/release-20261022-v0.3.0/image_serial_resilience.json) (before migration 035) |
 | Optimized native binary, 8 operators, 2,048 serial labels, 300 s, 1,000ms p95 limit | 5,661 moves, 18.8 moves/s, **772ms** action p95: passes | [after migration 035](performance/native-serial-sku-scope-035.json) (1,242ms and failing before) |
-| Full serial reconciliation at 16,000 labels | about **4 s**, inside the 10 s statement limit | scale test (39–54 s before set-form reconciliation) |
+| Full serial reconciliation at 16,000 labels | about **4 s** with little history; over the 10 s statement limit after about 5,000 serial commands ([known limit](#known-full-reconciliation-history-limit--2026-10-27)) | scale test (39–54 s before set-form reconciliation) |
 | Commit-time serial custody check at 16,000 labels | **18–24ms** per save | migration 035 (100–192ms before) |
 
 "Action latency" runs from submitting a save until the client has validated its own full refresh afterwards, so it includes a complete warehouse read. Writes to one warehouse are serialized, so latency rises with the number of operators working in the same warehouse at once.
 
 **Not yet measured:** real-warehouse volumes (millions of events, many facilities), managed PostgreSQL, and anything with real scanners or networks.
+
+## Known full-reconciliation history limit — 2026-10-27
+
+Full reconciliation re-proves every historical serial event in one statement, so its cost grows with history. Two plan effects make it grow faster than that. A growth test seeded 16,000 labels across eight SKUs, made single-label moves, and timed the serial proof at each step on a separate session without the 10-second limit:
+
+| Single-label moves | Full reconciliation | Serial proof, JIT on | Serial proof, JIT off | JIT compile |
+|---|---|---|---|---|
+| 0 | 2.7 s | 1.7 s | 1.7 s | none |
+| 2,000 | 9.7 s | 3.2 s | 2.6 s | 0.7 s |
+| 4,000 | 9.0 s | 5.6 s | 5.3 s | 0.6 s |
+| 5,000 | 503 | 9.6 s | 10.1 s | 0.6 s |
+| 6,000 | 503 | 17.2 s | 7.8 s | 13.7 s |
+| 7,000 | 503 | 20.6 s | 13.4 s | 15.5 s |
+
+Debug build and PostgreSQL 12 with default settings on the shared host, where single runs vary by up to half. Each move stayed at roughly 400–670 ms throughout, and refreshing planner statistics did not change the proof time.
+
+- **Quadratic join.** The proof matches each event to its serial-input class on the command alone and compares the inputs afterwards, so identical commands (same SKU, lot and bins) are compared pairwise: 3,120,000 rejected row pairs at 5,000 moves.
+- **JIT cliff.** Near 5,500 serial commands the statement's estimated cost passes PostgreSQL's 500,000 `jit_inline_above_cost` and `jit_optimize_above_cost`, and full JIT optimization adds 12–16 s of compilation.
+- **Linear remainder.** Joining on an exact class id returned the same verdict in the same snapshot in 3.9 s instead of 9.9 s (5,943 moves, JIT off). What remains is about 0.65 ms per historical serial command, which would reach the limit near 15,000.
+
+Until a fix is released, `GET /v1/warehouses/{id}/reconciliation` returns 503 for a warehouse with serial-controlled SKUs once its history passes roughly 5,000 serial commands on comparable hardware. The proof is read-only, and every write keeps its own commit-time custody check. Planned work: disable JIT for the reconciliation transaction, join on the exact class id, then move full reconciliation off the request path and check history in bounded chunks under one snapshot.
 
 ## Known serial write bottleneck — 2026-10-22
 
