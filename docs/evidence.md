@@ -8,13 +8,13 @@ This page records what has been proven about StateSet Warehouse, how, and what h
 
 | Claim | Latest evidence |
 |---|---|
-| Every stock change, reservation, receipt and serial unit can be rebuilt from immutable history, and the database rejects commits that disagree | [0.4.0 gate](qualification/release-20261027-v0.4.0/verification.json): final reconciliation passes on both API replicas |
-| Retrying a lost request returns the original result, never a second change | 0.4.0 gate: thousands of exact cross-replica replays per workload, zero mismatches |
-| API and PostgreSQL crashes mid-write lose or duplicate nothing | 0.4.0 gate: every table fingerprint unchanged after each forced crash |
-| A backup restores to an identical database | 0.4.0 gate: archive restore with every table fingerprint and migration digest matching |
-| Full serial reconciliation stays inside its 10-second limit at 16,000 labels | 0.4.0 gate; the 16,000-label scale fixture takes about 4s, from 39–54s before |
+| Every stock change, reservation, receipt and serial unit can be rebuilt from immutable history, and the database rejects commits that disagree | [0.4.1 gate](qualification/release-20261027-v0.4.1/verification.json): final reconciliation passes on both API replicas |
+| Retrying a lost request returns the original result, never a second change | 0.4.1 gate: thousands of exact cross-replica replays per workload, zero mismatches |
+| API and PostgreSQL crashes mid-write lose or duplicate nothing | 0.4.1 gate: every table fingerprint unchanged after each forced crash |
+| A backup restores to an identical database | 0.4.1 gate: archive restore with every table fingerprint and migration digest matching |
+| Full serial reconciliation completes at 16,000 labels with long history | 0.4.1 gate: background runs on both replicas at version 7,084 in 13.1 and 13.4s; the synchronous endpoint keeps its 10-second limit ([known limit](performance.md#known-full-reconciliation-history-limit--2026-10-27)) |
 | Serial saves meet a 1,000ms p95 with eight concurrent operators | [native profile after migration 035](performance/native-serial-sku-scope-035.json): 772ms (released in 0.3.1) |
-| The public source and its history contain no unreviewed secrets, and dependencies are permissively licensed | [source audit](qualification/release-20261027-v0.4.0/source-audit-report.json) and [license review](qualification/release-20261027-v0.4.0/source-license-review.json) |
+| The public source and its history contain no unreviewed secrets, and dependencies are permissively licensed | [source audit](qualification/release-20261027-v0.4.1/source-audit-report.json) and [license review](qualification/release-20261027-v0.4.1/source-license-review.json) |
 
 **Not yet proven:**
 
@@ -24,6 +24,14 @@ This page records what has been proven about StateSet Warehouse, how, and what h
 - Hosted CI on GitHub (blocked by account billing).
 
 **Reproduce:** run the complete gate with the [release profile](release-qualification.md#run-the-release-profile).
+
+## 0.4.1 qualification — 2026-10-27
+
+The [0.4.1 complete gate](qualification/release-20261027-v0.4.1/summary.json) passed all ten stages on its second attempt, from a clean clone at `8799664`: 0.4.0 with the code-health changes, the exact serial class join, JIT off for reconciliation, and background reconciliation runs. It used the same full profile as 0.4.0. The serial run made 4,719 moves at 15.7 per second with an action p95 of 623ms, and both replicas' final proofs ran as background runs at version 7,084 in 13.1 and 13.4s.
+
+The first attempt, on `86d5baa` without background runs, passed nine stages and then failed: its serial run made 4,766 moves, and the final synchronous reconciliation exceeded the 10-second statement limit at about 7,100 commands. The [verification record](qualification/release-20261027-v0.4.1/verification.json) lists both attempts and binds all 515 gated inputs byte for byte to tag `v0.4.1` (`ffd7ff1`), which adds only evidence and release notes.
+
+The [full-history source audit](qualification/release-20261027-v0.4.1/source-audit-report.json) passed on all 13 branches and tags: 93 commits, 1,564 current files, 0 unreviewed findings (Gitleaks 8.30.1, verified archive). The [license review](qualification/release-20261027-v0.4.1/source-license-review.json) matches 0.4.0: 169 vendored files, 311 Rust and 128 browser packages, with `caniuse-lite` (CC-BY-4.0, development-only) as the one non-permissive package.
 
 ## 0.4.0 qualification — 2026-10-27
 

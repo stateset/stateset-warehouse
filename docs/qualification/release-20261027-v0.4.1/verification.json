@@ -11,7 +11,8 @@
     "method": "Each gated software input's SHA-256 recomputed from `git show 8799664:<path>`",
     "inputs": 515,
     "aggregate_sha256": "79dc9f8aece7478a4d55042ca7d58f1a6c40717ed0e1b673708ac96a461570d4",
-    "mismatches": 0
+    "mismatches": 0,
+    "note": "The gate ran from a clean clone at 8799664. Tag v0.4.1 (ffd7ff1) adds only the gate evidence and release notes (docs/qualification, README.md, CHANGELOG.md, docs/performance.md), which are not gated inputs; every gated input matches both commits byte for byte."
   },
   "profile": {
     "products": 500,
@@ -85,5 +86,135 @@
     "Production deployment, deployed identity/native/MCP clients, scanner devices, physical facility acceptance and managed failover remain separate",
     "Hosted CI did not run (GitHub billing); PostgreSQL 16 runtime checks ran only inside the image stages",
     "Repository remains private; no packages or images are published"
-  ]
+  ],
+  "attempts": [
+    {
+      "attempt": 1,
+      "date": "2026-10-27",
+      "directory": "gate-041-attempt1-full",
+      "source": "86d5baa",
+      "profile": "full",
+      "result": "failed",
+      "reason": "Nine stages passed. The serial resilience run made 4,766 moves; its final synchronous reconciliation then exceeded the 10-second statement limit at about 7,100 commands. Background reconciliation runs (8799664) were added in response. No rule was loosened.",
+      "stages": [
+        {
+          "stage": "prerequisites",
+          "status": "passed"
+        },
+        {
+          "stage": "software_checks",
+          "status": "passed"
+        },
+        {
+          "stage": "observability_rules",
+          "status": "passed"
+        },
+        {
+          "stage": "release_builds",
+          "status": "passed"
+        },
+        {
+          "stage": "standard_workload",
+          "status": "passed"
+        },
+        {
+          "stage": "archive_restore",
+          "status": "passed"
+        },
+        {
+          "stage": "live_browsers",
+          "status": "passed"
+        },
+        {
+          "stage": "production_container",
+          "status": "passed"
+        },
+        {
+          "stage": "image_resilience",
+          "status": "failed"
+        },
+        {
+          "stage": "stable_source_inputs",
+          "status": "not_run"
+        }
+      ]
+    },
+    {
+      "attempt": 2,
+      "date": "2026-10-27",
+      "directory": "gate-041-attempt2-full",
+      "source": "8799664",
+      "profile": "full",
+      "result": "passed",
+      "reason": "This bundle",
+      "stages": [
+        {
+          "stage": "prerequisites",
+          "status": "passed"
+        },
+        {
+          "stage": "software_checks",
+          "status": "passed"
+        },
+        {
+          "stage": "observability_rules",
+          "status": "passed"
+        },
+        {
+          "stage": "release_builds",
+          "status": "passed"
+        },
+        {
+          "stage": "standard_workload",
+          "status": "passed"
+        },
+        {
+          "stage": "archive_restore",
+          "status": "passed"
+        },
+        {
+          "stage": "live_browsers",
+          "status": "passed"
+        },
+        {
+          "stage": "production_container",
+          "status": "passed"
+        },
+        {
+          "stage": "image_resilience",
+          "status": "passed"
+        },
+        {
+          "stage": "stable_source_inputs",
+          "status": "passed"
+        }
+      ]
+    }
+  ],
+  "tag_commit": "ffd7ff1b316cf6cebe70c9e63fdb098b801e54f4",
+  "source_audit": {
+    "report": "source-audit-report.json",
+    "result": "passed",
+    "audited_head": "ffd7ff1b316cf6cebe70c9e63fdb098b801e54f4",
+    "refs": 13,
+    "commits": 93,
+    "current_files": 1564,
+    "unreviewed_findings": 0,
+    "scanner": "Gitleaks 8.30.1, archive SHA-256 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb",
+    "note": "Run on a full mirror of every branch and tag, including v0.4.1, with the tag's tree as the current tree; the raw source export stays private."
+  },
+  "license_review": {
+    "report": "source-license-review.json",
+    "vendored_files_verified": 169,
+    "rust_packages": 311,
+    "browser_packages": 128,
+    "non_permissive": [
+      {
+        "package": "caniuse-lite",
+        "license": "CC-BY-4.0",
+        "note": "Development-only build data (dev: true in package-lock.json); absent from the built dashboard and its notices"
+      }
+    ],
+    "not_legal_approval": true
+  }
 }
