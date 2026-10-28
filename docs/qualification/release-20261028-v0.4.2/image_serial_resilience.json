@@ -1,0 +1,1397 @@
+{
+  "ok": true,
+  "synthetic": true,
+  "qualified_at_utc": "2026-10-28T09:33:46Z",
+  "qualification": "two-replica sustained HTTP and crash recovery",
+  "image_id": "sha256:bc07b741bf731c504994ca08edaacf9cc1701d02f2ff154002ce0711e7121f03",
+  "image_source_inputs_sha256": "d21ef9ac9ff7bd51eb4ccc6ece5883112703579b1a9285195e0beb705487639b",
+  "image_release_revision": "feb87801e5a8207d7cca108f323d905bd2e4262a",
+  "qualifier_sha256": {
+    "scripts/resilience-rehearsal.sh": "12e0ba244e89e18f78fd0f33f3d287ea8eb6737ddc25e6ab376fa5733ca6e831",
+    "scripts/qualification_resources.sh": "61e454b5d465660ae5751411681eeafd9c9da8357d2657c1a396ee98f1996e0f",
+    "scripts/qualification_host.py": "cf52076c6a0952c4671232921c262d8852f0b5e1203720c64a2555f1f597101e",
+    "scripts/resilience_probe.py": "96c88517ccb19c1b072012802b7ae1fab890769395f4782c5a9fefc7e86f9096",
+    "scripts/serial_traffic_proof.py": "fbf40276356a5992fd3c15a78d8ec81bc8b1913b612b1ff42061784583b1485e",
+    "scripts/traffic_policy.py": "9a50162a2c6ca7a998f37979e9405d61653ba01b0e78cc116b784c98f8a96aa5",
+    "scripts/serial_crash_barrier.py": "9ecae86ec0f80c9a930ccecff02a78e3b4ee2dc4f774db27057305d8cbc305a1",
+    "scripts/crash_journal.py": "ff05defa1cb7ddccd72568b6f851afaac5af1be9a64a416cc8a6f3d8d522cf74"
+  },
+  "postgres_image_id": "sha256:81bd698b4594e751a3269e4dcd3e03a4a0ec0daf7b72e7aa1abd43cce9887542",
+  "postgres_version": "16.15",
+  "runtime": {
+    "api_replicas": 2,
+    "uid": 10001,
+    "read_only_rootfs": true,
+    "capabilities_dropped": "ALL",
+    "no_new_privileges": true,
+    "postgres_named_volume_survived_crash": true,
+    "random_loopback_api_ports": true,
+    "native_and_webhook_connections": 0
+  },
+  "elapsed_total_seconds": 720.491,
+  "phases": {
+    "seed": {
+      "method": "authenticated actual HTTP commands only; opening counts are disclosed synthetic fixtures",
+      "seconds": 312.941,
+      "operational_products": 500,
+      "additional_recovery_product": 1,
+      "storage_bins": 100,
+      "lots_per_product": 2,
+      "opening_bin_lot_balances": 1000,
+      "opening_each_per_balance": 16,
+      "serial_units_per_bin_lot": 16,
+      "open_orders": 500,
+      "allocated_orders": 250,
+      "commands_before_recovery_lifecycle": 2352,
+      "expected_setup_commands": 2352,
+      "observed_setup_commands": 2352,
+      "independent_setup_command_count_matches": true,
+      "excluded_from_sustained_timing": true
+    },
+    "lost_http_success": {
+      "downstream_response_lost": true,
+      "upstream_commit_observed_before_drop": true,
+      "retry_other_replica": true,
+      "original_result_unchanged": true,
+      "exact_receipt_lines": {
+        "same-sku-first": 7,
+        "same-sku-second": 0
+      }
+    },
+    "api_sigkill": {
+      "crash_journal": {
+        "private_checkpoints": [
+          {
+            "path": "crash-journal/api_sigkill/000-prepared.json",
+            "sha256": "99972d9edb4814afad7b85253f6b06496259b3b5f9c8290cd933d161e0ce09ff"
+          },
+          {
+            "path": "crash-journal/api_sigkill/001-baseline_captured.json",
+            "sha256": "8db16cf48ba90b2e3916dfd5ca9f36700bddacf0697e4e16e08b249010d0e573"
+          },
+          {
+            "path": "crash-journal/api_sigkill/002-barrier_planned.json",
+            "sha256": "0eb5c3712d9a1ceecd6945f9c8e8ad16b792b71e4209b59d2faacd0cbb5c7576"
+          },
+          {
+            "path": "crash-journal/api_sigkill/003-barrier_installed.json",
+            "sha256": "9b82e77090d1ef2619de3ec91007e4a3356752643cc5159d807a46d58a811947"
+          },
+          {
+            "path": "crash-journal/api_sigkill/004-original_send_requested.json",
+            "sha256": "ffa3d7294444adc6249299476b79b20ac3461b7e6a62598fd678da93abf56081"
+          },
+          {
+            "path": "crash-journal/api_sigkill/005-writer_blocked.json",
+            "sha256": "1f60c8a1c49b79947ee2edddc1a8a097a989556ac0d40438542e5777a53ba3f1"
+          },
+          {
+            "path": "crash-journal/api_sigkill/006-fault_requested.json",
+            "sha256": "117059bd82dcffa6249ddd2441bf52ace1cce3e75afb233209f8723226c2f776"
+          },
+          {
+            "path": "crash-journal/api_sigkill/007-interrupted_response_observed.json",
+            "sha256": "956e9f6f616a353a0199b7907a5d6de508bec2de74d2b108142838a34047c63a"
+          },
+          {
+            "path": "crash-journal/api_sigkill/008-fault_verified.json",
+            "sha256": "6649d1e832f06ae89c44939e263a63acd39bdeae3ffc2ecb1ac1ad0da3e4cb4e"
+          },
+          {
+            "path": "crash-journal/api_sigkill/009-barrier_removed.json",
+            "sha256": "cda5c005508894e061027996fa2ea4ecf2f7aeb8364d1402a61be35d02ac4951"
+          },
+          {
+            "path": "crash-journal/api_sigkill/010-rollback_verified.json",
+            "sha256": "724ee82a1a1ab0ab2441d84cb46da36f8be8797f18c4a9ac805af72c2c067599"
+          },
+          {
+            "path": "crash-journal/api_sigkill/011-original_absent.json",
+            "sha256": "cf38afda3f48d61a6cda1c5f2252041c435a9bb0e514fb82ee97e2965e32e3f1"
+          },
+          {
+            "path": "crash-journal/api_sigkill/012-original_recovery_requested.json",
+            "sha256": "de8da06debb399f2b666883540320002812b2b973e4d7d6bdaebbf4cae09c117"
+          },
+          {
+            "path": "crash-journal/api_sigkill/013-original_committed.json",
+            "sha256": "902333dba96a9425a60d31b81f59fb6ba7567926b6fbc5845f050365300f42f3"
+          },
+          {
+            "path": "crash-journal/api_sigkill/014-exact_replay_verified.json",
+            "sha256": "952c90d591e707517a34c35aa63f894739f0ce4d352691f69d07bc2198b8a918"
+          },
+          {
+            "path": "crash-journal/api_sigkill/015-completed.json",
+            "sha256": "08cff9fecc53b9c808ec0ad50966a1a41c5fbd442d19aee2d9066e3e28c77245"
+          }
+        ],
+        "contains_credentials": false
+      },
+      "barrier_stage": "after_serial_custody_history_event_receipt_before_outbox_commit",
+      "serial_after_write_barrier": {
+        "name": "wms_resilience_serial_1793179300_527040e1",
+        "marker": "wms-serial-after-write-1793179300-527040e1",
+        "keys": [
+          180121,
+          114426475
+        ],
+        "original_request": {
+          "request_id": "e57c8fa2-d73b-49a2-9cf9-ca3ae4f44045",
+          "expected_version": 2363,
+          "command": {
+            "type": "move_stock",
+            "sku": "LOAD-00499",
+            "lot": "LOT-000",
+            "from": "BIN-00099",
+            "to": "BIN-00000",
+            "quantity": 1
+          },
+          "serial_inputs": [
+            {
+              "target": [],
+              "sku": "LOAD-00499",
+              "serials": [
+                "Load-00499-Lot-000-Unit-00015"
+              ]
+            }
+          ]
+        },
+        "actor": "operator:resilience-0",
+        "before": {
+          "head": 2,
+          "revision": 1,
+          "source_quantity": 16,
+          "destination_quantity": 0
+        },
+        "blocking_evidence": {
+          "lock_objid": "114426475",
+          "wait_event": "advisory",
+          "writer_pid": 71,
+          "blocker_pid": 2575,
+          "lock_classid": "180121",
+          "writer_application": "wms-serial-after-write-1793179300-527040e1"
+        },
+        "owned_fault_trigger_removed": true
+      },
+      "all_table_fingerprints_unchanged": {
+        "wms_activity": {
+          "rows": 2363,
+          "sha256": "2554b86ff16c001fc9c4c1aecc648a2963cb0edbc0fa977d79e9ec62ed486d6c"
+        },
+        "wms_admin_audit": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_allocations": {
+          "rows": 253,
+          "sha256": "fc1c2297f8dc1c38e2b75facc43eb0391b92bed7a56ea44a0b64e324fbe5bc3d"
+        },
+        "wms_carrier_labels": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_commands": {
+          "rows": 2363,
+          "sha256": "95f403643c4980cdf2b115f717c515cbfb15138b922e7543ca906295179b7da0"
+        },
+        "wms_delivery_attempts": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_events": {
+          "rows": 2363,
+          "sha256": "285659d64dfa8569ed175e98687e4135b2889fef885df9ab4b454b292df82b56"
+        },
+        "wms_exceptions": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_location_capacity": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_locations": {
+          "rows": 104,
+          "sha256": "552a6c243e5d598af02d0dc98f3b477adf61df9cc65ef2cbe57c0604a1ce205e"
+        },
+        "wms_lot_changes": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_lot_decisions": {
+          "rows": 256,
+          "sha256": "af8ee98b8552cddce37096d6653222dc6069112a24d7670de9a0619adb94b760"
+        },
+        "wms_lot_enforcement": {
+          "rows": 2,
+          "sha256": "93913cea8505cc1e249446971f145ffb2faa290f250977b7c09f997daae0ce73"
+        },
+        "wms_movements": {
+          "rows": 1007,
+          "sha256": "62232bebd43da0d0026ae14bc2b533948821a41f29ad629d7cf99ac4ad0bfa4a"
+        },
+        "wms_native_attempts": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_native_requests": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_order_cancellations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_order_cancelled_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_order_lines": {
+          "rows": 503,
+          "sha256": "eb9a227bc35eac83061e8ab928a4e7e18814c21e581eba4bdce9d21380e26328"
+        },
+        "wms_orders": {
+          "rows": 502,
+          "sha256": "2af3587f0971b83820d9a2c429731949f99e3a86298dfcb153c6b79bbaa9b6e1"
+        },
+        "wms_outbox": {
+          "rows": 2365,
+          "sha256": "94bb8c07edc0ab4f1c1186f20452300c2a923280e472946cbd53ed9bd28adb65"
+        },
+        "wms_package_closures": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_package_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_packages": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_product_gtins": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_products": {
+          "rows": 501,
+          "sha256": "e7b6065c569c90ce78b7b3afc3e9891bd3fc36ab733c4464da399783f0838415"
+        },
+        "wms_receipt_cancellations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_receipt_cancelled_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_receipt_evidence": {
+          "rows": 2,
+          "sha256": "ecf7a032292257881bfd7aa7be9a6388cae6dfe2f7c62a5b4802140cbba36c0a"
+        },
+        "wms_receipt_lines": {
+          "rows": 2,
+          "sha256": "baa73acf5caf4f7c2aabeb447e3bbd905a2823947e12f7e8fe372164b4617322"
+        },
+        "wms_receipts": {
+          "rows": 1,
+          "sha256": "15e06181e38fe169d2af02f575732d5e513d6ff50aa8d2ed7579e5b65191c898"
+        },
+        "wms_reconciliation_runs": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_replenishment_rules": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_resource_versions": {
+          "rows": 2612,
+          "sha256": "cd073ea9b6f4d5d780704a1bde3ec8e589e19ae49ba5061999a7626b0d77041b"
+        },
+        "wms_return_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_schema_migrations": {
+          "rows": 39,
+          "sha256": "e8e725b20fa04ecec312496c00ec7c1bed75b70238fd00f1d285df7105c1f5b7"
+        },
+        "wms_serial_batches": {
+          "rows": 1000,
+          "sha256": "739e035847d49651c6c6a970bd27d6ac433cd3675af92021394212785c8c8187"
+        },
+        "wms_serial_heads": {
+          "rows": 500,
+          "sha256": "b405467256dd81f6c4e48286898c6327fbcc3a1526bb7957dfd27544f074021f"
+        },
+        "wms_serial_modes": {
+          "rows": 501,
+          "sha256": "3cb94515398cc1a7c368496addaccbe4643ef48b15947fb129cbfa61dbe8295e"
+        },
+        "wms_serial_observations": {
+          "rows": 1000,
+          "sha256": "8dd746832af3b06659eb38ac0f8a8606108322b557924f377f919e980d1c7fd9"
+        },
+        "wms_serial_pending_checks": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_serial_steps": {
+          "rows": 16000,
+          "sha256": "65c4b566ec38ca8d94f04fb2b3e119b1a983df98862a168d9c72bf7781c28708"
+        },
+        "wms_serial_units": {
+          "rows": 16000,
+          "sha256": "ab5d25cb542bbb2443741f52f98d5666825bb3f88b1a8333ac93e032d77e3858"
+        },
+        "wms_shipment_evidence": {
+          "rows": 1,
+          "sha256": "b4bb95f662c83c7088e35735b61e76754f3dcd01280ee86864f8d0b8aec648db"
+        },
+        "wms_split_orders": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_stock": {
+          "rows": 1003,
+          "sha256": "39cb34eea0a205504cfa11fb985f7d3329c74c6ca80663c8bc3c7441b02c9f38"
+        },
+        "wms_stock_ledger": {
+          "rows": 1003,
+          "sha256": "0448ce29d59e69ca1c36f16b94c2b8aba214ff88162ba9b3d96a5e415e3cab65"
+        },
+        "wms_stock_reserved": {
+          "rows": 502,
+          "sha256": "56585020520e40cf9e772081d0c3ec226342698781108d04bdbcd868ad663634"
+        },
+        "wms_transfer_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_transfer_loss_records": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_transfers": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_unit_observations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_unit_pack_changes": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_warehouses": {
+          "rows": 2,
+          "sha256": "cd738c45059bc5dd7bd1e3e8ff992a49235f172c53b14ec6c3da89e23e886cdf"
+        },
+        "wms_workspaces": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      },
+      "database_blocking_pid_barrier": true,
+      "exit_code": 137,
+      "surviving_replica_ready": true,
+      "uncommitted_original_absent": true,
+      "same_original_request_recovered_other_replica": true,
+      "restarted_replica_exact_replay": true,
+      "local_restart_to_readiness_seconds": 0.43,
+      "interrupted_response": {
+        "transport_error": "RemoteDisconnected"
+      }
+    },
+    "postgres_sigkill": {
+      "crash_journal": {
+        "private_checkpoints": [
+          {
+            "path": "crash-journal/postgres_sigkill/000-prepared.json",
+            "sha256": "6843d7be735a33a2ececd6451a3c9c895ff0a81b24283f4279d43f278834f4d8"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/001-baseline_captured.json",
+            "sha256": "6842067a5a24dd3396c6d3ad12a79d92f205a88075b3adb007d41cb8b9483f6c"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/002-barrier_planned.json",
+            "sha256": "ccc14fd1f13901d97e91f2294083ffa64bfb6bac661be41a0c2dfe67420e4bf0"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/003-barrier_installed.json",
+            "sha256": "9b82e77090d1ef2619de3ec91007e4a3356752643cc5159d807a46d58a811947"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/004-original_send_requested.json",
+            "sha256": "5c8df0d726d84674a15e891776dc033a32f64cafb35c7d8cab19c64f71b26a12"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/005-writer_blocked.json",
+            "sha256": "7a16c6e2d3fdab22fd1dafce4ec78648103b9e84a81a81eaa6b7aaac0caaa3ac"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/006-fault_requested.json",
+            "sha256": "fbfd5a46015864d55b0f1ab9c018711b35192fcd03f20a7b20a7955d8e40179e"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/007-interrupted_response_observed.json",
+            "sha256": "cefdd21bb598f3aedb11121c179a6fe4c5e8aa004c3f5f7e6a2633c4a80f526b"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/008-fault_verified.json",
+            "sha256": "6649d1e832f06ae89c44939e263a63acd39bdeae3ffc2ecb1ac1ad0da3e4cb4e"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/009-rollback_verified.json",
+            "sha256": "724ee82a1a1ab0ab2441d84cb46da36f8be8797f18c4a9ac805af72c2c067599"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/010-barrier_removed.json",
+            "sha256": "cda5c005508894e061027996fa2ea4ecf2f7aeb8364d1402a61be35d02ac4951"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/011-original_absent.json",
+            "sha256": "cf38afda3f48d61a6cda1c5f2252041c435a9bb0e514fb82ee97e2965e32e3f1"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/012-original_recovery_requested.json",
+            "sha256": "e0849c51d8aff2e0d01f7c935479f65fee4c1f04cf30498cd62ab8057e0cc073"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/013-original_committed.json",
+            "sha256": "488285041bc861ff5bf9380af3966d97d5846707cd1f13f833ef359fe85dabe6"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/014-exact_replay_verified.json",
+            "sha256": "7302a47568d3b1750414f0ba287e72fa73b8e799e7518d2c48f73f5f140dd687"
+          },
+          {
+            "path": "crash-journal/postgres_sigkill/015-completed.json",
+            "sha256": "08cff9fecc53b9c808ec0ad50966a1a41c5fbd442d19aee2d9066e3e28c77245"
+          }
+        ],
+        "contains_credentials": false
+      },
+      "barrier_stage": "after_serial_custody_history_event_receipt_before_outbox_commit",
+      "serial_after_write_barrier": {
+        "name": "wms_resilience_serial_1793179300_527040e1",
+        "marker": "wms-serial-after-write-1793179300-527040e1",
+        "keys": [
+          180121,
+          97503915
+        ],
+        "original_request": {
+          "request_id": "d0980461-bcda-49f2-bddf-216493b585d9",
+          "expected_version": 2364,
+          "command": {
+            "type": "move_stock",
+            "sku": "LOAD-00499",
+            "lot": "LOT-000",
+            "from": "BIN-00000",
+            "to": "BIN-00099",
+            "quantity": 1
+          },
+          "serial_inputs": [
+            {
+              "target": [],
+              "sku": "LOAD-00499",
+              "serials": [
+                "Load-00499-Lot-000-Unit-00015"
+              ]
+            }
+          ]
+        },
+        "actor": "operator:resilience-1",
+        "before": {
+          "head": 3,
+          "revision": 2,
+          "source_quantity": 1,
+          "destination_quantity": 15
+        },
+        "blocking_evidence": {
+          "lock_objid": "97503915",
+          "wait_event": "advisory",
+          "writer_pid": 79,
+          "blocker_pid": 3539,
+          "lock_classid": "180121",
+          "writer_application": "wms-serial-after-write-1793179300-527040e1"
+        },
+        "owned_fault_trigger_removed": true
+      },
+      "database_blocking_pid_barrier": true,
+      "exit_code": 137,
+      "named_volume_preserved": true,
+      "readiness_during_outage": [
+        503,
+        503
+      ],
+      "liveness_during_outage": [
+        200,
+        200
+      ],
+      "local_database_restart_to_both_api_readiness_seconds": 1.717,
+      "both_replicas_recovered_without_api_restart": true,
+      "all_table_fingerprints_unchanged": {
+        "wms_activity": {
+          "rows": 2364,
+          "sha256": "06da53cdf5a9e987bb2eadf1bdbbcfb07877bd896e39f37407e24330539fcc3b"
+        },
+        "wms_admin_audit": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_allocations": {
+          "rows": 253,
+          "sha256": "fc1c2297f8dc1c38e2b75facc43eb0391b92bed7a56ea44a0b64e324fbe5bc3d"
+        },
+        "wms_carrier_labels": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_commands": {
+          "rows": 2364,
+          "sha256": "02428897d90f0b5da29fa3339d4214d42ffaa331563ffeacc043eaf5775ae1aa"
+        },
+        "wms_delivery_attempts": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_events": {
+          "rows": 2364,
+          "sha256": "b62a37d12f00a7365fde725a80376fbd2066071603edff5411d60bdf46ebf11c"
+        },
+        "wms_exceptions": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_location_capacity": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_locations": {
+          "rows": 104,
+          "sha256": "552a6c243e5d598af02d0dc98f3b477adf61df9cc65ef2cbe57c0604a1ce205e"
+        },
+        "wms_lot_changes": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_lot_decisions": {
+          "rows": 256,
+          "sha256": "af8ee98b8552cddce37096d6653222dc6069112a24d7670de9a0619adb94b760"
+        },
+        "wms_lot_enforcement": {
+          "rows": 2,
+          "sha256": "93913cea8505cc1e249446971f145ffb2faa290f250977b7c09f997daae0ce73"
+        },
+        "wms_movements": {
+          "rows": 1008,
+          "sha256": "c6f3a9f80a55c5e97f21a3bbc56750f739ff3e51568d09fbadcd5bf2a00c7dd2"
+        },
+        "wms_native_attempts": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_native_requests": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_order_cancellations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_order_cancelled_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_order_lines": {
+          "rows": 503,
+          "sha256": "eb9a227bc35eac83061e8ab928a4e7e18814c21e581eba4bdce9d21380e26328"
+        },
+        "wms_orders": {
+          "rows": 502,
+          "sha256": "2af3587f0971b83820d9a2c429731949f99e3a86298dfcb153c6b79bbaa9b6e1"
+        },
+        "wms_outbox": {
+          "rows": 2366,
+          "sha256": "4930befef69fc3c2ce6dc16a827bde31ce09a643668b353f4ce54ceac1450cef"
+        },
+        "wms_package_closures": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_package_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_packages": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_product_gtins": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_products": {
+          "rows": 501,
+          "sha256": "e7b6065c569c90ce78b7b3afc3e9891bd3fc36ab733c4464da399783f0838415"
+        },
+        "wms_receipt_cancellations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_receipt_cancelled_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_receipt_evidence": {
+          "rows": 2,
+          "sha256": "ecf7a032292257881bfd7aa7be9a6388cae6dfe2f7c62a5b4802140cbba36c0a"
+        },
+        "wms_receipt_lines": {
+          "rows": 2,
+          "sha256": "baa73acf5caf4f7c2aabeb447e3bbd905a2823947e12f7e8fe372164b4617322"
+        },
+        "wms_receipts": {
+          "rows": 1,
+          "sha256": "15e06181e38fe169d2af02f575732d5e513d6ff50aa8d2ed7579e5b65191c898"
+        },
+        "wms_reconciliation_runs": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_replenishment_rules": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_resource_versions": {
+          "rows": 2613,
+          "sha256": "2168d642f07eead57a9d64b2eeaebb848b3d0d801afe5553c28c0997e8ebd956"
+        },
+        "wms_return_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_schema_migrations": {
+          "rows": 39,
+          "sha256": "e8e725b20fa04ecec312496c00ec7c1bed75b70238fd00f1d285df7105c1f5b7"
+        },
+        "wms_serial_batches": {
+          "rows": 1001,
+          "sha256": "294992aea352b0b4e98e90bccd476e586c8cb32acd91cc380336bbbb87f5bbf0"
+        },
+        "wms_serial_heads": {
+          "rows": 500,
+          "sha256": "ff5c1ceefc2cfa8d8a0ddf01dd1ac5890419353c70e43edb436c028dfd386d05"
+        },
+        "wms_serial_modes": {
+          "rows": 501,
+          "sha256": "3cb94515398cc1a7c368496addaccbe4643ef48b15947fb129cbfa61dbe8295e"
+        },
+        "wms_serial_observations": {
+          "rows": 1001,
+          "sha256": "fa33f8cfd1fbced328d1bd79384c19982fff34364d70e7bf59a15f04d9f7d63d"
+        },
+        "wms_serial_pending_checks": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_serial_steps": {
+          "rows": 16001,
+          "sha256": "c0ccff07e398dcd751cb35de79b5cfd9b562a017db832d5cee61b5602cf69f81"
+        },
+        "wms_serial_units": {
+          "rows": 16000,
+          "sha256": "68aaf5385964ec13e5600cd31d261b396f3756cbd69a9292ab04fa5a9362d034"
+        },
+        "wms_shipment_evidence": {
+          "rows": 1,
+          "sha256": "b4bb95f662c83c7088e35735b61e76754f3dcd01280ee86864f8d0b8aec648db"
+        },
+        "wms_split_orders": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_stock": {
+          "rows": 1004,
+          "sha256": "c274749f73ce36781e98555d29b57bebbeca9711c4135df26562f143c6e77e9d"
+        },
+        "wms_stock_ledger": {
+          "rows": 1004,
+          "sha256": "55fca9325292b462de1875e651baac3464eb001f4b7be2691e5c881ed44b12fd"
+        },
+        "wms_stock_reserved": {
+          "rows": 502,
+          "sha256": "56585020520e40cf9e772081d0c3ec226342698781108d04bdbcd868ad663634"
+        },
+        "wms_transfer_lines": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_transfer_loss_records": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_transfers": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_unit_observations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_unit_pack_changes": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "wms_warehouses": {
+          "rows": 2,
+          "sha256": "04a3776cfb39f41a8de2d7243da0c1e05e6539c0614d416fad69d57bbaedb0ae"
+        },
+        "wms_workspaces": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      },
+      "unclean_shutdown_recovery_observed": true,
+      "uncommitted_original_absent": true,
+      "same_original_request_committed_once_then_replayed": true,
+      "interrupted_response": {
+        "http_status": 503
+      }
+    },
+    "snapshot_fixture": {
+      "sha256": "5ef542fbf9f09c4caf53caf52cff2eabdc4da3d923ef14b07758586274ec5ab8",
+      "bytes": 913316,
+      "version": 2365,
+      "outside_sustained_interval": true
+    },
+    "sustained_http": {
+      "requested_seconds": 300,
+      "review_mode": "resources",
+      "traffic_model": "independent-operators",
+      "client_schedule": "independent continuous client loops without think time or an operator barrier",
+      "serial_units_per_bin_lot": 16,
+      "serial_pattern": "rotating",
+      "serial_distinct_labels_per_operator": [
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32
+      ],
+      "serial_labels_available_per_operator": 32,
+      "serial_current_source_reads": 3590,
+      "serial_current_source_latency": {
+        "samples": 3590,
+        "p50_ms": 12.912,
+        "p95_ms": 39.513,
+        "p99_ms": 66.057,
+        "max_ms": 165.497
+      },
+      "measurement_limit": "Authenticated loopback HTTP and JSON processing; Python clients open HTTP connections per request; browser rendering, human timing and physical scanner input are excluded",
+      "elapsed_seconds": 301.05,
+      "replicas": 2,
+      "distinct_operator_identities": 8,
+      "rounds": null,
+      "committed_moves": 3590,
+      "exact_cross_replica_replays": 3590,
+      "definite_stale_conflicts": 0,
+      "unexpected_errors": 0,
+      "committed_moves_per_second": 11.925,
+      "action_latency": {
+        "samples": 3590,
+        "p50_ms": 611.902,
+        "p95_ms": 1043.444,
+        "p99_ms": 1302.161,
+        "max_ms": 1942.567
+      },
+      "action_latency_scope": "command submission from the client's cached review through committed write and its own validated post-commit full warehouse refresh and, when enabled, exact literal serial source/custody review; initial review and subsequent exact replay excluded",
+      "throughput_scope": "all completed client cycles, including initial reviews, physical commands, post-commit refreshes when enabled, conflicts and exact cross-replica replays; replay is not another physical move",
+      "http_write_attempt_latency": {
+        "samples": 3590,
+        "p50_ms": 479.498,
+        "p95_ms": 827.378,
+        "p99_ms": 1073.056,
+        "max_ms": 1672.603
+      },
+      "frozen_replay_latency": {
+        "samples": 3590,
+        "p50_ms": 2.523,
+        "p95_ms": 18.996,
+        "p99_ms": 38.625,
+        "max_ms": 111.987
+      },
+      "operational_snapshot_latency": {
+        "samples": 3598,
+        "p50_ms": 117.319,
+        "p95_ms": 194.912,
+        "p99_ms": 248.952,
+        "max_ms": 516.134
+      },
+      "shared_round_snapshot_reads": 0,
+      "independent_post_commit_stock_visibility_verified": true,
+      "snapshot_coverage": "exact configured catalog SKU set and every seeded order ID/state, with completed history permitted",
+      "operators": [
+        {
+          "actor": "operator:resilience-0",
+          "commits": 447,
+          "stale_conflicts": 0,
+          "exact_replays": 447,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 447,
+          "snapshot_reads": 448
+        },
+        {
+          "actor": "operator:resilience-1",
+          "commits": 449,
+          "stale_conflicts": 0,
+          "exact_replays": 449,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 449,
+          "snapshot_reads": 450
+        },
+        {
+          "actor": "operator:resilience-2",
+          "commits": 451,
+          "stale_conflicts": 0,
+          "exact_replays": 451,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 451,
+          "snapshot_reads": 452
+        },
+        {
+          "actor": "operator:resilience-3",
+          "commits": 448,
+          "stale_conflicts": 0,
+          "exact_replays": 448,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 448,
+          "snapshot_reads": 449
+        },
+        {
+          "actor": "operator:resilience-4",
+          "commits": 449,
+          "stale_conflicts": 0,
+          "exact_replays": 449,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 449,
+          "snapshot_reads": 450
+        },
+        {
+          "actor": "operator:resilience-5",
+          "commits": 448,
+          "stale_conflicts": 0,
+          "exact_replays": 448,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 448,
+          "snapshot_reads": 449
+        },
+        {
+          "actor": "operator:resilience-6",
+          "commits": 449,
+          "stale_conflicts": 0,
+          "exact_replays": 449,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 449,
+          "snapshot_reads": 450
+        },
+        {
+          "actor": "operator:resilience-7",
+          "commits": 449,
+          "stale_conflicts": 0,
+          "exact_replays": 449,
+          "initial_snapshot_reads": 1,
+          "post_commit_refreshes": 449,
+          "snapshot_reads": 450
+        }
+      ],
+      "acceptance": {
+        "ok": true,
+        "limits": {
+          "max_action_p95_ms": null,
+          "min_moves_per_second": null,
+          "min_serial_coverage": 1.0
+        },
+        "failures": [],
+        "observed_serial_coverage_per_operator": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "scope": "Synthetic workload acceptance; unset latency/throughput limits establish no facility SLO"
+      }
+    }
+  },
+  "independent_proof": {
+    "serial_identity_proof": {
+      "ok": true,
+      "literal_units": 16000,
+      "steps": 19592,
+      "observations": 4592,
+      "batches": 4592,
+      "global_heads": 500,
+      "timed_moves": 3590,
+      "serial_pattern": "rotating",
+      "distinct_timed_labels": 256,
+      "recovered_moves_outside_timed_interval": 2,
+      "recovery_request_ids": [
+        "e57c8fa2-d73b-49a2-9cf9-ca3ae4f44045",
+        "d0980461-bcda-49f2-bddf-216493b585d9"
+      ],
+      "all_literal_custody_revisions_original_steps_observations_and_heads_match": true
+    },
+    "physical_recomputed_from_append_only_movements": true,
+    "reserved_recomputed_from_allocation_lines": true,
+    "receipt_quantities_recomputed_per_exact_line": true,
+    "expected_probe_on_hand": 13,
+    "expected_total_on_hand": 16013,
+    "expected_reserved": 253,
+    "all_seeded_open_order_states_retained": true,
+    "per_operator_bin_totals_match_committed_move_parity": true,
+    "commands": 5955,
+    "events": 5955,
+    "activity": 5955,
+    "movements": 4599,
+    "outbox": 5957,
+    "independent_execution_counts": {
+      "expected": {
+        "setup_commands": 2352,
+        "recovery_commands": 13,
+        "sustained_physical_commands": 3590,
+        "commands": 5955,
+        "events": 5955,
+        "activity": 5955,
+        "movements": 4599,
+        "outbox": 5957
+      },
+      "observed": {
+        "setup_commands": 2352,
+        "recovery_commands": 13,
+        "sustained_physical_commands": 3590,
+        "commands": 5955,
+        "events": 5955,
+        "activity": 5955,
+        "movements": 4599,
+        "outbox": 5957
+      },
+      "all_match": true
+    },
+    "contiguous_versions_and_atomic_actor_result_evidence": true,
+    "cross_tenant_isolation": true,
+    "cross_actor_replay_rejected": true,
+    "unconfigured_external_delivery_attempts": 0,
+    "replica_reconciliations": [
+      {
+        "ok": true,
+        "version": 5955,
+        "method": "full_append_only_ledger_and_order_line_allocations",
+        "run_id": "08d8fd49-9c1f-415b-8a29-47117203d81d",
+        "run_started_at": "2026-10-28T09:32:55.679159+00:00",
+        "run_finished_at": "2026-10-28T09:33:12.37106+00:00"
+      },
+      {
+        "ok": true,
+        "version": 5955,
+        "method": "full_append_only_ledger_and_order_line_allocations",
+        "run_id": "5a6b5a66-c7bb-4bcd-894c-42f740ffbe6f",
+        "run_started_at": "2026-10-28T09:33:12.855478+00:00",
+        "run_finished_at": "2026-10-28T09:33:27.604924+00:00"
+      }
+    ],
+    "final_table_fingerprints": {
+      "wms_activity": {
+        "rows": 5955,
+        "sha256": "9abc96d13cfa44309388754847f6f6a903925086e04d9ff8e09ab862e8d40925"
+      },
+      "wms_admin_audit": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_allocations": {
+        "rows": 253,
+        "sha256": "fc1c2297f8dc1c38e2b75facc43eb0391b92bed7a56ea44a0b64e324fbe5bc3d"
+      },
+      "wms_carrier_labels": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_commands": {
+        "rows": 5955,
+        "sha256": "41ad9640948ed5b49d7f6e78de2a21a9a324efb56ec9d85f3b5aa78be58e8963"
+      },
+      "wms_delivery_attempts": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_events": {
+        "rows": 5955,
+        "sha256": "b8314989367fa70e728553dd7a5baa24b4fb35ba58683a3de5026e3755651d76"
+      },
+      "wms_exceptions": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_location_capacity": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_locations": {
+        "rows": 104,
+        "sha256": "552a6c243e5d598af02d0dc98f3b477adf61df9cc65ef2cbe57c0604a1ce205e"
+      },
+      "wms_lot_changes": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_lot_decisions": {
+        "rows": 256,
+        "sha256": "af8ee98b8552cddce37096d6653222dc6069112a24d7670de9a0619adb94b760"
+      },
+      "wms_lot_enforcement": {
+        "rows": 2,
+        "sha256": "93913cea8505cc1e249446971f145ffb2faa290f250977b7c09f997daae0ce73"
+      },
+      "wms_movements": {
+        "rows": 4599,
+        "sha256": "26124b8e96ade10d718aba6f9734fcc7bd2ec65dc4927bc1a8fc2844077eb917"
+      },
+      "wms_native_attempts": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_native_requests": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_order_cancellations": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_order_cancelled_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_order_lines": {
+        "rows": 503,
+        "sha256": "eb9a227bc35eac83061e8ab928a4e7e18814c21e581eba4bdce9d21380e26328"
+      },
+      "wms_orders": {
+        "rows": 502,
+        "sha256": "2af3587f0971b83820d9a2c429731949f99e3a86298dfcb153c6b79bbaa9b6e1"
+      },
+      "wms_outbox": {
+        "rows": 5957,
+        "sha256": "199a5e55a5df01f928a1258b1bb7be96550398565f1f9bea8937f6a317cccc18"
+      },
+      "wms_package_closures": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_package_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_packages": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_product_gtins": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_products": {
+        "rows": 501,
+        "sha256": "e7b6065c569c90ce78b7b3afc3e9891bd3fc36ab733c4464da399783f0838415"
+      },
+      "wms_receipt_cancellations": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_receipt_cancelled_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_receipt_evidence": {
+        "rows": 2,
+        "sha256": "ecf7a032292257881bfd7aa7be9a6388cae6dfe2f7c62a5b4802140cbba36c0a"
+      },
+      "wms_receipt_lines": {
+        "rows": 2,
+        "sha256": "baa73acf5caf4f7c2aabeb447e3bbd905a2823947e12f7e8fe372164b4617322"
+      },
+      "wms_receipts": {
+        "rows": 1,
+        "sha256": "15e06181e38fe169d2af02f575732d5e513d6ff50aa8d2ed7579e5b65191c898"
+      },
+      "wms_reconciliation_runs": {
+        "rows": 2,
+        "sha256": "9444a9c44d6fa69902073dce2c4915358439c5f0c4765e038416fbb83c37b4b6"
+      },
+      "wms_replenishment_rules": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_resource_versions": {
+        "rows": 2629,
+        "sha256": "feafb96b0e8de4e0f69b606f752e9b0d21f4e8327fa2d473ea1babc43cba3378"
+      },
+      "wms_return_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_schema_migrations": {
+        "rows": 39,
+        "sha256": "e8e725b20fa04ecec312496c00ec7c1bed75b70238fd00f1d285df7105c1f5b7"
+      },
+      "wms_serial_batches": {
+        "rows": 4592,
+        "sha256": "3de201362afcde1c84f8272ad9897d9c09bc2f14a56173a3dcf2ed6528651890"
+      },
+      "wms_serial_heads": {
+        "rows": 500,
+        "sha256": "b301d170f73a4f2110e0a36f16accb2f69ddfb5263540ce897cb50efe2793a9a"
+      },
+      "wms_serial_modes": {
+        "rows": 501,
+        "sha256": "3cb94515398cc1a7c368496addaccbe4643ef48b15947fb129cbfa61dbe8295e"
+      },
+      "wms_serial_observations": {
+        "rows": 4592,
+        "sha256": "f6891366135ca1623427119dadcd499428bfb85c09498e6d46eb3f42ad7e8436"
+      },
+      "wms_serial_pending_checks": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_serial_steps": {
+        "rows": 19592,
+        "sha256": "44b56be89410487d23fad3acc92e742da2f7db9f766694340612814cf30ee73f"
+      },
+      "wms_serial_units": {
+        "rows": 16000,
+        "sha256": "2fe407c532d85e9999d12a46fafbf784b617c7462b88ed1bb37f80ed2304e34d"
+      },
+      "wms_shipment_evidence": {
+        "rows": 1,
+        "sha256": "b4bb95f662c83c7088e35735b61e76754f3dcd01280ee86864f8d0b8aec648db"
+      },
+      "wms_split_orders": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_stock": {
+        "rows": 1020,
+        "sha256": "9b6083f18e409a47c33096ebb5cf3718ecd9d30c0137376d64e60ff49b2a2d87"
+      },
+      "wms_stock_ledger": {
+        "rows": 1020,
+        "sha256": "de2c61779e1c65bb4b5f9a35569614a63b6d36a8f7d8f8106e99f530a474f2e4"
+      },
+      "wms_stock_reserved": {
+        "rows": 502,
+        "sha256": "56585020520e40cf9e772081d0c3ec226342698781108d04bdbcd868ad663634"
+      },
+      "wms_transfer_lines": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_transfer_loss_records": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_transfers": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_unit_observations": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_unit_pack_changes": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "wms_warehouses": {
+        "rows": 2,
+        "sha256": "27fc7f17c39aac9e37bc3651e8ba549b036bc87c941ed2b56459d77eff8b1944"
+      },
+      "wms_workspaces": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      }
+    }
+  },
+  "migrations": [
+    {
+      "name": "001_initial",
+      "sha256": "8e5c3fa5f0065b63076c33b8bd3c337b8490d4b7a88f3e774ec17e2290e1f4d4"
+    },
+    {
+      "name": "002_relational_execution",
+      "sha256": "660cd0fdbc7205644c7c3d7ac3da43cbaf1c6d9f80c4d0f2ea4d0c0986e6ff90"
+    },
+    {
+      "name": "003_native_operations",
+      "sha256": "f9a5cfa4a1e4f7830613febe6b37f11a8485beef46d6b96791c78435fe784108"
+    },
+    {
+      "name": "004_native_source_ownership",
+      "sha256": "366979c9630c4c62cb7d71beb5c89cd917764558b4e05267c4eb4aac486a6cb9"
+    },
+    {
+      "name": "005_conditional_oms_fulfillment",
+      "sha256": "b8892cbaa4a1b26c6e1732616ec30503d3698f44e363240386078398e29e9a41"
+    },
+    {
+      "name": "006_oms_rejections",
+      "sha256": "567e061943a1602ff25b5d5c988be810808b8c6e1638885ee6ef9b71a9ba4ed4"
+    },
+    {
+      "name": "007_operations_indexes",
+      "sha256": "b0b9b422f570ed77ca1252df42c96b29544849621ed748cadd1f068b708576b5"
+    },
+    {
+      "name": "008_delivery_recipient",
+      "sha256": "050f40c80b9e73a3edc8a19545ab08cfe41051616b84d9445dfdea9a30de9d19"
+    },
+    {
+      "name": "009_resource_versions",
+      "sha256": "b702a003a1d74210fdfc06cef1fbfb6e737146a25314642094a2f8383dc2e209"
+    },
+    {
+      "name": "010_customer_returns",
+      "sha256": "dfafb0547d0af2ba11f86dfa31f7facebe89adf582d6b215d02b734e1413fb71"
+    },
+    {
+      "name": "011_immutable_command_receipts",
+      "sha256": "0a7c69928f38527f542a55e795de9b62c65f4907d7d05cba2d47f7eeebdf8a73"
+    },
+    {
+      "name": "012_receipt_cancellation",
+      "sha256": "5a36bc5c39f49fe9fdf9e6cd292d71ed50c85daffea2777fda890d9b2d68a676"
+    },
+    {
+      "name": "013_shipment_evidence",
+      "sha256": "e867e6b35c3cbcb10ea5f4a952c916f10e7b5d16b53c80aad656a9fba286334e"
+    },
+    {
+      "name": "014_facility_transfers",
+      "sha256": "b98005fca14a6aa180c09e77d998105662b3f11147a3284d6a145147de3182b1"
+    },
+    {
+      "name": "015_split_fulfillment",
+      "sha256": "dd2e0b0625cec5d9cd1a6209e094f924fc4cb503a0b82ed3fcc2253109fe393a"
+    },
+    {
+      "name": "016_order_remainder_cancellation",
+      "sha256": "c79180323838e6353c3c32f77564aa3ae37eae6b523bf405e12311496f0f3f43"
+    },
+    {
+      "name": "017_lot_controls",
+      "sha256": "cbca465647b18f84e9d74deeabbe011a7572957b90c4046de9f2f0e9738360bf"
+    },
+    {
+      "name": "018_lot_trace",
+      "sha256": "c4d000be8cc2bae0097c629f98556177b97225cc6ba753cb29731e5464a85d4c"
+    },
+    {
+      "name": "019_transfer_loss",
+      "sha256": "30822c5f49905f192d4eff2de3b90e885ed800d26d1bc97e6b383b1fef47eae1"
+    },
+    {
+      "name": "020_pack_units",
+      "sha256": "7ba3eefed9e4386fc2f11002540bd703d0e6c584780ca3a378e308831c4bccf1"
+    },
+    {
+      "name": "021_serial_tracking",
+      "sha256": "856cbcf67490934123676ac6de66a972a39256616cd74d8048368feacdb1acce"
+    },
+    {
+      "name": "022_serial_restore_search_path",
+      "sha256": "ae5e84f4a08cbb75a46ea9a0602e35b03815861661fe7b60f9eff11514b677cc"
+    },
+    {
+      "name": "023_serial_target_resolution",
+      "sha256": "8778a75182885af6ac976f44ee2bcbd3813837e6c5f8170842e53c31fcc9687d"
+    },
+    {
+      "name": "024_serial_event_payload_reuse",
+      "sha256": "5c7dc4b76a21c487a0440297b42001fb39a65af1537813e880908e5a8b9fb491"
+    },
+    {
+      "name": "025_serial_resolved_read_sources",
+      "sha256": "d255984a2eb4e7a1e7e9212c1406b30e40dcd24944f6bb0e35fa7c58027fdf32"
+    },
+    {
+      "name": "026_serial_event_batch_index",
+      "sha256": "98c2796069821a4ef064e5968759686109833067f510ef066eeb0d9e7185ea03"
+    },
+    {
+      "name": "027_serial_reference_classes",
+      "sha256": "e8515cdbebc8ceece05e45d6882d20b1031455347473676d588a4437a5ba144f"
+    },
+    {
+      "name": "028_serial_read_source",
+      "sha256": "04aac8ae5697cf913bc3d2bbf774327e3bf15c146d3e64f2d700c2c1362ec928"
+    },
+    {
+      "name": "029_serial_scope_source_sets",
+      "sha256": "3b4c3af8193077bac797c2dafdf1d0eb1d4c690ac94c20e200a70fa2fa21cedd"
+    },
+    {
+      "name": "030_serial_scope_custody_counts",
+      "sha256": "75484358617dd3b0db45979871b8f6e980e5c45e5022d38f2b8ffe565b222d16"
+    },
+    {
+      "name": "031_serial_ascii_validation",
+      "sha256": "eda4e8e05c64042b72945ce13c587add68a8f6323d9a8e57a1649fb0f6aaadf3"
+    },
+    {
+      "name": "032_serial_deferred_check_sets",
+      "sha256": "c1159facd8c9727ab9d2cb9e00fa54ea83cd2d8401771d302ba30a975a6d4464"
+    },
+    {
+      "name": "033_serial_target_dispatch",
+      "sha256": "633eaba6e2a566e7ada516baf16e1dcdbea775b6030495c15cb530df40570ed0"
+    },
+    {
+      "name": "034_serial_command_target_sets",
+      "sha256": "69086efaff103a36fcdd1dbbf5adf4df4f7cb932acae1359fc05c21781d846b5"
+    },
+    {
+      "name": "035_serial_sku_scope_checks",
+      "sha256": "e7eb6e56b71a44752bf6e0a937b23ddd00b6cd33bb2cb11439efa4be920f0e90"
+    },
+    {
+      "name": "036_replenishment_rules",
+      "sha256": "f75f00aff65d4afa988e9bc3252bf8fd81686899584d2ca630baae3293f3c6e0"
+    },
+    {
+      "name": "037_carrier_labels",
+      "sha256": "94bb6766f67a0fd7d0c9c5dff673cf61a6de80da5c9c8b9b52dd693fb2760dd3"
+    },
+    {
+      "name": "038_gtins_and_bin_capacity",
+      "sha256": "7d48bab9a4f6d661628b9f7da431bce9a674d39ebc537dc47b94f1d264b2b3ae"
+    },
+    {
+      "name": "039_reconciliation_runs",
+      "sha256": "149a4e0b8a5d5255af3f077ba128be897232406baaf4e1cbd5d7dd91581e3081"
+    }
+  ],
+  "qualification_limit": "Local synthetic single-host and single-PostgreSQL-primary rehearsal. API replica survival and PostgreSQL crash recovery were tested; database failover, host loss, deployed latency, native receivers and physical facility acceptance were not."
+}
