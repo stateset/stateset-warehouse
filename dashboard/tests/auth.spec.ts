@@ -87,9 +87,10 @@ async function setup(page: Page, signedIn = true) {
     }
     if (path === "/user_management/sessions/logout") {
       control.signedIn = false;
+      // Not a fulfilled 302: Chromium 149 sends its follow-up past page.route() to DNS.
       return route.fulfill({
-        status: 302,
-        headers: { location: `${origin}/` },
+        contentType: "text/html",
+        body: `<script>location.replace(${JSON.stringify(`${origin}/`)})</script>`,
       });
     }
     return route.fulfill({
