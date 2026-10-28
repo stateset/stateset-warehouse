@@ -8,13 +8,13 @@ This page records what has been proven about StateSet Warehouse, how, and what h
 
 | Claim | Latest evidence |
 |---|---|
-| Every stock change, reservation, receipt and serial unit can be rebuilt from immutable history, and the database rejects commits that disagree | [0.4.1 gate](qualification/release-20261027-v0.4.1/verification.json): final reconciliation passes on both API replicas |
-| Retrying a lost request returns the original result, never a second change | 0.4.1 gate: thousands of exact cross-replica replays per workload, zero mismatches |
-| API and PostgreSQL crashes mid-write lose or duplicate nothing | 0.4.1 gate: every table fingerprint unchanged after each forced crash |
-| A backup restores to an identical database | 0.4.1 gate: archive restore with every table fingerprint and migration digest matching |
+| Every stock change, reservation, receipt and serial unit can be rebuilt from immutable history, and the database rejects commits that disagree | [0.4.2 gate](qualification/release-20261028-v0.4.2/verification.json): final reconciliation passes on both API replicas |
+| Retrying a lost request returns the original result, never a second change | 0.4.2 gate: thousands of exact cross-replica replays per workload, zero mismatches |
+| API and PostgreSQL crashes mid-write lose or duplicate nothing | 0.4.2 gate: every table fingerprint unchanged after each forced crash |
+| A backup restores to an identical database | 0.4.2 gate: archive restore with every table fingerprint and migration digest matching |
 | Full serial reconciliation completes at 16,000 labels with long history | 0.4.1 gate: background runs on both replicas at version 7,084 in 13.1 and 13.4s; the synchronous endpoint keeps its 10-second limit ([known limit](performance.md#known-full-reconciliation-history-limit--2026-10-27)) |
 | Serial saves meet a 1,000ms p95 with eight concurrent operators | [native profile after migration 035](performance/native-serial-sku-scope-035.json): 772ms (released in 0.3.1) |
-| The public source and its history contain no unreviewed secrets, and dependencies are permissively licensed | [source audit](qualification/release-20261027-v0.4.1/source-audit-report.json) and [license review](qualification/release-20261027-v0.4.1/source-license-review.json) |
+| The public source and its history contain no unreviewed secrets, and dependencies are permissively licensed | [source audit](qualification/release-20261028-v0.4.2/source-audit-report.json) and [license review](qualification/release-20261028-v0.4.2/source-license-review.json) |
 
 **Not yet proven:**
 
@@ -24,6 +24,14 @@ This page records what has been proven about StateSet Warehouse, how, and what h
 - Hosted CI on GitHub (blocked by account billing).
 
 **Reproduce:** run the complete gate with the [release profile](release-qualification.md#run-the-release-profile).
+
+## 0.4.2 qualification — 2026-10-28
+
+The [0.4.2 complete gate](qualification/release-20261028-v0.4.2/summary.json) passed all ten stages on its second attempt, from a clean clone at `feb8780`: 0.4.1 with the dashboard, terminal and MCP using background reconciliation runs. It used the same full profile. The whole-unit run made 6,767 moves at 22.5 per second (action p95 535ms); the serial run made 3,590 moves at 11.9 per second (action p95 1,043ms, under host load of 11–17). Both replicas' final serial proofs ran as background runs at version 5,955 in 16.7 and 14.8s.
+
+The first attempt, on the same commit, passed eight stages and then failed when host load from other projects rose to 18–28: whole-unit throughput fell from about 180 to 18 moves per 10 seconds and one write returned 503 after a lock timeout. The [verification record](qualification/release-20261028-v0.4.2/verification.json) lists both attempts and binds all 516 gated inputs byte for byte to tag `v0.4.2` (`c3299c2`), which adds only evidence and release notes.
+
+The [full-history source audit](qualification/release-20261028-v0.4.2/source-audit-report.json) passed on all 9 branches and tags: 98 commits, 1,581 current files, 0 unreviewed findings (Gitleaks 8.30.1, verified archive). The [license review](qualification/release-20261028-v0.4.2/source-license-review.json) matches 0.4.1.
 
 ## 0.4.1 qualification — 2026-10-27
 
