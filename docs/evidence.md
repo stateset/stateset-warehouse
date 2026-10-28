@@ -21,9 +21,15 @@ This page records what has been proven about StateSet Warehouse, how, and what h
 - Production deployment, deployed identity (WorkOS), native OMS/TMS and MCP clients.
 - Real scanner hardware and a signed [physical facility acceptance](facility-acceptance.md).
 - Managed database failover, cross-region availability and real-warehouse capacity. All measurements so far are synthetic, on a shared host.
-- Hosted CI on GitHub (blocked by account billing).
+- A hosted pass of the complete gate. Hosted CI has run on every push since the repository went public on 2026-10-28; until then, account billing kept every hosted job from starting.
 
 **Reproduce:** run the complete gate with the [release profile](release-qualification.md#run-the-release-profile).
+
+## Public launch — 2026-10-28
+
+The repository was made public with release [v0.4.2](https://github.com/stateset/stateset-warehouse/releases/tag/v0.4.2). A fresh audit of all 9 branches and tags passed just before the switch: head `70926dd`, 99 commits, 1,583 current files, 0 unreviewed findings. None of the 85 earlier hosted workflow runs had started a job, so no hosted logs existed. Secret scanning and push protection are enabled.
+
+The first hosted run after launch passed the hosted source audit, then stopped at the gate's prerequisites: on a fresh runner, `cargo metadata --offline` found no downloaded crates. The workflow now runs `cargo fetch --locked` before the gate.
 
 ## 0.4.2 qualification — 2026-10-28
 
