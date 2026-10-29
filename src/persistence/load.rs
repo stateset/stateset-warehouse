@@ -176,7 +176,7 @@ impl Store {
             _ => Err(Error::new(404, "Unknown warehouse record")),
         }
     }
-    pub(super) async fn load(
+    pub(crate) async fn load(
         c: &mut PgConnection,
         t: &str,
         w: &str,

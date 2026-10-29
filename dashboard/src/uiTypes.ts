@@ -3,6 +3,7 @@ import type { Command, UnitInput } from "./types";
 
 /** Dashboard navigation tabs. */
 export type Tab =
+  | "work"
   | "overview"
   | "inventory"
   | "receiving"
@@ -36,6 +37,7 @@ export type SubmitCommand = (
   expectedVersion?: number,
   capturedVersions?: Record<string, number>,
   unitInputs?: UnitInput[],
+  requestId?: string,
 ) => Promise<boolean>;
 
 /** Headline warehouse totals shown across tabs. */

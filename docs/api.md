@@ -36,6 +36,10 @@ The same authenticated service exposes a [native MCP endpoint](mcp.md) at `/mcp`
 | POST | `/v1/warehouses/{id}/replenishment/plan` | Read-only bounded pick-face plan; operator/admin |
 | GET / PUT | `/v1/warehouses/{id}/replenishment/rules` | Saved replenishment rules; read roles / admin (audited) |
 | GET | `/v1/warehouses/{id}/replenishment/due` | Replenishment due under saved rules; operator/admin |
+| GET | `/v1/warehouses/{id}/work?view=mine&offset=0` | Putaway tasks and counts; viewer/operator/admin; 50 per page |
+| POST | `/v1/warehouses/{id}/work/discover` | Create up to 200 tasks for unassigned receiving balances; operator/admin |
+| POST | `/v1/warehouses/{id}/work/{task}/action` | Revision-checked task ownership/status/priority changes |
+| POST | `/v1/warehouses/{id}/work/{task}/review` | Register an owned, capacity-checked move for the original command journal |
 | POST | `/v1/warehouses/{id}/putaway/plan` | Read-only putaway suggestions for receiving stock; operator/admin |
 | POST | `/v1/warehouses/{id}/picking/batch-plan` | Read-only multi-order pick walk with totes; operator/admin |
 | POST | `/v1/warehouses/{id}/counts/plan` | Read-only ABC cycle counts due; operator/admin |
@@ -655,3 +659,18 @@ Three read endpoints, available to viewers, all scoped to the authenticated tena
 ## Visual operations console
 
 Authenticated GET `/v1/warehouses/{warehouse}/console` supplies reconciliation-checked flow, exact decimal-string each totals, version-fenced bin pages and optional configured floor-plan geometry. GET `/v1/warehouses/{warehouse}/console/products/{sku}` supplies original catalog/label evidence and optional image metadata. Its `/image` subresource requires the original review version, image SHA256 and identity scope. All three are read-only and use `Cache-Control: no-store`. See [configuration, contract and fallback behavior](visual-console.md).
+
+
+## Owned putaway work
+
+Each committed `receive` creates one task for its exact source SKU, lot, receiving bin and quantity. Retrying the original receipt creates no second task. `POST .../work/discover` accounts for all remaining open work, including paused/blocked tasks, before creating tasks for older receiving stock. It moves and reserves nothing; repeat if the returned `created` count reaches `limit` (200).
+
+`GET .../work` accepts `view=mine|available|all|completed` and `offset` (0–1,000,000). It returns `tasks`, the filtered `total`, and `counts` for ready, mine, blocked and active work in one snapshot. Every query is scoped to the authenticated tenant and selected warehouse.
+
+Actions require `{ "revision": 1, "action": "claim" }`. An operator claims ready work for themselves, and may `pause`, `block`, `resume` or `release` their own task. `block` requires a reason of 1–500 characters. Administrators may release another owner's work, `cancel` with a reason, or set `priority` to 0 (normal), 1 (high), or 2 (urgent). A stale revision returns 409. Read the queue after an uncertain metadata response before acting again. Metadata changes never move stock or advance the warehouse version.
+
+`POST .../work/{task}/review` takes `{ "revision": 2, "quantity": 100 }` (`quantity` is optional, 1–10,000). The task must be claimed by the caller. The response contains a fresh immutable `request`, the new task `revision`, the destination reason and whether a unit capacity is configured. The request is capped to task remainder, available source stock, destination unit/SKU capacity and 10,000 units per confirmation. A new review invalidates any previous review of that task.
+
+Observe the physical labels and fit, collect exact `serial_inputs` when required, then submit the returned request **unchanged** to the existing `POST .../commands` endpoint, preserving its request ID, command, expected version and resource map. Unit-pack conversions are not accepted in this flow; quantities are each units. The original command journal handles uncertain saves and exact retries. Its resource map additionally fences task ownership/revision and occupancy/capacity of the entire destination bin, including other SKUs. Stale reviews return the existing `changed_resources` proof.
+
+A matching original move receipt advances task progress in the same transaction as inventory, serial observations, movement evidence and outbox creation. Partial moves retain ownership and need another review for the remaining units. Task snapshots and original reviews cannot be deleted or edited. Completed/cancelled tasks are terminal. Direct stock moves through other workflows do not complete these tasks; an administrator can cancel obsolete work with a reason, then discover any actual remaining stock. Claiming a task does not reserve physical stock.

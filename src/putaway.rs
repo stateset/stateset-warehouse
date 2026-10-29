@@ -1,7 +1,7 @@
 //! Directed putaway: suggest a storage bin for stock waiting in receiving.
 //! Suggestions reserve and move nothing; each task is an ordinary reviewed
 //! `move_stock` command that an operator confirms through the command journal.
-//! There is no bin capacity model, so suggestions never claim physical fit.
+//! Configured unit/SKU capacity is checked; operators still confirm physical fit.
 use crate::{
     api::App,
     concurrency,
@@ -69,6 +69,17 @@ pub fn plan(
     request: &PlanRequest,
     capacity: &BTreeMap<String, Capacity>,
 ) -> domain::Result<Value> {
+    plan_source(state, request, capacity, None)
+}
+
+/// Review only this task's lot and remaining quantity, while retaining all
+/// canonical balances for validation and destination occupancy calculations.
+pub(crate) fn plan_source(
+    state: &State,
+    request: &PlanRequest,
+    capacity: &BTreeMap<String, Capacity>,
+    source: Option<(&str, i64)>,
+) -> domain::Result<Value> {
     state.validate()?;
     let receiving: BTreeSet<&str> = state
         .locations
@@ -122,6 +133,7 @@ pub fn plan(
                 && s.on_hand > s.reserved
                 && (request.from.is_empty() || request.from.contains(&s.location))
                 && (request.skus.is_empty() || request.skus.contains(&s.sku))
+                && source.is_none_or(|(lot, _)| s.lot == lot)
         })
         .collect();
     sources.sort_by(|a, b| (&a.location, &a.sku, &a.lot).cmp(&(&b.location, &b.sku, &b.lot)));
@@ -133,7 +145,8 @@ pub fn plan(
     let mut tasks = vec![];
     let mut unplaced = vec![];
     for stock in sources {
-        let mut remaining = stock.on_hand - stock.reserved;
+        let mut remaining =
+            (stock.on_hand - stock.reserved).min(source.map_or(i64::MAX, |(_, quantity)| quantity));
         while remaining > 0 {
             let Some((reason, to, room)) = choose(
                 &storage, &occupied, &units, capacity, request, &stock.sku, &stock.lot,

@@ -42,3 +42,4 @@ mod lot_store;
 pub mod lot_trace;
 pub mod master_data;
 pub mod mcp;
+pub mod work_tasks;

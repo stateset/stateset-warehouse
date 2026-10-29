@@ -17,6 +17,8 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 mod history_restore;
 #[path = "restore_probe/serials.rs"]
 mod serial_restore;
+#[path = "restore_probe/work.rs"]
+mod work_restore;
 
 const TENANT: &str = "restore-rehearsal";
 const WAREHOUSE: &str = "wh-main";
@@ -2500,6 +2502,7 @@ async fn seed(path: &str) -> Result<()> {
         run_outcome["status"] == "succeeded" && run_outcome["result"]["ok"] == true,
         "A background reconciliation run must complete the full proof",
     )?;
+    let putaway_work = work_restore::seed(&store).await?;
     let mut remainder_cancellation = remainder_fixture(&store).await?;
     let lot_controls = quality_fixture(&store).await?;
     let transfer_loss = transfer_loss_fixture(&store).await?;
@@ -2541,6 +2544,7 @@ async fn seed(path: &str) -> Result<()> {
         .fetch_one(&store.pool)
         .await?;
     let mut manifest = json!({"transfer_loss":transfer_loss,"lot_trace":lot_trace,"source_session_timezone":source_session_timezone,"lot_controls":lot_controls,"remainder_cancellation":remainder_cancellation,"split_fulfillment":split_fulfillment,"schema_version":1,"synthetic":true,"transfer_dispatch":transfer_dispatch,"transfer_dispatched":transfer_dispatched,"transfer_arrival":transfer_arrival,"transfer_arrived":transfer_arrived,"transfer_proof":transfer_proof,"shipment_source":shipment_source,"cancelled_receipt_id":cancelled_receipt_id,"cancellation_request":cancellation_request,"cancellation_response":cancellation_response,"facility_create":facility_create,"facility_response":facility_response,"receive_request":receive,"receive_response":receive_response,"receipt_id":receipt_id,"order_id":order_id,"import_input":import_input,"import_digest":import_digest,"import_request":import_request,"import_response":import_response,"import_frozen":frozen,"source_snapshot":source_snapshot,"transport_digest":transport_digest,"transport_frozen":prepared,"conditional_frozen":conditional,"conditional_digest":conditional_digest,"conditional_rejected":conditional_rejected,"return_receipt_id":return_receipt_id,"return_receive":return_receive,"return_receive_response":return_receive_response,"evidence":evidence});
+    manifest["putaway_work"] = putaway_work;
     manifest["units"] = units;
     manifest["serials"] = serials;
     manifest["operational_histories"] = histories;
@@ -2558,6 +2562,7 @@ async fn verify(manifest_path: &str, report_path: &str) -> Result<()> {
     )?;
     let store = connect().await?;
     let restored = snapshot(&store).await?;
+    work_restore::verify(&store, &manifest["putaway_work"]).await?;
     require(restored == manifest["evidence"], "Restored table hashes, warehouse versions, migration digests or independent proofs differ before replay")?;
     eprintln!(
         "Restored {} WMS table hashes; checking original identity histories and retries",
@@ -2961,6 +2966,7 @@ async fn verify(manifest_path: &str, report_path: &str) -> Result<()> {
         empty_tables == ["wms_serial_pending_checks"],
         "Every durable WMS table must be populated; only transaction-local serial validation keys must be empty",
     )?;
+    report["putaway_original_receipt_and_task_history_restored"] = json!(true);
     report["operational_history_post_restore_recovery"] = history_recovery;
     report["recovery_point_table_count"] = json!(table_rows.len());
     report["recovery_point_nonempty_table_count"] = json!(table_rows.len() - empty_tables.len());

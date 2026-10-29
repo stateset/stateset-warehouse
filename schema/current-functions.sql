@@ -19,6 +19,7 @@
 --   wms_carrier_labels | wms_carrier_label_open_package | immediate | wms_carrier_label_open_package
 --   wms_commands | wms_commands_immutable | immediate | wms_immutable_history
 --   wms_commands | wms_commands_no_truncate | immediate | wms_immutable_history
+--   wms_commands | wms_work_after_command | immediate | wms_work_after_command
 --   wms_events | wms_count_review_revision | immediate | wms_track_count_review
 --   wms_events | wms_events_immutable | immediate | wms_immutable_history
 --   wms_events | wms_lot_event_proof | deferred | wms_lot_event_guard
@@ -26,6 +27,7 @@
 --   wms_events | wms_serial_event_proof | immediate | wms_serial_scope_commit
 --   wms_events | wms_unit_event_proof | deferred | wms_unit_commit_proof
 --   wms_exceptions | wms_exception_revision | immediate | wms_track_resources
+--   wms_location_capacity | wms_work_capacity_revision | immediate | wms_work_bin_revision
 --   wms_locations | wms_location_revision | immediate | wms_track_resources
 --   wms_locations | wms_serial_location_proof | immediate | wms_serial_scope_commit
 --   wms_lot_changes | wms_lot_change_lock | immediate | wms_lot_lock
@@ -141,6 +143,7 @@
 --   wms_stock | wms_serial_stock_proof | immediate | wms_serial_scope_commit
 --   wms_stock | wms_stock_proof | deferred | wms_check_stock
 --   wms_stock | wms_stock_revision | immediate | wms_track_resources
+--   wms_stock | wms_work_stock_revision | immediate | wms_work_bin_revision
 --   wms_stock_ledger | wms_ledger_proof | deferred | wms_check_stock
 --   wms_stock_reserved | wms_reserved_proof | deferred | wms_check_stock
 --   wms_transfer_lines | wms_serial_transfer_line_proof | immediate | wms_serial_scope_commit
@@ -165,9 +168,17 @@
 --   wms_unit_pack_changes | wms_unit_pack_no_truncate | immediate | wms_immutable_history
 --   wms_unit_pack_changes | wms_unit_pack_proof | deferred | wms_unit_commit_proof
 --   wms_warehouses | wms_lot_initialize | immediate | wms_lot_initialize
+--   wms_work_executions | wms_work_executions_immutable | immediate | wms_immutable_history
+--   wms_work_executions | wms_work_executions_no_truncate | immediate | wms_immutable_history
+--   wms_work_task_events | wms_work_events_immutable | immediate | wms_immutable_history
+--   wms_work_task_events | wms_work_events_no_truncate | immediate | wms_immutable_history
+--   wms_work_tasks | wms_work_task_audit | immediate | wms_work_task_audit
+--   wms_work_tasks | wms_work_task_guard | immediate | wms_work_task_guard
+--   wms_work_tasks | wms_work_tasks_no_delete | immediate | wms_immutable_history
+--   wms_work_tasks | wms_work_tasks_no_truncate | immediate | wms_immutable_history
 --   wms_workspaces | wms_legacy_write_fence | immediate | wms_fence_legacy_writes
 
--- 130 functions
+-- 134 functions
 
 -- ------------------------------------------------------------------
 -- wms_actual_shipped(t text, w text, o text) RETURNS TABLE(line_id text, sku text, lot text, quantity bigint)
@@ -2854,4 +2865,101 @@ END
         FROM jsonb_array_elements(document->'stocks') AS b
       )
     END;
+
+-- ------------------------------------------------------------------
+-- wms_work_after_command() RETURNS trigger
+-- LANGUAGE plpgsql VOLATILE
+DECLARE e JSONB; x wms_work_executions; t wms_work_tasks; q BIGINT; line RECORD;
+BEGIN
+ SELECT payload INTO e FROM wms_events WHERE tenant=NEW.tenant AND warehouse_id=NEW.warehouse_id
+  AND version=(NEW.result->>'version')::bigint AND payload->>'request_id'=NEW.request_id;
+ SELECT * INTO x FROM wms_work_executions WHERE tenant=NEW.tenant AND warehouse_id=NEW.warehouse_id AND request_id=NEW.request_id;
+ IF FOUND THEN
+  SELECT * INTO t FROM wms_work_tasks WHERE tenant=x.tenant AND warehouse_id=x.warehouse_id AND id=x.task_id FOR UPDATE;
+  q=(x.command->>'quantity')::bigint;
+  IF t.status<>'claimed' OR t.owner<>NEW.actor OR x.actor<>NEW.actor OR t.revision<>x.task_revision
+    OR e->'command' IS DISTINCT FROM x.command OR q<=0 OR q>t.quantity-t.completed_quantity
+    OR x.command->>'sku'<>t.sku OR x.command->>'lot'<>t.lot OR x.command->>'from'<>t.from_location THEN
+   RAISE EXCEPTION 'Putaway requires its original owned review and physical move' USING ERRCODE='23514';
+  END IF;
+  UPDATE wms_work_tasks SET completed_quantity=completed_quantity+q,
+   status=CASE WHEN completed_quantity+q=quantity THEN 'completed' ELSE 'claimed' END,
+   updated_by=NEW.actor,last_action='putaway_confirmed',reason=NULL
+   WHERE tenant=x.tenant AND warehouse_id=x.warehouse_id AND id=x.task_id;
+ END IF;
+ IF e->'command'->>'type'='receive' THEN
+  SELECT * INTO line FROM wms_receipt_lines WHERE tenant=NEW.tenant AND warehouse_id=NEW.warehouse_id
+   AND receipt_id=e->'command'->>'receipt_id' AND id=e->'command'->>'line_id';
+  INSERT INTO wms_work_tasks(tenant,warehouse_id,id,sku,lot,from_location,quantity,source_receipt_id,source_event_id,created_by,updated_by)
+   VALUES(NEW.tenant,NEW.warehouse_id,'putaway-'||(e->>'id'),line.sku,line.lot,e->'command'->>'location',
+    (e->'command'->>'quantity')::bigint,line.receipt_id,e->>'id',NEW.actor,NEW.actor);
+ END IF;
+ RETURN NULL;
+END
+
+-- ------------------------------------------------------------------
+-- wms_work_bin_revision() RETURNS trigger
+-- LANGUAGE plpgsql VOLATILE
+DECLARE r RECORD; location_code TEXT;
+BEGIN
+ IF TG_OP='DELETE' THEN r=OLD; ELSE r=NEW; END IF;
+ IF TG_OP='UPDATE' AND NEW IS NOT DISTINCT FROM OLD THEN RETURN NULL; END IF;
+ IF TG_OP='UPDATE' THEN
+  IF TG_TABLE_NAME='wms_stock' THEN
+   IF (OLD.tenant,OLD.warehouse_id,OLD.location) IS DISTINCT FROM (NEW.tenant,NEW.warehouse_id,NEW.location) THEN
+    PERFORM wms_bump_resource(OLD.tenant,OLD.warehouse_id,jsonb_build_array('putaway_bin',OLD.location));
+   END IF;
+  ELSIF (OLD.tenant,OLD.warehouse_id,OLD.code) IS DISTINCT FROM (NEW.tenant,NEW.warehouse_id,NEW.code) THEN
+   PERFORM wms_bump_resource(OLD.tenant,OLD.warehouse_id,jsonb_build_array('putaway_bin',OLD.code));
+  END IF;
+ END IF;
+ IF TG_TABLE_NAME='wms_stock' THEN location_code=r.location; ELSE location_code=r.code; END IF;
+ PERFORM wms_bump_resource(r.tenant,r.warehouse_id,jsonb_build_array('putaway_bin',location_code));
+ RETURN NULL;
+END
+
+-- ------------------------------------------------------------------
+-- wms_work_task_audit() RETURNS trigger
+-- LANGUAGE plpgsql VOLATILE
+BEGIN
+ PERFORM wms_bump_resource(NEW.tenant,NEW.warehouse_id,jsonb_build_array('work_task',NEW.id));
+ INSERT INTO wms_work_task_events(tenant,warehouse_id,task_id,revision,actor,action,snapshot)
+ VALUES(NEW.tenant,NEW.warehouse_id,NEW.id,NEW.revision,NEW.updated_by,NEW.last_action,to_jsonb(NEW));
+ RETURN NULL;
+END
+
+-- ------------------------------------------------------------------
+-- wms_work_task_guard() RETURNS trigger
+-- LANGUAGE plpgsql VOLATILE
+DECLARE confirmed BIGINT;
+BEGIN
+ IF TG_OP='INSERT' THEN
+  IF NEW.status<>'ready' OR NEW.completed_quantity<>0 OR NEW.owner IS NOT NULL THEN
+   RAISE EXCEPTION 'New work must be unclaimed and uncompleted' USING ERRCODE='23514';
+  END IF;
+  NEW.revision=1;
+ ELSE
+  IF OLD.status IN('completed','cancelled') OR
+     (NEW.tenant,NEW.warehouse_id,NEW.id,NEW.seq,NEW.sku,NEW.lot,NEW.from_location,NEW.quantity,
+      NEW.source_receipt_id,NEW.source_event_id,NEW.created_by,NEW.created_at)
+      IS DISTINCT FROM
+     (OLD.tenant,OLD.warehouse_id,OLD.id,OLD.seq,OLD.sku,OLD.lot,OLD.from_location,OLD.quantity,
+      OLD.source_receipt_id,OLD.source_event_id,OLD.created_by,OLD.created_at) THEN
+   RAISE EXCEPTION 'Work identity and terminal history are immutable' USING ERRCODE='23514';
+  END IF;
+  IF NEW.owner IS DISTINCT FROM OLD.owner AND NOT
+    (OLD.status='ready' AND NEW.status='claimed' AND NEW.owner=NEW.updated_by OR NEW.status='ready' AND NEW.owner IS NULL) THEN
+   RAISE EXCEPTION 'Claim or release work before changing its owner' USING ERRCODE='23514';
+  END IF;
+  SELECT COALESCE(sum((x.command->>'quantity')::bigint),0) INTO confirmed
+   FROM wms_work_executions x JOIN wms_commands c USING(tenant,warehouse_id,request_id)
+   WHERE x.tenant=NEW.tenant AND x.warehouse_id=NEW.warehouse_id AND x.task_id=NEW.id;
+  IF NEW.completed_quantity<>confirmed OR NEW.completed_quantity<OLD.completed_quantity THEN
+   RAISE EXCEPTION 'Work progress requires its original move receipts' USING ERRCODE='23514';
+  END IF;
+  NEW.revision=OLD.revision+1;
+ END IF;
+ NEW.updated_at=clock_timestamp();
+ RETURN NEW;
+END
 

@@ -30,6 +30,7 @@ import MobileNavigation from "./MobileNavigation";
 import { matchesOrderStatus, prioritizeOrders } from "./orderView";
 import { useTheme } from "./theme";
 import ReceivingTab from "./ReceivingTab";
+import WorkTasksTab from "./WorkTasksTab";
 import LocationsTab from "./LocationsTab";
 import ExceptionsTab from "./ExceptionsTab";
 import {
@@ -105,6 +106,7 @@ function mergeRecords<T extends { id: string }>(
 }
 const nav: { id: Tab; title: string; icon: typeof Box }[] = [
   { id: "overview", title: "Overview", icon: LayoutDashboard },
+  { id: "work", title: "My work", icon: CheckCheck },
   { id: "receiving", title: "Receiving", icon: ArrowDownToLine },
   { id: "inventory", title: "Inventory", icon: Boxes },
   { id: "fulfillment", title: "Fulfillment", icon: PackageCheck },
@@ -120,7 +122,7 @@ const navGroups: { title: string; items: Tab[] }[] = [
   { title: "Workspace", items: ["overview", "inventory", "locations"] },
   {
     title: "Execution",
-    items: ["receiving", "fulfillment", "scanner", "transfers"],
+    items: ["work", "receiving", "fulfillment", "scanner", "transfers"],
   },
   {
     title: "Control",
@@ -721,6 +723,7 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
     expectedVersion?: number,
     capturedVersions?: Record<string, number>,
     unitInputs?: UnitInput[],
+    requestId?: string,
   ): Promise<boolean> => {
     if (
       !state ||
@@ -742,7 +745,7 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
       actor: session.identity.actor,
       warehouse: creating ? `wh-${crypto.randomUUID()}` : state.warehouse.id,
       request: {
-        request_id: crypto.randomUUID(),
+        request_id: requestId ?? crypto.randomUUID(),
         expected_version: creating
           ? 0
           : (expectedVersion ?? modalVersion.current ?? state.version),
@@ -1742,6 +1745,7 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
               <p>
                 {
                   {
+                    work: "Your next move, with clear ownership and progress across the floor.",
                     overview:
                       "A clear picture of your floor. Keep every movement in sync.",
                     inventory:
@@ -1872,7 +1876,7 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
 
           {tab !== "overview" && (
             <>
-              {tab !== "operations" && tab !== "transfers" && (
+              {tab !== "operations" && tab !== "transfers" && tab !== "work" && (
                 <div className="list-toolbar">
                   <div className="search-field">
                     <Search size={17} />
@@ -2139,6 +2143,16 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                   )}
                   {historyControl("orders")}
                 </Section>
+              )}
+              {tab === "work" && (
+                <WorkTasksTab
+                  key={`work:${session.identity.tenant}:${session.identity.actor}:${s.warehouse.id}`}
+                  state={s}
+                  identity={session.identity}
+                  request={request}
+                  submit={submit}
+                  disabled={disabled}
+                />
               )}
               {tab === "receiving" && (
                 <ReceivingTab

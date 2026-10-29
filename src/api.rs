@@ -425,6 +425,22 @@ fn business_routes_with_console(assets: crate::console::Assets) -> Router<App> {
             post(crate::putaway::endpoint),
         )
         .route(
+            "/v1/warehouses/{warehouse}/work",
+            get(crate::work_tasks::list),
+        )
+        .route(
+            "/v1/warehouses/{warehouse}/work/discover",
+            post(crate::work_tasks::discover),
+        )
+        .route(
+            "/v1/warehouses/{warehouse}/work/{task}/action",
+            post(crate::work_tasks::action),
+        )
+        .route(
+            "/v1/warehouses/{warehouse}/work/{task}/review",
+            post(crate::work_tasks::review),
+        )
+        .route(
             "/v1/warehouses/{warehouse}/picking/batch-plan",
             post(crate::batch_pick::endpoint),
         )

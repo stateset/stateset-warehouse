@@ -77,6 +77,9 @@ async fn table_contents(pool: &sqlx::PgPool) -> Value {
             "wms_product_gtins",
             "wms_location_capacity",
             "wms_reconciliation_runs",
+            "wms_work_tasks",
+            "wms_work_executions",
+            "wms_work_task_events",
         ]
         .contains(&name.as_str())
         {
@@ -222,11 +225,11 @@ async fn populated_21_upgrade_to_current_preserves_every_data_table_and_original
     f.store.pool.close().await;
     f.store = Store::connect(target.as_str())
         .await
-        .expect("actual application upgrade21→33");
+        .expect("actual application upgrade21→current");
     assert_eq!(
         table_contents(&f.store.pool).await,
         before,
-        "migrations22–39 changed existing application data"
+        "migrations22–40 changed existing application data"
     );
     let old_rows:Value=sqlx::query_scalar("SELECT jsonb_agg(to_jsonb(m) ORDER BY name) FROM wms_schema_migrations m WHERE name<'022_serial_restore_search_path'").fetch_one(&f.store.pool).await.expect("original21 ledger remains intact");
     assert_eq!(old_rows, ledger);
@@ -234,7 +237,7 @@ async fn populated_21_upgrade_to_current_preserves_every_data_table_and_original
         .fetch_one(&f.store.pool)
         .await
         .expect("upgraded ledger count");
-    assert_eq!(count, 39);
+    assert_eq!(count, 40);
     f.proof().await;
     f.execute(
         json!({"type":"move_stock","sku":"SERIAL","lot":"LOT","from":"A","to":"B","quantity":1}),
@@ -271,5 +274,5 @@ async fn populated_21_upgrade_to_current_preserves_every_data_table_and_original
     f.store.pool.close().await;
     // Keep the uniquely named source/upgrade database with the owning isolated
     // server's evidence; no pre-existing database or inventory is altered.
-    eprintln!("Retained owned schema21→33 upgrade database {name}; all{}data tables and{}original ledger rows unchanged, exact replay preserved",before.as_object().expect("original table evidence").len(),ledger.as_array().expect("original migration evidence").len());
+    eprintln!("Retained owned schema21→current upgrade database {name}; all{}data tables and{}original ledger rows unchanged, exact replay preserved",before.as_object().expect("original table evidence").len(),ledger.as_array().expect("original migration evidence").len());
 }

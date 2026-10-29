@@ -1466,3 +1466,53 @@ tbody tr:hover {
     flex-shrink: 0;
   }
 }
+
+/* Putaway execution uses the shared Sync OMS color and spacing foundation. */
+.work-space { display: grid; gap: 20px; }
+.work-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.work-metrics > div { padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); display: grid; gap: 8px; }
+.work-metrics span, .work-meta, .work-expected { color: var(--muted); font-size: 12px; }
+.work-metrics strong { color: var(--ink); font-size: 28px; font-weight: 600; }
+.work-body { padding: 20px; }
+.work-actions, .work-tabs, .work-meta, .work-pagination { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.work-tabs { margin-bottom: 20px; }
+.work-tabs .active { color: var(--accent); background: var(--accent-bg); border-color: var(--accent-border); }
+.work-list { display: grid; gap: 14px; }
+.work-card { border: 1px solid var(--line); border-radius: 12px; padding: 20px; background: var(--panel); min-width: 0; }
+.work-card-top, .work-progress, .work-review-heading { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; }
+.work-card h3, .work-review h3 { font-size: 16px; color: var(--ink); margin: 0 0 6px; overflow-wrap: anywhere; }
+.work-card p, .work-review p { font-size: 13px; color: var(--muted); margin: 4px 0 14px; overflow-wrap: anywhere; }
+.work-progress { font-size: 12px; margin-top: 20px; }
+.work-progress strong { color: var(--ink); font-weight: 500; }
+.work-progress span { color: var(--muted); }
+.work-card progress { width: 100%; height: 5px; margin: 10px 0 14px; accent-color: var(--accent); }
+.work-meta { margin-bottom: 18px; justify-content: space-between; overflow-wrap: anywhere; }
+.work-card .work-reason, .work-error { color: var(--danger); background: var(--danger-bg); padding: 12px; border-radius: 8px; }
+.work-notice { color: var(--accent); background: var(--accent-bg); padding: 12px; border-radius: 8px; }
+.work-review { padding: 22px; border: 1px solid var(--accent-border); border-radius: 12px; margin-bottom: 20px; background: var(--accent-bg); }
+.work-review h3 { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.work-scans { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 20px 0; }
+.work-scans label, .work-reason-form label { display: grid; gap: 6px; font-size: 13px; color: var(--ink); min-width: 0; }
+.work-scans input, .work-priority input, .work-priority select, .work-reason-form textarea { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 7px; padding: 10px 12px; width: 100%; min-width: 0; }
+.work-expected { overflow-wrap: anywhere; }
+.work-fit { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; margin: 16px 0; }
+.work-fit input { width: 18px; height: 18px; flex: 0 0 auto; accent-color: var(--accent); }
+.work-priority { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.work-reason-form { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 16px; }
+.work-pagination { justify-content: flex-end; margin-top: 20px; font-size: 12px; }
+@media (max-width: 680px) {
+  .work-metrics { gap: 8px; }
+  .work-metrics > div { padding: 12px; }
+  .work-metrics strong { font-size: 24px; }
+  .work-body, .work-card, .work-review { padding: 14px; }
+  .work-scans { grid-template-columns: 1fr; }
+  .work-actions .btn, .work-tabs .btn { min-height: 44px; }
+}
+
+.work-priority input { max-width: 90px; }
+
+.work-priority { white-space: nowrap; }
+@media (max-width: 680px) {
+  .work-space .panel-head { flex-direction: column; align-items: stretch; }
+  .work-space .panel-head > .work-actions .btn { flex: 1; }
+}

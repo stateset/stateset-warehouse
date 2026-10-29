@@ -19,7 +19,7 @@ python3 scripts/dashboard_notices.py --check
 node --test cli/test/*.test.mjs
 if [[ "${1:-}" == '--postgres' ]]; then
   : "${WMS_TEST_DATABASE_URL:?Set WMS_TEST_DATABASE_URL to an isolated Postgres database with test in its name}"
-  cargo test --locked --lib --test postgres --test persistence_acceptance --test mcp --test console --test native_api --test persistence_guards --test oms_fulfillment_api --test oms_receiver --test operations --test startup --test serial_admission --test serial_registry --test serial_scale --test reconciliation_runs --test sql_catalog --test warehouse_planning --test icommerce -- --ignored --test-threads=1
+  cargo test --locked --lib --test postgres --test persistence_acceptance --test mcp --test console --test native_api --test persistence_guards --test oms_fulfillment_api --test oms_receiver --test operations --test startup --test serial_admission --test serial_registry --test serial_scale --test reconciliation_runs --test sql_catalog --test warehouse_planning --test work_tasks --test icommerce -- --ignored --test-threads=1
 fi
 npm --prefix dashboard run build
 cargo build --locked --example domain_driver

@@ -1,5 +1,11 @@
 # Changes
 
+## Unreleased
+
+- **Owned putaway work.** Receiving creates a task automatically. My work adds personal, available, team and closed queues; claim, pause, block with a reason, resume and release actions; and supervisor priority/cancellation controls. Existing receiving stock can be discovered without creating duplicate work.
+- **Guided confirmation.** Exact bin, SKU, lot and quantity checks lead into the existing serial observation and recovery journal. Inventory and task progress commit together, including partial moves. Ownership and destination capacity changes invalidate old reviews with definitive retry evidence.
+- Migration 040 preserves task history and original execution reviews. Tasks do not reserve inventory. Direct moves outside the task workflow do not complete tasks; supervisors can cancel obsolete work with a reason.
+
 ## 0.5.0 — 2026-10-29
 
 - **Dashboard aligned with Sync OMS.** Shared dark and light palettes, emerald accents, Outfit and JetBrains Mono typography, consistent panels and metric cards, and grouped desktop navigation. The selected theme persists across reloads and applies before the first render.

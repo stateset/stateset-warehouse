@@ -226,15 +226,19 @@ impl Store {
             }
         }
         if let Some(expected) = &r.resource_versions {
-            let required = crate::concurrency::reviewed_versions(&state, &r.command)
+            let mut required = crate::concurrency::reviewed_versions(&state, &r.command)
                 .map_err(|message| Error::new(422, message))?
                 .ok_or_else(|| Error::new(422, "This command requires a warehouse version"))?;
+            crate::work_tasks::admit(&mut tx, i, w, r, &mut required).await?;
             if expected != &required {
                 return Err(Error::new(
                     422,
                     "Review must include exactly this command's resources",
                 ));
             }
+        }
+        if r.resource_versions.is_none() {
+            crate::work_tasks::admit(&mut tx, i, w, r, &mut Default::default()).await?;
         }
         match &r.command {
             Command::CreateOrder {
