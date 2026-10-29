@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "scope": "software_release_gate_verification",
+  "release": "0.6.0",
+  "tag": "v0.6.0",
+  "release_commit": "99d20c1d7cc26583680dee189ee7b93b022581d8",
+  "gate_result": "passed",
+  "gate_release_revision_field": "99d20c1d7cc26583680dee189ee7b93b022581d8",
+  "elapsed_seconds": 2279,
+  "commit_binding": {
+    "method": "Each gated input SHA-256 recomputed from git show 99d20c1d7cc26583680dee189ee7b93b022581d8:<path> and the final working tree",
+    "inputs": 528,
+    "aggregate_sha256": "d7cc3323b059ac8b58da66a3b942c7db7a755678a9933935419d63752bf2ed61",
+    "mismatches": 0,
+    "note": "The tag adds only release documentation, screenshots and qualification evidence to this candidate. All gated software inputs match byte for byte."
+  },
+  "profile": {
+    "products": 500,
+    "open_orders": 500,
+    "bins": 100,
+    "lots": 2,
+    "operators": 8,
+    "replicas": 2,
+    "sustained_seconds": 300,
+    "serial_units_per_sku_lot": 16,
+    "serial_labels": 16000
+  },
+  "tests": {
+    "rust": 392,
+    "python": 116,
+    "terminal": 137,
+    "browser_offline_contract": 155,
+    "browser_live_postgres": 24
+  },
+  "results": {
+    "image_resilience": {
+      "committed_moves": 10271,
+      "moves_per_second": 34.22,
+      "unexpected_errors": 0,
+      "action_p95_ms": 266.182
+    },
+    "image_serial_resilience": {
+      "committed_moves": 5102,
+      "moves_per_second": 16.982,
+      "unexpected_errors": 0,
+      "action_p95_ms": 536.232
+    }
+  },
+  "putaway_original_receipt_and_task_history_restored": true,
+  "stages": [
+    {
+      "name": "prerequisites",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 1.017
+    },
+    {
+      "name": "software_checks",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 884.636
+    },
+    {
+      "name": "observability_rules",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 1.379
+    },
+    {
+      "name": "release_builds",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 0.684
+    },
+    {
+      "name": "standard_workload",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 9.601
+    },
+    {
+      "name": "archive_restore",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 40.455
+    },
+    {
+      "name": "live_browsers",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 196.636
+    },
+    {
+      "name": "production_container",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 11.824
+    },
+    {
+      "name": "image_resilience",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 1132.546
+    },
+    {
+      "name": "stable_source_inputs",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 0.151
+    }
+  ],
+  "limits": [
+    "All inventory and native-service fixtures are synthetic",
+    "Performance results apply to the recorded profiles and host",
+    "Process/database restart is not managed database failover",
+    "Published logs are sanitized; private raw artifacts stay in the fresh evidence directory"
+  ],
+  "attempts": [
+    {
+      "attempt": 1,
+      "candidate": "99d20c1d7cc26583680dee189ee7b93b022581d8",
+      "result": "failed",
+      "summary": "attempt-1/summary.json",
+      "failure_context": "attempt-1/failure-context.json",
+      "reason": "Docker default address pools exhausted before container network creation."
+    },
+    {
+      "attempt": 2,
+      "candidate": "99d20c1d7cc26583680dee189ee7b93b022581d8",
+      "result": "passed",
+      "summary": "summary.json",
+      "configuration": "Full unchanged release profile, separate loopback API ports 18188/18189 and unused private Docker subnets 10.253.246.0/24, 10.253.247.0/24 and 10.253.248.0/24."
+    }
+  ]
+}

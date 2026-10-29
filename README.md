@@ -17,8 +17,8 @@ Built with Rust (Axum, Tokio, SQLx) on PostgreSQL, with a React/TypeScript dashb
 
 | | |
 |---|---|
-| Latest qualified release | **0.5.0** (2026-10-29): Sync OMS dashboard styling, persistent themes, mobile tools navigation and clearer work queues. The complete release gate passed at the full profile: 500 products, 16,000 serial labels, eight operators, API/PostgreSQL crash recovery and final reconciliation on both replicas. [Evidence](docs/qualification/release-20261029-v0.5.0/verification.json). |
-| Previous release | **0.4.2** (2026-10-28). [Evidence](docs/qualification/release-20261028-v0.4.2/verification.json). |
+| Latest qualified release | **0.6.0** (2026-10-29): owned putaway work, guided physical confirmation and team progress. The complete release gate passed at the full profile: 500 products, 16,000 serial labels, eight operators, archive restoration and API/PostgreSQL crash recovery. [Evidence](docs/qualification/release-20261029-v0.6.0/verification.json). |
+| Previous release | **0.5.0** (2026-10-29). [Evidence](docs/qualification/release-20261029-v0.5.0/verification.json). |
 | Known limit | `GET .../reconciliation` must finish inside 10 seconds, which a warehouse with serial-controlled SKUs exceeds after about 5,000 serial commands. [Background reconciliation runs](docs/api.md#background-reconciliation-runs) complete the same proof: 13 s at 7,084 commands with 16,000 labels. [Measurements](docs/performance.md#known-full-reconciliation-history-limit--2026-10-27). |
 | Not yet qualified | Production deployment, scanner hardware, physical facility acceptance and managed failover. See [evidence and limits](docs/evidence.md). |
 

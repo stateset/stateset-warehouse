@@ -8,6 +8,8 @@
 
 **Upgrade:** migration 040 adds durable work tasks, original move reviews, task history and destination-capacity version fences. Back up the database before upgrading. Older releases refuse the newer schema; downgrade by restoring the pre-upgrade backup.
 
+**Validation:** the complete local release profile passed all ten stages: 392 Rust tests, 116 Python checks, 137 terminal tests, 155 offline browser tests and 24 live PostgreSQL browser tests. Backup/restore preserves original putaway receipts and task history. Both full 300-second image workloads, crash recovery and final reconciliation passed. [Qualification evidence](docs/qualification/release-20261029-v0.6.0/verification.json). Deployed and physical facility acceptance remain separate.
+
 ## 0.5.0 — 2026-10-29
 
 - **Dashboard aligned with Sync OMS.** Shared dark and light palettes, emerald accents, Outfit and JetBrains Mono typography, consistent panels and metric cards, and grouped desktop navigation. The selected theme persists across reloads and applies before the first render.

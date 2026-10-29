@@ -1,5 +1,13 @@
 # One reproducible software release gate
 
+## 0.6.0 qualification — 2026-10-29
+
+The [complete release gate](qualification/release-20261029-v0.6.0/verification.json) passed all ten stages on candidate `99d20c1`, with 392 Rust, 116 Python, 137 terminal, 155 offline-contract browser and 24 live-PostgreSQL browser tests. The full profile used 500 products, 500 orders, 100 bins, 16,000 serial labels, eight operators and two API replicas for 300 seconds per workload. Archive restoration, API/PostgreSQL crash recovery and final reconciliation passed. All 528 gated software inputs match the release candidate byte for byte.
+
+Putaway checks cover competing claims, partial moves, exact serial observations, stale ownership/capacity reviews and lost-response recovery on desktop and mobile. Archive restoration preserves original work receipts and completed task history without a second physical effect. The source/history audit passed with zero unreviewed findings. These are local synthetic software results; deployed identity/integrations, scanner hardware, physical facility acceptance and hosted CI remain separate.
+
+The [first attempt](qualification/release-20261029-v0.6.0/attempt-1/failure-context.json) stopped before the container could start because the host had exhausted Docker's default address pools. A standalone container check passed with an unused private subnet, then the complete gate passed on unchanged source with three explicit private subnets. The failed attempt remains retained.
+
 ## 0.5.0 qualification — 2026-10-29
 
 The [complete release gate](qualification/release-20261029-v0.5.0/verification.json) passed all ten stages on candidate `04018ea`, with 388 Rust, 116 Python, 137 terminal, 155 offline-contract browser and 22 live-PostgreSQL browser tests. The full profile used 500 products, 500 orders, 100 bins, 16,000 serial labels, eight operators and two API replicas for 300 seconds per workload. Archive restoration, API/PostgreSQL crash recovery and final reconciliation passed. All 522 gated software inputs match the release candidate byte for byte.

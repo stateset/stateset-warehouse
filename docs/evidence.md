@@ -8,13 +8,13 @@ This page records what has been proven about StateSet Warehouse, how, and what h
 
 | Claim | Latest evidence |
 |---|---|
-| Every stock change, reservation, receipt and serial unit can be rebuilt from immutable history, and the database rejects commits that disagree | [0.5.0 gate](qualification/release-20261029-v0.5.0/verification.json): final reconciliation passes on both API replicas |
-| Retrying a lost request returns the original result, never a second change | 0.5.0 gate: thousands of exact cross-replica replays per workload, zero mismatches |
-| API and PostgreSQL crashes mid-write lose or duplicate nothing | 0.5.0 gate: every table fingerprint unchanged after each forced crash |
-| A backup restores to an identical database | 0.5.0 gate: archive restore with every table fingerprint and migration digest matching |
+| Every stock change, reservation, receipt and serial unit can be rebuilt from immutable history, and the database rejects commits that disagree | [0.6.0 gate](qualification/release-20261029-v0.6.0/verification.json): final reconciliation passes on both API replicas |
+| Retrying a lost request returns the original result, never a second change | 0.6.0 gate: thousands of exact cross-replica replays per workload, zero mismatches |
+| API and PostgreSQL crashes mid-write lose or duplicate nothing | 0.6.0 gate: every table fingerprint unchanged after each forced crash |
+| A backup restores to an identical database | 0.6.0 gate: archive restore with every table fingerprint and migration digest matching |
 | Full serial reconciliation completes at 16,000 labels with long history | 0.4.1 gate: background runs on both replicas at version 7,084 in 13.1 and 13.4s; the synchronous endpoint keeps its 10-second limit ([known limit](performance.md#known-full-reconciliation-history-limit--2026-10-27)) |
 | Serial saves meet a 1,000ms p95 with eight concurrent operators | [native profile after migration 035](performance/native-serial-sku-scope-035.json): 772ms (released in 0.3.1) |
-| The public source and its history contain no unreviewed secrets, and dependencies are permissively licensed | [source audit](qualification/release-20261029-v0.5.0/source-audit-report.json) and [license review](qualification/release-20261029-v0.5.0/source-license-review.json) |
+| The public source and its history contain no unreviewed secrets, and dependencies are permissively licensed | [source audit](qualification/release-20261029-v0.6.0/source-audit-report.json) and [license review](qualification/release-20261029-v0.6.0/source-license-review.json) |
 
 **Not yet proven:**
 
@@ -24,6 +24,14 @@ This page records what has been proven about StateSet Warehouse, how, and what h
 - A hosted pass of the complete gate. Account billing kept every hosted job from starting until the repository went public on 2026-10-28. Three runs then started, and since then GitHub has locked the account over billing.
 
 **Reproduce:** run the complete gate with the [release profile](release-qualification.md#run-the-release-profile).
+
+## 0.6.0 qualification — 2026-10-29
+
+The [complete release gate](qualification/release-20261029-v0.6.0/verification.json) passed all ten stages on candidate `99d20c1`, with 392 Rust, 116 Python, 137 terminal, 155 offline-contract browser and 24 live-PostgreSQL browser tests. The full profile used 500 products, 500 orders, 100 bins, 16,000 serial labels, eight operators and two API replicas for 300 seconds per workload. Archive restoration, API/PostgreSQL crash recovery and final reconciliation passed. All 528 gated software inputs match the release candidate byte for byte.
+
+Putaway checks cover competing claims, partial moves, exact serial observations, stale ownership/capacity reviews and lost-response recovery on desktop and mobile. Archive restoration preserves original work receipts and completed task history without a second physical effect. The source/history audit passed with zero unreviewed findings. These are local synthetic software results; deployed identity/integrations, scanner hardware, physical facility acceptance and hosted CI remain separate.
+
+The [first attempt](qualification/release-20261029-v0.6.0/attempt-1/failure-context.json) stopped before the container could start because the host had exhausted Docker's default address pools. A standalone container check passed with an unused private subnet, then the complete gate passed on unchanged source with three explicit private subnets. The failed attempt remains retained.
 
 ## 0.5.0 qualification — 2026-10-29
 

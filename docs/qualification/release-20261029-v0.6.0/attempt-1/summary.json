@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "scope": "software_release_gate",
+  "recorded_at": "2026-10-29T16:06:37.346989+00:00",
+  "result": "failed",
+  "production_qualified": false,
+  "synthetic": true,
+  "release_revision": "99d20c1d7cc26583680dee189ee7b93b022581d8",
+  "elapsed_seconds": 1730,
+  "stages": [
+    {
+      "name": "prerequisites",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 1.011
+    },
+    {
+      "name": "software_checks",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 1059.881
+    },
+    {
+      "name": "observability_rules",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 1.189
+    },
+    {
+      "name": "release_builds",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 152.797
+    },
+    {
+      "name": "standard_workload",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 9.343
+    },
+    {
+      "name": "archive_restore",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 45.368
+    },
+    {
+      "name": "live_browsers",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 205.859
+    },
+    {
+      "name": "production_container",
+      "status": "failed",
+      "exit_code": 1,
+      "elapsed_seconds": 254.191
+    },
+    {
+      "name": "image_resilience",
+      "status": "not_run"
+    },
+    {
+      "name": "stable_source_inputs",
+      "status": "not_run"
+    }
+  ],
+  "artifacts": [
+    {
+      "stage": "standard_workload",
+      "path": "standard_workload.json",
+      "sha256": "d1504c532349915dc4be1ea2b95b5a873ff568683f8e9b4649582178ea1d4110"
+    },
+    {
+      "stage": "archive_restore",
+      "path": "archive_restore.json",
+      "sha256": "59dfd9e1c65d43b1893513d1add4855510c7b7cf7649fad340f1c535d78bbd8b"
+    },
+    {
+      "stage": "observability_rules",
+      "path": "observability_rules.json",
+      "sha256": "f123616fd64559ff38f6d4e893d8551b3e38987b5632b4e36cb20ff623c6a100"
+    },
+    {
+      "path": "source-inputs-before.json",
+      "sha256": "1d52058aac35f63e92c53dca6e926cb49780372be4a04cbd9f4472e2095ff174"
+    },
+    {
+      "path": "tool-versions.json",
+      "sha256": "fb353776fcb627064e6ae049b0f4af0fa62007cc594ca9b5063098dd9946e8b5"
+    },
+    {
+      "path": "dependency-licenses.json",
+      "sha256": "bcd5a0aa305d2856a611194071d01df9a12ef92ed242bb9d166ab9301c63126b"
+    },
+    {
+      "path": "host-preflight.json",
+      "sha256": "64ec7801b5647278591da7efab4806987e57fb3937bbad954f231f78b39283a6"
+    },
+    {
+      "path": "archive_restore.log",
+      "sha256": "5438c9212eef3bcd7f990ec9f3148717c58576c37cf5cefef2aaa46a214154c4"
+    },
+    {
+      "path": "live_browsers.log",
+      "sha256": "bf3e5e66f747c1eadbbb3a65fd896402e43e5ee41af48b738c1bb2ce194528ed"
+    },
+    {
+      "path": "observability_rules.log",
+      "sha256": "6ea89889bde1dea45385eded927b4b88c7b45fc33c61084d5897a674a470d9ee"
+    },
+    {
+      "path": "prerequisites.log",
+      "sha256": "cec33041f49e3401b3f6ac3c73fcc2ac24ac7b17e01911bc34fe3606da5633d7"
+    },
+    {
+      "path": "production_container.log",
+      "sha256": "caffbac28c50794d80082333e779107ce65ba042a7162c4957dea5ba82d63b77"
+    },
+    {
+      "path": "release_builds.log",
+      "sha256": "c6e173ecb3e9638be2806cfeeee1bf1b1a779f74286f106068836fbbefd98450"
+    },
+    {
+      "path": "software_checks.log",
+      "sha256": "14a8f6652350cb011763da0a6d2ffef2a092919ed8246683c116f43b694c8cb6"
+    },
+    {
+      "path": "standard_workload.log",
+      "sha256": "0f5d93376ca15e5b6b2a7677af49a305354c0823a6b23325074f10dd115db272"
+    }
+  ],
+  "not_performed": [
+    "Deployed WorkOS sign-in and membership lifecycle",
+    "Deployed OMS/Freight qualification",
+    "Physical warehouse and scanner acceptance",
+    "Organization-hosted GitHub execution"
+  ],
+  "limits": [
+    "All inventory and native-service fixtures are synthetic",
+    "Performance results apply to the recorded profiles and host",
+    "Process/database restart is not managed database failover",
+    "Published logs are sanitized; private raw artifacts stay in the fresh evidence directory"
+  ]
+}
