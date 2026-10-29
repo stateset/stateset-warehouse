@@ -1,5 +1,13 @@
 # Changes
 
+## 0.5.0 — 2026-10-29
+
+- **Dashboard aligned with Sync OMS.** Shared dark and light palettes, emerald accents, Outfit and JetBrains Mono typography, consistent panels and metric cards, and grouped desktop navigation. The selected theme persists across reloads and applies before the first render.
+- **Phone navigation built for floor work.** Overview, Inventory, Scanner and Fulfillment stay within reach in a bottom bar. A searchable, grouped **All tools** dialog provides every remaining workspace, keyboard dismissal and focus restoration.
+- **An actionable overview.** **Your next moves** opens the relevant reconciliation, exception, fulfillment or receiving queue. Active orders prioritize urgency and age; shortcuts retain their destination filters through browser history. The floor summary displays actual stock in receiving, storage and staging.
+- **Clearer inventory and work queues.** Stock comes before planning tools, mobile stock records retain readable quantities and actions, and receiving puts receipts first. Fulfillment gains priority/age sorting, visible record counts and explicit review actions. Tables gain sticky headers, aligned quantities and keyboard-accessible scroll regions; empty searches offer a clear-filter action.
+- **Accessibility and regression coverage.** A skip-to-content link, current-page navigation semantics, larger controls, theme persistence checks, mobile menu and focus checks, and queue-filter regression tests. Live browser navigation uses the same mobile tools menu. Updated desktop, light-theme and mobile screenshots are included.
+
 ## 0.4.2 — 2026-10-28
 
 - **Clients use background reconciliation runs.** The dashboard's movement ledger, the terminal's reconciliation view and `--once reconciliation` try the synchronous proof first; when it exceeds the 10-second request deadline (HTTP 503) they start a background run and poll it to completion. Two MCP tools, `wms_reconciliation_run_start` and `wms_reconciliation_run`, expose runs to agents.
