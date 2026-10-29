@@ -1,5 +1,11 @@
 # One reproducible software release gate
 
+## 0.5.0 qualification — 2026-10-29
+
+The [complete release gate](qualification/release-20261029-v0.5.0/verification.json) passed all ten stages on candidate `04018ea`, with 388 Rust, 116 Python, 137 terminal, 155 offline-contract browser and 22 live-PostgreSQL browser tests. The full profile used 500 products, 500 orders, 100 bins, 16,000 serial labels, eight operators and two API replicas for 300 seconds per workload. Archive restoration, API/PostgreSQL crash recovery and final reconciliation passed. All 522 gated software inputs match the release candidate byte for byte.
+
+The first attempt stopped because the live-browser API port was occupied by the existing local preview. A standalone live-browser check then found one test using the former mobile Receiving navigation; that test was corrected, all 22 live checks passed, and a new complete gate passed on separate ports. The verification record retains both attempts and the browser failure. Source auditing passed with zero unreviewed findings. These are local synthetic software results; deployed identity/integrations, scanner hardware, physical facility acceptance and hosted CI remain separate.
+
 ## 0.3.0 qualification — 2026-10-22
 
 The [0.3.0 complete gate](qualification/release-20261022-v0.3.0/summary.json) passed all ten stages on the tagged source. The run used the full profile: 500 products, 500 open orders, 100 bins, two lots, eight operators, two API replicas, 300-second image workloads and 16,000 serial labels. The untracked image workload completed **4,694 moves with exact replays** (15.618 moves/s, 662.249ms action p95). The serial workload completed **1,689 moves with exact replays** across 256 distinct timed labels (5.605 moves/s, 1,930.575ms action p95). Both had zero unexpected errors and zero conflicts. Final full reconciliation passed on both replicas; that is the check that exceeded its SQL deadline on 2026-10-21. API and PostgreSQL crash recovery preserved every table fingerprint.

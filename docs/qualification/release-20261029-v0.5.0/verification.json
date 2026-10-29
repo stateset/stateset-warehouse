@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "scope": "software_release_gate_verification",
+  "release": "0.5.0",
+  "tag": "v0.5.0",
+  "release_commit": "04018ea845efea28763a1ed5c0eb522cbb4f911d",
+  "gate_result": "passed",
+  "gate_release_revision_field": "04018ea",
+  "elapsed_seconds": 2300,
+  "commit_binding": {
+    "method": "Each gated input SHA-256 recomputed from git show 04018ea845efea28763a1ed5c0eb522cbb4f911d:<path> and the final working tree",
+    "inputs": 522,
+    "aggregate_sha256": "0340b81e1dd5c6010426dd5ad9266b8192848376d6b5891ee1768ae21710519c",
+    "mismatches": 0,
+    "note": "The tag adds only release notes and qualification evidence to this candidate. All gated software inputs match byte for byte."
+  },
+  "profile": {
+    "products": 500,
+    "open_orders": 500,
+    "bins": 100,
+    "lots": 2,
+    "operators": 8,
+    "replicas": 2,
+    "sustained_seconds": 300,
+    "serial_units_per_sku_lot": 16,
+    "serial_labels": 16000
+  },
+  "tests": {
+    "rust": 388,
+    "python": 116,
+    "terminal": 137,
+    "browser_offline_contract": 155,
+    "browser_live_postgres": 22
+  },
+  "results": {
+    "image_resilience": {
+      "committed_moves": 10198,
+      "moves_per_second": 33.968,
+      "unexpected_errors": 0,
+      "action_p95_ms": 271.191
+    },
+    "image_serial_resilience": {
+      "committed_moves": 4286,
+      "moves_per_second": 14.266,
+      "unexpected_errors": 0,
+      "action_p95_ms": 787.304
+    }
+  },
+  "stages": [
+    {
+      "name": "prerequisites",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 1.201
+    },
+    {
+      "name": "software_checks",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 923.747
+    },
+    {
+      "name": "observability_rules",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 0.974
+    },
+    {
+      "name": "release_builds",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 0.528
+    },
+    {
+      "name": "standard_workload",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 9.388
+    },
+    {
+      "name": "archive_restore",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 40.863
+    },
+    {
+      "name": "live_browsers",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 149.899
+    },
+    {
+      "name": "production_container",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 21.239
+    },
+    {
+      "name": "image_resilience",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 1152.087
+    },
+    {
+      "name": "stable_source_inputs",
+      "status": "passed",
+      "exit_code": 0,
+      "elapsed_seconds": 0.247
+    }
+  ],
+  "limits": [
+    "All inventory and native-service fixtures are synthetic",
+    "Performance results apply to the recorded profiles and host",
+    "Process/database restart is not managed database failover",
+    "Published logs are sanitized; private raw artifacts stay in the fresh evidence directory"
+  ],
+  "attempts": [
+    {
+      "attempt": 1,
+      "candidate": "df57e60163f26263f8d7ffae1efcefc51bbe47e9",
+      "result": "failed",
+      "stage": "live_browsers",
+      "reason": "The default API port was occupied by the existing local preview; the browser harness refused to use an unowned listener.",
+      "summary": "attempts/attempt-1-summary.json"
+    },
+    {
+      "check": "standalone live browser precheck",
+      "result": "failed",
+      "passed": 21,
+      "failed": 1,
+      "reason": "The mobile serial returns test still clicked Receiving in the old navigation. It now uses the shared All tools navigation helper.",
+      "log_sha256": "28b53ef967fb144755864ef77a64f1078900e1c23159b0dbeb9280358dbfa842"
+    },
+    {
+      "check": "standalone live browser recheck",
+      "result": "passed",
+      "passed": 22,
+      "log_sha256": "7684b40d5757603d92172dfaf8e2707c7e9841dae876b9a24d609bd3c9411c5d"
+    },
+    {
+      "attempt": 2,
+      "candidate": "04018ea845efea28763a1ed5c0eb522cbb4f911d",
+      "result": "passed",
+      "summary": "summary.json",
+      "configuration": "Separate loopback API ports 18088 and 18089; same full release profile."
+    }
+  ]
+}

@@ -4,9 +4,12 @@
 
 - **Dashboard aligned with Sync OMS.** Shared dark and light palettes, emerald accents, Outfit and JetBrains Mono typography, consistent panels and metric cards, and grouped desktop navigation. The selected theme persists across reloads and applies before the first render.
 - **Phone navigation built for floor work.** Overview, Inventory, Scanner and Fulfillment stay within reach in a bottom bar. A searchable, grouped **All tools** dialog provides every remaining workspace, keyboard dismissal and focus restoration.
-- **An actionable overview.** **Your next moves** opens the relevant reconciliation, exception, fulfillment or receiving queue. Active orders prioritize urgency and age; shortcuts retain their destination filters through browser history. The floor summary displays actual stock in receiving, storage and staging.
+- **An actionable overview.** **Your next moves** opens the relevant reconciliation, exception, fulfillment or receiving queue. Active orders prioritize urgency and age; shortcuts open the correct filtered queue, and browser Back restores the previous view. The floor summary displays actual stock in receiving, storage and staging.
 - **Clearer inventory and work queues.** Stock comes before planning tools, mobile stock records retain readable quantities and actions, and receiving puts receipts first. Fulfillment gains priority/age sorting, visible record counts and explicit review actions. Tables gain sticky headers, aligned quantities and keyboard-accessible scroll regions; empty searches offer a clear-filter action.
 - **Accessibility and regression coverage.** A skip-to-content link, current-page navigation semantics, larger controls, theme persistence checks, mobile menu and focus checks, and queue-filter regression tests. Live browser navigation uses the same mobile tools menu. Updated desktop, light-theme and mobile screenshots are included.
+- **Qualification reliability.** Native qualification enforces the same JSON nesting limit across Python versions, hosted CI fetches locked Rust dependencies before the gate, and the WorkOS browser fixture returns from provider logout without a mocked HTTP redirect.
+
+**Validation:** the complete local release profile passed all ten stages, including all 177 browser tests, archive restoration and two-replica API/PostgreSQL crash recovery. [Qualification evidence](docs/qualification/release-20261029-v0.5.0/verification.json). Deployed identity/integrations and physical facility acceptance remain separate.
 
 ## 0.4.2 — 2026-10-28
 
