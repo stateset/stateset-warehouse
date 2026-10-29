@@ -1,5 +1,5 @@
 .serial-observations { padding: 1.4rem; display: grid; gap: 1rem; }
-.serial-observations fieldset { min-width: 0; border: 1px solid var(--border, #d6dedb); border-radius: .6rem; padding: 1rem; }
+.serial-observations fieldset { min-width: 0; border: 1px solid var(--line); border-radius: .6rem; padding: 1rem; }
 .serial-observations legend, .serial-observations code { overflow-wrap: anywhere; white-space: pre-wrap; }
 .serial-observations label { display: grid; gap: .4rem; margin-bottom: .7rem; }
 .serial-observations input:not([type=checkbox]) { width: 100%; min-width: 0; }
@@ -25,5 +25,5 @@
 }
 .serial-action-context { display: grid; gap: .5rem; margin: 0; }
 .serial-action-context > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: .5rem; }
-.serial-action-context dt { color: #66766b; }
+.serial-action-context dt { color: var(--text); }
 .serial-action-context dd { margin: 0; overflow-wrap: anywhere; }

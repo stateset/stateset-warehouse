@@ -1,3 +1,4 @@
+import { navigateTo } from "./support/navigation";
 // Actual built browser → canonical authenticated HTTP → PostgreSQL. No interception.
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
@@ -135,9 +136,7 @@ test("confirmed transfer loss and exact reversal retain custody until actual rec
   await expect(page.locator(".workspace-card strong")).toHaveText(
     `DST-${suffix}`,
   );
-  await page
-    .getByRole("button", { name: "Facility transfers", exact: true })
-    .click();
+  await navigateTo(page, "Facility transfers");
   const panel = page.getByRole("region", {
     name: `Loss records for ${reference}`,
   });
@@ -349,9 +348,7 @@ test("confirmed transfer loss and exact reversal retain custody until actual rec
     ).toHaveCount(0);
   }
   expect(await get(`/v1/warehouses/${destination}`)).toEqual(final);
-  await page
-    .getByRole("button", { name: "Facility transfers", exact: true })
-    .click();
+  await navigateTo(page, "Facility transfers");
   await page.getByLabel("Include completed transfers", { exact: true }).check();
   await openJournal();
   await expect(

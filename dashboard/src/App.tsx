@@ -26,6 +26,9 @@ import { fmt, when } from "./format";
 import type { Modal, Tab } from "./uiTypes";
 import InventoryTab from "./InventoryTab";
 import OverviewTab from "./OverviewTab";
+import MobileNavigation from "./MobileNavigation";
+import { matchesOrderStatus, prioritizeOrders } from "./orderView";
+import { useTheme } from "./theme";
 import ReceivingTab from "./ReceivingTab";
 import LocationsTab from "./LocationsTab";
 import ExceptionsTab from "./ExceptionsTab";
@@ -47,6 +50,7 @@ import {
   Loader2,
   LogOut,
   MapPin,
+  Moon,
   PackageCheck,
   Plus,
   RefreshCw,
@@ -54,6 +58,7 @@ import {
   ScanLine,
   Settings2,
   ShieldCheck,
+  Sun,
   Truck,
   Warehouse,
   X,
@@ -111,9 +116,21 @@ const nav: { id: Tab; title: string; icon: typeof Box }[] = [
   { id: "integrations", title: "Integrations", icon: Link2 },
   { id: "operations", title: "Operations", icon: ShieldCheck },
 ];
+const navGroups: { title: string; items: Tab[] }[] = [
+  { title: "Workspace", items: ["overview", "inventory", "locations"] },
+  {
+    title: "Execution",
+    items: ["receiving", "fulfillment", "scanner", "transfers"],
+  },
+  {
+    title: "Control",
+    items: ["exceptions", "activity", "integrations", "operations"],
+  },
+];
 const opts = (items: string[]) =>
   items.map((value) => ({ value, label: value }));
 export default function App({ auth }: { auth?: WarehouseAuth }) {
+  const { theme, toggleTheme } = useTheme();
   const [token, setToken] = useState(() =>
     auth ? "workos" : (sessionStorage.getItem("wms-token") ?? ""),
   );
@@ -128,6 +145,7 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
   );
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
+  const [orderSort, setOrderSort] = useState("priority");
   const [modal, rawSetModal] = useState<Modal>(null);
   const modalVersion = useRef<number | null>(null);
   const setModal = (next: Modal) => {
@@ -582,7 +600,12 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
     setTab(next);
     setSearch("");
     setFilter("all");
-    location.hash = next;
+    // Internal navigation must not fire a later hashchange that clears the
+    // search/filter applied by a contextual shortcut. Back/forward still uses
+    // the hashchange listener above.
+    if (location.hash !== `#${next}`)
+      window.history.pushState(null, "", `#${next}`);
+    window.scrollTo({ top: 0, behavior: "auto" });
   };
   const logout = () => {
     ++epoch.current;
@@ -1269,13 +1292,18 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
     void submit(c);
   };
   const orderTable = (orders: Order[]) => (
-    <div className="table-scroll">
-      <table>
+    <div
+      className="table-scroll"
+      role="region"
+      aria-label="Order list"
+      tabIndex={0}
+    >
+      <table className="operational-table order-table">
         <thead>
           <tr>
             <th>Order / customer</th>
             <th>Destination</th>
-            <th>Units</th>
+            <th className="numeric">Units</th>
             <th>Status</th>
             <th>Priority</th>
             <th aria-label="Open order" />
@@ -1292,13 +1320,26 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                   {o.reference}
                 </button>
                 <span className="subline">{o.customer}</span>
+                <span
+                  className={`priority order-mobile-priority ${o.priority}`}
+                >
+                  <i />
+                  {o.priority} priority
+                </span>
               </td>
               <td>{o.destination}</td>
-              <td className="mono">
+              <td className="mono numeric">
                 {fmt(o.lines.reduce((n, l) => n + l.quantity, 0))}
               </td>
               <td>
                 <Status value={o.status} />
+                {s.exceptions.some(
+                  (issue) => issue.order_id === o.id && issue.status === "open",
+                ) && (
+                  <span className="order-blocked">
+                    <AlertTriangle size={12} /> Open issue
+                  </span>
+                )}
               </td>
               <td>
                 <span className={`priority ${o.priority}`}>
@@ -1308,10 +1349,11 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
               </td>
               <td>
                 <button
-                  className="icon-btn"
+                  className="mini-btn review-order"
                   aria-label={`Open ${o.reference}`}
                   onClick={() => setModal({ order: o.id })}
                 >
+                  <span>Review</span>
                   <ChevronRight size={17} />
                 </button>
               </td>
@@ -1322,7 +1364,24 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
       {!orders.length && (
         <Empty
           title="No matching orders"
-          detail="New fulfillment work will appear here."
+          detail={
+            search || filter !== "all"
+              ? "Try a different search or clear the filters to see loaded orders."
+              : "New fulfillment work will appear here."
+          }
+          action={
+            (search || filter !== "all") && (
+              <button
+                className="btn"
+                onClick={() => {
+                  setSearch("");
+                  setFilter("all");
+                }}
+              >
+                Clear filters
+              </button>
+            )
+          }
         />
       )}
     </div>
@@ -1344,6 +1403,26 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
 
   return (
     <div className="app-shell">
+      <a
+        className="skip-link"
+        href="#workspace-content"
+        onClick={(event) => {
+          event.preventDefault();
+          document.getElementById("workspace-content")?.focus();
+          window.scrollTo({ top: 0, behavior: "auto" });
+        }}
+      >
+        Skip to workspace content
+      </a>
+      <MobileNavigation
+        items={nav.filter((item) => item.id !== "operations" || canWork)}
+        groups={navGroups}
+        tab={tab}
+        navigate={navigate}
+        openIssues={openExceptions.length}
+        onHelp={() => setModal({ help: true })}
+        onLogout={logout}
+      />
       <aside className="sidebar">
         <a
           className="brand"
@@ -1369,25 +1448,31 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
           </div>
           <span className="live-dot" />
         </div>
-        <div className="nav-label">WORKSPACE</div>
-        <nav>
-          {nav
-            .filter((n) => n.id !== "operations" || canWork)
-            .map((n) => (
-              <button
-                key={n.id}
-                aria-label={n.title}
-                title={n.title}
-                className={tab === n.id ? "active" : ""}
-                onClick={() => navigate(n.id)}
-              >
-                <n.icon size={18} />
-                <span>{n.title}</span>
-                {n.id === "exceptions" && openExceptions.length > 0 && (
-                  <b>{openExceptions.length}</b>
-                )}
-              </button>
-            ))}
+        <nav aria-label="Warehouse navigation">
+          {navGroups.map((group) => (
+            <div className="nav-group" key={group.title}>
+              <div className="nav-label">{group.title}</div>
+              {group.items
+                .map((id) => nav.find((n) => n.id === id)!)
+                .filter((n) => n.id !== "operations" || canWork)
+                .map((n) => (
+                  <button
+                    key={n.id}
+                    aria-label={n.title}
+                    title={n.title}
+                    aria-current={tab === n.id ? "page" : undefined}
+                    className={tab === n.id ? "active" : ""}
+                    onClick={() => navigate(n.id)}
+                  >
+                    <n.icon size={18} />
+                    <span>{n.title}</span>
+                    {n.id === "exceptions" && openExceptions.length > 0 && (
+                      <b>{openExceptions.length}</b>
+                    )}
+                  </button>
+                ))}
+            </div>
+          ))}
         </nav>
         <div className="sidebar-bottom">
           <div className="system-note">
@@ -1428,7 +1513,7 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
       <div className="main-shell">
         <header className="topbar">
           <div className="breadcrumb">
-            Workspace <ChevronRight size={14} />
+            Warehouse <ChevronRight size={14} />
             <span>{nav.find((n) => n.id === tab)?.title}</span>
           </div>
           <div className="topbar-actions">
@@ -1465,6 +1550,14 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
             </span>
             <span className="topbar-separator" />
             <button
+              className="icon-btn theme-toggle"
+              aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+              title={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+              onClick={toggleTheme}
+            >
+              {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            <button
               className="icon-btn"
               disabled={busy || loading}
               aria-label="Refresh warehouse"
@@ -1487,7 +1580,7 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
             </button>
           </div>
         </header>
-        <main>
+        <main id="workspace-content" tabIndex={-1}>
           {nativeBlocked && tab !== "integrations" && (
             <div className="alert info" role="status">
               An integration request needs confirmation. Open Integrations to
@@ -1821,6 +1914,7 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                                 "pending",
                                 "allocated",
                                 "picking",
+                                "pick_queue",
                                 "partially_shipped",
                                 "closed_partial",
                                 "picked",
@@ -1829,7 +1923,13 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                                 "cancelled",
                               ]
                             : tab === "receiving"
-                              ? ["expected", "partial", "received", "cancelled"]
+                              ? [
+                                  "inbound_queue",
+                                  "expected",
+                                  "partial",
+                                  "received",
+                                  "cancelled",
+                                ]
                               : tab === "exceptions"
                                 ? ["open", "resolved"]
                                 : [
@@ -1845,7 +1945,11 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                             {o.value === "all"
                               ? "All " +
                                 (tab === "activity" ? "types" : "statuses")
-                              : label(o.label)}
+                              : o.value === "pick_queue"
+                                ? "To pick"
+                                : o.value === "inbound_queue"
+                                  ? "Open receipts"
+                                  : label(o.label)}
                           </option>
                         ))}
                       </select>
@@ -1978,6 +2082,7 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                   lowStock={lowStock}
                   matches={matches}
                   moveStock={moveStock}
+                  clearSearch={() => setSearch("")}
                   request={request}
                   s={s}
                   session={session}
@@ -1997,12 +2102,33 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
               {tab === "fulfillment" && (
                 <Section
                   title="Fulfillment orders"
-                  detail={`${s.orders.length} orders · ${totals.active} in progress`}
+                  detail={`${s.orders.filter((o) => matchesOrderStatus(o, filter) && matches(o.reference, o.customer, o.source_order_id, o.destination)).length} shown · ${s.orders.length} loaded · ${totals.active} in progress`}
+                  action={
+                    <label className="sort-control">
+                      Sort by
+                      <select
+                        aria-label="Sort fulfillment orders"
+                        value={orderSort}
+                        onChange={(e) => setOrderSort(e.target.value)}
+                      >
+                        <option value="priority">Priority</option>
+                        <option value="newest">Newest first</option>
+                        <option value="oldest">Oldest first</option>
+                      </select>
+                    </label>
+                  }
                 >
                   {orderTable(
-                    s.orders.filter(
+                    (orderSort === "priority"
+                      ? prioritizeOrders(s.orders)
+                      : [...s.orders].sort((a, b) =>
+                          orderSort === "newest"
+                            ? b.created_at.localeCompare(a.created_at)
+                            : a.created_at.localeCompare(b.created_at),
+                        )
+                    ).filter(
                       (o) =>
-                        (filter === "all" || o.status === filter) &&
+                        matchesOrderStatus(o, filter) &&
                         matches(
                           o.reference,
                           o.customer,
@@ -2024,6 +2150,10 @@ export default function App({ auth }: { auth?: WarehouseAuth }) {
                   request={request}
                   s={s}
                   setModal={setModal}
+                  clearFilters={() => {
+                    setSearch("");
+                    setFilter("all");
+                  }}
                   submit={submit}
                   totals={totals}
                 />

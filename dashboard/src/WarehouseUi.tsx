@@ -93,18 +93,20 @@ export function Metric({
   icon: Icon,
   note,
   attention,
+  tone = "green",
 }: {
   label: string;
   value: string;
   icon: typeof Box;
   note: string;
   attention?: boolean;
+  tone?: "green" | "blue" | "purple";
 }) {
   return (
-    <div className={`metric ${attention ? "attention" : ""}`}>
+    <div className={`metric metric-${tone} ${attention ? "attention" : ""}`}>
       <div>
         <span>{title}</span>
-        <Icon size={18} />
+        <span className="metric-icon"><Icon size={18} /></span>
       </div>
       <strong>{value}</strong>
       <p>

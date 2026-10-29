@@ -3,8 +3,11 @@ import { fmt } from "./format";
 import type { ReconciliationProof } from "./proofView";
 import type { Exception, Order, Product, Stock, WarehouseState } from "./types";
 import type { Tab, Totals } from "./uiTypes";
+import { activeOrder, prioritizeOrders } from "./orderView";
 import {
   ArrowDownLeft,
+  ArrowDownToLine,
+  ArrowRight,
   ArrowUpRight,
   Box,
   Boxes,
@@ -42,6 +45,105 @@ export default function OverviewTab({
   setSearch: (value: string) => void;
   totals: Totals;
 }) {
+  const floor = [
+    { kind: "receiving", title: "Receiving", icon: ArrowDownToLine },
+    { kind: "storage", title: "Storage", icon: Boxes },
+    { kind: "staging", title: "Staging", icon: Truck },
+  ].map((area) => ({
+    ...area,
+    units: s.stocks
+      .filter((stock) =>
+        s.locations.some(
+          (location) =>
+            location.code === stock.location && location.kind === area.kind,
+        ),
+      )
+      .reduce((sum, stock) => sum + stock.on_hand, 0),
+  }));
+  const packed = s.orders.filter((order) => order.status === "packed").length;
+  const pending = s.orders.filter((order) => order.status === "pending").length;
+  const receivingUnits = floor.find((area) => area.kind === "receiving")!.units;
+  const openView = (next: Tab, status = "all") => {
+    navigate(next);
+    setFilter(status);
+  };
+  const nextActions = [
+    ...(!reconciliation?.ok
+      ? [
+          {
+            title: "Review inventory balances",
+            detail: "Check the ledger before continuing work.",
+            icon: AlertTriangle,
+            tone: "danger",
+            action: () => openView("activity"),
+          },
+        ]
+      : []),
+    ...(openExceptions.length
+      ? [
+          {
+            title: `Resolve ${openExceptions.length} open ${openExceptions.length === 1 ? "issue" : "issues"}`,
+            detail: "Review exceptions holding up warehouse work.",
+            icon: AlertTriangle,
+            tone: "warn",
+            action: () => openView("exceptions", "open"),
+          },
+        ]
+      : []),
+    ...(packed
+      ? [
+          {
+            title: `Review ${packed} packed ${packed === 1 ? "order" : "orders"}`,
+            detail: "Confirm readiness for the carrier handoff.",
+            icon: Truck,
+            tone: "green",
+            action: () => openView("fulfillment", "packed"),
+          },
+        ]
+      : []),
+    ...(totals.receiving
+      ? [
+          {
+            title: `${totals.receiving} inbound ${totals.receiving === 1 ? "receipt" : "receipts"} open`,
+            detail: "Receive arrivals and plan putaway.",
+            icon: ArrowDownToLine,
+            tone: "blue",
+            action: () => openView("receiving", "inbound_queue"),
+          },
+        ]
+      : []),
+    ...(receivingUnits > 0
+      ? [
+          {
+            title: `${fmt(receivingUnits)} units at receiving`,
+            detail: "Review received goods and plan putaway.",
+            icon: Boxes,
+            tone: "blue",
+            action: () => openView("receiving"),
+          },
+        ]
+      : []),
+    ...(pending
+      ? [
+          {
+            title: `Review ${pending} unallocated ${pending === 1 ? "order" : "orders"}`,
+            detail: "Check available stock and allocate work.",
+            icon: ClipboardCheck,
+            tone: "blue",
+            action: () => openView("fulfillment", "pending"),
+          },
+        ]
+      : []),
+  ].slice(0, 3);
+  if (!nextActions.length && totals.active > 0) {
+    nextActions.push({
+      title: `Review ${totals.active} active ${totals.active === 1 ? "order" : "orders"}`,
+      detail: "Continue picking, packing, or partial shipments.",
+      icon: PackageCheck,
+      tone: "blue",
+      action: () => openView("fulfillment"),
+    });
+  }
   return (
     <>
       <div className="metrics">
@@ -49,6 +151,7 @@ export default function OverviewTab({
           label="Units on hand"
           value={fmt(totals.onHand)}
           icon={Boxes}
+          tone="blue"
           note={`${s.products.length} SKUs across ${s.locations.length} locations`}
         />
         <Metric
@@ -63,18 +166,54 @@ export default function OverviewTab({
           label="Orders in progress"
           value={fmt(totals.active)}
           icon={PackageCheck}
+          tone="purple"
           note={`${
             s.orders.filter((o) => o.status === "packed").length
-          } packed and ready for handoff`}
+          } packed · review before carrier handoff`}
         />
         <Metric
           label="Needs attention"
           value={fmt(openExceptions.length + lowStock.length)}
           icon={AlertTriangle}
           note={`${openExceptions.length} open issues · ${lowStock.length} low-stock SKUs`}
-          attention
+          attention={openExceptions.length + lowStock.length > 0}
         />
       </div>
+      <section className="next-actions" aria-labelledby="next-actions-title">
+        <div className="section-caption">
+          <h2 id="next-actions-title">Your next moves</h2>
+          <span>Review issues first, then move work forward</span>
+        </div>
+        {nextActions.length ? (
+          <div className="next-actions-grid">
+            {nextActions.map((item, index) => (
+              <button
+                className={`next-action ${item.tone}`}
+                key={item.title}
+                onClick={item.action}
+              >
+                <span className="next-action-icon">
+                  <item.icon size={19} />
+                </span>
+                <span className="next-action-copy">
+                  <small>0{index + 1}</small>
+                  <strong>{item.title}</strong>
+                  <span>{item.detail}</span>
+                </span>
+                <ArrowRight size={17} className="next-action-arrow" />
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="next-actions-clear">
+            <CheckCheck size={20} />
+            <span>No pending orders, receipts, or open issues.</span>
+            <button className="text-btn" onClick={() => navigate("inventory")}>
+              Review inventory <ArrowRight size={15} />
+            </button>
+          </div>
+        )}
+      </section>
       <div className="overview-grid">
         <Section
           title="Fulfillment flow"
@@ -107,7 +246,9 @@ export default function OverviewTab({
                 <button
                   onClick={() => {
                     navigate("fulfillment");
-                    setFilter(f.status);
+                    setFilter(
+                      f.status === "allocated" ? "pick_queue" : f.status,
+                    );
                   }}
                 >
                   <span className={`flow-icon step-${i}`}>
@@ -142,7 +283,7 @@ export default function OverviewTab({
           <div className="warehouse-card-top">
             <span className="warehouse-code">{s.warehouse.code}</span>
             <Badge tone={reconciliation?.ok ? "green" : "red"}>
-              <span className="live-dot" />
+              <i />
               {reconciliation?.ok
                 ? "Operational balances checked"
                 : "Balances require review"}
@@ -153,15 +294,30 @@ export default function OverviewTab({
             <MapPin size={14} />
             {s.warehouse.city}
           </p>
-          <div className="warehouse-map" aria-hidden="true">
-            <span className="map-dock" />
-            <div>
-              {Array.from({ length: 24 }, (_, i) => (
-                <i key={i} className={i % 7 === 0 ? "map-empty" : ""} />
-              ))}
-            </div>
-            <span className="map-route" />
-            <span className="map-point" />
+          <div
+            className="floor-distribution"
+            aria-label="Physical units by warehouse area"
+          >
+            {floor.map((area) => (
+              <div className={`floor-area ${area.kind}`} key={area.kind}>
+                <div>
+                  <span>
+                    <area.icon size={14} />
+                    {area.title}
+                  </span>
+                  <strong>
+                    {fmt(area.units)} <small>units</small>
+                  </strong>
+                </div>
+                <div className="floor-track" aria-hidden="true">
+                  <span
+                    style={{
+                      width: `${totals.onHand > 0 ? Math.min(100, (area.units / totals.onHand) * 100) : 0}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
           <div className="warehouse-card-foot">
             <span>
@@ -177,7 +333,7 @@ export default function OverviewTab({
       <div className="overview-grid bottom-grid">
         <Section
           title="Active orders"
-          detail="The next moves on your warehouse floor"
+          detail="Urgent and high-priority work first · oldest first within each priority"
           action={
             <button
               className="text-btn"
@@ -188,14 +344,7 @@ export default function OverviewTab({
           }
         >
           {orderTable(
-            s.orders
-              .filter(
-                (o) =>
-                  !["shipped", "cancelled", "closed_partial"].includes(
-                    o.status,
-                  ),
-              )
-              .slice(0, 5),
+            prioritizeOrders(s.orders.filter(activeOrder)).slice(0, 5),
           )}
         </Section>
         <div className="right-stack">

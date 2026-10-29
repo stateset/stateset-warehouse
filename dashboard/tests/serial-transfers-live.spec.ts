@@ -1,3 +1,4 @@
+import { navigateTo } from "./support/navigation";
 // Real source/destination UI and API/DB, including a simultaneously retained
 // source browser review. Synthetic keyboard events, facilities and inventory.
 import { test, expect } from "@playwright/test";
@@ -63,9 +64,7 @@ for (const mobile of [false, true])
       destination,
     );
     await f.login();
-    await page
-      .getByRole("button", { name: "Facility transfers", exact: true })
-      .click();
+    await navigateTo(page, "Facility transfers");
     await page.getByText("New facility transfer", { exact: true }).click();
     await page
       .getByLabel("Destination facility", { exact: true })
@@ -155,9 +154,7 @@ for (const mobile of [false, true])
       .getByLabel("Active warehouse", { exact: true })
       .selectOption(destination);
     await expect(page.locator(".workspace-card strong")).toHaveText(code);
-    await page
-      .getByRole("button", { name: "Facility transfers", exact: true })
-      .click();
+    await navigateTo(page, "Facility transfers");
     const panel = page.getByRole("region", {
       name: `Loss records for ${reference}`,
     });
@@ -223,9 +220,7 @@ for (const mobile of [false, true])
     ).toBeVisible();
     await expect(sourcePage.getByText(extras[0], { exact: true })).toBeHidden();
     expect((await f.get()).version).toBe(sourceVersion);
-    await page
-      .getByRole("button", { name: "Facility transfers", exact: true })
-      .click();
+    await navigateTo(page, "Facility transfers");
     await journal();
     await panel
       .getByRole("button", {
@@ -256,9 +251,7 @@ for (const mobile of [false, true])
       ids: string[],
       when: "before" | "after",
     ) => {
-      await page
-        .getByRole("button", { name: "Facility transfers", exact: true })
-        .click();
+      await navigateTo(page, "Facility transfers");
       await page
         .getByRole("button", {
           name: `Receive transfer ${reference} line ${line}`,

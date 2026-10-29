@@ -1,3 +1,4 @@
+import { navigateTo } from "./support/navigation";
 // These exercise the built UI and Rust domain through intercepted requests.
 // They do not claim to exercise SQLx, HTTP sockets or actual integrations.
 import { test, expect, type Page } from "@playwright/test";
@@ -348,11 +349,151 @@ test("overview, filtering, stock and responsive layout", async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test("theme preference survives reload and mobile navigation remains accessible", async ({
+  page,
+}) => {
+  await setup(page);
+  await page.getByRole("button", { name: "Switch to light theme" }).click();
+  await page.getByRole("button", { name: "Inventory", exact: true }).click();
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Inventory", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Switch to dark theme" }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: resolve(root, "docs/screenshots/light.png"),
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await navigateTo(page, "Movement ledger");
+  await expect(
+    page.getByRole("heading", { name: "Movement ledger", level: 1 }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "All tools", exact: true }).click();
+  await expect(
+    page
+      .getByRole("dialog", { name: "All tools", exact: true })
+      .getByRole("button", { name: "Movement ledger", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  await page.getByRole("button", { name: "Close tools" }).click();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.getByRole("button", { name: "Switch to dark theme" }).click();
+  await expect(
+    page.getByRole("button", { name: "Switch to light theme" }),
+  ).toBeVisible();
+});
+
+test("overview shortcuts keep their scope and browser back restores the overview", async ({
+  page,
+}) => {
+  await setup(page);
+  await page.getByRole("button", { name: /Review 1 packed order/ }).click();
+  await expect(
+    page.getByRole("combobox", { name: "Filter by status or type" }),
+  ).toHaveValue("packed");
+  await expect(
+    page.getByRole("button", { name: "SO-1044", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "SO-1041", exact: true }),
+  ).toHaveCount(0);
+  await page.goBack();
+  await expect(
+    page.getByRole("heading", { name: "Warehouse overview" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /To pick$/ }).click();
+  await expect(
+    page.getByRole("combobox", { name: "Filter by status or type" }),
+  ).toHaveValue("pick_queue");
+  await expect(
+    page.getByRole("button", { name: "SO-1042", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Overview", exact: true }).click();
+  await page
+    .getByRole("button", { name: /Five Panel Cap Below reorder/ })
+    .click();
+  await expect(
+    page.getByRole("textbox", { name: "Search current view" }),
+  ).toHaveValue("SS-CAP-004");
+  await expect(
+    page.getByRole("cell", { name: /Everyday Cotton Tee/ }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Overview", exact: true }).click();
+  await page.getByRole("button", { name: /inbound receipt open/ }).click();
+  await expect(
+    page.getByRole("combobox", { name: "Filter by status or type" }),
+  ).toHaveValue("inbound_queue");
+  await expect(
+    page.getByRole("button", { name: "RCV-207", exact: true }),
+  ).toBeVisible();
+});
+
+test("mobile tools support search, keyboard dismissal, and a usable stock view", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setup(page);
+  const trigger = page.getByRole("button", { name: "All tools", exact: true });
+  await trigger.click();
+  const dialog = page.getByRole("dialog", { name: "All tools", exact: true });
+  await expect(dialog).toBeVisible();
+  await page.getByRole("textbox", { name: "Find a tool" }).fill("receiv");
+  await expect(
+    dialog.getByRole("button", { name: "Receiving", exact: true }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Inventory", exact: true }),
+  ).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(dialog).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+  await trigger.click();
+  await expect(page.getByRole("textbox", { name: "Find a tool" })).toHaveValue(
+    "",
+  );
+  await dialog.getByRole("button", { name: "Receiving", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Receiving", level: 1 }),
+  ).toBeVisible();
+  await navigateTo(page, "Exceptions");
+  await expect(
+    page.getByRole("heading", { name: "Exceptions", level: 1 }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Inventory", exact: true }).click();
+  const stock = page.getByRole("region", {
+    name: "Stock by location",
+    exact: true,
+  });
+  expect(
+    await stock.evaluate(
+      (element) => element.scrollWidth <= element.clientWidth,
+    ),
+  ).toBe(true);
+  await page
+    .getByRole("textbox", { name: "Search current view" })
+    .fill("no-such-stock");
+  await expect(
+    page.getByRole("heading", { name: "No matching stock" }),
+  ).toBeVisible();
+  await stock
+    .getByRole("button", { name: "Clear search", exact: true })
+    .click();
+  await expect(
+    stock.getByRole("cell", { name: /Five Panel Cap/ }).first(),
+  ).toBeVisible();
+});
+
 test("partial receive and putaway execute the real domain", async ({
   page,
 }) => {
   const state = await setup(page);
-  await page.getByRole("button", { name: "Receiving", exact: true }).click();
+  await navigateTo(page, "Receiving");
   await page
     .getByRole("row")
     .filter({ hasText: "RCV-207" })
@@ -446,7 +587,7 @@ test("accepted save with a lost response recovers after reload", async ({
 });
 
 async function loseReceiptBeforeArrival(page: Page) {
-  await page.getByRole("button", { name: "Receiving", exact: true }).click();
+  await navigateTo(page, "Receiving");
   await page
     .getByRole("row")
     .filter({ hasText: "RCV-207" })
@@ -589,7 +730,7 @@ test("an in-flight warehouse refresh replaces stale canonical receipt detail bef
   page,
 }) => {
   const state = await setup(page);
-  await page.getByRole("button", { name: "Receiving", exact: true }).click();
+  await navigateTo(page, "Receiving");
   let releaseRefresh!: () => void;
   const refreshHeld = new Promise<void>((resolve) => {
     releaseRefresh = resolve;
@@ -774,7 +915,7 @@ test("keyset history exposes archived records and opens authoritative details", 
   );
   expect(detailRequests).toHaveLength(1);
   await page.getByRole("button", { name: "Close dialog", exact: true }).click();
-  await page.getByRole("button", { name: "Receiving", exact: true }).click();
+  await navigateTo(page, "Receiving");
   await page
     .getByRole("button", { name: "Browse receipts history", exact: true })
     .click();
@@ -786,9 +927,7 @@ test("keyset history exposes archived records and opens authoritative details", 
     .click();
   await expect(page.getByRole("dialog")).toContainText("ARCHIVE-RCV-000");
   await page.getByRole("button", { name: "Close dialog", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Movement ledger", exact: true })
-    .click();
+  await navigateTo(page, "Movement ledger");
   await page
     .getByRole("button", { name: "Browse movements history", exact: true })
     .click();
@@ -856,9 +995,7 @@ test("ledger uses the independent history proof even when operational balances a
     page.getByText("Operational balances checked", { exact: true }),
   ).toBeVisible();
   expect(fullChecks).toHaveLength(0);
-  await page
-    .getByRole("button", { name: "Movement ledger", exact: true })
-    .click();
+  await navigateTo(page, "Movement ledger");
   await expect(
     page.getByText("Full reconciliation needs review", { exact: true }),
   ).toBeVisible();
@@ -1148,7 +1285,7 @@ function partialCancellationFixture(state: any) {
   }).state;
 }
 async function cancelRemainder(page: Page) {
-  await page.getByRole("button", { name: "Receiving", exact: true }).click();
+  await navigateTo(page, "Receiving");
   await page
     .getByRole("row")
     .filter({ hasText: "RCV-207" })
@@ -1361,9 +1498,7 @@ test("ledger identifies original shipment disagreement even when every stock bal
       }),
     }),
   );
-  await page
-    .getByRole("button", { name: "Movement ledger", exact: true })
-    .click();
+  await navigateTo(page, "Movement ledger");
   await expect(
     page.getByText("Full reconciliation needs review", { exact: true }),
   ).toBeVisible();
@@ -1435,9 +1570,7 @@ for (const loss of ["before", "after"] as const) {
       (n: number, b: any) => n + b.on_hand,
       0,
     );
-    await page
-      .getByRole("button", { name: "Facility transfers", exact: true })
-      .click();
+    await navigateTo(page, "Facility transfers");
     await page.getByText("New facility transfer", { exact: true }).click();
     await expect(
       page.getByLabel("Destination facility", { exact: true }),
@@ -1552,9 +1685,7 @@ test("transfer receiving holds inconsistent original evidence and rejects mixed-
         },
       }),
   );
-  await page
-    .getByRole("button", { name: "Facility transfers", exact: true })
-    .click();
+  await navigateTo(page, "Facility transfers");
   await expect(page.getByRole("alert")).toContainText(
     "Original transfer evidence needs reconciliation",
   );
@@ -1620,9 +1751,7 @@ test("mixed movement CSV retains later transfer ownership columns and neutralize
   );
   expect(state().movements[0].transfer_id).toBeUndefined();
   const transfer = state().movements.at(-1);
-  await page
-    .getByRole("button", { name: "Movement ledger", exact: true })
-    .click();
+  await navigateTo(page, "Movement ledger");
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export CSV", exact: true }).click();
   const file = await (await download).path();

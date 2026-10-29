@@ -1,3 +1,4 @@
+import { navigateTo } from "./support/navigation";
 // Built browser → authenticated HTTP → isolated PostgreSQL; no interception.
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
@@ -97,7 +98,7 @@ test("reviewed pack definitions retain original form scanner count and recovery 
     )
     .toBe(12);
   const pack = (await state()).unit_packs.find((p: any) => p.sku === sku);
-  await page.getByRole("button", { name: "Receiving", exact: true }).click();
+  await navigateTo(page, "Receiving");
   await page.getByRole("button", { name: "New receipt", exact: true }).click();
   const modal = page.getByRole("dialog");
   await modal.getByLabel("Receipt reference", { exact: true }).fill(reference);
@@ -311,20 +312,16 @@ test("reviewed pack definitions retain original form scanner count and recovery 
     fullPage: true,
   });
   await page.setViewportSize({ width: 390, height: 844 });
-  const overflow = await page
-    .locator("body *")
-    .evaluateAll((nodes) =>
-      nodes
-        .filter(
-          (n) => n.getBoundingClientRect().right > window.innerWidth + 0.5,
-        )
-        .map((n) => ({
-          tag: n.tagName,
-          className: n.className,
-          right: n.getBoundingClientRect().right,
-          width: n.getBoundingClientRect().width,
-        })),
-    );
+  const overflow = await page.locator("body *").evaluateAll((nodes) =>
+    nodes
+      .filter((n) => n.getBoundingClientRect().right > window.innerWidth + 0.5)
+      .map((n) => ({
+        tag: n.tagName,
+        className: n.className,
+        right: n.getBoundingClientRect().right,
+        width: n.getBoundingClientRect().width,
+      })),
+  );
   await testInfo.attach("pack-mobile-overflow.json", {
     body: JSON.stringify(overflow, null, 2),
     contentType: "application/json",

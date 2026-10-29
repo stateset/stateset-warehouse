@@ -2,9 +2,9 @@
   max-width: 900px;
   margin: 0 auto;
   padding: 28px;
-  border: 1px solid var(--line, #e0e6e1);
+  border: 1px solid var(--line);
   border-radius: 16px;
-  background: var(--surface, #fff);
+  background: var(--panel);
 }
 .scanner-heading {
   display: flex;
@@ -13,7 +13,7 @@
 }
 .scanner-heading > svg {
   flex: 0 0 auto;
-  color: #28654e;
+  color: var(--ink);
   margin-top: 3px;
 }
 .scanner-heading h2 {
@@ -31,7 +31,7 @@
 .scanner-identity,
 .scanner-record span,
 .scanner-footnote {
-  color: #69776e;
+  color: var(--text);
   font-size: 13px;
   overflow-wrap: anywhere;
 }
@@ -42,18 +42,18 @@
 }
 .scanner-panel button {
   min-height: 48px;
-  border: 1px solid #c8d7cb;
+  border: 1px solid var(--line);
   padding: 11px 16px;
-  background: #f8faf7;
+  background: var(--panel);
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
 }
 .scanner-panel button[aria-pressed="true"],
 .scanner-panel .scanner-save {
-  background: #24543c;
-  color: white;
-  border-color: #24543c;
+  background: var(--surface-raised);
+  color: var(--muted);
+  border-color: var(--line);
 }
 .scanner-panel button:disabled {
   cursor: default;
@@ -62,7 +62,7 @@
 .scanner-panel button:focus-visible,
 .scanner-panel input:focus-visible,
 .scanner-panel select:focus-visible {
-  outline: 3px solid #92bfa2;
+  outline: 3px solid var(--line);
   outline-offset: 3px;
 }
 .scanner-panel label {
@@ -78,17 +78,17 @@
   width: 100%;
   min-width: 0;
   min-height: 52px;
-  border: 1px solid #c8d7cb;
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px;
-  color: #1a3022;
-  background: white;
+  color: var(--ink);
+  background: var(--panel);
   font: inherit;
   font-size: 17px;
 }
 .scanner-panel input:disabled,
 .scanner-panel select:disabled {
-  background: #f3f5f0;
+  background: var(--surface);
 }
 .scanner-work-selection {
   display: grid;
@@ -104,7 +104,7 @@
   margin-bottom: 1px;
 }
 .scanner-work {
-  border-top: 1px solid #e0e6e1;
+  border-top: 1px solid var(--line);
   margin-top: 26px;
   padding-top: 24px;
 }
@@ -122,12 +122,12 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
   padding: 20px;
-  background: #f3f7ef;
+  background: var(--surface);
   border-radius: 10px;
 }
 .scanner-target dt {
   font-size: 12px;
-  color: #69776e;
+  color: var(--text);
   margin-bottom: 5px;
 }
 .scanner-target dd {
@@ -152,8 +152,8 @@
   align-items: center;
   font-size: 14px;
   padding: 10px 0;
-  color: #67746b;
-  border-bottom: 3px solid #e2e8df;
+  color: var(--text);
+  border-bottom: 3px solid var(--line);
 }
 .scanner-steps li > span:first-child {
   border: 1px solid currentColor;
@@ -166,12 +166,12 @@
   font-size: 11px;
 }
 .scanner-steps li.verified {
-  color: #28654e;
-  border-color: #81ad8e;
+  color: var(--ink);
+  border-color: var(--line);
 }
 .scanner-steps li.current {
-  color: #1c3f2c;
-  border-color: #28654e;
+  color: var(--ink);
+  border-color: var(--line);
 }
 .scanner-step-state {
   width: 100%;
@@ -184,7 +184,7 @@
     monospace;
 }
 .scanner-label-form p {
-  color: #69776e;
+  color: var(--text);
   margin-top: -6px;
   font-size: 13px;
 }
@@ -192,7 +192,7 @@
   display: inline-flex;
   gap: 7px;
   align-items: center;
-  background: white;
+  background: var(--panel);
   margin-top: 24px;
 }
 .scanner-confirm input {
@@ -206,17 +206,17 @@
   width: 100%;
 }
 .scanner-error {
-  background: #fdf0e8;
-  border: 1px solid #e4bc9e;
-  color: #7c3b1d;
+  background: var(--danger-bg);
+  border: 1px solid var(--warn-border);
+  color: var(--danger);
   padding: 12px 16px;
   border-radius: 8px;
   overflow-wrap: anywhere;
 }
 .scanner-verified {
-  background: #edf5e8;
-  border: 1px solid #c5d9bc;
-  color: #285234;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
   padding: 12px 16px;
   border-radius: 8px;
 }

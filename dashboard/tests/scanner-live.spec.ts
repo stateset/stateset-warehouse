@@ -1,3 +1,4 @@
+import { navigateTo } from "./support/navigation";
 // Real browser → HTTP → SQLx → PostgreSQL qualification. Keyboard-wedge input
 // is simulated; scanner hardware and printed labels require facility acceptance.
 import { expect, test } from "@playwright/test";
@@ -574,7 +575,7 @@ test("replenishment moves and customer returns retain exact physical and source 
   expect(Object.values(receipt.return_source.line_ids)).toEqual([
     `line-a-${suffix}`,
   ]);
-  await page.getByRole("button", { name: "Receiving", exact: true }).click();
+  await navigateTo(page, "Receiving");
   await page.getByRole("button", { name: rma, exact: true }).click();
   await expect(
     page.getByText(`Customer return · original order ${orderId}`, {

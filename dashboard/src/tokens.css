@@ -1,0 +1,66 @@
+/* Shared visual foundation with StateSet Sync OMS: obsidian, emerald, Outfit.
+   Keep component colors semantic so every workflow supports both themes. */
+:root {
+  color-scheme: dark;
+  --page: #06090f;
+  --panel: #0d1117;
+  --surface: #111822;
+  --surface-raised: #1a2332;
+  --sidebar: #080c13;
+  --ink: #f3f4f6;
+  --text: #cbd5e1;
+  --muted: #94a3b8;
+  --line: #263040;
+  --accent: #06d6a0;
+  --accent-hover: #05b384;
+  --accent-foreground: #06090f;
+  --accent-bg: #0a2623;
+  --accent-border: #195447;
+  --green: var(--accent);
+  --info: #60a5fa;
+  --info-bg: #10223b;
+  --info-border: #25466e;
+  --warn: #fbbf24;
+  --warn-bg: #2b2211;
+  --warn-border: #614a1e;
+  --danger: #fb7185;
+  --danger-bg: #30151e;
+  --danger-border: #6b2a3a;
+  --purple: #c4b5fd;
+  --purple-bg: #241e3a;
+  --overlay: #020617b3;
+  --shadow-color: #00000040;
+  --shadow-card: 0 1px 3px #00000030, inset 0 1px 0 #ffffff03;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --page: #f8fafc;
+  --panel: #ffffff;
+  --surface: #f1f5f9;
+  --surface-raised: #e2e8f0;
+  --sidebar: #ffffff;
+  --ink: #0f172a;
+  --text: #334155;
+  --muted: #526277;
+  --line: #dce3eb;
+  --accent: #047857;
+  --accent-hover: #065f46;
+  --accent-foreground: #ffffff;
+  --accent-bg: #e8f7f1;
+  --accent-border: #b1dccd;
+  --info: #1d4ed8;
+  --info-bg: #eff6ff;
+  --info-border: #bfd5fb;
+  --warn: #92400e;
+  --warn-bg: #fffbeb;
+  --warn-border: #f3d79c;
+  --danger: #be123c;
+  --danger-bg: #fff1f2;
+  --danger-border: #fecdd3;
+  --purple: #6d28d9;
+  --purple-bg: #f3efff;
+  --overlay: #0f172a60;
+  --shadow-color: #0f172a14;
+  --shadow-card: 0 1px 3px #0f172a08;
+}

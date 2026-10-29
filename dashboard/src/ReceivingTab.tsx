@@ -15,6 +15,7 @@ export default function ReceivingTab({
   request,
   s,
   setModal,
+  clearFilters,
   submit,
   totals,
 }: {
@@ -26,20 +27,23 @@ export default function ReceivingTab({
   request: RequestJson;
   s: WarehouseState;
   setModal: (next: Modal) => void;
+  clearFilters: () => void;
   submit: SubmitCommand;
   totals: Totals;
 }) {
+  const receipts = s.receipts
+    .filter(
+      (receipt) =>
+        (filter === "all" ||
+          (filter === "inbound_queue"
+            ? ["expected", "partial"].includes(receipt.status)
+            : receipt.status === filter)) &&
+        matches(receipt.reference, receipt.supplier),
+    )
+    .slice()
+    .reverse();
   return (
     <>
-      {canWork && (
-        <PutawayPanel
-          key={`putaway-${s.warehouse.id}`}
-          state={s}
-          disabled={disabled}
-          request={request}
-          onSubmit={submit}
-        />
-      )}
       <div className="inventory-summary">
         <span>{totals.receiving} inbound receipts open</span>
         <span>
@@ -57,79 +61,89 @@ export default function ReceivingTab({
       </div>
       <Section
         title="Inbound receipts"
-        detail="Receive against an expected line, then move the goods to storage."
+        detail={`${receipts.length} of ${s.receipts.length} loaded receipts shown · receive, then put away`}
       >
-        <div className="table-scroll">
-          <table>
+        <div
+          className="table-scroll operational-scroll"
+          role="region"
+          aria-label="Inbound receipts"
+          tabIndex={0}
+        >
+          <table className="operational-table receipts-table">
             <thead>
               <tr>
                 <th>Receipt / supplier</th>
-                <th>Lines</th>
+                <th className="numeric">Lines</th>
                 <th>Received / expected</th>
                 <th>Status</th>
-                <th>Created</th>
-                <th />
+                <th className="receipt-created">Created</th>
+                <th aria-label="Review receipt" />
               </tr>
             </thead>
             <tbody>
-              {s.receipts
-                .filter(
-                  (r) =>
-                    (filter === "all" || r.status === filter) &&
-                    matches(r.reference, r.supplier),
-                )
-                .slice()
-                .reverse()
-                .map((r) => (
-                  <tr key={r.id}>
-                    <td>
-                      <button
-                        className="table-link"
-                        onClick={() => setModal({ receipt: r.id })}
-                      >
-                        {r.reference}
-                      </button>
-                      <span className="subline">{r.supplier}</span>
-                    </td>
-                    <td>{r.lines.length}</td>
-                    <td>
-                      <span className="mono">
-                        {fmt(r.lines.reduce((n, l) => n + l.received, 0))}{" "}
-                        <span className="muted-text">
-                          / {fmt(r.lines.reduce((n, l) => n + l.quantity, 0))}
-                        </span>
+              {receipts.map((r) => (
+                <tr key={r.id}>
+                  <td>
+                    <button
+                      className="table-link"
+                      onClick={() => setModal({ receipt: r.id })}
+                    >
+                      {r.reference}
+                    </button>
+                    <span className="subline">{r.supplier}</span>
+                  </td>
+                  <td className="numeric">{r.lines.length}</td>
+                  <td>
+                    <span className="mono">
+                      {fmt(r.lines.reduce((n, l) => n + l.received, 0))}{" "}
+                      <span className="muted-text">
+                        / {fmt(r.lines.reduce((n, l) => n + l.quantity, 0))}
                       </span>
-                      <div className="progress-track">
-                        <span
-                          style={{
-                            width: `${
-                              (100 *
-                                r.lines.reduce((n, l) => n + l.received, 0)) /
-                              r.lines.reduce((n, l) => n + l.quantity, 0)
-                            }%`,
-                          }}
-                        />
-                      </div>
-                    </td>
-                    <td>
-                      <Status value={r.status} />
-                    </td>
-                    <td className="muted-text">{when(r.created_at)}</td>
-                    <td>
-                      <button
-                        className="mini-btn"
-                        onClick={() => setModal({ receipt: r.id })}
-                      >
-                        {["received", "cancelled"].includes(r.status)
-                          ? "View receipt"
-                          : "Receive goods"}
-                        <ChevronRight size={14} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                    </span>
+                    <div className="progress-track">
+                      <span
+                        style={{
+                          width: `${
+                            (100 *
+                              r.lines.reduce((n, l) => n + l.received, 0)) /
+                            r.lines.reduce((n, l) => n + l.quantity, 0)
+                          }%`,
+                        }}
+                      />
+                    </div>
+                  </td>
+                  <td>
+                    <Status value={r.status} />
+                  </td>
+                  <td className="muted-text receipt-created">
+                    {when(r.created_at)}
+                  </td>
+                  <td>
+                    <button
+                      className="mini-btn"
+                      onClick={() => setModal({ receipt: r.id })}
+                    >
+                      {["received", "cancelled"].includes(r.status)
+                        ? "View receipt"
+                        : "Receive goods"}
+                      <ChevronRight size={14} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
+          {!receipts.length && s.receipts.length > 0 && (
+            <Empty
+              title="No matching receipts"
+              detail="Clear the search and status filter to see loaded receipts."
+              action={
+                <button className="btn" onClick={clearFilters}>
+                  Clear filters
+                </button>
+              }
+            />
+          )}
           {!s.receipts.length && (
             <Empty
               title="Your receiving dock is clear"
@@ -139,6 +153,15 @@ export default function ReceivingTab({
         </div>
         {historyControl("receipts")}
       </Section>
+      {canWork && (
+        <PutawayPanel
+          key={`putaway-${s.warehouse.id}`}
+          state={s}
+          disabled={disabled}
+          request={request}
+          onSubmit={submit}
+        />
+      )}
     </>
   );
 }

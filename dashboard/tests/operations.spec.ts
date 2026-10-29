@@ -1,3 +1,4 @@
+import { navigateTo } from "./support/navigation";
 import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -188,7 +189,7 @@ test("operational status separates held events and immutable rejection history f
     { count: 3, oldest_age_seconds: 7200, oldest_updated_age_seconds: 3600 },
   );
   fixture.set(state);
-  await page.getByRole("button", { name: "Operations", exact: true }).click();
+  await navigateTo(page, "Operations");
   await expect(
     page.getByText("No active review conditions detected", { exact: true }),
   ).toBeVisible();
@@ -224,7 +225,7 @@ test("uncertain requests remain actionable and a failed refresh retains explicit
     (g) => g.kind === "tms_transport" && g.status === "uncertain",
   )!.count = 1;
   fixture.set(state);
-  await page.getByRole("button", { name: "Operations", exact: true }).click();
+  await navigateTo(page, "Operations");
   await expect(
     page.getByText("Operational review needed", { exact: true }),
   ).toBeVisible();
@@ -262,7 +263,7 @@ test("warehouse status pagination uses independent bounded snapshots and rejects
   state.warehouses.total = 2;
   state.warehouses.next_after = "wh-pdx";
   fixture.set(state);
-  await page.getByRole("button", { name: "Operations", exact: true }).click();
+  await navigateTo(page, "Operations");
   await expect(
     page.getByRole("button", { name: "Next warehouses", exact: true }),
   ).toBeEnabled();
@@ -312,7 +313,7 @@ test("offline and elapsed reads never remain green or exportable, and reconnect 
 }) => {
   await page.clock.install({ time: Date.now() });
   const fixture = await setup(page);
-  await page.getByRole("button", { name: "Operations", exact: true }).click();
+  await navigateTo(page, "Operations");
   await expect(
     page.getByText("No active review conditions detected", { exact: true }),
   ).toBeVisible();
@@ -346,7 +347,7 @@ test("old or future server timestamps cannot become a healthy snapshot", async (
   const old = snapshot();
   old.snapshot_at = new Date(Date.now() - 300000).toISOString();
   fixture.set(old);
-  await page.getByRole("button", { name: "Operations", exact: true }).click();
+  await navigateTo(page, "Operations");
   await expect(page.getByRole("alert")).toContainText("clock window");
   await expect(
     page.getByText("No active review conditions detected", { exact: true }),
