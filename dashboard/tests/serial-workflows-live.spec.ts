@@ -4,6 +4,7 @@
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { serialFixture, type Group } from "./support/serialLive";
+import { navigateTo } from "./support/navigation";
 test.use({
   baseURL: process.env.WMS_SCANNER_BROWSER_URL || "http://127.0.0.1:8089",
 });
@@ -238,9 +239,7 @@ for (const mobile of [false, true]) {
       authorized.packet.command.lines[0].id,
     ]);
     const receive = async (ref: string, ids: string[]) => {
-      await page
-        .getByRole("button", { name: "Receiving", exact: true })
-        .click();
+      await navigateTo(page, "Receiving");
       await page.getByRole("button", { name: ref, exact: true }).click();
       await page
         .getByRole("dialog")
@@ -252,7 +251,7 @@ for (const mobile of [false, true]) {
       return f.commit("receive", "Confirm receipt", [f.group(ids)]);
     };
     await receive(rmaRef, [a]);
-    await page.getByRole("button", { name: "Receiving", exact: true }).click();
+    await navigateTo(page, "Receiving");
     await page.getByRole("button", { name: rmaRef, exact: true }).click();
     await page
       .getByRole("button", { name: "Cancel unreceived remainder", exact: true })
