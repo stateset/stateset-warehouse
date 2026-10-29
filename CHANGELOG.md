@@ -1,10 +1,12 @@
 # Changes
 
-## Unreleased
+## 0.6.0 — 2026-10-29
 
 - **Owned putaway work.** Receiving creates a task automatically. My work adds personal, available, team and closed queues; claim, pause, block with a reason, resume and release actions; and supervisor priority/cancellation controls. Existing receiving stock can be discovered without creating duplicate work.
 - **Guided confirmation.** Exact bin, SKU, lot and quantity checks lead into the existing serial observation and recovery journal. Inventory and task progress commit together, including partial moves. Ownership and destination capacity changes invalidate old reviews with definitive retry evidence.
 - Migration 040 preserves task history and original execution reviews. Tasks do not reserve inventory. Direct moves outside the task workflow do not complete tasks; supervisors can cancel obsolete work with a reason.
+
+**Upgrade:** migration 040 adds durable work tasks, original move reviews, task history and destination-capacity version fences. Back up the database before upgrading. Older releases refuse the newer schema; downgrade by restoring the pre-upgrade backup.
 
 ## 0.5.0 — 2026-10-29
 
